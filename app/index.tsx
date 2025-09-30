@@ -11,7 +11,7 @@ export default function Index() {
     >
       <Text>Marinda</Text>
       <Text>Connect Expo to Git</Text>
-      <Text>Test to see if rebuild through git updates the expo production url</Text>
+      <Text>Trying Build from Github button</Text>
     </View>
   );
 }
