@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Marinda",
-    "slug": "Marinda",
+    "slug": "marinda",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -43,6 +43,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2e584113-683b-4bd0-a5e0-7de8039c1014"
+      }
+    },
+    "owner": "darrmorgan"
   }
 }

@@ -9,7 +9,8 @@ export default function Index() {
         alignItems: "center",
       }}
     >
-      <Text>Edit app/index.tsx to edit this screen.</Text>
+      <Text>Marinda</Text>
+      <Text>Connect Expo to Git</Text>
     </View>
   );
 }
