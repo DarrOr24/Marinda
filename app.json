@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.marinda.marinda",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +23,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.marinda.marinda"
     },
     "web": {
       "output": "static",
@@ -47,9 +52,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "2e584113-683b-4bd0-a5e0-7de8039c1014"
+        "projectId": "e0ef2462-bdb7-4439-97d4-21cacd10f6c1"
       }
     },
-    "owner": "darrmorgan"
+    "owner": "marinda"
   }
 }
