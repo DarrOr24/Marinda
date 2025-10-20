@@ -53,7 +53,9 @@
       "router": {},
       "eas": {
         "projectId": "e0ef2462-bdb7-4439-97d4-21cacd10f6c1"
-      }
+      },
+      "supabaseUrl": "https://lemtpzciuequvwmkehcw.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlbXRwemNpdWVxdXZ3bWtlaGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5NTA2MDIsImV4cCI6MjA3NjUyNjYwMn0.RummUmQYYn8bzmcgCP6e1SiBCRyKdQZTFg1xLwVFC_0"
     },
     "owner": "marinda"
   }
