@@ -3,8 +3,8 @@ import { Link } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import CheckerboardBackground from '@/components/CheckerboardBackground';
+import FeatureTile from '@/components/FeatureTile';
 import Sidebar, { Member } from '@/components/Sidebar';
-import StarButton from '@/components/StarButton';
 
 const members: Member[] = [
     { id: '1', name: 'Mom', role: 'mom' },
@@ -28,27 +28,44 @@ export default function Index() {
                 {/* Row 1 */}
                 <View style={styles.row}>
                     <Link href="/chores" asChild>
-                        <StarButton label="Chores Game" />
+                        <FeatureTile
+                            label="Chores Game"
+                            icon={{ family: 'MaterialCommunityIcons', name: 'clipboard-check-outline', color: '#2563eb' }}
+                        />
                     </Link>
+
                     <Link href="/boards/grocery" asChild>
-                        <StarButton label="Grocery Board" />
+                        <FeatureTile
+                            label="Grocery Board"
+                            icon={{ family: 'MaterialCommunityIcons', name: 'cart-outline', color: '#16a34a' }}
+                        />
                     </Link>
                 </View>
 
                 {/* Row 2 */}
                 <View style={styles.row}>
                     <Link href="/boards/announce" asChild>
-                        <StarButton label="Announcements" />
+                        <FeatureTile
+                            label="Announcements"
+                            icon={{ family: 'MaterialCommunityIcons', name: 'bullhorn-outline', color: '#f59e0b' }}
+                        />
                     </Link>
+
                     <Link href="/wishList" asChild>
-                        <StarButton label="Wish List" />
+                        <FeatureTile
+                            label="Wish List"
+                            icon={{ family: 'Ionicons', name: 'gift-outline', color: '#db2777' }}
+                        />
                     </Link>
                 </View>
 
-                {/* Row 3 (single centered) */}
+                {/* Row 3 */}
                 <View style={styles.row}>
                     <Link href="/boards/activity" asChild>
-                        <StarButton label="Activity Board" />
+                        <FeatureTile
+                            label="Activity Board"
+                            icon={{ family: 'MaterialCommunityIcons', name: 'calendar-month-outline', color: '#7c3aed' }}
+                        />
                     </Link>
                 </View>
             </View>
