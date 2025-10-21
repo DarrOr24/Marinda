@@ -7,11 +7,11 @@ import Sidebar, { Member } from '@/components/Sidebar';
 import StarButton from '@/components/StarButton';
 
 const members: Member[] = [
-    { id: '1', name: 'Mom' },
-    { id: '2', name: 'Dad' },
-    { id: '3', name: 'Avi' },
-    { id: '4', name: 'Noa' },
-    { id: '5', name: 'Lia' },
+    { id: '1', name: 'Mom', role: 'mom' },
+    { id: '2', name: 'Dad', role: 'dad' },
+    { id: '3', name: 'Teen', role: 'teen' },
+    { id: '4', name: 'Child1', role: 'child' },
+    { id: '5', name: 'Child2', role: 'child' },
 ];
 
 export default function Index() {
