@@ -44,7 +44,7 @@ export default function Index() {
 
                 {/* Row 2 */}
                 <View style={styles.row}>
-                    <Link href="/boards/announce" asChild>
+                    <Link href="/boards/announcements" asChild>
                         <FeatureTile
                             label="Announcements"
                             icon={{ family: 'MaterialCommunityIcons', name: 'bullhorn-outline', color: '#f59e0b' }}
