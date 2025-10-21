@@ -30,5 +30,18 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
-  return <Stack />;
+  return (
+    <Stack
+      screenOptions={{
+        headerTitleAlign: 'left',
+      }}
+    >
+      <Stack.Screen
+        name="index"
+        options={{
+          title: 'Home',
+        }}
+      />
+    </Stack>
+  );
 }
