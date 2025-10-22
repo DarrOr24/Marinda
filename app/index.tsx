@@ -4,7 +4,8 @@ import { StyleSheet, View } from 'react-native';
 
 import CheckerboardBackground from '@/components/CheckerboardBackground';
 import FeatureTile from '@/components/FeatureTile';
-import Sidebar, { Member } from '@/components/Sidebar';
+import type { Member } from '@/components/MemberAvatar';
+import Sidebar from '@/components/Sidebar';
 
 const members: Member[] = [
     { id: '1', name: 'Mom', role: 'mom' },
