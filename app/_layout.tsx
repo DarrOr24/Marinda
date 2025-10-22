@@ -7,6 +7,15 @@ import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
+import { Provider } from 'react-redux';
+import { store } from '../src/store';
+
+import { Button } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
+import { login, logout } from '../src/authSlice';
+import type { RootState } from '../src/store';
+
+
 export default function RootLayout() {
   function hasOAuthCode(url: string) {
     try {
@@ -31,17 +40,33 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <Stack
-      screenOptions={{
-        headerTitleAlign: 'left',
-      }}
-    >
-      <Stack.Screen
-        name="index"
-        options={{
-          title: 'Home',
+    <Provider store={store}>
+      <Stack
+        screenOptions={{
+          headerTitleAlign: 'left',
         }}
-      />
-    </Stack>
+      >
+        <Stack.Screen
+          name="index"
+          options={{
+            title: 'Home',
+            headerTitleAlign: 'left',
+            headerRight: () => {
+              const dispatch = useDispatch();
+              const isLoggedIn = useSelector((state: RootState) => state.auth.isLoggedIn);
+
+              return (
+                <Button
+                  title={isLoggedIn ? 'Log out' : 'Log in'}
+                  onPress={() => dispatch(isLoggedIn ? logout() : login())}
+                  color={isLoggedIn ? '#dc2626' : '#2563eb'} // red for logout, blue for login
+                />
+              );
+            },
+          }}
+        />
+
+      </Stack>
+    </Provider>
   );
 }
