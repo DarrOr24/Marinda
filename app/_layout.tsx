@@ -1,57 +1,55 @@
-import 'react-native-get-random-values';
-import 'react-native-url-polyfill/auto';
-
-import { getSupabase } from '@/lib/supabase';
-import * as Linking from 'expo-linking';
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
-import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { useColorScheme } from 'react-native';
+import 'react-native-reanimated';
 
 import HeaderProfileButton from '@/components/HeaderProfileButton';
-import { Provider } from 'react-redux';
-import { store } from '../src/store';
+import { SplashScreenController } from '@/components/splash-screen-controller';
+import { useAuthContext } from '@/hooks/use-auth-context';
+import AuthProvider from '@/providers/auth-provider';
 
-export default function RootLayout() {
-  function hasOAuthCode(url: string) {
-    try {
-      const u = new URL(url);
-      return u.searchParams.has('code');
-    } catch { return false; }
-  }
 
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-    const supabase = getSupabase();
-
-    const handleUrl = async (url: string | null) => {
-      if (!url || !hasOAuthCode(url)) return;
-      const { error } = await supabase.auth.exchangeCodeForSession(url);
-      if (error) console.warn('exchangeCodeForSession error:', error.message);
-    };
-
-    const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url));
-    (async () => handleUrl(await Linking.getInitialURL()))();
-    return () => sub.remove();
-  }, []);
+function RootNavigator() {
+  const { isLoggedIn } = useAuthContext()
 
   return (
-    <Provider store={store}>
-      <Stack
-        screenOptions={{
-          headerTitleAlign: 'left',
-        }}
-      >
+    <Stack>
+      <Stack.Protected guard={isLoggedIn}>
         <Stack.Screen
           name="index"
           options={{
             title: 'Home',
             headerTitleAlign: 'left',
             headerRight: () => <HeaderProfileButton />,
-
           }}
         />
+        <Stack.Screen name="chores" />
+        <Stack.Screen name="wishList" />
+        <Stack.Screen name="boards/activity" />
+        <Stack.Screen name="boards/announcements" />
+        <Stack.Screen name="boards/grocery" />
+      </Stack.Protected>
 
-      </Stack>
-    </Provider>
-  );
+      <Stack.Protected guard={!isLoggedIn}>
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+      </Stack.Protected>
+
+      <Stack.Screen name="+not-found" />
+    </Stack>
+  )
+}
+
+export default function RootLayout() {
+  const colorScheme = useColorScheme()
+
+  return (
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <AuthProvider>
+        <SplashScreenController />
+        <RootNavigator />
+        <StatusBar style="auto" />
+      </AuthProvider>
+    </ThemeProvider>
+  )
 }

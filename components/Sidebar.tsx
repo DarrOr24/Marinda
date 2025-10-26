@@ -1,8 +1,7 @@
-import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-
 import MemberAvatar, { Member } from './MemberAvatar';
+
 
 export default function Sidebar({ members }: { members: Member[] }) {
     return (
@@ -11,7 +10,6 @@ export default function Sidebar({ members }: { members: Member[] }) {
                 {members.map((m, idx) => (
                     <TouchableOpacity
                         key={m.id}
-                        style={styles.item}
                         onPress={() => { /* open profile or select */ }}
                     >
                         <MemberAvatar member={m} index={idx} />
@@ -37,6 +35,7 @@ const styles = StyleSheet.create({
         gap: 14,
         flexGrow: 1,
         justifyContent: 'center',
+        alignItems: 'center',
         paddingVertical: 12,
     },
     item: { alignItems: 'center' },

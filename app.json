@@ -43,7 +43,8 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -55,7 +56,9 @@
         "projectId": "e0ef2462-bdb7-4439-97d4-21cacd10f6c1"
       },
       "supabaseUrl": "https://lemtpzciuequvwmkehcw.supabase.co",
-      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlbXRwemNpdWVxdXZ3bWtlaGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5NTA2MDIsImV4cCI6MjA3NjUyNjYwMn0.RummUmQYYn8bzmcgCP6e1SiBCRyKdQZTFg1xLwVFC_0"
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlbXRwemNpdWVxdXZ3bWtlaGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5NTA2MDIsImV4cCI6MjA3NjUyNjYwMn0.RummUmQYYn8bzmcgCP6e1SiBCRyKdQZTFg1xLwVFC_0",
+      "supabaseApiPublishableKey": "sb_publishable_fo2kCMBO4urMq5TcjIGxhQ_REveOOaH",
+      "supabaseApiSecretKey": "sb_secret_h3bRHPNC8NM6qb-xXXByYg_d8jNvTFs"
     },
     "owner": "marinda"
   }

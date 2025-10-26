@@ -1,37 +1,51 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React from 'react';
-import { Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { login, logout } from '../src/authSlice';
-import type { RootState } from '../src/store';
+import { useAuthContext } from '@/hooks/use-auth-context'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { router } from 'expo-router'
+import React from 'react'
+import { Alert, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 export default function HeaderProfileButton() {
-    const dispatch = useDispatch();
-    const isLoggedIn = useSelector((s: RootState) => s.auth.isLoggedIn);
+    const { isLoggedIn, signOut } = useAuthContext()
 
     const onPress = () => {
-        console.log(isLoggedIn);
         if (!isLoggedIn) {
             Alert.alert(
                 'Welcome to Marinda 💫',
                 'Sign in or create your family account to continue',
                 [
                     { text: 'Cancel', style: 'cancel' },
-                    { text: 'Log in', onPress: () => dispatch(login()) },
-                    { text: 'Create Account', onPress: () => console.log('TODO: go to signup') },
+                    {
+                        text: 'Log in',
+                        onPress: () => {
+                            router.push('/login')
+                        },
+                    },
+                    {
+                        text: 'Create Account',
+                        onPress: () => {
+                            // TODO: navigate to sign-up screen or show signup modal
+                            console.log('Navigate to create account screen')
+                        },
+                    },
                 ]
-            );
+            )
         } else {
-            Alert.alert(
-                'Log out?',
-                'Are you sure you want to log out?',
-                [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Log out', onPress: () => dispatch(logout()) },
-                ]
-            );
+            Alert.alert('Log out?', 'Are you sure you want to log out?', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Log out',
+                    onPress: async () => {
+                        try {
+                            await signOut?.()
+                        } catch (err: any) {
+                            console.error('Error signing out:', err)
+                            Alert.alert('Sign out failed', err?.message ?? 'Please try again.')
+                        }
+                    },
+                },
+            ])
         }
-    };
+    }
 
     return (
         <View style={styles.wrapper}>
@@ -43,9 +57,9 @@ export default function HeaderProfileButton() {
                 />
             </TouchableOpacity>
         </View>
-    );
+    )
 }
 
 const styles = StyleSheet.create({
     wrapper: {},
-});
+})
