@@ -3,6 +3,10 @@
 # dependencies
 node_modules/
 
+# IDE (IntelliJ/Android Studio)
+.idea/
+*.iml
+
 # Expo
 .expo/
 dist/
