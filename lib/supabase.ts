@@ -1,7 +1,6 @@
 import 'react-native-get-random-values';
 import 'react-native-url-polyfill/auto';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
@@ -23,11 +22,22 @@ const NativeSecureStoreAdapter = {
 };
 
 // Web: small adapter (optional but keeps parity & allows logging)
-const ExpoWebSecureStoreAdapter = {
-  getItem: (key: string) => AsyncStorage.getItem(key),
-  setItem: (key: string, value: string) => AsyncStorage.setItem(key, value),
-  removeItem: (key: string) => AsyncStorage.removeItem(key),
-};
+const WebStorageAdapter = {
+  getItem: (key: string) => {
+    if (typeof window === 'undefined') return Promise.resolve(null)
+    return Promise.resolve(window.localStorage.getItem(key))
+  },
+  setItem: (key: string, value: string) => {
+    if (typeof window === 'undefined') return Promise.resolve()
+    window.localStorage.setItem(key, value)
+    return Promise.resolve()
+  },
+  removeItem: (key: string) => {
+    if (typeof window === 'undefined') return Promise.resolve()
+    window.localStorage.removeItem(key)
+    return Promise.resolve()
+  },
+}
 
 export function getSupabase(): SupabaseClient {
   if (_client) return _client;
@@ -40,12 +50,11 @@ export function getSupabase(): SupabaseClient {
 
   _client = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-      storage:
-        Platform.OS === 'web' ? ExpoWebSecureStoreAdapter : (NativeSecureStoreAdapter as any),
+      storage: Platform.OS === 'web' ? WebStorageAdapter : NativeSecureStoreAdapter,
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: false,
-      flowType: 'pkce',
+      ...(Platform.OS !== 'web' ? { flowType: 'pkce' } : {})
     },
   });
 
