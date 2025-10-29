@@ -11,19 +11,39 @@ import AuthProvider from '@/providers/auth-provider';
 
 
 function RootNavigator() {
-  const { isLoggedIn } = useAuthContext()
+  const { isLoggedIn } = useAuthContext();
 
   return (
-    <Stack>
+    <Stack
+      screenOptions={{
+        animation: 'none',
+        headerRight: () => <HeaderProfileButton />, // profile/login icon everywhere
+      }}
+    >
       <Stack.Protected guard={isLoggedIn}>
+        {/* Home: show header, but no back button */}
         <Stack.Screen
           name="index"
           options={{
-            title: 'Home',
-            headerTitleAlign: 'left',
-            headerRight: () => <HeaderProfileButton />,
+            headerBackVisible: false,
+            headerLeft: () => null,
+            headerTitle: '',
+            headerShadowVisible: false,
           }}
         />
+
+        {/* Profile pages: show header, but no back button */}
+        <Stack.Screen
+          name="profile/[id]"
+          options={{
+            headerBackVisible: false,
+            headerLeft: () => null,
+            headerTitle: '',
+            headerShadowVisible: false,
+          }}
+        />
+
+        {/* Other screens keep normal headers (and keep the profile icon on the right) */}
         <Stack.Screen name="chores" />
         <Stack.Screen name="wishList" />
         <Stack.Screen name="boards/activity" />
@@ -37,8 +57,11 @@ function RootNavigator() {
 
       <Stack.Screen name="+not-found" />
     </Stack>
-  )
+  );
 }
+
+
+
 
 export default function RootLayout() {
   const colorScheme = useColorScheme()
