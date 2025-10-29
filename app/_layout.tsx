@@ -44,11 +44,36 @@ function RootNavigator() {
         />
 
         {/* Other screens keep normal headers (and keep the profile icon on the right) */}
-        <Stack.Screen name="chores" />
-        <Stack.Screen name="wishList" />
-        <Stack.Screen name="boards/activity" />
-        <Stack.Screen name="boards/announcements" />
-        <Stack.Screen name="boards/grocery" />
+        <Stack.Screen
+          name="chores"
+          options={{
+            headerTitle: 'Chores 🧹',
+          }}
+        />
+        <Stack.Screen
+          name="wishList"
+          options={{
+            headerTitle: 'Wish List 💫',
+          }}
+        />
+        <Stack.Screen
+          name="boards/activity"
+          options={{
+            headerTitle: 'Activities 📆',
+          }}
+        />
+        <Stack.Screen
+          name="boards/announcements"
+          options={{
+            headerTitle: 'Announcements 📢',
+          }}
+        />
+        <Stack.Screen
+          name="boards/grocery"
+          options={{
+            headerTitle: 'Groceries 🛒',
+          }}
+        />
       </Stack.Protected>
 
       <Stack.Protected guard={!isLoggedIn}>
