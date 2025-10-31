@@ -1,4 +1,4 @@
-// components/AddActivityModal.tsx
+import type { Member } from "@/components/MemberAvatar";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -8,7 +8,6 @@ import {
     Modal,
     Pressable,
     StyleSheet,
-    Switch,
     Text,
     TextInput,
     TouchableOpacity,
@@ -22,11 +21,12 @@ export type NewActivityForm = {
     title: string;
     day_index: number;          // 0..6 within the visible week
     time: string;               // "18:00"  (REQUIRED)
-    location?: string;
+    location?: string;          // we label it "Place" in UI
     money?: number;
     ride_needed?: boolean;
     present_needed?: boolean;
     babysitter_needed?: boolean;
+    participants_member_ids?: string[]; // 👈 NEW
     other?: string;
     status: ActivityStatus;     // default 'pending'
     created_by: string;         // auth user id
@@ -35,7 +35,7 @@ export type NewActivityForm = {
     created_at: string;         // ISO
 };
 
-// ── Helpers (same spirit as groceries) ─────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const getDisplayName = (p?: any, u?: any) => {
@@ -48,7 +48,6 @@ const getDisplayName = (p?: any, u?: any) => {
 };
 
 // If you later store member color on profile, swap this for that value.
-// For now, a stable default tint:
 function pickMemberColor() {
     return "#2563eb"; // blue
 }
@@ -60,6 +59,10 @@ type Props = {
     onSave: (form: NewActivityForm) => void;
     default_day_index?: number; // parent can pass today's index in the visible week
     week_days: Date[];          // 7 dates for the visible week
+    mode?: "create" | "edit";
+    submitLabel?: string;
+    initial?: Partial<NewActivityForm>;
+    members: Member[];          // 👈 NEW: for "Who’s going?"
 };
 
 export default function AddActivityModal({
@@ -68,6 +71,10 @@ export default function AddActivityModal({
     onSave,
     default_day_index = 0,
     week_days,
+    mode = "create",
+    submitLabel,
+    initial,
+    members,
 }: Props) {
     const { profile, user, session } = useAuthContext() as any;
     const authUser = user ?? session?.user;
@@ -85,12 +92,34 @@ export default function AddActivityModal({
     const [rideNeeded, setRideNeeded] = useState(false);
     const [presentNeeded, setPresentNeeded] = useState(false);
     const [babysitterNeeded, setBabysitterNeeded] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]); // 👈 NEW
     const [other, setOther] = useState("");
 
-    // keep default in sync when modal opens with a different week
+    // keep default in sync when modal opens with a different week / edit mode
     useEffect(() => {
-        if (visible) setDayIndex(default_day_index);
-    }, [visible, default_day_index]);
+        if (visible) {
+            if (initial?.day_index !== undefined) {
+                setDayIndex(initial.day_index);
+            } else {
+                setDayIndex(default_day_index);
+            }
+            if (initial) {
+                setTitle(initial.title ?? "");
+                setTime(initial.time ?? "");
+                setLocation(initial.location ?? "");
+                setMoney(
+                    initial.money !== undefined && initial.money !== null
+                        ? String(initial.money)
+                        : ""
+                );
+                setRideNeeded(!!initial.ride_needed);
+                setPresentNeeded(!!initial.present_needed);
+                setBabysitterNeeded(!!initial.babysitter_needed);
+                setSelectedIds(initial.participants_member_ids ?? []); // 👈 NEW
+                setOther(initial.other ?? "");
+            }
+        }
+    }, [visible, default_day_index, initial]);
 
     // animate in/out
     useEffect(() => {
@@ -122,7 +151,14 @@ export default function AddActivityModal({
         setRideNeeded(false);
         setPresentNeeded(false);
         setBabysitterNeeded(false);
+        setSelectedIds([]); // 👈 NEW
         setOther("");
+    }
+
+    function toggleMember(id: string) {
+        setSelectedIds((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+        );
     }
 
     function handleSave() {
@@ -141,17 +177,18 @@ export default function AddActivityModal({
             ride_needed: rideNeeded || undefined,
             present_needed: presentNeeded || undefined,
             babysitter_needed: babysitterNeeded || undefined,
+            participants_member_ids: selectedIds.length ? selectedIds : undefined, // 👈 NEW
             other: other.trim() || undefined,
-            status: "pending",
-            created_by: whoId,
-            created_by_name: whoName,
-            member_color: color,
-            created_at: new Date().toISOString(),
+            status: initial?.status ?? "pending",
+            created_by: initial?.created_by ?? whoId,
+            created_by_name: initial?.created_by_name ?? whoName,
+            member_color: initial?.member_color ?? color,
+            created_at: initial?.created_at ?? new Date().toISOString(),
         };
 
         onSave(payload);
         onClose();
-        reset();
+        if (mode === "create") reset();
     }
 
     const dayChips = useMemo(() => {
@@ -161,6 +198,8 @@ export default function AddActivityModal({
         });
     }, [week_days]);
 
+    const quickTimes = ["15:30", "17:00", "18:30", "19:00"];
+
     return (
         <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
             <Animated.View style={[styles.backdrop, { opacity }]}>
@@ -169,22 +208,19 @@ export default function AddActivityModal({
 
             <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
                 <View style={styles.header}>
-                    <Text style={styles.title}>New Activity</Text>
+                    <Text style={styles.title}>{mode === "edit" ? "Edit Activity ✏️" : "New Activity ✨"}</Text>
                     <TouchableOpacity onPress={onClose}>
                         <MaterialCommunityIcons name="close" size={22} color="#111827" />
                     </TouchableOpacity>
                 </View>
 
                 {/* Day selector (0..6) */}
-                <Text style={styles.label}>Date</Text>
+                <Text style={styles.label}>📅 Date</Text>
                 <View style={styles.chips}>
                     {dayChips.map(({ idx, label }) => (
                         <TouchableOpacity
                             key={idx}
-                            style={[
-                                styles.chip,
-                                idx === dayIndex && styles.chipActive,
-                            ]}
+                            style={[styles.chip, idx === dayIndex && styles.chipActive]}
                             onPress={() => setDayIndex(idx)}
                         >
                             <Text style={[styles.chipTxt, idx === dayIndex && styles.chipTxtActive]}>
@@ -195,15 +231,16 @@ export default function AddActivityModal({
                 </View>
 
                 {/* Required fields */}
-                <Text style={styles.label}>Title *</Text>
+                <Text style={styles.label}>🏷️ Title *</Text>
                 <TextInput
-                    placeholder="e.g., Soccer practice"
+                    placeholder="e.g., Soccer practice ⚽️"
                     value={title}
                     onChangeText={setTitle}
                     style={styles.input}
+                    autoCapitalize="words"
                 />
 
-                <Text style={styles.label}>Time *</Text>
+                <Text style={styles.label}>🕒 Time *</Text>
                 <View style={styles.fieldRow}>
                     <MaterialCommunityIcons name="clock-outline" size={18} color="#475569" />
                     <TextInput
@@ -213,9 +250,20 @@ export default function AddActivityModal({
                         style={styles.input}
                     />
                 </View>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
+                    {quickTimes.map((t) => (
+                        <TouchableOpacity
+                            key={t}
+                            onPress={() => setTime(t)}
+                            style={[styles.chip, time === t && styles.chipActive]}
+                        >
+                            <Text style={[styles.chipTxt, time === t && styles.chipTxtActive]}>{t}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
 
                 {/* Optional fields */}
-                <Text style={styles.label}>Location</Text>
+                <Text style={styles.label}>📍 Place</Text>
                 <View style={styles.fieldRow}>
                     <MaterialCommunityIcons name="map-marker-outline" size={18} color="#475569" />
                     <TextInput
@@ -226,7 +274,7 @@ export default function AddActivityModal({
                     />
                 </View>
 
-                <Text style={styles.label}>Money</Text>
+                <Text style={styles.label}>💵 $</Text>
                 <View style={styles.fieldRow}>
                     <MaterialCommunityIcons name="cash" size={18} color="#475569" />
                     <TextInput
@@ -238,24 +286,57 @@ export default function AddActivityModal({
                     />
                 </View>
 
-                <View style={styles.switchRow}>
-                    <Text style={styles.switchLabel}>Ride needed</Text>
-                    <Switch value={rideNeeded} onValueChange={setRideNeeded} />
+                {/* Friendly emoji chips toggles */}
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
+                    <TouchableOpacity
+                        onPress={() => setRideNeeded((v) => !v)}
+                        style={[styles.chip, rideNeeded && styles.chipActive]}
+                    >
+                        <Text style={[styles.chipTxt, rideNeeded && styles.chipTxtActive]}>
+                            🚗 Ride {rideNeeded ? "✅" : "❌"}
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        onPress={() => setPresentNeeded((v) => !v)}
+                        style={[styles.chip, presentNeeded && styles.chipActive]}
+                    >
+                        <Text style={[styles.chipTxt, presentNeeded && styles.chipTxtActive]}>
+                            🎁 Present {presentNeeded ? "✅" : "❌"}
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        onPress={() => setBabysitterNeeded((v) => !v)}
+                        style={[styles.chip, babysitterNeeded && styles.chipActive]}
+                    >
+                        <Text style={[styles.chipTxt, babysitterNeeded && styles.chipTxtActive]}>
+                            🍼 Babysitter {babysitterNeeded ? "✅" : "❌"}
+                        </Text>
+                    </TouchableOpacity>
                 </View>
 
-                <View style={styles.switchRow}>
-                    <Text style={styles.switchLabel}>Present needed</Text>
-                    <Switch value={presentNeeded} onValueChange={setPresentNeeded} />
+                {/* 👥 Who's going? */}
+                <Text style={styles.label}>👥 Who’s going?</Text>
+                <View style={styles.memberChips}>
+                    {members.map((m) => {
+                        const active = selectedIds.includes(m.id);
+                        return (
+                            <TouchableOpacity
+                                key={m.id}
+                                onPress={() => toggleMember(m.id)}
+                                style={[styles.memberChip, active && styles.memberChipActive]}
+                            >
+                                <View style={[styles.memberDot, { backgroundColor: (m as any).color || "#94a3b8" }]} />
+                                <Text style={[styles.memberTxt, active && styles.memberTxtActive]}>{m.name}</Text>
+                            </TouchableOpacity>
+                        );
+                    })}
                 </View>
 
-                <View style={styles.switchRow}>
-                    <Text style={styles.switchLabel}>Babysitter needed</Text>
-                    <Switch value={babysitterNeeded} onValueChange={setBabysitterNeeded} />
-                </View>
-
-                <Text style={styles.label}>Other</Text>
+                <Text style={styles.label}>📝 Notes</Text>
                 <TextInput
-                    placeholder="Notes / extra info"
+                    placeholder="Add a note…"
                     value={other}
                     onChangeText={setOther}
                     style={[styles.input, { height: 80 }]}
@@ -271,7 +352,9 @@ export default function AddActivityModal({
                         onPress={handleSave}
                         disabled={!canSave}
                     >
-                        <Text style={canSave ? styles.btnPrimaryTxt : styles.btnDisabledTxt}>Save</Text>
+                        <Text style={canSave ? styles.btnPrimaryTxt : styles.btnDisabledTxt}>
+                            {submitLabel ?? (mode === "edit" ? "Update" : "Save")}
+                        </Text>
                     </TouchableOpacity>
                 </View>
             </Animated.View>
@@ -304,56 +387,74 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginBottom: 12,
     },
-    title: { fontSize: 18, fontWeight: "700", color: "#0f172a" },
+    title: { fontSize: 18, fontWeight: "800", color: "#0f172a" },
 
     label: {
-        fontSize: 12,
+        fontSize: 13,
         color: "#475569",
-        marginTop: 8,
+        marginTop: 10,
         marginBottom: 4,
+        fontWeight: "700",
     },
     fieldRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
     input: {
         flex: 1,
         borderWidth: 1,
         borderColor: "#e5e7eb",
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        fontSize: 15,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        fontSize: 16,
         backgroundColor: "#f9fafb",
     },
 
     chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
     chip: {
-        borderWidth: 1,
-        borderColor: "#e5e7eb",
+        borderWidth: 2,
+        borderColor: "#cbd5e1",
         borderRadius: 999,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
         backgroundColor: "#fff",
     },
     chipActive: {
         borderColor: "#2563eb",
         backgroundColor: "#eff6ff",
     },
-    chipTxt: { color: "#0f172a", fontWeight: "600" },
+    chipTxt: { color: "#0f172a", fontWeight: "800" },
     chipTxtActive: { color: "#1d4ed8" },
 
-    switchRow: {
+    // Member chips
+    memberChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    memberChip: {
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: 8,
+        gap: 8,
+        borderWidth: 2,
+        borderColor: "#cbd5e1",
+        borderRadius: 999,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        backgroundColor: "#fff",
     },
-    switchLabel: { fontSize: 15, color: "#0f172a" },
+    memberChipActive: {
+        borderColor: "#2563eb",
+        backgroundColor: "#eff6ff",
+    },
+    memberDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 999,
+    },
+    memberTxt: { color: "#0f172a", fontWeight: "800" },
+    memberTxtActive: { color: "#1d4ed8" },
 
     actions: { flexDirection: "row", justifyContent: "flex-end", gap: 8, marginTop: 12 },
-    btn: { borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16 },
+    btn: { borderRadius: 14, paddingVertical: 14, paddingHorizontal: 18 },
     btnGhost: { backgroundColor: "transparent", borderWidth: 1, borderColor: "#e5e7eb" },
-    btnGhostTxt: { color: "#0f172a", fontWeight: "600" },
+    btnGhostTxt: { color: "#0f172a", fontWeight: "700" },
     btnPrimary: { backgroundColor: "#2563eb" },
-    btnPrimaryTxt: { color: "#fff", fontWeight: "700" },
+    btnPrimaryTxt: { color: "#fff", fontWeight: "800", fontSize: 16 },
     btnDisabled: { backgroundColor: "#e5e7eb" },
-    btnDisabledTxt: { color: "#64748b", fontWeight: "700" },
+    btnDisabledTxt: { color: "#64748b", fontWeight: "800", fontSize: 16 },
 });

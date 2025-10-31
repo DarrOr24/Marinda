@@ -1,6 +1,7 @@
-// app/boards/activity.tsx
 import AddActivityModal, { type NewActivityForm } from "@/components/AddActivityModal";
 import CheckerboardBackground from "@/components/CheckerboardBackground";
+import { members as FAMILY_MEMBERS } from "@/data/members";
+import { useAuthContext } from "@/hooks/use-auth-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import {
@@ -51,7 +52,7 @@ function formatRangeLabel(start: Date) {
     }
     return `${fmt(start)} – ${fmt(end)}`;
 }
-function dateKey(d: Date) {
+function toDateKey(d: Date) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
         d.getDate()
     ).padStart(2, "0")}`;
@@ -69,6 +70,9 @@ type ActivitiesByDate = Record<string, Activity[]>;
 
 export default function ActivityBoard() {
     const today = new Date();
+    const { profile, user, session } = useAuthContext() as any;
+    const authUser = user ?? session?.user;
+    const currentUserId = profile?.id ?? authUser?.id ?? "guest";
 
     // weekOffset: 0 = this week, +1 = next week, -1 = last week, etc.
     const [weekOffset, setWeekOffset] = useState<number>(0);
@@ -76,9 +80,12 @@ export default function ActivityBoard() {
     // data
     const [byDate, setByDate] = useState<ActivitiesByDate>({});
 
-    // modal
+    // modals
     const [addOpen, setAddOpen] = useState(false);
     const [defaultDayIndex, setDefaultDayIndex] = useState(0);
+
+    const [editOpen, setEditOpen] = useState(false);
+    const [editing, setEditing] = useState<Activity | null>(null);
 
     // Compute the visible week's start date
     const startOfThisWeek = useMemo(() => getStartOfWeek(today), [today]);
@@ -95,6 +102,21 @@ export default function ActivityBoard() {
     const isPastWeek = weekOffset < 0;
     const rangeLabel = formatRangeLabel(visibleWeekStart);
 
+    // Resolve names/colors for participants
+    const memberById = useMemo(() => {
+        const map = new Map<string, (typeof FAMILY_MEMBERS)[number]>();
+        for (const m of FAMILY_MEMBERS) map.set(m.id, m as any);
+        return map;
+    }, []);
+
+    function resolveParticipantNames(ids?: string[]) {
+        if (!ids?.length) return "";
+        return ids
+            .map((id) => memberById.get(id)?.name)
+            .filter(Boolean)
+            .join(", ");
+    }
+
     // open modal, defaulting the picker to today's index (if within week)
     function openAddModal() {
         const idx = visibleWeekDays.findIndex((d) => sameDay(d, today));
@@ -103,9 +125,8 @@ export default function ActivityBoard() {
     }
 
     function handleSaveActivity(form: NewActivityForm) {
-        // Map the form's day_index to the actual date in the visible week
         const targetDate = visibleWeekDays[form.day_index] ?? visibleWeekDays[0];
-        const key = dateKey(targetDate);
+        const key = toDateKey(targetDate);
 
         const toSave: Activity = {
             ...form,
@@ -119,24 +140,95 @@ export default function ActivityBoard() {
         }));
     }
 
+    function handleUpdateActivity(form: NewActivityForm) {
+        if (!editing) return;
+
+        const oldKey = editing.date_key;
+        const newDate = visibleWeekDays[form.day_index] ?? visibleWeekDays[0];
+        const newKey = toDateKey(newDate);
+
+        const updated: Activity = {
+            ...editing,
+            ...form,
+            date_key: newKey,
+        };
+
+        setByDate((prev) => {
+            if (oldKey === newKey) {
+                const arr = prev[oldKey] ?? [];
+                const replaced = arr.map((x) => (x.id === editing.id ? updated : x));
+                return { ...prev, [oldKey]: replaced };
+            }
+            const oldArr = prev[oldKey] ?? [];
+            const without = oldArr.filter((x) => x.id !== editing.id);
+            const newArr = prev[newKey] ? [updated, ...prev[newKey]!] : [updated];
+            return { ...prev, [oldKey]: without, [newKey]: newArr };
+        });
+
+        setEditing(null);
+        setEditOpen(false);
+    }
+
+    function deleteActivity(a: Activity) {
+        setByDate((prev) => {
+            const arr = prev[a.date_key] ?? [];
+            const filtered = arr.filter((x) => x.id !== a.id);
+            return { ...prev, [a.date_key]: filtered };
+        });
+    }
+
+    function openEditModal(a: Activity) {
+        setEditing(a);
+        const idx = visibleWeekDays.findIndex((d) => toDateKey(d) === a.date_key);
+        setDefaultDayIndex(idx >= 0 ? idx : 0);
+        setEditOpen(true);
+    }
+
     function showDetails(a: Activity) {
+        const names = resolveParticipantNames(a.participants_member_ids);
         const lines = [
-            `Title: ${a.title}`,
-            a.time ? `Time: ${a.time}` : "",
-            a.location ? `Location: ${a.location}` : "",
-            typeof a.money === "number" ? `Money: $${a.money.toFixed(2)}` : "",
-            a.ride_needed ? "Ride needed: yes" : "Ride needed: no",
-            a.present_needed ? "Present needed: yes" : "Present needed: no",
-            a.babysitter_needed ? "Babysitter needed: yes" : "Babysitter needed: no",
-            a.other ? `Notes: ${a.other}` : "",
-            `Status: ${a.status}`,
-            `Created by: ${a.created_by_name}`,
-            `Created at: ${new Date(a.created_at).toLocaleString()}`,
+            `🏷️ ${a.title}`,
+            `📅 ${a.date_key}`,
+            "",
+
+            a.time ? `🕒 ${a.time}` : "",
+            a.location ? `📍 ${a.location}` : "",
+            typeof a.money === "number" ? `💵 $${a.money.toFixed(2)}` : "",
+            "",
+
+            `🚗 Ride: ${a.ride_needed ? "✅" : "❌"}`,
+            `🎁 Present: ${a.present_needed ? "✅" : "❌"}`,
+            `🍼 Babysitter: ${a.babysitter_needed ? "✅" : "❌"}`,
+            names ? `👥 Who’s going: ${names}` : "👥 Who’s going: —",
+            a.other ? `📝 ${a.other}` : "",
+            "",
+
+            a.status === "approved" ? "✅ All set!" : "⏳ Waiting for approval",
+            `👤 ${a.created_by_name}`,
         ]
-            .filter(Boolean)
+            .filter((s) => s !== undefined)
             .join("\n");
 
-        Alert.alert("Activity", lines);
+        const buttons: any[] = [{ text: "CLOSE", style: "cancel" }];
+
+        if (a.created_by === currentUserId) {
+            buttons.unshift({
+                text: "DELETE 🗑️",
+                style: "destructive",
+                onPress: () => {
+                    Alert.alert("Delete activity?", "This cannot be undone.", [
+                        { text: "Cancel", style: "cancel" },
+                        { text: "Delete", style: "destructive", onPress: () => deleteActivity(a) },
+                    ]);
+                },
+            });
+            buttons.unshift({
+                text: "EDIT  ✏️",
+                onPress: () => openEditModal(a),
+            });
+        }
+
+        Alert.alert("Activity", lines, buttons);
     }
 
     return (
@@ -186,7 +278,7 @@ export default function ActivityBoard() {
                 >
                     {visibleWeekDays.map((d, i) => {
                         const isToday = sameDay(d, today) && weekOffset === 0;
-                        const key = dateKey(d);
+                        const key = toDateKey(d);
                         const items = byDate[key] || [];
 
                         return (
@@ -201,7 +293,7 @@ export default function ActivityBoard() {
                                     </Text>
                                 </View>
 
-                                {/* Activities list (title + time only, colored by member + status) */}
+                                {/* Activities list */}
                                 <View style={styles.dayContent}>
                                     {items.length === 0 ? (
                                         <Text style={styles.placeholder}>No activities</Text>
@@ -213,6 +305,23 @@ export default function ActivityBoard() {
                                                     backgroundColor:
                                                         a.status === "approved" ? `${a.member_color}22` : "#fff",
                                                 };
+
+                                                // build badges (need flags) and participant dots (who's going)
+                                                const badges = [
+                                                    a.ride_needed ? "🚗" : "",
+                                                    a.present_needed ? "🎁" : "",
+                                                    a.babysitter_needed ? "🍼" : "",
+                                                ]
+                                                    .filter(Boolean)
+                                                    .join(" ");
+
+                                                const going = (a.participants_member_ids ?? [])
+                                                    .map((id) => memberById.get(id))
+                                                    .filter(Boolean) as any[];
+
+                                                const top3 = going.slice(0, 3);
+                                                const more = going.length - top3.length;
+
                                                 return (
                                                     <Pressable
                                                         key={a.id}
@@ -223,7 +332,24 @@ export default function ActivityBoard() {
                                                         <Text numberOfLines={1} style={styles.itemTitle}>
                                                             {a.title}
                                                             {a.time ? ` — ${a.time}` : ""}
+                                                            {badges ? `  ${badges}` : ""}
                                                         </Text>
+
+                                                        {/* tiny participant dots */}
+                                                        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                                                            {top3.map((m) => (
+                                                                <View
+                                                                    key={m.id}
+                                                                    style={[
+                                                                        styles.partDot,
+                                                                        { backgroundColor: (m as any).color || "#94a3b8" },
+                                                                    ]}
+                                                                />
+                                                            ))}
+                                                            {more > 0 ? (
+                                                                <Text style={styles.partMore}>+{more}</Text>
+                                                            ) : null}
+                                                        </View>
                                                     </Pressable>
                                                 );
                                             })}
@@ -247,14 +373,51 @@ export default function ActivityBoard() {
                 <MaterialCommunityIcons name="plus" size={26} color="#fff" />
             </TouchableOpacity>
 
-            {/* Add Activity */}
+            {/* Create Activity */}
             <AddActivityModal
                 visible={addOpen}
                 onClose={() => setAddOpen(false)}
                 onSave={handleSaveActivity}
                 default_day_index={defaultDayIndex}
                 week_days={visibleWeekDays}
+                mode="create"
+                submitLabel="Save"
+                members={FAMILY_MEMBERS}
             />
+
+            {/* Edit Activity */}
+            {editing && (
+                <AddActivityModal
+                    visible={editOpen}
+                    onClose={() => {
+                        setEditOpen(false);
+                        setEditing(null);
+                    }}
+                    onSave={handleUpdateActivity}
+                    default_day_index={defaultDayIndex}
+                    week_days={visibleWeekDays}
+                    mode="edit"
+                    submitLabel="Update"
+                    members={FAMILY_MEMBERS}
+                    initial={{
+                        title: editing.title,
+                        day_index: defaultDayIndex,
+                        time: editing.time,
+                        location: editing.location,
+                        money: editing.money,
+                        ride_needed: editing.ride_needed,
+                        present_needed: editing.present_needed,
+                        babysitter_needed: editing.babysitter_needed,
+                        participants_member_ids: editing.participants_member_ids, // 👈 NEW
+                        other: editing.other,
+                        status: editing.status,
+                        created_by: editing.created_by,
+                        created_by_name: editing.created_by_name,
+                        member_color: editing.member_color,
+                        created_at: editing.created_at,
+                    }}
+                />
+            )}
         </View>
     );
 }
@@ -374,9 +537,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         backgroundColor: "#fff",
     },
-    itemPending: {
-        // nothing extra — shows the colored border
-    },
+    itemPending: {},
     colorDot: {
         width: 8,
         height: 8,
@@ -385,7 +546,19 @@ const styles = StyleSheet.create({
     itemTitle: {
         flex: 1,
         color: "#0f172a",
-        fontWeight: "600",
+        fontWeight: "700",
+    },
+
+    // tiny participant dots
+    partDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 999,
+    },
+    partMore: {
+        fontSize: 12,
+        color: "#334155",
+        marginLeft: 2,
     },
 
     // FAB
