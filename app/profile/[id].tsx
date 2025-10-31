@@ -3,16 +3,8 @@ import { useLocalSearchParams } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import CheckerboardBackground from '@/components/CheckerboardBackground';
-import type { Member } from '@/components/MemberAvatar';
 import Sidebar from '@/components/Sidebar';
-
-const members: Member[] = [
-    { id: '1', name: 'Mom', role: 'mom' },
-    { id: '2', name: 'Dad', role: 'dad' },
-    { id: '3', name: 'Teen', role: 'teen' },
-    { id: '4', name: 'Child1', role: 'child' },
-    { id: '5', name: 'Child2', role: 'child' },
-];
+import { members } from '@/data/members';
 
 export default function MemberProfile() {
     const { id } = useLocalSearchParams<{ id: string }>();

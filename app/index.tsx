@@ -4,16 +4,9 @@ import { StyleSheet, View } from 'react-native';
 
 import CheckerboardBackground from '@/components/CheckerboardBackground';
 import FeatureTile from '@/components/FeatureTile';
-import type { Member } from '@/components/MemberAvatar';
 import Sidebar from '@/components/Sidebar';
+import { members } from '@/data/members';
 
-const members: Member[] = [
-    { id: '1', name: 'Mom', role: 'mom' },
-    { id: '2', name: 'Dad', role: 'dad' },
-    { id: '3', name: 'Teen', role: 'teen' },
-    { id: '4', name: 'Child1', role: 'child' },
-    { id: '5', name: 'Child2', role: 'child' },
-];
 
 export default function Index() {
     return (
