@@ -7,10 +7,12 @@ import {
     Easing,
     Modal,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
+    useWindowDimensions,
     View,
 } from "react-native";
 
@@ -21,14 +23,14 @@ export type NewActivityForm = {
     title: string;
     day_index: number;          // 0..6 within the visible week
     time: string;               // "18:00"  (REQUIRED)
-    location?: string;          // we label it "Place" in UI
+    location?: string;          // labeled "Place" in UI
     money?: number;
     ride_needed?: boolean;
     present_needed?: boolean;
     babysitter_needed?: boolean;
-    participants_member_ids?: string[]; // 👈 NEW
+    participants_member_ids?: string[];
     other?: string;
-    status: ActivityStatus;     // default 'pending'
+    status: ActivityStatus;     // default "pending"
     created_by: string;         // auth user id
     created_by_name: string;    // resolved from profile/user/email
     member_color: string;       // for calendar tinting
@@ -62,7 +64,7 @@ type Props = {
     mode?: "create" | "edit";
     submitLabel?: string;
     initial?: Partial<NewActivityForm>;
-    members: Member[];          // 👈 NEW: for "Who’s going?"
+    members: Member[];          // for "Who’s going?"
 };
 
 export default function AddActivityModal({
@@ -78,6 +80,7 @@ export default function AddActivityModal({
 }: Props) {
     const { profile, user, session } = useAuthContext() as any;
     const authUser = user ?? session?.user;
+    const { height } = useWindowDimensions();
 
     // animations
     const opacity = useRef(new Animated.Value(0)).current;
@@ -92,7 +95,7 @@ export default function AddActivityModal({
     const [rideNeeded, setRideNeeded] = useState(false);
     const [presentNeeded, setPresentNeeded] = useState(false);
     const [babysitterNeeded, setBabysitterNeeded] = useState(false);
-    const [selectedIds, setSelectedIds] = useState<string[]>([]); // 👈 NEW
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [other, setOther] = useState("");
 
     // keep default in sync when modal opens with a different week / edit mode
@@ -115,7 +118,7 @@ export default function AddActivityModal({
                 setRideNeeded(!!initial.ride_needed);
                 setPresentNeeded(!!initial.present_needed);
                 setBabysitterNeeded(!!initial.babysitter_needed);
-                setSelectedIds(initial.participants_member_ids ?? []); // 👈 NEW
+                setSelectedIds(initial.participants_member_ids ?? []);
                 setOther(initial.other ?? "");
             }
         }
@@ -151,7 +154,7 @@ export default function AddActivityModal({
         setRideNeeded(false);
         setPresentNeeded(false);
         setBabysitterNeeded(false);
-        setSelectedIds([]); // 👈 NEW
+        setSelectedIds([]);
         setOther("");
     }
 
@@ -177,7 +180,7 @@ export default function AddActivityModal({
             ride_needed: rideNeeded || undefined,
             present_needed: presentNeeded || undefined,
             babysitter_needed: babysitterNeeded || undefined,
-            participants_member_ids: selectedIds.length ? selectedIds : undefined, // 👈 NEW
+            participants_member_ids: selectedIds.length ? selectedIds : undefined,
             other: other.trim() || undefined,
             status: initial?.status ?? "pending",
             created_by: initial?.created_by ?? whoId,
@@ -194,11 +197,16 @@ export default function AddActivityModal({
     const dayChips = useMemo(() => {
         return week_days.map((d, idx) => {
             const label = `${DAY_NAMES[d.getDay()]} ${d.getDate()}`;
-            return { idx, label };
+            return { idx, label, date: d };
         });
     }, [week_days]);
 
-    const quickTimes = ["15:30", "17:00", "18:30", "19:00"];
+    // Helper: start of "today" at 00:00 for safe comparisons
+    const today0 = useMemo(() => {
+        const t = new Date();
+        t.setHours(0, 0, 0, 0);
+        return t;
+    }, []);
 
     return (
         <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
@@ -206,7 +214,12 @@ export default function AddActivityModal({
                 <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
             </Animated.View>
 
-            <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
+            <Animated.View
+                style={[
+                    styles.sheet,
+                    { transform: [{ translateY }], maxHeight: Math.min(height * 0.86, 720) },
+                ]}
+            >
                 <View style={styles.header}>
                     <Text style={styles.title}>{mode === "edit" ? "Edit Activity ✏️" : "New Activity ✨"}</Text>
                     <TouchableOpacity onPress={onClose}>
@@ -214,134 +227,143 @@ export default function AddActivityModal({
                     </TouchableOpacity>
                 </View>
 
-                {/* Day selector (0..6) */}
-                <Text style={styles.label}>📅 Date</Text>
-                <View style={styles.chips}>
-                    {dayChips.map(({ idx, label }) => (
+                <ScrollView
+                    contentContainerStyle={{ paddingBottom: 12 }}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
+                    {/* Day selector (0..6) — WRAPPED CHIPS, no horizontal scroll */}
+                    <Text style={styles.label}>📅 Date</Text>
+                    <View style={styles.wrapChipsRow}>
+                        {dayChips.map(({ idx, label, date }) => {
+                            const isPast = date.getTime() < today0.getTime();
+                            return (
+                                <TouchableOpacity
+                                    key={idx}
+                                    disabled={isPast}
+                                    style={[
+                                        styles.chip,
+                                        idx === dayIndex && styles.chipActive,
+                                        isPast && { opacity: 0.4 },
+                                    ]}
+                                    onPress={() => !isPast && setDayIndex(idx)}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.chipTxt,
+                                            idx === dayIndex && styles.chipTxtActive,
+                                            isPast && { textDecorationLine: "line-through" },
+                                        ]}
+                                    >
+                                        {label}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+
+                    {/* Required fields */}
+                    <Text style={styles.label}>🏷️ Title *</Text>
+                    <TextInput
+                        placeholder="e.g., Soccer practice ⚽️"
+                        value={title}
+                        onChangeText={setTitle}
+                        style={styles.input}
+                        autoCapitalize="words"
+                    />
+
+                    <Text style={styles.label}>🕒 Time *</Text>
+                    <View style={styles.fieldRow}>
+                        <MaterialCommunityIcons name="clock-outline" size={18} color="#475569" />
+                        <TextInput
+                            placeholder="e.g., 18:00"
+                            value={time}
+                            onChangeText={setTime}
+                            style={styles.input}
+                        />
+                    </View>
+
+                    {/* Optional fields */}
+                    <Text style={styles.label}>📍 Place</Text>
+                    <View style={styles.fieldRow}>
+                        <MaterialCommunityIcons name="map-marker-outline" size={18} color="#475569" />
+                        <TextInput
+                            placeholder="e.g., Community Center"
+                            value={location}
+                            onChangeText={setLocation}
+                            style={styles.input}
+                        />
+                    </View>
+
+                    <Text style={styles.label}>💵 $</Text>
+                    <View style={styles.fieldRow}>
+                        <MaterialCommunityIcons name="cash" size={18} color="#475569" />
+                        <TextInput
+                            placeholder="e.g., 15"
+                            keyboardType="numeric"
+                            value={money}
+                            onChangeText={setMoney}
+                            style={styles.input}
+                        />
+                    </View>
+
+                    {/* One row: Ride / Present / Babysitter */}
+                    <View style={styles.wrapChipsRow}>
                         <TouchableOpacity
-                            key={idx}
-                            style={[styles.chip, idx === dayIndex && styles.chipActive]}
-                            onPress={() => setDayIndex(idx)}
+                            onPress={() => setRideNeeded((v) => !v)}
+                            style={[styles.chip, rideNeeded && styles.chipActive]}
                         >
-                            <Text style={[styles.chipTxt, idx === dayIndex && styles.chipTxtActive]}>
-                                {label}
+                            <Text style={[styles.chipTxt, rideNeeded && styles.chipTxtActive]}>
+                                🚗 Ride {rideNeeded ? "✅" : "❌"}
                             </Text>
                         </TouchableOpacity>
-                    ))}
-                </View>
 
-                {/* Required fields */}
-                <Text style={styles.label}>🏷️ Title *</Text>
-                <TextInput
-                    placeholder="e.g., Soccer practice ⚽️"
-                    value={title}
-                    onChangeText={setTitle}
-                    style={styles.input}
-                    autoCapitalize="words"
-                />
-
-                <Text style={styles.label}>🕒 Time *</Text>
-                <View style={styles.fieldRow}>
-                    <MaterialCommunityIcons name="clock-outline" size={18} color="#475569" />
-                    <TextInput
-                        placeholder="e.g., 18:00"
-                        value={time}
-                        onChangeText={setTime}
-                        style={styles.input}
-                    />
-                </View>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
-                    {quickTimes.map((t) => (
                         <TouchableOpacity
-                            key={t}
-                            onPress={() => setTime(t)}
-                            style={[styles.chip, time === t && styles.chipActive]}
+                            onPress={() => setPresentNeeded((v) => !v)}
+                            style={[styles.chip, presentNeeded && styles.chipActive]}
                         >
-                            <Text style={[styles.chipTxt, time === t && styles.chipTxtActive]}>{t}</Text>
+                            <Text style={[styles.chipTxt, presentNeeded && styles.chipTxtActive]}>
+                                🎁 Present {presentNeeded ? "✅" : "❌"}
+                            </Text>
                         </TouchableOpacity>
-                    ))}
-                </View>
 
-                {/* Optional fields */}
-                <Text style={styles.label}>📍 Place</Text>
-                <View style={styles.fieldRow}>
-                    <MaterialCommunityIcons name="map-marker-outline" size={18} color="#475569" />
+                        <TouchableOpacity
+                            onPress={() => setBabysitterNeeded((v) => !v)}
+                            style={[styles.chip, babysitterNeeded && styles.chipActive]}
+                        >
+                            <Text style={[styles.chipTxt, babysitterNeeded && styles.chipTxtActive]}>
+                                🍼 Babysitter {babysitterNeeded ? "✅" : "❌"}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* 👥 Who's going? */}
+                    <Text style={styles.label}>👥 Who’s going?</Text>
+                    <View style={styles.memberChips}>
+                        {members.map((m) => {
+                            const active = selectedIds.includes(m.id);
+                            return (
+                                <TouchableOpacity
+                                    key={m.id}
+                                    onPress={() => toggleMember(m.id)}
+                                    style={[styles.memberChip, active && styles.memberChipActive]}
+                                >
+                                    <View style={[styles.memberDot, { backgroundColor: (m as any).color || "#94a3b8" }]} />
+                                    <Text style={[styles.memberTxt, active && styles.memberTxtActive]}>{m.name}</Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+
+                    <Text style={styles.label}>📝 Notes</Text>
                     <TextInput
-                        placeholder="e.g., Community Center"
-                        value={location}
-                        onChangeText={setLocation}
-                        style={styles.input}
+                        placeholder="Add a note…"
+                        value={other}
+                        onChangeText={setOther}
+                        style={[styles.input, { height: 80 }]}
+                        multiline
                     />
-                </View>
-
-                <Text style={styles.label}>💵 $</Text>
-                <View style={styles.fieldRow}>
-                    <MaterialCommunityIcons name="cash" size={18} color="#475569" />
-                    <TextInput
-                        placeholder="e.g., 15"
-                        keyboardType="numeric"
-                        value={money}
-                        onChangeText={setMoney}
-                        style={styles.input}
-                    />
-                </View>
-
-                {/* Friendly emoji chips toggles */}
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
-                    <TouchableOpacity
-                        onPress={() => setRideNeeded((v) => !v)}
-                        style={[styles.chip, rideNeeded && styles.chipActive]}
-                    >
-                        <Text style={[styles.chipTxt, rideNeeded && styles.chipTxtActive]}>
-                            🚗 Ride {rideNeeded ? "✅" : "❌"}
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        onPress={() => setPresentNeeded((v) => !v)}
-                        style={[styles.chip, presentNeeded && styles.chipActive]}
-                    >
-                        <Text style={[styles.chipTxt, presentNeeded && styles.chipTxtActive]}>
-                            🎁 Present {presentNeeded ? "✅" : "❌"}
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        onPress={() => setBabysitterNeeded((v) => !v)}
-                        style={[styles.chip, babysitterNeeded && styles.chipActive]}
-                    >
-                        <Text style={[styles.chipTxt, babysitterNeeded && styles.chipTxtActive]}>
-                            🍼 Babysitter {babysitterNeeded ? "✅" : "❌"}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* 👥 Who's going? */}
-                <Text style={styles.label}>👥 Who’s going?</Text>
-                <View style={styles.memberChips}>
-                    {members.map((m) => {
-                        const active = selectedIds.includes(m.id);
-                        return (
-                            <TouchableOpacity
-                                key={m.id}
-                                onPress={() => toggleMember(m.id)}
-                                style={[styles.memberChip, active && styles.memberChipActive]}
-                            >
-                                <View style={[styles.memberDot, { backgroundColor: (m as any).color || "#94a3b8" }]} />
-                                <Text style={[styles.memberTxt, active && styles.memberTxtActive]}>{m.name}</Text>
-                            </TouchableOpacity>
-                        );
-                    })}
-                </View>
-
-                <Text style={styles.label}>📝 Notes</Text>
-                <TextInput
-                    placeholder="Add a note…"
-                    value={other}
-                    onChangeText={setOther}
-                    style={[styles.input, { height: 80 }]}
-                    multiline
-                />
+                </ScrollView>
 
                 <View style={styles.actions}>
                     <TouchableOpacity style={[styles.btn, styles.btnGhost]} onPress={onClose}>
@@ -408,13 +430,13 @@ const styles = StyleSheet.create({
         backgroundColor: "#f9fafb",
     },
 
-    chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    // shared chip styles
     chip: {
         borderWidth: 2,
         borderColor: "#cbd5e1",
         borderRadius: 999,
         paddingHorizontal: 14,
-        paddingVertical: 10,
+        paddingVertical: 12,
         backgroundColor: "#fff",
     },
     chipActive: {
@@ -423,6 +445,9 @@ const styles = StyleSheet.create({
     },
     chipTxt: { color: "#0f172a", fontWeight: "800" },
     chipTxtActive: { color: "#1d4ed8" },
+
+    // wrappers that allow wrapping
+    wrapChipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 
     // Member chips
     memberChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
