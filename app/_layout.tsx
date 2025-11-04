@@ -1,3 +1,4 @@
+// app/_layout.tsx
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -9,6 +10,7 @@ import { SplashScreenController } from '@/components/splash-screen-controller';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import AuthProvider from '@/providers/auth-provider';
 
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 function RootNavigator() {
   const { isLoggedIn } = useAuthContext();
@@ -17,11 +19,13 @@ function RootNavigator() {
     <Stack
       screenOptions={{
         animation: 'none',
-        headerRight: () => <HeaderProfileButton />, // profile/login icon everywhere
+        headerRight: () => <HeaderProfileButton />,   // keep your profile button
+        headerStyle: { backgroundColor: '#fff' },     // solid header bg
+        headerTitleAlign: 'center',
+        headerShadowVisible: false,
       }}
     >
       <Stack.Protected guard={isLoggedIn}>
-        {/* Home: show header, but no back button */}
         <Stack.Screen
           name="index"
           options={{
@@ -32,7 +36,6 @@ function RootNavigator() {
           }}
         />
 
-        {/* Profile pages: show header, but no back button */}
         <Stack.Screen
           name="profile/[id]"
           options={{
@@ -43,37 +46,11 @@ function RootNavigator() {
           }}
         />
 
-        {/* Other screens keep normal headers (and keep the profile icon on the right) */}
-        <Stack.Screen
-          name="chores"
-          options={{
-            headerTitle: 'Chores 🧹',
-          }}
-        />
-        <Stack.Screen
-          name="wishList"
-          options={{
-            headerTitle: 'Wish List 💫',
-          }}
-        />
-        <Stack.Screen
-          name="boards/activity"
-          options={{
-            headerTitle: 'Activities 📆',
-          }}
-        />
-        <Stack.Screen
-          name="boards/announcements"
-          options={{
-            headerTitle: 'Announcements 📢',
-          }}
-        />
-        <Stack.Screen
-          name="boards/grocery"
-          options={{
-            headerTitle: 'Groceries 🛒',
-          }}
-        />
+        <Stack.Screen name="chores" options={{ headerTitle: 'Chores 🧹' }} />
+        <Stack.Screen name="wishList" options={{ headerTitle: 'Wish List 💫' }} />
+        <Stack.Screen name="boards/activity" options={{ headerTitle: 'Activities 📆' }} />
+        <Stack.Screen name="boards/announcements" options={{ headerTitle: 'Announcements 📢' }} />
+        <Stack.Screen name="boards/grocery" options={{ headerTitle: 'Groceries 🛒' }} />
       </Stack.Protected>
 
       <Stack.Protected guard={!isLoggedIn}>
@@ -85,19 +62,19 @@ function RootNavigator() {
   );
 }
 
-
-
-
 export default function RootLayout() {
-  const colorScheme = useColorScheme()
+  const colorScheme = useColorScheme();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <SplashScreenController />
-        <RootNavigator />
-        <StatusBar style="auto" />
-      </AuthProvider>
-    </ThemeProvider>
-  )
+    <SafeAreaProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <AuthProvider>
+          <SplashScreenController />
+          <RootNavigator />
+          {/* Non-translucent so the OS reserves space for the status bar */}
+          <StatusBar style="dark" translucent={false} backgroundColor="#fff" />
+        </AuthProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
+  );
 }
