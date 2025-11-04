@@ -1,13 +1,11 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'react-native';
 import 'react-native-reanimated';
 
 import HeaderProfileButton from '@/components/HeaderProfileButton';
 import { SplashScreenController } from '@/components/splash-screen-controller';
 import { useAuthContext } from '@/hooks/use-auth-context';
-import AuthProvider from '@/providers/auth-provider';
+import Providers from '@/providers';
 
 
 function RootNavigator() {
@@ -85,19 +83,12 @@ function RootNavigator() {
   );
 }
 
-
-
-
 export default function RootLayout() {
-  const colorScheme = useColorScheme()
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <SplashScreenController />
-        <RootNavigator />
-        <StatusBar style="auto" />
-      </AuthProvider>
-    </ThemeProvider>
+    <Providers>
+      <SplashScreenController />
+      <RootNavigator />
+      <StatusBar style="auto" />
+    </Providers>
   )
 }
