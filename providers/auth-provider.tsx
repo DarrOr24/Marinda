@@ -1,14 +1,29 @@
-import { AuthContext } from '@/hooks/use-auth-context'
-import { getSupabase } from '@/lib/supabase'
 import type { Session } from '@supabase/supabase-js'
-import { PropsWithChildren, useCallback, useEffect, useState } from 'react'
+import { PropsWithChildren, useCallback, useEffect, useMemo, useState } from 'react'
+import { Linking, Platform } from 'react-native'
+
+import { AuthContext } from '@/hooks/use-auth-context'
+import { appStorage } from '@/lib/app-storage'
+import { getSupabase } from '@/lib/supabase'
+
+
+const ACTIVE_FAMILY_KEY = 'marinda:activeFamilyId'
 
 export default function AuthProvider({ children }: PropsWithChildren) {
   const supabase = getSupabase()
 
-  const [session, setSession] = useState<Session | undefined | null>()
-  const [profile, setProfile] = useState<any>()
+  const [session, setSession] = useState<Session | null>(null)
+  const [profile, setProfile] = useState<any | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
+
+  const [activeFamilyId, _setActiveFamilyId] = useState<string | null>(null)
+  const setActiveFamilyId = useCallback(async (id: string | null) => {
+    _setActiveFamilyId(id)
+    try {
+      if (id) await appStorage.setItem(ACTIVE_FAMILY_KEY, id)
+      else await appStorage.removeItem(ACTIVE_FAMILY_KEY)
+    } catch { }
+  }, [])
 
   // Fetch the session once, and subscribe to auth state changes
   useEffect(() => {
@@ -43,6 +58,24 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     }
   }, [supabase])
 
+  // Native deep linking support
+  useEffect(() => {
+    if (Platform.OS === 'web') return
+
+    const handleUrl = async (url: string | null) => {
+      if (!url) return
+      const { data, error } = await supabase.auth.exchangeCodeForSession(url)
+      if (error) {
+      } else if (data?.session) {
+        setSession(data.session)
+      }
+    }
+
+    const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url))
+    Linking.getInitialURL().then(handleUrl)
+    return () => sub.remove()
+  }, [supabase])
+
   // Fetch the profile when the session changes
   useEffect(() => {
     const fetchProfile = async () => {
@@ -64,6 +97,40 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     }
 
     fetchProfile()
+  }, [session, supabase])
+
+  // Restore or auto-pick active family on login
+  useEffect(() => {
+    const fetchActiveFamilyId = async () => {
+      if (!session?.user) {
+        _setActiveFamilyId(null)
+        await appStorage.removeItem(ACTIVE_FAMILY_KEY)
+        return
+      }
+
+      const stored = await appStorage.getItem(ACTIVE_FAMILY_KEY)
+      if (stored) {
+        _setActiveFamilyId(stored)
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('family_members')
+        .select('family_id')
+        .eq('user_id', session.user.id)
+        .order('joined_at', { ascending: true })
+        .limit(1)
+
+      if (error) {
+        console.error('Error fetching active family:', error)
+        return
+      }
+
+      const first = data?.[0]?.family_id ?? null
+      if (first) setActiveFamilyId(first)
+    }
+
+    fetchActiveFamilyId()
   }, [session, supabase])
 
   const signInWithEmailPassword = useCallback(
@@ -91,19 +158,25 @@ export default function AuthProvider({ children }: PropsWithChildren) {
       throw error
     }
     setSession(null)
+    setActiveFamilyId(null)
   }, [supabase])
 
+  const value = useMemo(
+    () => ({
+      session,
+      profile,
+      isLoading,
+      isLoggedIn: !!session,
+      signInWithEmailPassword,
+      signOut,
+      activeFamilyId,
+      setActiveFamilyId,
+    }),
+    [session, profile, isLoading, activeFamilyId, signInWithEmailPassword, signOut, setActiveFamilyId]
+  )
+
   return (
-    <AuthContext.Provider
-      value={{
-        session,
-        profile,
-        isLoading,
-        isLoggedIn: !!session,
-        signInWithEmailPassword,
-        signOut,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )
