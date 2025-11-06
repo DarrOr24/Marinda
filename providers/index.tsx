@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-query'
 import { PropsWithChildren, useEffect } from 'react'
 import { AppState, Platform, useColorScheme } from 'react-native'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
 
 import AuthProvider from '@/providers/auth-provider'
 
@@ -48,9 +49,11 @@ export default function Providers({ children }: PropsWithChildren) {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>{children}</AuthProvider>
-      </QueryClientProvider>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>{children}</AuthProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
     </ThemeProvider>
   )
 }

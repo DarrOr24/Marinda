@@ -1,3 +1,4 @@
+// app/_layout.tsx
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
@@ -5,8 +6,8 @@ import 'react-native-reanimated';
 import HeaderProfileButton from '@/components/HeaderProfileButton';
 import { SplashScreenController } from '@/components/splash-screen-controller';
 import { useAuthContext } from '@/hooks/use-auth-context';
-import Providers from '@/providers';
 
+import Providers from '@/providers';
 
 function RootNavigator() {
   const { isLoggedIn } = useAuthContext();
@@ -15,11 +16,13 @@ function RootNavigator() {
     <Stack
       screenOptions={{
         animation: 'none',
-        headerRight: () => <HeaderProfileButton />, // profile/login icon everywhere
+        headerRight: () => <HeaderProfileButton />,   // keep your profile button
+        headerStyle: { backgroundColor: '#fff' },     // solid header bg
+        headerTitleAlign: 'center',
+        headerShadowVisible: false,
       }}
     >
       <Stack.Protected guard={isLoggedIn}>
-        {/* Home: show header, but no back button */}
         <Stack.Screen
           name="index"
           options={{
@@ -30,7 +33,6 @@ function RootNavigator() {
           }}
         />
 
-        {/* Profile pages: show header, but no back button */}
         <Stack.Screen
           name="profile/[id]"
           options={{
@@ -41,37 +43,11 @@ function RootNavigator() {
           }}
         />
 
-        {/* Other screens keep normal headers (and keep the profile icon on the right) */}
-        <Stack.Screen
-          name="chores"
-          options={{
-            headerTitle: 'Chores 🧹',
-          }}
-        />
-        <Stack.Screen
-          name="wishList"
-          options={{
-            headerTitle: 'Wish List 💫',
-          }}
-        />
-        <Stack.Screen
-          name="boards/activity"
-          options={{
-            headerTitle: 'Activities 📆',
-          }}
-        />
-        <Stack.Screen
-          name="boards/announcements"
-          options={{
-            headerTitle: 'Announcements 📢',
-          }}
-        />
-        <Stack.Screen
-          name="boards/grocery"
-          options={{
-            headerTitle: 'Groceries 🛒',
-          }}
-        />
+        <Stack.Screen name="chores" options={{ headerTitle: 'Chores 🧹' }} />
+        <Stack.Screen name="wishList" options={{ headerTitle: 'Wish List 💫' }} />
+        <Stack.Screen name="boards/activity" options={{ headerTitle: 'Activities 📆' }} />
+        <Stack.Screen name="boards/announcements" options={{ headerTitle: 'Announcements 📢' }} />
+        <Stack.Screen name="boards/grocery" options={{ headerTitle: 'Groceries 🛒' }} />
       </Stack.Protected>
 
       <Stack.Protected guard={!isLoggedIn}>
@@ -88,7 +64,8 @@ export default function RootLayout() {
     <Providers>
       <SplashScreenController />
       <RootNavigator />
-      <StatusBar style="auto" />
+      {/* Non-translucent so the OS reserves space for the status bar */}
+      <StatusBar style="dark" translucent={false} backgroundColor="#fff" />
     </Providers>
-  )
+  );
 }
