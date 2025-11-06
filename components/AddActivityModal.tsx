@@ -1,4 +1,4 @@
-import type { Member } from "@/components/MemberAvatar";
+import type { Member } from "@/components/member-avatar";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";

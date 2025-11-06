@@ -1,21 +1,18 @@
 // app/index.tsx
-import { Link } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { Link } from 'expo-router'
+import { StyleSheet, View } from 'react-native'
 
-import CheckerboardBackground from '@/components/CheckerboardBackground';
-import FeatureTile from '@/components/FeatureTile';
-import Sidebar from '@/components/Sidebar';
-import { members } from '@/data/members';
-
+import CheckerboardBackground from '@/components/CheckerboardBackground'
+import FeatureTile from '@/components/FeatureTile'
+import MembersSidebar from '@/components/members-sidebar'
 
 export default function Index() {
     return (
         <View style={styles.screen}>
-            {/* Background */}
             <CheckerboardBackground colorA="#F6FAFF" colorB="#EAF3FF" size={28} />
 
             {/* Left sidebar */}
-            <Sidebar members={members} />
+            <MembersSidebar />
 
             {/* Center content */}
             <View style={styles.center}>
@@ -64,17 +61,11 @@ export default function Index() {
                 </View>
             </View>
         </View>
-    );
+    )
 }
 
-const SIDEBAR_WIDTH = 92;
-
 const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        flexDirection: 'row',          // sidebar (left) + center content
-        backgroundColor: '#E6F4FE',    // fallback under SVG
-    },
+    screen: { flex: 1, flexDirection: 'row', backgroundColor: '#E6F4FE' },
     center: {
         flex: 1,
         paddingHorizontal: 16,
@@ -83,10 +74,5 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: 26,
     },
-    row: {
-        flexDirection: 'row',
-        gap: 26,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-});
+    row: { flexDirection: 'row', gap: 26, alignItems: 'center', justifyContent: 'center' },
+})

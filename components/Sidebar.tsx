@@ -3,7 +3,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { usePathname, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import MemberAvatar, { Member } from './MemberAvatar';
+import type { Member } from '@/lib/families/families.types';
+import MemberAvatar from './member-avatar';
 
 const SIDEBAR_WIDTH = 92;
 const AVATAR_SIZE = 48;
@@ -41,14 +42,14 @@ export default function Sidebar({ members }: { members: Member[] }) {
                             onPress={() => router.push({ pathname: '/profile/[id]', params: { id: m.id } })}
                             style={styles.item}
                             accessibilityRole="button"
-                            accessibilityLabel={`Open ${m.name}'s profile`}
+                            accessibilityLabel={`Open ${m.profile?.first_name ?? ''} ${m.profile?.last_name ?? ''}'s profile`}
                         >
                             <View style={[styles.avatarBox, isActive && styles.avatarBoxActive]}>
                                 <View style={styles.memberAvatarInner}>
                                     <MemberAvatar member={m} index={idx} />
                                 </View>
                             </View>
-                            <Text numberOfLines={1} style={styles.name}>{m.name}</Text>
+                            <Text numberOfLines={1} style={styles.name}>{m.profile?.first_name ?? ''} {m.profile?.last_name ?? ''}</Text>
                         </TouchableOpacity>
                     );
                 })}
