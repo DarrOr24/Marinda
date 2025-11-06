@@ -117,7 +117,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
       const { data, error } = await supabase
         .from('family_members')
         .select('family_id')
-        .eq('user_id', session.user.id)
+        .eq('profile_id', session.user.id)
         .order('joined_at', { ascending: true })
         .limit(1)
 
