@@ -2,8 +2,8 @@
 import { Link } from 'expo-router'
 import { StyleSheet, View } from 'react-native'
 
-import CheckerboardBackground from '@/components/CheckerboardBackground'
-import FeatureTile from '@/components/FeatureTile'
+import CheckerboardBackground from '@/components/checkerboard-background'
+import FeatureTile from '@/components/feature-tile'
 import MembersSidebar from '@/components/members-sidebar'
 
 export default function Index() {

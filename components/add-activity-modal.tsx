@@ -1,3 +1,4 @@
+// components/add-activity-modal.tsx
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
 import { MaterialCommunityIcons } from "@expo/vector-icons";

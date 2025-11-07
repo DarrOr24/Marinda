@@ -1,4 +1,4 @@
-// components/FeatureTile.tsx
+// components/feature-tile.tsx
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';

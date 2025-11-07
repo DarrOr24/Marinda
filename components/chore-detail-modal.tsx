@@ -1,3 +1,4 @@
+// components/chore-detail-modal.tsx
 import { ResizeMode, Video } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import React, { useMemo, useState } from "react";

@@ -1,5 +1,5 @@
-import ChoreDetailModal, { ChoreView } from '@/components/ChoreDetailModal';
-import ChorePostModal from '@/components/ChorePostModal';
+import ChoreDetailModal, { ChoreView } from '@/components/chore-detail-modal';
+import ChorePostModal from '@/components/chore-post-modal';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';

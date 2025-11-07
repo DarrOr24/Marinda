@@ -1,3 +1,4 @@
+// components/header-profile-button.tsx
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { router } from 'expo-router'

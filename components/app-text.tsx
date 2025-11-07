@@ -1,5 +1,5 @@
+// components/app-text.tsx
 import { Platform, StyleSheet, Text } from "react-native";
-
 
 
 const styles = StyleSheet.create({

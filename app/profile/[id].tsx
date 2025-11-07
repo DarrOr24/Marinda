@@ -2,8 +2,8 @@
 import { useLocalSearchParams } from 'expo-router'
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
 
-import CheckerboardBackground from '@/components/CheckerboardBackground'
-import Sidebar from '@/components/Sidebar'
+import CheckerboardBackground from '@/components/checkerboard-background'
+import MemberSidebar from '@/components/members-sidebar'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useFamily } from '@/lib/families/families.hooks'
 import { useSubscribeTableByFamily } from '@/lib/families/families.realtime'
@@ -51,7 +51,7 @@ export default function MemberProfile() {
       <CheckerboardBackground colorA="#F6FAFF" colorB="#EAF3FF" size={28} />
 
       {/* Left sidebar */}
-      <Sidebar members={memberList} />
+      <MemberSidebar />
 
       {/* Center content */}
       <View style={styles.center}>

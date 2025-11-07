@@ -1,4 +1,4 @@
-// components/ChorePostModal.tsx
+// components/chore-post-modal.tsx
 import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 

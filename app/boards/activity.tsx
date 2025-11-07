@@ -1,5 +1,5 @@
-import AddActivityModal, { type NewActivityForm } from "@/components/AddActivityModal";
-import CheckerboardBackground from "@/components/CheckerboardBackground";
+import AddActivityModal, { type NewActivityForm } from "@/components/add-activity-modal";
+import CheckerboardBackground from "@/components/checkerboard-background";
 import { members as FAMILY_MEMBERS } from "@/data/members";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";

@@ -1,4 +1,4 @@
-// components/CheckerboardBackground.tsx
+// components/checkerboard-background.tsx
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import Svg, { Defs, Pattern, Rect } from 'react-native-svg';
