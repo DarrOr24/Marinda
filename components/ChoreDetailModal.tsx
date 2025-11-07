@@ -13,6 +13,8 @@ import {
     View,
 } from "react-native";
 
+import { Role } from "@/lib/families/families.types";
+
 type Proof = { uri: string; kind: "image" | "video" };
 export type ChoreStatus = "open" | "pending" | "approved";
 
@@ -36,7 +38,7 @@ export type ChoreView = {
 type Props = {
     visible: boolean;
     chore: ChoreView;
-    currentRole: "mom" | "dad" | "teen" | "child";
+    currentRole: Role;
     onClose: () => void;
 
     onAttachProof: (id: string, proof: Proof | null) => void; // null = clear
@@ -55,7 +57,7 @@ export default function ChoreDetailModal({
     onApprove,
     onDecline,
 }: Props) {
-    const isParent = currentRole === "mom" || currentRole === "dad";
+    const isParent = currentRole === "MOM" || currentRole === "DAD";
     const [notes, setNotes] = useState(chore.notes ?? "");
 
     React.useEffect(() => setNotes(chore.notes ?? ""), [chore.id, chore.notes]);

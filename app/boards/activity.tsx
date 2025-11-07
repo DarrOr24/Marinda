@@ -70,9 +70,7 @@ type ActivitiesByDate = Record<string, Activity[]>;
 
 export default function ActivityBoard() {
     const today = new Date();
-    const { profile, user, session } = useAuthContext() as any;
-    const authUser = user ?? session?.user;
-    const currentUserId = profile?.id ?? authUser?.id ?? "guest";
+    const { member } = useAuthContext() as any;
 
     // weekOffset: 0 = this week, +1 = next week, -1 = last week, etc.
     const [weekOffset, setWeekOffset] = useState<number>(0);
@@ -211,7 +209,7 @@ export default function ActivityBoard() {
 
         const buttons: any[] = [{ text: "CLOSE", style: "cancel" }];
 
-        if (a.created_by === currentUserId) {
+        if (a.created_by === member?.profile?.id) {
             buttons.unshift({
                 text: "DELETE 🗑️",
                 style: "destructive",
@@ -382,7 +380,6 @@ export default function ActivityBoard() {
                 week_days={visibleWeekDays}
                 mode="create"
                 submitLabel="Save"
-                members={FAMILY_MEMBERS}
             />
 
             {/* Edit Activity */}
@@ -398,7 +395,6 @@ export default function ActivityBoard() {
                     week_days={visibleWeekDays}
                     mode="edit"
                     submitLabel="Update"
-                    members={FAMILY_MEMBERS}
                     initial={{
                         title: editing.title,
                         day_index: defaultDayIndex,

@@ -1,5 +1,5 @@
-import type { Member } from "@/components/member-avatar";
 import { useAuthContext } from "@/hooks/use-auth-context";
+import { useFamily } from "@/lib/families/families.hooks";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -64,7 +64,6 @@ type Props = {
     mode?: "create" | "edit";
     submitLabel?: string;
     initial?: Partial<NewActivityForm>;
-    members: Member[];          // for "Who’s going?"
 };
 
 export default function AddActivityModal({
@@ -76,10 +75,9 @@ export default function AddActivityModal({
     mode = "create",
     submitLabel,
     initial,
-    members,
 }: Props) {
-    const { profile, user, session } = useAuthContext() as any;
-    const authUser = user ?? session?.user;
+    const { member, activeFamilyId } = useAuthContext() as any;
+    const { members } = useFamily(activeFamilyId);
     const { height } = useWindowDimensions();
 
     // animations
@@ -167,8 +165,8 @@ export default function AddActivityModal({
     function handleSave() {
         if (!canSave) return;
 
-        const whoId = profile?.id ?? authUser?.id ?? "guest";
-        const whoName = getDisplayName(profile, authUser);
+        const whoId = member?.profile?.id;
+        const whoName = member?.profile?.first_name;
         const color = pickMemberColor();
 
         const payload: NewActivityForm = {
@@ -340,7 +338,7 @@ export default function AddActivityModal({
                     {/* 👥 Who's going? */}
                     <Text style={styles.label}>👥 Who’s going?</Text>
                     <View style={styles.memberChips}>
-                        {members.map((m) => {
+                        {members.data?.map((m) => {
                             const active = selectedIds.includes(m.id);
                             return (
                                 <TouchableOpacity
@@ -349,7 +347,7 @@ export default function AddActivityModal({
                                     style={[styles.memberChip, active && styles.memberChipActive]}
                                 >
                                     <View style={[styles.memberDot, { backgroundColor: (m as any).color || "#94a3b8" }]} />
-                                    <Text style={[styles.memberTxt, active && styles.memberTxtActive]}>{m.name}</Text>
+                                    <Text style={[styles.memberTxt, active && styles.memberTxtActive]}>{m.profile?.first_name ?? ''} {m.profile?.last_name ?? ''}</Text>
                                 </TouchableOpacity>
                             );
                         })}

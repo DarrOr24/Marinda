@@ -5,21 +5,12 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Role } from '@/lib/families/families.types';
 type Proof = { uri: string; kind: 'image' | 'video' };
 
-const getDisplayName = (p?: any, u?: any) => {
-  const full = [p?.first_name, p?.last_name].filter(Boolean).join(' ').trim();
-  if (full) return full;
-  const metaName = u?.user_metadata?.full_name || u?.user_metadata?.name;
-  if (metaName) return metaName;
-  return u?.email || 'Someone';
-};
-
 export default function Chores() {
-  const { profile, user, session } = useAuthContext() as any;
-  const authUser = user ?? session?.user;
-  const currentRole: 'mom' | 'dad' | 'teen' | 'child' =
-    (profile?.role as any) || 'mom';
+  const { member } = useAuthContext();
+  const currentRole = member?.role as Role;
 
   const [list, setList] = useState<ChoreView[]>([
     { id: 'seed-1', title: 'Make your bed', points: 5, status: 'open', proofs: [] },
@@ -27,7 +18,7 @@ export default function Chores() {
   const [showPost, setShowPost] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const isParent = useMemo(() => currentRole === 'mom' || currentRole === 'dad', [currentRole]);
+  const isParent = useMemo(() => currentRole === 'MOM' || currentRole === 'DAD', [currentRole]);
   const selected = selectedId ? list.find(c => c.id === selectedId) ?? null : null;
 
   const postChore = ({ title, points }: { title: string; points: number }) => {
@@ -48,28 +39,28 @@ export default function Chores() {
 
   const onMarkPending = (id: string) => {
     const when = Date.now();
-    const whoId = profile?.id ?? authUser?.id ?? 'guest';
-    const whoName = getDisplayName(profile, authUser);
+    const whoId = member?.profile?.id;
+    const whoName = member?.profile?.first_name;
 
     setList(prev =>
       prev.map(c =>
         c.id === id
           ? { ...c, status: 'pending', doneById: whoId, doneByName: whoName, doneAt: when }
           : c,
-      ),
+      ) as ChoreView[],
     );
   };
 
   const onApprove = (id: string, notes?: string) => {
-    const approverId = profile?.id ?? authUser?.id ?? 'guest';
-    const approverName = getDisplayName(profile, authUser);
+    const approverId = member?.profile?.id;
+    const approverName = member?.profile?.first_name;
 
     setList(prev =>
       prev.map(c =>
         c.id === id
           ? { ...c, status: 'approved', notes, approvedById: approverId, approvedByName: approverName }
           : c,
-      ),
+      ) as ChoreView[],
     );
   };
 
@@ -79,7 +70,7 @@ export default function Chores() {
         c.id === id
           ? { ...c, status: 'open', notes, doneById: undefined, doneByName: undefined, doneAt: undefined }
           : c,
-      ),
+      ) as ChoreView[],
     );
   };
 

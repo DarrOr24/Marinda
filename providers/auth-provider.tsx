@@ -4,6 +4,8 @@ import { Linking, Platform } from 'react-native'
 
 import { AuthContext } from '@/hooks/use-auth-context'
 import { appStorage } from '@/lib/app-storage'
+import { fetchMember } from '@/lib/families/families.api'
+import { Member } from '@/lib/families/families.types'
 import { getSupabase } from '@/lib/supabase'
 
 
@@ -13,7 +15,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
   const supabase = getSupabase()
 
   const [session, setSession] = useState<Session | null>(null)
-  const [profile, setProfile] = useState<any | null>(null)
+  const [member, setMember] = useState<Member | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
   const [activeFamilyId, _setActiveFamilyId] = useState<string | null>(null)
@@ -76,28 +78,22 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     return () => sub.remove()
   }, [supabase])
 
-  // Fetch the profile when the session changes
+  // Fetch the member when the session changes
   useEffect(() => {
-    const fetchProfile = async () => {
-      setIsLoading(true)
+    setIsLoading(true)
 
-      if (session) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-
-        setProfile(data)
+    const fetchCurrMember = async () => {
+      if (session && activeFamilyId) {
+        const member = await fetchMember(activeFamilyId, session.user.id)
+        setMember(member)
       } else {
-        setProfile(null)
+        setMember(null)
       }
-
       setIsLoading(false)
     }
 
-    fetchProfile()
-  }, [session, supabase])
+    fetchCurrMember()
+  }, [session, activeFamilyId, supabase])
 
   // Restore or auto-pick active family on login
   useEffect(() => {
@@ -164,7 +160,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
   const value = useMemo(
     () => ({
       session,
-      profile,
+      member,
       isLoading,
       isLoggedIn: !!session,
       signInWithEmailPassword,
@@ -172,7 +168,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
       activeFamilyId,
       setActiveFamilyId,
     }),
-    [session, profile, isLoading, activeFamilyId, signInWithEmailPassword, signOut, setActiveFamilyId]
+    [session, member, isLoading, activeFamilyId, signInWithEmailPassword, signOut, setActiveFamilyId]
   )
 
   return (
