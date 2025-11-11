@@ -1,4 +1,6 @@
+// Grocery.tsx
 import { useAuthContext } from "@/hooks/use-auth-context";
+import { useFamily } from "@/lib/families/families.hooks";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import {
@@ -18,20 +20,12 @@ const makeId = () =>
         ? (globalThis as any).crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-const getDisplayName = (p?: any, u?: any) => {
-    // prefer first + last from your public profile table
-    const full = [p?.first_name, p?.last_name].filter(Boolean).join(' ').trim();
-    if (full) return full;
-
-    // common places Supabase stores names
-    const metaName = u?.user_metadata?.full_name || u?.user_metadata?.name;
-    if (metaName) return metaName;
-
-    // last resort: email
-    if (u?.email) return u.email;
-
-    return 'Someone';
-};
+// Prefer first name from the profile; fall back gracefully.
+const getDisplayName = (m?: any) =>
+    m?.profile?.first_name ||
+    [m?.profile?.first_name, m?.profile?.last_name].filter(Boolean).join(" ").trim() ||
+    m?.profile?.email ||
+    "Someone";
 
 // ── Types ─────────────────────────────────────────────────────────────
 type GroceryItem = {
@@ -41,9 +35,9 @@ type GroceryItem = {
     category: string | undefined; // DB will store null later
     added_by_member_id: string;
     is_checked: boolean;
-    checked_at?: string | null;   // ISO string when checked
-    created_at: string;           // ISO string
-    addedByName?: string;         // UI-only helper (not in DB)
+    checked_at?: string | null; // ISO string when checked
+    created_at: string; // ISO string
+    addedByName?: string; // UI-only helper (not in DB)
 };
 
 const DEFAULT_CATEGORIES = [
@@ -58,10 +52,11 @@ const DEFAULT_CATEGORIES = [
     "Other",
 ];
 
-// ── Component ────────────────────────────────────────────────────────
 export default function Grocery() {
-    const { profile, user, session } = useAuthContext() as any;
-    const authUser = user ?? session?.user; // handles either shape
+    // 👇 same shape you used in Activities
+    const { activeFamilyId, member } = useAuthContext() as any;
+    useFamily(activeFamilyId); // preloads/cache family & members (not strictly required here)
+
     const [items, setItems] = useState<GroceryItem[]>([]);
     const [addOpen, setAddOpen] = useState(false);
     const [name, setName] = useState("");
@@ -101,9 +96,10 @@ export default function Grocery() {
             return;
         }
 
-        const whoId = profile?.id ?? authUser?.id ?? "guest";
-        const whoName = getDisplayName(profile, authUser);
-        const familyId = profile?.familyId ?? "temp-family"; // keep temp until backend wires this
+        // 👇 pull real family/member from context (same as Activities)
+        const familyId = activeFamilyId ?? "temp-family";
+        const whoId = member?.id ?? member?.profile_id ?? "guest";
+        const whoName = getDisplayName(member);
 
         const newItem: GroceryItem = {
             id: makeId(),
@@ -114,14 +110,14 @@ export default function Grocery() {
             is_checked: false,
             checked_at: null,
             created_at: new Date().toISOString(),
-            addedByName: whoName, // now resolves from profile/session/email
+            addedByName: whoName,
         };
 
+        // (Later, replace this with a Supabase insert)
         setItems((prev) => [newItem, ...prev]);
         setAddOpen(false);
         resetAddForm();
     }
-
 
     function toggleChecked(id: string) {
         setItems((prev) =>
@@ -219,12 +215,7 @@ export default function Grocery() {
             />
 
             {/* Add item modal */}
-            <Modal
-                visible={addOpen}
-                animationType="fade"
-                transparent
-                onRequestClose={() => setAddOpen(false)}
-            >
+            <Modal visible={addOpen} animationType="fade" transparent onRequestClose={() => setAddOpen(false)}>
                 <View style={styles.modalBackdrop}>
                     <View style={styles.modalCard}>
                         <Text style={styles.modalTitle}>Add Grocery Item</Text>
@@ -239,7 +230,6 @@ export default function Grocery() {
                         />
 
                         <Text style={styles.label}>Category (optional)</Text>
-                        {/* simple "menu": tap to open a mini picker list */}
                         <TouchableOpacity
                             onPress={() => setCategoryOpen((v) => !v)}
                             style={styles.select}
@@ -298,17 +288,8 @@ export default function Grocery() {
 
 // ── Styles ────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: "#F6FAFF",
-        padding: 12,
-        gap: 12,
-    },
-
-    actions: {
-        flexDirection: "row",
-        gap: 10,
-    },
+    screen: { flex: 1, backgroundColor: "#F6FAFF", padding: 12, gap: 12 },
+    actions: { flexDirection: "row", gap: 10 },
     btn: {
         flexDirection: "row",
         gap: 6,
@@ -321,27 +302,12 @@ const styles = StyleSheet.create({
         borderColor: "#e5e7eb",
     },
     btnTxt: { color: "#0f172a", fontWeight: "600" },
-    btnDanger: {
-        backgroundColor: "#fff5f5",
-        borderColor: "#fecaca",
-    },
+    btnDanger: { backgroundColor: "#fff5f5", borderColor: "#fecaca" },
     btnDangerTxt: { color: "#b91c1c" },
-    btnGhost: {
-        backgroundColor: "#fff",
-    },
-    btnPrimary: {
-        backgroundColor: "#2563eb",
-        borderColor: "#1d4ed8",
-    },
-    btnPrimaryTxt: {
-        color: "#fff",
-        fontWeight: "700",
-    },
-
-    listContent: {
-        paddingBottom: 40,
-    },
-
+    btnGhost: { backgroundColor: "#fff" },
+    btnPrimary: { backgroundColor: "#2563eb", borderColor: "#1d4ed8" },
+    btnPrimaryTxt: { color: "#fff", fontWeight: "700" },
+    listContent: { paddingBottom: 40 },
     group: {
         backgroundColor: "#ffffff",
         borderWidth: 1,
@@ -360,37 +326,13 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: "#e5e7eb",
     },
-
-    row: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 10,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-    },
-    rowChecked: {
-        backgroundColor: "#f5faff",
-    },
-    rowTextWrap: {
-        flex: 1,
-    },
-    rowText: {
-        fontSize: 16,
-        color: "#0f172a",
-    },
-    rowTextDone: {
-        color: "#64748b",
-        textDecorationLine: "line-through",
-    },
-    rowSub: {
-        fontSize: 12,
-        color: "#64748b",
-    },
-    infoBtn: {
-        padding: 6,
-    },
-
-    // Modal
+    row: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 10 },
+    rowChecked: { backgroundColor: "#f5faff" },
+    rowTextWrap: { flex: 1 },
+    rowText: { fontSize: 16, color: "#0f172a" },
+    rowTextDone: { color: "#64748b", textDecorationLine: "line-through" },
+    rowSub: { fontSize: 12, color: "#64748b" },
+    infoBtn: { padding: 6 },
     modalBackdrop: {
         flex: 1,
         backgroundColor: "rgba(15, 23, 42, 0.45)",
@@ -407,18 +349,8 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: "#e5e7eb",
     },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: "800",
-        color: "#0f172a",
-        marginBottom: 12,
-    },
-    label: {
-        fontSize: 12,
-        color: "#475569",
-        marginTop: 8,
-        marginBottom: 4,
-    },
+    modalTitle: { fontSize: 18, fontWeight: "800", color: "#0f172a", marginBottom: 12 },
+    label: { fontSize: 12, color: "#475569", marginTop: 8, marginBottom: 4 },
     input: {
         borderWidth: 1,
         borderColor: "#e5e7eb",
@@ -429,7 +361,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: "#0f172a",
     },
-
     select: {
         borderWidth: 1,
         borderColor: "#e5e7eb",
@@ -442,28 +373,8 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     selectText: { color: "#0f172a", fontSize: 16 },
-
-    menu: {
-        marginTop: 6,
-        borderWidth: 1,
-        borderColor: "#e5e7eb",
-        borderRadius: 12,
-        backgroundColor: "#fff",
-        overflow: "hidden",
-    },
-    menuItem: {
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-    },
-    menuItemTxt: {
-        color: "#0f172a",
-        fontSize: 16,
-    },
-
-    modalActions: {
-        flexDirection: "row",
-        justifyContent: "flex-end",
-        gap: 10,
-        marginTop: 16,
-    },
+    menu: { marginTop: 6, borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 12, backgroundColor: "#fff", overflow: "hidden" },
+    menuItem: { paddingHorizontal: 12, paddingVertical: 10 },
+    menuItemTxt: { color: "#0f172a", fontSize: 16 },
+    modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 10, marginTop: 16 },
 });
