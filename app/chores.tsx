@@ -77,6 +77,7 @@ export default function Chores() {
       try {
         const rows = await fetchChores(activeFamilyId);
         if (cancelled) return;
+        // when loading
         const mapped: ChoreView[] = (rows ?? []).map((r: any) => ({
           id: r.id,
           title: r.title,
@@ -87,8 +88,9 @@ export default function Chores() {
           approvedById: r.approved_by_member_id ?? undefined,
           approvedAt: r.approved_at ? new Date(r.approved_at).getTime() : undefined,
           notes: r.notes ?? undefined,
-          proofs: [],
+          proofs: r.proof_uri && r.proof_kind ? [{ uri: r.proof_uri, kind: r.proof_kind }] : [],
         }));
+
         setList(mapped);
       } catch (e) {
         console.error('fetchChores failed', e);
@@ -135,21 +137,32 @@ export default function Chores() {
   const onMarkPending = async (id: string) => {
     try {
       if (!myFamilyMemberId) throw new Error('Missing family member id');
-      const row = await submitChore(id, myFamilyMemberId);
+      const theChore = list.find(c => c.id === id);
+      const lastProof = theChore?.proofs?.[theChore.proofs.length - 1];
+
+      const row = await submitChore(id, myFamilyMemberId, lastProof);
       const when = row.done_at ? new Date(row.done_at).getTime() : Date.now();
       const whoId = row.done_by_member_id ?? myFamilyMemberId;
-      setList((prev) =>
-        prev.map((c) =>
-          c.id === id
-            ? { ...c, status: 'pending', doneById: whoId, doneAt: when }
-            : c
-        )
-      );
+
+      setList(prev => prev.map(c =>
+        c.id === id
+          ? {
+            ...c,
+            status: 'pending',
+            doneById: whoId,
+            doneAt: when,
+            proofs: row.proof_uri && row.proof_kind
+              ? [{ uri: row.proof_uri, kind: row.proof_kind }]
+              : [],
+          }
+          : c
+      ));
     } catch (e) {
       console.error('submitChore failed', e);
       Alert.alert('Error', 'Could not mark as completed.');
     }
   };
+
 
   // Parent approves (APPROVED)
   const onApprove = async (id: string, notes?: string) => {
@@ -181,26 +194,26 @@ export default function Chores() {
   const onDecline = async (id: string, notes?: string) => {
     try {
       const row = await rejectChore(id, notes);
-      setList((prev) =>
-        prev.map((c) =>
-          c.id === id
-            ? {
-              ...c,
-              status: 'open',
-              notes: row.notes ?? notes,
-              doneById: undefined,
-              doneAt: undefined,
-              approvedById: undefined,
-              approvedAt: undefined,
-            }
-            : c
-        )
-      );
+      setList(prev => prev.map(c =>
+        c.id === id
+          ? {
+            ...c,
+            status: 'open',
+            notes: row.notes ?? notes,
+            doneById: undefined,
+            doneAt: undefined,
+            approvedById: undefined,
+            approvedAt: undefined,
+            proofs: [], // cleared
+          }
+          : c
+      ));
     } catch (e) {
       console.error('rejectChore failed', e);
       Alert.alert('Error', 'Could not decline the chore.');
     }
   };
+
 
   function handleOpen(item: ChoreView) {
     if (item.status === 'pending' && !isParent) {

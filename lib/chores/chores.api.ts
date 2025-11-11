@@ -1,18 +1,20 @@
-import { getSupabase } from '../supabase'
+import { getSupabase } from '../supabase';
 
 
 export type ChoreStatus = 'OPEN' | 'SUBMITTED' | 'APPROVED' | 'REJECTED'
 
 const supabase = getSupabase()
 
+export type ProofPayload = { uri: string; kind: 'image' | 'video' } | undefined;
+
 export async function fetchChores(familyId: string) {
   const { data, error } = await supabase
     .from('chores')
-    .select('*')
+    .select('*') // proof_* will come back too
     .eq('family_id', familyId)
-    .order('created_at', { ascending: false })
-  if (error) throw new Error(error.message)
-  return data
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data;
 }
 
 export async function addChore(
@@ -36,13 +38,15 @@ export async function addChore(
   return data
 }
 
-export async function submitChore(choreId: string, memberId: string) {
+export async function submitChore(choreId: string, memberId: string, proof?: ProofPayload) {
   const { data, error } = await supabase
     .from('chores')
     .update({
       status: 'SUBMITTED',
       done_by_member_id: memberId,
       done_at: new Date().toISOString(),
+      proof_uri: proof?.uri ?? null,
+      proof_kind: proof?.kind ?? null,
     })
     .eq('id', choreId)
     .select()
@@ -68,7 +72,6 @@ export async function approveChore(choreId: string, parentMemberId: string, note
 }
 
 export async function rejectChore(choreId: string, notes?: string) {
-  // bounce back to OPEN and clear submit fields
   const { data, error } = await supabase
     .from('chores')
     .update({
@@ -78,6 +81,9 @@ export async function rejectChore(choreId: string, notes?: string) {
       done_at: null,
       approved_by_member_id: null,
       approved_at: null,
+      // clear proof on reject
+      proof_uri: null,
+      proof_kind: null,
     })
     .eq('id', choreId)
     .select()
