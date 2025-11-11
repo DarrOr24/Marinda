@@ -1,16 +1,23 @@
+// app/chores.tsx
 import ChoreDetailModal, { ChoreView } from '@/components/chore-detail-modal';
 import ChorePostModal from '@/components/chore-post-modal';
 import { useAuthContext } from '@/hooks/use-auth-context';
+import { useFamily } from '@/lib/families/families.hooks';
+import { useSubscribeTableByFamily } from '@/lib/families/families.realtime';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Role } from '@/lib/families/families.types';
+import type { Role } from '@/lib/families/families.types';
+
 type Proof = { uri: string; kind: 'image' | 'video' };
 
 export default function Chores() {
-  const { member } = useAuthContext();
-  const currentRole = member?.role as Role;
+  // Family + role
+  const { activeFamilyId, member } = useAuthContext() as any;
+  const currentRole = (member?.role as Role) ?? 'TEEN';
+  useFamily(activeFamilyId || undefined);
+  useSubscribeTableByFamily('family_members', activeFamilyId || undefined, ['family-members', activeFamilyId]);
 
   const [list, setList] = useState<ChoreView[]>([
     { id: 'seed-1', title: 'Make your bed', points: 5, status: 'open', proofs: [] },
@@ -74,10 +81,21 @@ export default function Chores() {
     );
   };
 
+  // gate opening by status/role:
+  function handleOpen(item: ChoreView) {
+    if (item.status === 'pending' && !isParent) {
+      Alert.alert('Pending approval', 'Only a parent can review this chore.');
+      return;
+    }
+    setSelectedId(item.id);
+  }
+
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
         <Text style={styles.h1}>Chores Game</Text>
+
+        {/* 1) Only parents can post chores */}
         {isParent && (
           <Pressable onPress={() => setShowPost(true)} style={styles.postBtn}>
             <Ionicons name="add" size={20} color="#fff" />
@@ -91,7 +109,7 @@ export default function Chores() {
         data={list}
         keyExtractor={(c) => c.id}
         renderItem={({ item }) => (
-          <Pressable onPress={() => setSelectedId(item.id)} style={styles.card}>
+          <Pressable onPress={() => handleOpen(item)} style={styles.card}>
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>{item.title}</Text>
               <Text style={styles.meta}>
@@ -111,7 +129,7 @@ export default function Chores() {
       {selected && (
         <ChoreDetailModal
           visible={!!selected}
-          chore={selected}                        // always the fresh object from list
+          chore={selected}
           currentRole={currentRole}
           onClose={() => setSelectedId(null)}
           onAttachProof={onAttachProof}
