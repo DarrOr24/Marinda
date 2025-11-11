@@ -347,8 +347,9 @@ export default function AddActivityModal({
                                     onPress={() => toggleMember(m.id)}
                                     style={[styles.memberChip, active && styles.memberChipActive]}
                                 >
-                                    <View style={[styles.memberDot, { backgroundColor: (m as any).color || "#94a3b8" }]} />
-                                    <Text style={[styles.memberTxt, active && styles.memberTxtActive]}>{m.profile?.first_name ?? ''} {m.profile?.last_name ?? ''}</Text>
+                                    <View style={[styles.memberDot, { backgroundColor: m.color?.hex ?? "#94a3b8" }]} />
+
+                                    <Text style={[styles.memberTxt, active && styles.memberTxtActive]}>{m.profile?.first_name ?? ''}</Text>
                                 </TouchableOpacity>
                             );
                         })}
