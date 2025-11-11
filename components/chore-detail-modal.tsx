@@ -1,4 +1,5 @@
 // components/chore-detail-modal.tsx
+import { Role } from "@/lib/families/families.types";
 import { ResizeMode, Video } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import React, { useMemo, useState } from "react";
@@ -14,8 +15,6 @@ import {
     View,
 } from "react-native";
 
-import { Role } from "@/lib/families/families.types";
-
 type Proof = { uri: string; kind: "image" | "video" };
 export type ChoreStatus = "open" | "pending" | "approved";
 
@@ -24,14 +23,11 @@ export type ChoreView = {
     title: string;
     points: number;
     status: ChoreStatus;
-    // who did the chore (set when kid marks as completed)
+    // store only IDs/timestamps; names are derived
     doneById?: string;
-    doneByName?: string;
     doneAt?: number;
-    // who approved (set on approve)
     approvedById?: string;
-    approvedByName?: string;
-    // notes + media
+    approvedAt?: number;
     notes?: string;
     proofs?: Proof[];
 };
@@ -46,6 +42,9 @@ type Props = {
     onMarkPending: (id: string) => void;
     onApprove: (id: string, notes?: string) => void;
     onDecline: (id: string, notes?: string) => void;
+
+    // NEW: resolver from parent so names always render correctly
+    nameForId: (id?: string) => string;
 };
 
 export default function ChoreDetailModal({
@@ -57,21 +56,17 @@ export default function ChoreDetailModal({
     onMarkPending,
     onApprove,
     onDecline,
+    nameForId,
 }: Props) {
     const isParent = currentRole === "MOM" || currentRole === "DAD";
     const [notes, setNotes] = useState(chore.notes ?? "");
-
     React.useEffect(() => setNotes(chore.notes ?? ""), [chore.id, chore.notes]);
 
     const lastProof = useMemo(
-        () =>
-            chore.proofs && chore.proofs.length
-                ? chore.proofs[chore.proofs.length - 1]
-                : undefined,
+        () => (chore.proofs && chore.proofs.length ? chore.proofs[chore.proofs.length - 1] : undefined),
         [chore.proofs]
     );
 
-    // ---- capture helpers ----
     async function ensureCameraPermission() {
         const cam = await ImagePicker.requestCameraPermissionsAsync();
         if (!cam.granted) {
@@ -80,7 +75,6 @@ export default function ChoreDetailModal({
         }
         return true;
     }
-
     async function takePhoto() {
         if (!(await ensureCameraPermission())) return;
         const res = await ImagePicker.launchCameraAsync({
@@ -91,7 +85,6 @@ export default function ChoreDetailModal({
             onAttachProof(chore.id, { uri: res.assets[0].uri, kind: "image" });
         }
     }
-
     async function recordVideo() {
         if (!(await ensureCameraPermission())) return;
         const res = await ImagePicker.launchCameraAsync({
@@ -103,18 +96,13 @@ export default function ChoreDetailModal({
             onAttachProof(chore.id, { uri: res.assets[0].uri, kind: "video" });
         }
     }
-
     function removeProof() {
         onAttachProof(chore.id, null);
     }
 
-    // ---- actions ----
     const markCompleted = () => {
         if (!chore.proofs || chore.proofs.length === 0) {
-            Alert.alert(
-                "Proof required",
-                "Please upload a photo or video before marking as completed."
-            );
+            Alert.alert("Proof required", "Please upload a photo or video before marking as completed.");
             return;
         }
         onMarkPending(chore.id);
@@ -139,6 +127,9 @@ export default function ChoreDetailModal({
             },
         ]);
     };
+
+    const doneByName = nameForId(chore.doneById);
+    const approvedByName = nameForId(chore.approvedById);
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
@@ -167,18 +158,12 @@ export default function ChoreDetailModal({
                                     </Pressable>
                                 </View>
 
-                                {/* live preview + remove */}
                                 {lastProof && (
                                     <View style={s.proof}>
                                         {lastProof.kind === "image" ? (
                                             <Image source={{ uri: lastProof.uri }} style={s.media} />
                                         ) : (
-                                            <Video
-                                                source={{ uri: lastProof.uri }}
-                                                style={s.media}
-                                                useNativeControls
-                                                resizeMode={ResizeMode.CONTAIN}
-                                            />
+                                            <Video source={{ uri: lastProof.uri }} style={s.media} useNativeControls resizeMode={ResizeMode.CONTAIN} />
                                         )}
                                         <Pressable style={s.removeProof} onPress={removeProof}>
                                             <Text style={s.removeProofTxt}>✕</Text>
@@ -205,25 +190,18 @@ export default function ChoreDetailModal({
                                         {lastProof.kind === "image" ? (
                                             <Image source={{ uri: lastProof.uri }} style={s.media} />
                                         ) : (
-                                            <Video
-                                                source={{ uri: lastProof.uri }}
-                                                style={s.media}
-                                                useNativeControls
-                                                resizeMode={ResizeMode.CONTAIN}
-                                            />
+                                            <Video source={{ uri: lastProof.uri }} style={s.media} useNativeControls resizeMode={ResizeMode.CONTAIN} />
                                         )}
                                     </View>
                                 )}
 
                                 <Text style={[s.text, { marginTop: 6 }]}>
-                                    Done by: <Text style={s.bold}>{chore.doneByName ?? "—"}</Text>
+                                    Done by: <Text style={s.bold}>{doneByName}</Text>
                                 </Text>
                                 <Text style={s.text}>
                                     Time:{" "}
                                     <Text style={s.bold}>
-                                        {chore.doneAt
-                                            ? new Date(chore.doneAt).toLocaleString()
-                                            : "—"}
+                                        {chore.doneAt ? new Date(chore.doneAt).toLocaleString() : "—"}
                                     </Text>
                                 </Text>
 
@@ -249,10 +227,7 @@ export default function ChoreDetailModal({
                                     )}
                                 </View>
 
-                                <Pressable
-                                    style={[s.btn, s.secondary, { marginTop: 12 }]}
-                                    onPress={onClose}
-                                >
+                                <Pressable style={[s.btn, s.secondary, { marginTop: 12 }]} onPress={onClose}>
                                     <Text style={s.btnTxt}>Cancel</Text>
                                 </Pressable>
                             </>
@@ -266,41 +241,35 @@ export default function ChoreDetailModal({
                                         {lastProof.kind === "image" ? (
                                             <Image source={{ uri: lastProof.uri }} style={s.media} />
                                         ) : (
-                                            <Video
-                                                source={{ uri: lastProof.uri }}
-                                                style={s.media}
-                                                useNativeControls
-                                                resizeMode={ResizeMode.CONTAIN}
-                                            />
+                                            <Video source={{ uri: lastProof.uri }} style={s.media} useNativeControls resizeMode={ResizeMode.CONTAIN} />
                                         )}
                                     </View>
                                 )}
+
                                 <Text style={[s.text, { marginTop: 6 }]}>
-                                    Done by: <Text style={s.bold}>{chore.doneByName ?? "—"}</Text>
+                                    Done by: <Text style={s.bold}>{doneByName}</Text>
                                 </Text>
                                 <Text style={s.text}>
-                                    Time:{" "}
+                                    Time: <Text style={s.bold}>{chore.doneAt ? new Date(chore.doneAt).toLocaleString() : "—"}</Text>
+                                </Text>
+
+                                <Text style={s.text}>
+                                    Approved by: <Text style={s.bold}>{approvedByName}</Text>
+                                </Text>
+                                <Text style={s.text}>
+                                    Approved at:{" "}
                                     <Text style={s.bold}>
-                                        {chore.doneAt
-                                            ? new Date(chore.doneAt).toLocaleString()
-                                            : "—"}
+                                        {chore.approvedAt ? new Date(chore.approvedAt).toLocaleString() : "—"}
                                     </Text>
                                 </Text>
-                                {chore.approvedByName && (
-                                    <Text style={s.text}>
-                                        Approved by: <Text style={s.bold}>{chore.approvedByName}</Text>
-                                    </Text>
-                                )}
+
                                 {chore.notes ? (
                                     <Text style={s.text}>
                                         Notes: <Text style={s.bold}>{chore.notes}</Text>
                                     </Text>
                                 ) : null}
 
-                                <Pressable
-                                    style={[s.btn, s.secondary, { marginTop: 12 }]}
-                                    onPress={onClose}
-                                >
+                                <Pressable style={[s.btn, s.secondary, { marginTop: 12 }]} onPress={onClose}>
                                     <Text style={s.btnTxt}>Close</Text>
                                 </Pressable>
                             </>
@@ -313,29 +282,14 @@ export default function ChoreDetailModal({
 }
 
 const s = StyleSheet.create({
-    overlay: {
-        flex: 1,
-        backgroundColor: "rgba(0,0,0,0.4)",
-        justifyContent: "flex-end",
-    },
-    modal: {
-        backgroundColor: "#fff",
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        padding: 16,
-        maxHeight: "90%",
-    },
+    overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+    modal: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, maxHeight: "90%" },
     title: { fontSize: 20, fontWeight: "900", color: "#0f172a" },
     status: { fontWeight: "700", color: "#64748b", marginTop: 2 },
     text: { color: "#334155" },
     bold: { fontWeight: "700" },
     row: { flexDirection: "row", gap: 12, marginTop: 14 },
-    btn: {
-        flex: 1,
-        borderRadius: 10,
-        alignItems: "center",
-        paddingVertical: 12,
-    },
+    btn: { flex: 1, borderRadius: 10, alignItems: "center", paddingVertical: 12 },
     primary: { backgroundColor: "#2563eb" },
     primaryTxt: { color: "#fff", fontWeight: "700" },
     secondary: { backgroundColor: "#f1f5f9" },
@@ -343,31 +297,8 @@ const s = StyleSheet.create({
     cancelTxt: { color: "#b91c1c", fontWeight: "700" },
     btnTxt: { fontWeight: "700", color: "#1e293b" },
     proof: { marginTop: 12 },
-    media: {
-        width: "100%",
-        height: 220,
-        borderRadius: 12,
-        backgroundColor: "#e2e8f0",
-    },
-    removeProof: {
-        position: "absolute",
-        top: 8,
-        right: 8,
-        backgroundColor: "rgba(0,0,0,0.6)",
-        borderRadius: 16,
-        width: 28,
-        height: 28,
-        alignItems: "center",
-        justifyContent: "center",
-    },
+    media: { width: "100%", height: 220, borderRadius: 12, backgroundColor: "#e2e8f0" },
+    removeProof: { position: "absolute", top: 8, right: 8, backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 16, width: 28, height: 28, alignItems: "center", justifyContent: "center" },
     removeProofTxt: { color: "#fff", fontWeight: "800", fontSize: 16 },
-    input: {
-        borderWidth: 1,
-        borderColor: "#e2e8f0",
-        borderRadius: 10,
-        padding: 10,
-        minHeight: 44,
-        textAlignVertical: "top",
-        backgroundColor: "#fff",
-    },
+    input: { borderWidth: 1, borderColor: "#e2e8f0", borderRadius: 10, padding: 10, minHeight: 44, textAlignVertical: "top", backgroundColor: "#fff" },
 });

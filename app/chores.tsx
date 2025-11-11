@@ -22,57 +22,45 @@ const dbToUiStatus = (s: DbStatus): ChoreView['status'] =>
 
 type Proof = { uri: string; kind: 'image' | 'video' };
 
+const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 8)}` : '—');
+
 export default function Chores() {
   const { activeFamilyId, member, family, members } = useAuthContext() as any;
   const currentRole = (member?.role as Role) ?? 'TEEN';
 
-  useFamily(activeFamilyId || undefined);
+  // hydrate family + members via React Query
+  const { members: membersQuery } = useFamily(activeFamilyId || undefined);
   useSubscribeTableByFamily('family_members', activeFamilyId || undefined, ['family-members', activeFamilyId]);
 
-  // --- Names map: family_member_id -> display name
-  const memberNameById: Record<string, string> = useMemo(() => {
-    const list = (members?.data ?? members ?? family?.members ?? []) as any[];
+  // Build a stable resolver: family_member_id -> display name
+  const nameForId = useMemo(() => {
+    const list = (membersQuery?.data ?? members?.data ?? members ?? family?.members ?? []) as any[];
     const map: Record<string, string> = {};
     for (const m of list) {
-      if (!m) continue;
-      const id = m.id ?? m.member_id;
+      const id = m?.id ?? m?.member_id;
       if (!id) continue;
-      const first =
-        m.first_name ??
-        m.profile?.first_name ??
-        m.profile?.name ??
-        m.name ??
-        m.profile?.display_name ??
+      const name =
+        m?.nickname ||
+        m?.profile?.first_name ||
+        m?.first_name ||
+        m?.profile?.name ||
+        m?.name ||
         '';
-      map[id] = first || '—';
+      map[id] = name || shortId(id);
     }
-    return map;
-  }, [members, family]);
+    return (id?: string) => (id ? map[id] || shortId(id) : '—');
+  }, [membersQuery?.data, members, family]);
 
-  const resolveName = (id?: string) => (id && memberNameById[id]) || '—';
-
-  // Current user's family member id + display name
+  // Current signed-in family_member_id (for mutations)
   const myFamilyMemberId: string | undefined = useMemo(() => {
     if (member?.id) return member.id as string; // already a family_member record
-    const list = (members?.data ?? members ?? family?.members ?? []) as any[];
-    const authUserId = member?.profile?.id || member?.user_id;
-    const me = list.find(
-      (m) => m?.user_id === authUserId || m?.profile?.id === authUserId
-    );
+    const list = (membersQuery?.data ?? members?.data ?? members ?? family?.members ?? []) as any[];
+    const authUserId = member?.profile?.id || member?.user_id || member?.profile_id;
+    const me = list.find((m) => m?.user_id === authUserId || m?.profile?.id === authUserId || m?.profile_id === authUserId);
     return me?.id as string | undefined;
-  }, [members, family, member]);
+  }, [member, membersQuery?.data, members, family]);
 
-  const myDisplayName: string = useMemo(() => {
-    // Try direct name from current member object, else from map
-    const nameFromMember =
-      member?.first_name ||
-      member?.profile?.first_name ||
-      member?.profile?.name ||
-      member?.name ||
-      '';
-    if (nameFromMember) return nameFromMember;
-    return (myFamilyMemberId && resolveName(myFamilyMemberId)) || '—';
-  }, [member, myFamilyMemberId, memberNameById]);
+  const myDisplayName = useMemo(() => (myFamilyMemberId ? nameForId(myFamilyMemberId) : '—'), [myFamilyMemberId, nameForId]);
 
   const isParent = useMemo(() => currentRole === 'MOM' || currentRole === 'DAD', [currentRole]);
 
@@ -81,7 +69,7 @@ export default function Chores() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = selectedId ? list.find((c) => c.id === selectedId) ?? null : null;
 
-  // Load chores from DB
+  // Load chores from DB (store only IDs/timestamps; names are derived)
   useEffect(() => {
     if (!activeFamilyId) return;
     let cancelled = false;
@@ -95,10 +83,8 @@ export default function Chores() {
           points: r.points ?? 0,
           status: dbToUiStatus(r.status as DbStatus),
           doneById: r.done_by_member_id ?? undefined,
-          doneByName: resolveName(r.done_by_member_id),
           doneAt: r.done_at ? new Date(r.done_at).getTime() : undefined,
           approvedById: r.approved_by_member_id ?? undefined,
-          approvedByName: resolveName(r.approved_by_member_id),
           approvedAt: r.approved_at ? new Date(r.approved_at).getTime() : undefined,
           notes: r.notes ?? undefined,
           proofs: [],
@@ -112,7 +98,7 @@ export default function Chores() {
     return () => {
       cancelled = true;
     };
-  }, [activeFamilyId, memberNameById]);
+  }, [activeFamilyId]);
 
   // Post a chore (parent)
   const postChore = async ({ title, points }: { title: string; points: number }) => {
@@ -145,24 +131,17 @@ export default function Chores() {
     );
   };
 
-  // Kid submits (SUBMITTED) -> uses family_member_id
+  // Kid submits (SUBMITTED)
   const onMarkPending = async (id: string) => {
     try {
       if (!myFamilyMemberId) throw new Error('Missing family member id');
       const row = await submitChore(id, myFamilyMemberId);
       const when = row.done_at ? new Date(row.done_at).getTime() : Date.now();
       const whoId = row.done_by_member_id ?? myFamilyMemberId;
-      const whoName = resolveName(whoId) || myDisplayName; // immediate UX fallback
       setList((prev) =>
         prev.map((c) =>
           c.id === id
-            ? {
-              ...c,
-              status: 'pending',
-              doneById: whoId,
-              doneByName: whoName,
-              doneAt: when,
-            }
+            ? { ...c, status: 'pending', doneById: whoId, doneAt: when }
             : c
         )
       );
@@ -178,7 +157,6 @@ export default function Chores() {
       if (!myFamilyMemberId) throw new Error('Missing family member id');
       const row = await approveChore(id, myFamilyMemberId, notes);
       const approverId = row.approved_by_member_id ?? myFamilyMemberId;
-      const approverName = resolveName(approverId) || myDisplayName;
       const when = row.approved_at ? new Date(row.approved_at).getTime() : Date.now();
       setList((prev) =>
         prev.map((c) =>
@@ -188,7 +166,6 @@ export default function Chores() {
               status: 'approved',
               notes: row.notes ?? notes,
               approvedById: approverId,
-              approvedByName: approverName,
               approvedAt: when,
             }
             : c
@@ -200,7 +177,7 @@ export default function Chores() {
     }
   };
 
-  // Parent declines -> OPEN (clears submit/approve fields server-side)
+  // Parent declines -> OPEN
   const onDecline = async (id: string, notes?: string) => {
     try {
       const row = await rejectChore(id, notes);
@@ -212,10 +189,8 @@ export default function Chores() {
               status: 'open',
               notes: row.notes ?? notes,
               doneById: undefined,
-              doneByName: undefined,
               doneAt: undefined,
               approvedById: undefined,
-              approvedByName: undefined,
               approvedAt: undefined,
             }
             : c
@@ -279,6 +254,8 @@ export default function Chores() {
           onMarkPending={onMarkPending}
           onApprove={onApprove}
           onDecline={onDecline}
+          // NEW: give modal a resolver so it always shows the correct name
+          nameForId={nameForId}
         />
       )}
     </View>
