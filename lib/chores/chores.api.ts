@@ -36,13 +36,53 @@ export async function addChore(
   return data
 }
 
-export async function updateChoreStatus(choreId: string, status: ChoreStatus) {
+export async function submitChore(choreId: string, memberId: string) {
   const { data, error } = await supabase
     .from('chores')
-    .update({ status })
+    .update({
+      status: 'SUBMITTED',
+      done_by_member_id: memberId,
+      done_at: new Date().toISOString(),
+    })
     .eq('id', choreId)
     .select()
-    .single()
-  if (error) throw new Error(error.message)
-  return data
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
 }
+
+export async function approveChore(choreId: string, parentMemberId: string, notes?: string) {
+  const { data, error } = await supabase
+    .from('chores')
+    .update({
+      status: 'APPROVED',
+      approved_by_member_id: parentMemberId,
+      approved_at: new Date().toISOString(),
+      notes: notes ?? null,
+    })
+    .eq('id', choreId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function rejectChore(choreId: string, notes?: string) {
+  // bounce back to OPEN and clear submit fields
+  const { data, error } = await supabase
+    .from('chores')
+    .update({
+      status: 'OPEN',
+      notes: notes ?? null,
+      done_by_member_id: null,
+      done_at: null,
+      approved_by_member_id: null,
+      approved_at: null,
+    })
+    .eq('id', choreId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+

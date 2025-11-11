@@ -2,86 +2,234 @@
 import ChoreDetailModal, { ChoreView } from '@/components/chore-detail-modal';
 import ChorePostModal from '@/components/chore-post-modal';
 import { useAuthContext } from '@/hooks/use-auth-context';
+import {
+  addChore as apiAddChore,
+  approveChore,
+  fetchChores,
+  rejectChore,
+  submitChore,
+} from '@/lib/chores/chores.api';
 import { useFamily } from '@/lib/families/families.hooks';
 import { useSubscribeTableByFamily } from '@/lib/families/families.realtime';
+import type { Role } from '@/lib/families/families.types';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { Role } from '@/lib/families/families.types';
+type DbStatus = 'OPEN' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+const dbToUiStatus = (s: DbStatus): ChoreView['status'] =>
+  s === 'OPEN' ? 'open' : s === 'SUBMITTED' ? 'pending' : s === 'APPROVED' ? 'approved' : 'open';
 
 type Proof = { uri: string; kind: 'image' | 'video' };
 
 export default function Chores() {
-  // Family + role
-  const { activeFamilyId, member } = useAuthContext() as any;
+  const { activeFamilyId, member, family, members } = useAuthContext() as any;
   const currentRole = (member?.role as Role) ?? 'TEEN';
+
   useFamily(activeFamilyId || undefined);
   useSubscribeTableByFamily('family_members', activeFamilyId || undefined, ['family-members', activeFamilyId]);
 
-  const [list, setList] = useState<ChoreView[]>([
-    { id: 'seed-1', title: 'Make your bed', points: 5, status: 'open', proofs: [] },
-  ]);
-  const [showPost, setShowPost] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // --- Names map: family_member_id -> display name
+  const memberNameById: Record<string, string> = useMemo(() => {
+    const list = (members?.data ?? members ?? family?.members ?? []) as any[];
+    const map: Record<string, string> = {};
+    for (const m of list) {
+      if (!m) continue;
+      const id = m.id ?? m.member_id;
+      if (!id) continue;
+      const first =
+        m.first_name ??
+        m.profile?.first_name ??
+        m.profile?.name ??
+        m.name ??
+        m.profile?.display_name ??
+        '';
+      map[id] = first || '—';
+    }
+    return map;
+  }, [members, family]);
+
+  const resolveName = (id?: string) => (id && memberNameById[id]) || '—';
+
+  // Current user's family member id + display name
+  const myFamilyMemberId: string | undefined = useMemo(() => {
+    if (member?.id) return member.id as string; // already a family_member record
+    const list = (members?.data ?? members ?? family?.members ?? []) as any[];
+    const authUserId = member?.profile?.id || member?.user_id;
+    const me = list.find(
+      (m) => m?.user_id === authUserId || m?.profile?.id === authUserId
+    );
+    return me?.id as string | undefined;
+  }, [members, family, member]);
+
+  const myDisplayName: string = useMemo(() => {
+    // Try direct name from current member object, else from map
+    const nameFromMember =
+      member?.first_name ||
+      member?.profile?.first_name ||
+      member?.profile?.name ||
+      member?.name ||
+      '';
+    if (nameFromMember) return nameFromMember;
+    return (myFamilyMemberId && resolveName(myFamilyMemberId)) || '—';
+  }, [member, myFamilyMemberId, memberNameById]);
 
   const isParent = useMemo(() => currentRole === 'MOM' || currentRole === 'DAD', [currentRole]);
-  const selected = selectedId ? list.find(c => c.id === selectedId) ?? null : null;
 
-  const postChore = ({ title, points }: { title: string; points: number }) => {
-    setList(prev => [{ id: `local-${Date.now()}`, title, points, status: 'open', proofs: [] }, ...prev]);
-    setShowPost(false);
+  const [list, setList] = useState<ChoreView[]>([]);
+  const [showPost, setShowPost] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = selectedId ? list.find((c) => c.id === selectedId) ?? null : null;
+
+  // Load chores from DB
+  useEffect(() => {
+    if (!activeFamilyId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await fetchChores(activeFamilyId);
+        if (cancelled) return;
+        const mapped: ChoreView[] = (rows ?? []).map((r: any) => ({
+          id: r.id,
+          title: r.title,
+          points: r.points ?? 0,
+          status: dbToUiStatus(r.status as DbStatus),
+          doneById: r.done_by_member_id ?? undefined,
+          doneByName: resolveName(r.done_by_member_id),
+          doneAt: r.done_at ? new Date(r.done_at).getTime() : undefined,
+          approvedById: r.approved_by_member_id ?? undefined,
+          approvedByName: resolveName(r.approved_by_member_id),
+          approvedAt: r.approved_at ? new Date(r.approved_at).getTime() : undefined,
+          notes: r.notes ?? undefined,
+          proofs: [],
+        }));
+        setList(mapped);
+      } catch (e) {
+        console.error('fetchChores failed', e);
+        Alert.alert('Error', 'Could not load chores.');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeFamilyId, memberNameById]);
+
+  // Post a chore (parent)
+  const postChore = async ({ title, points }: { title: string; points: number }) => {
+    if (!activeFamilyId) return;
+    try {
+      const row = await apiAddChore(activeFamilyId, { title, points });
+      const created: ChoreView = {
+        id: row.id,
+        title: row.title,
+        points: row.points ?? points,
+        status: dbToUiStatus(row.status),
+        proofs: [],
+      };
+      setList((prev) => [created, ...prev]);
+      setShowPost(false);
+    } catch (e) {
+      console.error('addChore failed', e);
+      Alert.alert('Error', 'Could not post the chore.');
+    }
   };
 
-  // accepts null to clear all proofs
+  // Local proofs (client-side only for now)
   const onAttachProof = (id: string, proof: Proof | null) => {
-    setList(prev =>
-      prev.map(c => {
+    setList((prev) =>
+      prev.map((c) => {
         if (c.id !== id) return c;
         if (proof === null) return { ...c, proofs: [] };
         return { ...c, proofs: [...(c.proofs ?? []), proof] };
-      }),
+      })
     );
   };
 
-  const onMarkPending = (id: string) => {
-    const when = Date.now();
-    const whoId = member?.profile?.id;
-    const whoName = member?.profile?.first_name;
+  // Kid submits (SUBMITTED) -> uses family_member_id
+  // ⛏ change profile.id -> id
+  const onMarkPending = async (id: string) => {
+    try {
+      const whoId = member?.id;                 // <-- family_members.id
+      if (!whoId) throw new Error('Missing member id');
 
-    setList(prev =>
-      prev.map(c =>
-        c.id === id
-          ? { ...c, status: 'pending', doneById: whoId, doneByName: whoName, doneAt: when }
-          : c,
-      ) as ChoreView[],
-    );
+      const row = await submitChore(id, whoId);
+
+      setList(prev =>
+        prev.map(c =>
+          c.id === id
+            ? {
+              ...c,
+              status: 'pending',
+              doneById: row.done_by_member_id ?? whoId,
+              doneByName: resolveName(row.done_by_member_id ?? whoId),
+              doneAt: row.done_at ? new Date(row.done_at).getTime() : Date.now(),
+            }
+            : c,
+        ),
+      );
+    } catch (e) {
+      console.error('submitChore failed', e);
+      Alert.alert('Error', 'Could not mark as completed.');
+    }
   };
 
-  const onApprove = (id: string, notes?: string) => {
-    const approverId = member?.profile?.id;
-    const approverName = member?.profile?.first_name;
 
-    setList(prev =>
-      prev.map(c =>
-        c.id === id
-          ? { ...c, status: 'approved', notes, approvedById: approverId, approvedByName: approverName }
-          : c,
-      ) as ChoreView[],
-    );
+  // Parent approves (APPROVED)
+  // ⛏ change profile.id -> id
+  const onApprove = async (id: string, notes?: string) => {
+    try {
+      const approverId = member?.id;            // <-- family_members.id
+      if (!approverId) throw new Error('Missing approver member id');
+
+      const row = await approveChore(id, approverId, notes);
+
+      setList(prev =>
+        prev.map(c =>
+          c.id === id
+            ? {
+              ...c,
+              status: 'approved',
+              notes: row.notes ?? notes,
+              approvedById: row.approved_by_member_id ?? approverId,
+              approvedByName: resolveName(row.approved_by_member_id ?? approverId),
+            }
+            : c,
+        ),
+      );
+    } catch (e) {
+      console.error('approveChore failed', e);
+      Alert.alert('Error', 'Could not approve the chore.');
+    }
   };
 
-  const onDecline = (id: string, notes?: string) => {
-    setList(prev =>
-      prev.map(c =>
-        c.id === id
-          ? { ...c, status: 'open', notes, doneById: undefined, doneByName: undefined, doneAt: undefined }
-          : c,
-      ) as ChoreView[],
-    );
+
+  // Parent declines -> OPEN (clears submit/approve fields server-side)
+  const onDecline = async (id: string, notes?: string) => {
+    try {
+      const row = await rejectChore(id, notes);
+      setList((prev) =>
+        prev.map((c) =>
+          c.id === id
+            ? {
+              ...c,
+              status: 'open',
+              notes: row.notes ?? notes,
+              doneById: undefined,
+              doneByName: undefined,
+              doneAt: undefined,
+              approvedById: undefined,
+              approvedByName: undefined,
+              approvedAt: undefined,
+            }
+            : c
+        )
+      );
+    } catch (e) {
+      console.error('rejectChore failed', e);
+      Alert.alert('Error', 'Could not decline the chore.');
+    }
   };
 
-  // gate opening by status/role:
   function handleOpen(item: ChoreView) {
     if (item.status === 'pending' && !isParent) {
       Alert.alert('Pending approval', 'Only a parent can review this chore.');
@@ -94,8 +242,6 @@ export default function Chores() {
     <View style={styles.screen}>
       <View style={styles.header}>
         <Text style={styles.h1}>Chores Game</Text>
-
-        {/* 1) Only parents can post chores */}
         {isParent && (
           <Pressable onPress={() => setShowPost(true)} style={styles.postBtn}>
             <Ionicons name="add" size={20} color="#fff" />
