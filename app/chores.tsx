@@ -146,26 +146,25 @@ export default function Chores() {
   };
 
   // Kid submits (SUBMITTED) -> uses family_member_id
-  // ⛏ change profile.id -> id
   const onMarkPending = async (id: string) => {
     try {
-      const whoId = member?.id;                 // <-- family_members.id
-      if (!whoId) throw new Error('Missing member id');
-
-      const row = await submitChore(id, whoId);
-
-      setList(prev =>
-        prev.map(c =>
+      if (!myFamilyMemberId) throw new Error('Missing family member id');
+      const row = await submitChore(id, myFamilyMemberId);
+      const when = row.done_at ? new Date(row.done_at).getTime() : Date.now();
+      const whoId = row.done_by_member_id ?? myFamilyMemberId;
+      const whoName = resolveName(whoId) || myDisplayName; // immediate UX fallback
+      setList((prev) =>
+        prev.map((c) =>
           c.id === id
             ? {
               ...c,
               status: 'pending',
-              doneById: row.done_by_member_id ?? whoId,
-              doneByName: resolveName(row.done_by_member_id ?? whoId),
-              doneAt: row.done_at ? new Date(row.done_at).getTime() : Date.now(),
+              doneById: whoId,
+              doneByName: whoName,
+              doneAt: when,
             }
-            : c,
-        ),
+            : c
+        )
       );
     } catch (e) {
       console.error('submitChore failed', e);
@@ -173,35 +172,33 @@ export default function Chores() {
     }
   };
 
-
   // Parent approves (APPROVED)
-  // ⛏ change profile.id -> id
   const onApprove = async (id: string, notes?: string) => {
     try {
-      const approverId = member?.id;            // <-- family_members.id
-      if (!approverId) throw new Error('Missing approver member id');
-
-      const row = await approveChore(id, approverId, notes);
-
-      setList(prev =>
-        prev.map(c =>
+      if (!myFamilyMemberId) throw new Error('Missing family member id');
+      const row = await approveChore(id, myFamilyMemberId, notes);
+      const approverId = row.approved_by_member_id ?? myFamilyMemberId;
+      const approverName = resolveName(approverId) || myDisplayName;
+      const when = row.approved_at ? new Date(row.approved_at).getTime() : Date.now();
+      setList((prev) =>
+        prev.map((c) =>
           c.id === id
             ? {
               ...c,
               status: 'approved',
               notes: row.notes ?? notes,
-              approvedById: row.approved_by_member_id ?? approverId,
-              approvedByName: resolveName(row.approved_by_member_id ?? approverId),
+              approvedById: approverId,
+              approvedByName: approverName,
+              approvedAt: when,
             }
-            : c,
-        ),
+            : c
+        )
       );
     } catch (e) {
       console.error('approveChore failed', e);
       Alert.alert('Error', 'Could not approve the chore.');
     }
   };
-
 
   // Parent declines -> OPEN (clears submit/approve fields server-side)
   const onDecline = async (id: string, notes?: string) => {
