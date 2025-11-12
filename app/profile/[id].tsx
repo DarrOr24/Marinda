@@ -1,29 +1,37 @@
 // app/profile/[id].tsx
-import { useLocalSearchParams } from 'expo-router'
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
+import { useLocalSearchParams } from 'expo-router';
+import React, { useEffect } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import CheckerboardBackground from '@/components/checkerboard-background'
-import MemberSidebar from '@/components/members-sidebar'
-import { useAuthContext } from '@/hooks/use-auth-context'
-import { useFamily } from '@/lib/families/families.hooks'
-import { useSubscribeTableByFamily } from '@/lib/families/families.realtime'
+import CheckerboardBackground from '@/components/checkerboard-background';
+import MemberSidebar from '@/components/members-sidebar';
+import { useAuthContext } from '@/hooks/use-auth-context';
+import { useFamily } from '@/lib/families/families.hooks';
+import { useSubscribeTableByFamily } from '@/lib/families/families.realtime';
 
 export default function MemberProfile() {
-  const { id } = useLocalSearchParams<{ id: string }>()
-  const { activeFamilyId } = useAuthContext()
-  const { members, family } = useFamily(activeFamilyId || undefined)
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { activeFamilyId } = useAuthContext();
+  const { members, family } = useFamily(activeFamilyId || undefined);
 
   useSubscribeTableByFamily('family_members', activeFamilyId ?? undefined, [
     'family-members',
     activeFamilyId,
-  ])
+  ]);
+
+  // 🔄 Always refetch members when entering this screen or switching profile
+  useEffect(() => {
+    if (activeFamilyId && members?.refetch) {
+      members.refetch();
+    }
+  }, [activeFamilyId, id]); // re-run when you click another member in the sidebar
 
   if (!activeFamilyId) {
     return (
       <View style={[styles.screen, styles.centerOnly]}>
         <Text style={styles.subtitle}>No family selected yet</Text>
       </View>
-    )
+    );
   }
 
   if (members.isLoading) {
@@ -32,7 +40,7 @@ export default function MemberProfile() {
         <ActivityIndicator />
         <Text style={styles.subtitle}>Loading family…</Text>
       </View>
-    )
+    );
   }
 
   if (members.isError) {
@@ -40,15 +48,14 @@ export default function MemberProfile() {
       <View style={[styles.screen, styles.centerOnly]}>
         <Text style={styles.subtitle}>Failed to load members</Text>
       </View>
-    )
+    );
   }
 
-  const memberList = members.data ?? []
-  const current = memberList.find(m => m.id === id)
+  const memberList = members.data ?? [];
+  const current = memberList.find((m) => m.id === id);
 
-  const isKid = current?.role === 'TEEN' || current?.role === 'CHILD'
-  const points = current?.points ?? 0
-
+  const isKid = current?.role === 'TEEN' || current?.role === 'CHILD';
+  const points = (current as any)?.points ?? 0;
 
   return (
     <View style={styles.screen}>
@@ -75,7 +82,6 @@ export default function MemberProfile() {
           </View>
         )}
 
-
         <View style={styles.card}>
           <Text style={styles.cardText}>
             Coming soon: chores, grocery, announcements & wish-list activity for this member.
@@ -83,7 +89,7 @@ export default function MemberProfile() {
         </View>
       </View>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -140,4 +146,4 @@ const styles = StyleSheet.create({
     color: '#1e3a8a',
     marginTop: 6,
   },
-})
+});
