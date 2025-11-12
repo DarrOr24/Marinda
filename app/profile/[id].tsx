@@ -46,6 +46,10 @@ export default function MemberProfile() {
   const memberList = members.data ?? []
   const current = memberList.find(m => m.id === id)
 
+  const isKid = current?.role === 'TEEN' || current?.role === 'CHILD'
+  const points = current?.points ?? 0
+
+
   return (
     <View style={styles.screen}>
       <CheckerboardBackground colorA="#F6FAFF" colorB="#EAF3FF" size={28} />
@@ -63,6 +67,14 @@ export default function MemberProfile() {
         <Text style={styles.subtitle}>
           {family.data?.name ? `Family: ${family.data.name}` : 'Activities feed'}
         </Text>
+
+        {isKid && (
+          <View style={styles.pointsCard}>
+            <Text style={styles.pointsLabel}>Points Earned</Text>
+            <Text style={styles.pointsValue}>{points}</Text>
+          </View>
+        )}
+
 
         <View style={styles.card}>
           <Text style={styles.cardText}>
@@ -107,4 +119,25 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   cardText: { color: '#334155' },
+  pointsCard: {
+    marginTop: 8,
+    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    alignSelf: 'flex-start',
+    minWidth: 150,
+  },
+  pointsLabel: {
+    fontSize: 14,
+    color: '#475569',
+    fontWeight: '600',
+  },
+  pointsValue: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#1e3a8a',
+    marginTop: 6,
+  },
 })
