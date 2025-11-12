@@ -1,4 +1,5 @@
 // components/chore-detail-modal.tsx
+import { ChoreView, Proof } from "@/lib/chores/chores.types";
 import { Role } from "@/lib/families/families.types";
 import { ResizeMode, Video } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
@@ -14,23 +15,6 @@ import {
     TextInput,
     View,
 } from "react-native";
-
-type Proof = { uri: string; kind: "image" | "video" };
-export type ChoreStatus = "open" | "pending" | "approved";
-
-export type ChoreView = {
-    id: string;
-    title: string;
-    points: number;
-    status: ChoreStatus;
-    // store only IDs/timestamps; names are derived
-    doneById?: string;
-    doneAt?: number;
-    approvedById?: string;
-    approvedAt?: number;
-    notes?: string;
-    proofs?: Proof[];
-};
 
 type Props = {
     visible: boolean;

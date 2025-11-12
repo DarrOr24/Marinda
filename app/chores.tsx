@@ -1,5 +1,7 @@
 // app/chores.tsx
-import ChoreDetailModal, { ChoreView } from '@/components/chore-detail-modal';
+import ChoreDetailModal from '@/components/chore-detail-modal';
+import type { ChoreView, Proof } from '@/lib/chores/chores.types';
+
 import ChorePostModal from '@/components/chore-post-modal';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import {
@@ -24,8 +26,6 @@ import { Alert, FlatList, GestureResponderEvent, Pressable, StyleSheet, Text, Vi
 type DbStatus = 'OPEN' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
 const dbToUiStatus = (s: DbStatus): ChoreView['status'] =>
   s === 'OPEN' ? 'open' : s === 'SUBMITTED' ? 'pending' : s === 'APPROVED' ? 'approved' : 'open';
-
-type Proof = { uri: string; kind: 'image' | 'video' };
 
 const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 8)}` : '—');
 
