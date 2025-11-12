@@ -62,3 +62,13 @@ export async function fetchFamilyMembers(familyId: string): Promise<Member[]> {
 
   return members
 }
+
+export async function awardMemberPoints(memberId: string, delta: number) {
+  const { data, error } = await supabase.rpc('award_member_points', {
+    p_member_id: memberId,
+    p_delta: delta,
+  });
+  if (error) throw new Error(error.message);
+  return data?.[0]; // { id, points }
+}
+

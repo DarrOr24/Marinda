@@ -12,6 +12,7 @@ import {
   submitChore,
   updateChore,
 } from '@/lib/chores/chores.api';
+import { awardMemberPoints } from '@/lib/families/families.api';
 import { useFamily } from '@/lib/families/families.hooks';
 import { useSubscribeTableByFamily } from '@/lib/families/families.realtime';
 import type { Role } from '@/lib/families/families.types';
@@ -180,15 +181,25 @@ export default function Chores() {
     }
   };
 
-  // Parent approves (APPROVED)
+  // Parent approves (APPROVED) + award points to the member who did it
   const onApprove = async (id: string, notes?: string) => {
     try {
       if (!myFamilyMemberId) throw new Error('Missing family member id');
+
+      // Approve in chores table
       const row = await approveChore(id, myFamilyMemberId, notes);
       const approverId = row.approved_by_member_id ?? myFamilyMemberId;
       const when = row.approved_at ? new Date(row.approved_at).getTime() : Date.now();
-      setList((prev) =>
-        prev.map((c) =>
+
+      // Who gets the points + how many
+      const local = list.find(c => c.id === id);
+      const targetMemberId: string | undefined =
+        (row.done_by_member_id as string | undefined) ?? local?.doneById;
+      const delta: number = (row.points as number | undefined) ?? (local?.points ?? 0);
+
+      // Update the chore locally
+      setList(prev =>
+        prev.map(c =>
           c.id === id
             ? {
               ...c,
@@ -200,11 +211,18 @@ export default function Chores() {
             : c
         )
       );
+
+      // Award points in Supabase
+      if (targetMemberId && delta > 0) {
+        await awardMemberPoints(targetMemberId, delta);
+        // (no query invalidation for now; scores will refresh next time members are fetched)
+      }
     } catch (e) {
       console.error('approveChore failed', e);
       Alert.alert('Error', 'Could not approve the chore.');
     }
   };
+
 
   // Parent declines -> OPEN
   const onDecline = async (id: string, notes?: string) => {
