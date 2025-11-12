@@ -29,7 +29,7 @@ export async function fetchMember(familyId: string, profileId: string): Promise<
   const { data, error } = await supabase
     .from('family_members')
     .select(`
-      id, role, nickname, profile_id, joined_at,
+      id, role, nickname, profile_id, joined_at, points,
       color:color_palette(name, hex),
       profile:profiles(id, first_name, last_name, gender, avatar_url, birth_date)
     `)
@@ -45,7 +45,7 @@ export async function fetchFamilyMembers(familyId: string): Promise<Member[]> {
   const { data, error } = await supabase
     .from('family_members')
     .select(`
-      id, role, nickname, profile_id, joined_at,
+      id, role, nickname, profile_id, joined_at, points,
       color:color_palette(name, hex),
       profile:profiles(id, first_name, last_name, gender, avatar_url, birth_date)
     `)

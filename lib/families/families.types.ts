@@ -25,4 +25,5 @@ export interface Member {
   joined_at: string | null
   profile: Profile | null
   color: Color | null
+  points: number
 }
