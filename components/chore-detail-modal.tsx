@@ -44,6 +44,8 @@ type Props = {
     onDecline: (id: string, notes?: string) => void;
 
     // NEW: resolver from parent so names always render correctly
+    onDuplicate: (id: string) => void;   // NEW
+    onDelete: (id: string) => void;
     nameForId: (id?: string) => string;
 };
 
@@ -56,6 +58,8 @@ export default function ChoreDetailModal({
     onMarkPending,
     onApprove,
     onDecline,
+    onDelete,
+    onDuplicate,
     nameForId,
 }: Props) {
     const isParent = currentRole === "MOM" || currentRole === "DAD";
@@ -66,6 +70,16 @@ export default function ChoreDetailModal({
         () => (chore.proofs && chore.proofs.length ? chore.proofs[chore.proofs.length - 1] : undefined),
         [chore.proofs]
     );
+
+    const doDuplicate = () => onDuplicate(chore.id);
+
+    const doDelete = () => {
+        Alert.alert('Delete chore?', 'This cannot be undone.', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Delete', style: 'destructive', onPress: () => { onDelete(chore.id); onClose(); } },
+        ]);
+    };
+
 
     async function ensureCameraPermission() {
         const cam = await ImagePicker.requestCameraPermissionsAsync();
@@ -214,18 +228,17 @@ export default function ChoreDetailModal({
                                     multiline
                                 />
 
-                                <View style={[s.row, { marginTop: 18 }]}>
-                                    {isParent && (
-                                        <>
-                                            <Pressable style={[s.btn, s.cancel]} onPress={deny}>
-                                                <Text style={[s.btnTxt, s.cancelTxt]}>Deny</Text>
-                                            </Pressable>
-                                            <Pressable style={[s.btn, s.primary]} onPress={approve}>
-                                                <Text style={[s.btnTxt, s.primaryTxt]}>Approve</Text>
-                                            </Pressable>
-                                        </>
-                                    )}
-                                </View>
+                                {isParent && (
+                                    <View style={[s.row, { marginTop: 8 }]}>
+                                        <Pressable style={[s.btn, s.secondary]} onPress={doDuplicate}>
+                                            <Text style={s.btnTxt}>Duplicate</Text>
+                                        </Pressable>
+                                        <Pressable style={[s.btn, s.cancel]} onPress={doDelete}>
+                                            <Text style={[s.btnTxt, s.cancelTxt]}>Delete</Text>
+                                        </Pressable>
+                                    </View>
+                                )}
+
 
                                 <Pressable style={[s.btn, s.secondary, { marginTop: 12 }]} onPress={onClose}>
                                     <Text style={s.btnTxt}>Cancel</Text>

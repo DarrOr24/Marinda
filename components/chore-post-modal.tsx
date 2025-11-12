@@ -1,5 +1,5 @@
 // components/chore-post-modal.tsx
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 type Props = {
@@ -7,18 +7,20 @@ type Props = {
     onClose: () => void;
     onSubmit: (payload: { title: string; points: number }) => void;
     initial?: { title?: string; points?: number };
+    titleText?: string;      // e.g., "Edit Chore"
+    submitText?: string;
 };
 
-export default function ChorePostModal({ visible, onClose, onSubmit, initial }: Props) {
-    const [title, setTitle] = useState(initial?.title ?? '');
-    const [points, setPoints] = useState(String(initial?.points ?? 10));
+export default function ChorePostModal({
+    visible, onClose, onSubmit, initial, titleText = 'Post Chore', submitText = 'Post'
+}: Props) {
+    const [title, setTitle] = React.useState(initial?.title ?? '');
+    const [points, setPoints] = React.useState(String(initial?.points ?? 5));
 
-    useEffect(() => {
-        if (visible) {
-            setTitle(initial?.title ?? '');
-            setPoints(String(initial?.points ?? 10));
-        }
-    }, [visible]);
+    React.useEffect(() => {
+        setTitle(initial?.title ?? '');
+        setPoints(String(initial?.points ?? 5));
+    }, [initial?.title, initial?.points, visible]);
 
     const disabled = !title.trim() || Number.isNaN(Number(points));
 

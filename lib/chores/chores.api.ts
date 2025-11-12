@@ -92,3 +92,54 @@ export async function rejectChore(choreId: string, notes?: string) {
   return data;
 }
 
+// lib/chores/chores.api.ts
+export async function deleteChore(choreId: string) {
+  const { error } = await supabase.from('chores').delete().eq('id', choreId);
+  if (error) throw new Error(error.message);
+  return true;
+}
+
+export async function duplicateChore(choreId: string) {
+  // get source row (only fields we want to copy)
+  const { data: src, error: selErr } = await supabase
+    .from('chores')
+    .select('family_id, title, points, assignee_member_id')
+    .eq('id', choreId)
+    .single();
+  if (selErr) throw new Error(selErr.message);
+
+  const user = (await supabase.auth.getUser()).data.user;
+
+  const { data: inserted, error: insErr } = await supabase
+    .from('chores')
+    .insert({
+      family_id: src.family_id,
+      title: src.title,
+      points: src.points,
+      assignee_member_id: src.assignee_member_id ?? null,
+      status: 'OPEN',
+      created_by: user?.id ?? null,
+      // proof_* intentionally not copied; new chore starts fresh
+    })
+    .select()
+    .single();
+
+  if (insErr) throw new Error(insErr.message);
+  return inserted;
+}
+
+export async function updateChore(
+  choreId: string,
+  fields: { title?: string; points?: number }
+) {
+  const { data, error } = await supabase
+    .from('chores')
+    .update(fields)
+    .eq('id', choreId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+
