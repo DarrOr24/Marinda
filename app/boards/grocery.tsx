@@ -40,6 +40,7 @@ type GroceryItem = {
     checked_at?: string | null; // ISO string when checked
     created_at: string; // ISO string
     addedByName?: string; // UI-only helper (not in DB)
+    amount?: string;
 };
 
 const DEFAULT_CATEGORIES = [
@@ -64,6 +65,7 @@ export default function Grocery() {
     const [name, setName] = useState("");
     const [categoryOpen, setCategoryOpen] = useState(false);
     const [category, setCategory] = useState<string | undefined>(undefined);
+    const [amount, setAmount] = useState("");
 
     useEffect(() => {
         if (!activeFamilyId) return;
@@ -85,6 +87,7 @@ export default function Grocery() {
                     created_at: r.created_at,
                     // we can fill addedByName later; fallback uses id anyway
                     addedByName: undefined,
+                    amount: r.amount ?? undefined,
                 }));
 
                 setItems(mapped);
@@ -123,6 +126,7 @@ export default function Grocery() {
     function resetAddForm() {
         setName("");
         setCategory(undefined);
+        setAmount("");
     }
 
     async function addItem() {
@@ -146,6 +150,7 @@ export default function Grocery() {
                 familyId,
                 text: trimmed,
                 category: category?.trim() || undefined,
+                amount: amount.trim() || undefined,
                 addedByMemberId: whoId,
             });
 
@@ -266,14 +271,19 @@ export default function Grocery() {
                                     size={22}
                                     color={it.is_checked ? "#2563eb" : "#64748b"}
                                 />
-                                <View style={styles.rowTextWrap}>
+                                <View style={styles.rowLine}>
                                     <Text
                                         numberOfLines={1}
                                         style={[styles.rowText, it.is_checked && styles.rowTextDone]}
                                     >
                                         {it.name}
                                     </Text>
-                                    {!!it.category && <Text style={styles.rowSub}>{it.category}</Text>}
+
+                                    {it.amount && (
+                                        <View style={styles.amountPill}>
+                                            <Text style={styles.amountPillText}>{it.amount}</Text>
+                                        </View>
+                                    )}
                                 </View>
 
                                 {/* info icon */}
@@ -336,6 +346,14 @@ export default function Grocery() {
                                 ))}
                             </View>
                         )}
+
+                        <Text style={styles.label}>Amount (optional)</Text>
+                        <TextInput
+                            placeholder="e.g., 2, 3 packs, 1kg"
+                            value={amount}
+                            onChangeText={setAmount}
+                            style={styles.input}
+                        />
 
                         <View style={styles.modalActions}>
                             <TouchableOpacity
@@ -400,10 +418,31 @@ const styles = StyleSheet.create({
     },
     row: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 10 },
     rowChecked: { backgroundColor: "#f5faff" },
-    rowTextWrap: { flex: 1 },
     rowText: { fontSize: 16, color: "#0f172a" },
     rowTextDone: { color: "#64748b", textDecorationLine: "line-through" },
-    rowSub: { fontSize: 12, color: "#64748b" },
+    rowLine: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    amount: {
+        marginLeft: 12,
+    },
+    amountPill: {
+        marginLeft: 8,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        backgroundColor: "#e2e8f0", // light slate grey
+        borderRadius: 8,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+
+    amountPillText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#0f172a",
+    },
     infoBtn: { padding: 6 },
     modalBackdrop: {
         flex: 1,

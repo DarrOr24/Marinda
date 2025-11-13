@@ -12,6 +12,7 @@ export type GroceryRow = {
     purchased: boolean;
     purchased_at: string | null;
     created_at: string;
+    amount: string | null;
 };
 
 // Load all grocery items for a family
@@ -31,14 +32,17 @@ export async function addGroceryItem(input: {
     familyId: string;
     text: string;
     category?: string;
+    amount?: string | null;
     addedByMemberId: string;
 }) {
+
     const { data, error } = await supabase
         .from('grocery_items')
         .insert({
             family_id: input.familyId,
             text: input.text,
             category: input.category ?? null,
+            amount: input.amount ?? null,
             added_by_member_id: input.addedByMemberId,
             purchased: false,
         })
