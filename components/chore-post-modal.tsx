@@ -1,6 +1,16 @@
 // components/chore-post-modal.tsx
 import React from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from 'react-native';
 
 type Props = {
     visible: boolean;
@@ -10,6 +20,7 @@ type Props = {
     titleText?: string;      // e.g., "Edit Chore"
     submitText?: string;
     templates?: { id: string; title: string; defaultPoints: number }[];
+    onDeleteTemplate?: (id: string) => void;
 };
 
 export default function ChorePostModal({
@@ -19,7 +30,8 @@ export default function ChorePostModal({
     initial,
     titleText = 'Post Chore',
     submitText = 'Post',
-    templates,   // 👈 ADD THIS
+    templates,
+    onDeleteTemplate,
 }: Props) {
     const [title, setTitle] = React.useState(initial?.title ?? '');
     const [points, setPoints] = React.useState(String(initial?.points ?? 5));
@@ -43,17 +55,44 @@ export default function ChorePostModal({
                             <Text style={styles.label}>Choose from routine</Text>
                             <View style={styles.templatesRow}>
                                 {templates.map((t) => (
-                                    <Pressable
-                                        key={t.id}
-                                        style={styles.templateBtn}
-                                        onPress={() => {
-                                            setTitle(t.title);
-                                            setPoints(String(t.defaultPoints));
-                                        }}
-                                    >
-                                        <Text style={styles.templateTxt}>{t.title}</Text>
-                                    </Pressable>
+                                    <View key={t.id} style={styles.templateWrapper}>
+
+                                        <Pressable
+                                            style={styles.templateBtn}
+                                            onPress={() => {
+                                                setTitle(t.title);
+                                                setPoints(String(t.defaultPoints));
+                                            }}
+                                        >
+                                            <Text style={styles.templateTxt}>{t.title}</Text>
+                                        </Pressable>
+
+                                        {onDeleteTemplate && (
+                                            <Pressable
+                                                style={styles.deleteChipBtn}
+                                                onPress={() => {
+                                                    Alert.alert(
+                                                        "Remove routine chore?",
+                                                        `Are you sure you want to remove "${t.title}" from the routine list?`,
+                                                        [
+                                                            { text: "Cancel", style: "cancel" },
+                                                            {
+                                                                text: "Remove",
+                                                                style: "destructive",
+                                                                onPress: () => onDeleteTemplate(t.id),
+                                                            },
+                                                        ]
+                                                    );
+                                                }}
+
+                                                hitSlop={8}
+                                            >
+                                                <Text style={styles.deleteChipTxt}>×</Text>
+                                            </Pressable>
+                                        )}
+                                    </View>
                                 ))}
+
                             </View>
                         </View>
                     )}
@@ -153,5 +192,25 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#1e3a8a',
     },
+    templateWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
 
+    deleteChipBtn: {
+        marginLeft: 4,
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        backgroundColor: '#fee2e2',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    deleteChipTxt: {
+        color: '#b91c1c',
+        fontSize: 14,
+        fontWeight: '900',
+        lineHeight: 14,
+    },
 });

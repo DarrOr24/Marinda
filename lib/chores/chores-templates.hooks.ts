@@ -90,5 +90,16 @@ export function useChoreTemplates(familyId?: string) {
         return template;
     }
 
-    return { templates, loading, error, createTemplate };
+    async function deleteTemplate(id: string) {
+        const { error } = await supabase
+            .from("chore_templates")
+            .update({ is_archived: true })
+            .eq("id", id);
+
+        if (error) throw new Error(error.message);
+
+        setTemplates((prev) => prev.filter((t) => t.id !== id));
+    }
+
+    return { templates, loading, error, createTemplate, deleteTemplate };
 }

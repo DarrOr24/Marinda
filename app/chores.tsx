@@ -68,7 +68,7 @@ export default function Chores() {
     return me?.id as string | undefined;
   }, [member, membersQuery?.data, members, family]);
 
-  const { templates, createTemplate } = useChoreTemplates(activeFamilyId);
+  const { templates, createTemplate, deleteTemplate } = useChoreTemplates(activeFamilyId);
 
   const isParent = useMemo(() => currentRole === 'MOM' || currentRole === 'DAD', [currentRole]);
 
@@ -391,6 +391,7 @@ export default function Chores() {
         onClose={() => setShowPost(false)}
         onSubmit={postChore}
         templates={templates}
+        onDeleteTemplate={deleteTemplate}
       />
 
 
