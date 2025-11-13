@@ -1,4 +1,3 @@
-// Grocery.tsx
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
 import { useSubscribeTableByFamily } from "@/lib/families/families.realtime";
@@ -6,6 +5,7 @@ import {
     addGroceryItem,
     deleteGroceryItems,
     fetchGroceryItems,
+    updateGroceryItem,
     updateGroceryPurchased,
     type GroceryRow,
 } from "@/lib/groceries/groceries.api";
@@ -89,7 +89,11 @@ export default function Grocery() {
     }, [membersQuery?.data, members, family]);
 
     const [items, setItems] = useState<GroceryItem[]>([]);
+
+    // Add/edit modal state
     const [addOpen, setAddOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<GroceryItem | null>(null);
+
     const [name, setName] = useState("");
     const [categoryOpen, setCategoryOpen] = useState(false);
     const [category, setCategory] = useState<string | undefined>(undefined);
@@ -153,9 +157,11 @@ export default function Grocery() {
         setName("");
         setCategory(undefined);
         setAmount("");
+        setCategoryOpen(false);
+        setEditingItem(null);
     }
 
-    async function addItem() {
+    async function saveItem() {
         const trimmed = name.trim();
         if (!trimmed) {
             Alert.alert("Missing name", "Please enter an item name.");
@@ -169,8 +175,42 @@ export default function Grocery() {
 
         const familyId = activeFamilyId;
         const whoId = member?.id ?? member?.profile_id ?? "guest";
-        const whoName = getDisplayName(member);
 
+        // EDIT existing item
+        if (editingItem) {
+            try {
+                const row = await updateGroceryItem(editingItem.id, {
+                    text: trimmed,
+                    category: category?.trim() || undefined,
+                    amount: amount.trim() || undefined,
+                });
+
+                const updated: GroceryItem = {
+                    id: row.id,
+                    family_id: row.family_id,
+                    name: row.text,
+                    category: row.category ?? undefined,
+                    added_by_member_id: row.added_by_member_id,
+                    is_checked: row.purchased,
+                    checked_at: row.purchased_at,
+                    created_at: row.created_at,
+                    amount: row.amount ?? undefined,
+                };
+
+                setItems((prev) =>
+                    prev.map((it) => (it.id === updated.id ? updated : it))
+                );
+
+                setAddOpen(false);
+                resetAddForm();
+            } catch (e) {
+                console.error("updateGroceryItem failed", e);
+                Alert.alert("Error", "Could not update grocery item.");
+            }
+            return;
+        }
+
+        // ADD new item
         try {
             const row = await addGroceryItem({
                 familyId,
@@ -199,6 +239,20 @@ export default function Grocery() {
             console.error("addGroceryItem failed", e);
             Alert.alert("Error", "Could not add grocery item.");
         }
+    }
+
+    function startAdd() {
+        resetAddForm();
+        setAddOpen(true);
+    }
+
+    function startEdit(item: GroceryItem) {
+        setEditingItem(item);
+        setName(item.name);
+        setCategory(item.category);
+        setAmount(item.amount ?? "");
+        setCategoryOpen(false);
+        setAddOpen(true);
     }
 
     async function toggleChecked(id: string) {
@@ -257,7 +311,8 @@ export default function Grocery() {
         const addedBy = nameForId(it.added_by_member_id);
         Alert.alert(
             it.name,
-            `Added by: ${addedBy}\nWhen: ${when}\nCategory: ${it.category ?? "Uncategorized"}`
+            `Added by: ${addedBy}\nWhen: ${when}\nCategory: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}` : ""
+            }`
         );
     }
 
@@ -265,7 +320,7 @@ export default function Grocery() {
         <View style={styles.screen}>
             {/* Header row (actions) */}
             <View style={styles.actions}>
-                <TouchableOpacity style={styles.btn} onPress={() => setAddOpen(true)}>
+                <TouchableOpacity style={styles.btn} onPress={startAdd}>
                     <MaterialCommunityIcons name="plus" size={18} />
                     <Text style={styles.btnTxt}>Add</Text>
                 </TouchableOpacity>
@@ -292,11 +347,19 @@ export default function Grocery() {
                                 onPress={() => toggleChecked(it.id)}
                                 style={[styles.row, it.is_checked && styles.rowChecked]}
                             >
-                                <MaterialCommunityIcons
-                                    name={it.is_checked ? "checkbox-marked" : "checkbox-blank-outline"}
-                                    size={22}
-                                    color={it.is_checked ? "#2563eb" : "#64748b"}
-                                />
+                                <TouchableOpacity
+                                    onPress={(e) => {
+                                        e.stopPropagation();
+                                        toggleChecked(it.id);
+                                    }}
+                                >
+                                    <MaterialCommunityIcons
+                                        name={it.is_checked ? "checkbox-marked" : "checkbox-blank-outline"}
+                                        size={22}
+                                        color={it.is_checked ? "#2563eb" : "#64748b"}
+                                    />
+                                </TouchableOpacity>
+
                                 <View style={styles.rowLine}>
                                     <Text
                                         numberOfLines={1}
@@ -312,25 +375,58 @@ export default function Grocery() {
                                     )}
                                 </View>
 
+                                {/* edit icon */}
+                                <TouchableOpacity
+                                    onPress={(e) => {
+                                        e.stopPropagation();
+                                        startEdit(it);
+                                    }}
+                                    style={styles.infoBtn}
+                                >
+                                    <MaterialCommunityIcons
+                                        name="pencil-outline"
+                                        size={20}
+                                        color="#0f172a"
+                                    />
+                                </TouchableOpacity>
+
                                 {/* info icon */}
-                                <TouchableOpacity onPress={() => showItemInfo(it)} style={styles.infoBtn}>
+                                <TouchableOpacity
+                                    onPress={(e) => {
+                                        e.stopPropagation();
+                                        showItemInfo(it);
+                                    }}
+                                    style={styles.infoBtn}
+                                >
                                     <MaterialCommunityIcons
                                         name="information-outline"
                                         size={20}
                                         color="#475569"
                                     />
                                 </TouchableOpacity>
+
+
                             </Pressable>
                         ))}
                     </View>
                 )}
             />
 
-            {/* Add item modal */}
-            <Modal visible={addOpen} animationType="fade" transparent onRequestClose={() => setAddOpen(false)}>
+            {/* Add / Edit item modal */}
+            <Modal
+                visible={addOpen}
+                animationType="fade"
+                transparent
+                onRequestClose={() => {
+                    setAddOpen(false);
+                    resetAddForm();
+                }}
+            >
                 <View style={styles.modalBackdrop}>
                     <View style={styles.modalCard}>
-                        <Text style={styles.modalTitle}>Add Grocery Item</Text>
+                        <Text style={styles.modalTitle}>
+                            {editingItem ? "Edit Grocery Item" : "Add Grocery Item"}
+                        </Text>
 
                         <Text style={styles.label}>Item</Text>
                         <TextInput
@@ -395,8 +491,10 @@ export default function Grocery() {
                             >
                                 <Text style={styles.btnTxt}>Cancel</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={addItem} style={[styles.btn, styles.btnPrimary]}>
-                                <Text style={[styles.btnTxt, styles.btnPrimaryTxt]}>Add</Text>
+                            <TouchableOpacity onPress={saveItem} style={[styles.btn, styles.btnPrimary]}>
+                                <Text style={[styles.btnTxt, styles.btnPrimaryTxt]}>
+                                    {editingItem ? "Save" : "Add"}
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -467,7 +565,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
     },
-
     amountPillText: {
         fontSize: 14,
         fontWeight: "600",

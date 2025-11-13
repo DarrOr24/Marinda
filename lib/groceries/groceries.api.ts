@@ -79,3 +79,24 @@ export async function deleteGroceryItems(ids: string[]) {
 
     if (error) throw new Error(error.message);
 }
+
+// Edit an existing grocery item (name/category/amount)
+export async function updateGroceryItem(id: string, input: {
+    text: string;
+    category?: string;
+    amount?: string | null;
+}) {
+    const { data, error } = await supabase
+        .from('grocery_items')
+        .update({
+            text: input.text,
+            category: input.category ?? null,
+            amount: input.amount ?? null,
+        })
+        .eq('id', id)
+        .select('*')
+        .single();
+
+    if (error || !data) throw new Error(error?.message || 'Failed to update grocery item');
+    return data as GroceryRow;
+}
