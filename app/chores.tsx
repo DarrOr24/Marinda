@@ -1,5 +1,6 @@
 // app/chores.tsx
 import ChoreDetailModal from '@/components/chore-detail-modal';
+import { useChoreTemplates } from '@/lib/chores/chores-templates.hooks';
 import type { ChoreView, Proof } from '@/lib/chores/chores.types';
 
 import ChorePostModal from '@/components/chore-post-modal';
@@ -67,6 +68,8 @@ export default function Chores() {
     return me?.id as string | undefined;
   }, [member, membersQuery?.data, members, family]);
 
+  const { templates, createTemplate } = useChoreTemplates(activeFamilyId);
+
   const isParent = useMemo(() => currentRole === 'MOM' || currentRole === 'DAD', [currentRole]);
 
   const [list, setList] = useState<ChoreView[]>([]);
@@ -107,9 +110,18 @@ export default function Chores() {
   }, [activeFamilyId]);
 
   // Post a chore (parent)
-  const postChore = async ({ title, points }: { title: string; points: number }) => {
+  const postChore = async ({
+    title,
+    points,
+    saveAsTemplate,
+  }: {
+    title: string;
+    points: number;
+    saveAsTemplate?: boolean;
+  }) => {
     if (!activeFamilyId) return;
     try {
+      // 1) create the actual chore
       const row = await apiAddChore(activeFamilyId, { title, points });
       const created: ChoreView = {
         id: row.id,
@@ -119,6 +131,16 @@ export default function Chores() {
         proofs: [],
       };
       setList((prev) => [created, ...prev]);
+
+      // 2) optionally also save as routine template
+      if (saveAsTemplate) {
+        await createTemplate({
+          title,
+          defaultPoints: points,
+          createdById: myFamilyMemberId,
+        });
+      }
+
       setShowPost(false);
     } catch (e) {
       console.error('addChore failed', e);
@@ -364,7 +386,13 @@ export default function Chores() {
       />
 
       {/* create */}
-      <ChorePostModal visible={showPost} onClose={() => setShowPost(false)} onSubmit={postChore} />
+      <ChorePostModal
+        visible={showPost}
+        onClose={() => setShowPost(false)}
+        onSubmit={postChore}
+        templates={templates}
+      />
+
 
       {/* edit */}
       {editing && (
