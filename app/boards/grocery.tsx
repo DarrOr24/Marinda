@@ -1,6 +1,7 @@
 // Grocery.tsx
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
+import { useSubscribeTableByFamily } from "@/lib/families/families.realtime";
 import {
     addGroceryItem,
     deleteGroceryItems,
@@ -39,7 +40,6 @@ type GroceryItem = {
     is_checked: boolean;
     checked_at?: string | null; // ISO string when checked
     created_at: string; // ISO string
-    addedByName?: string; // UI-only helper (not in DB)
     amount?: string;
 };
 
@@ -55,10 +55,38 @@ const DEFAULT_CATEGORIES = [
     "Other",
 ];
 
+const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 8)}` : "—");
+
 export default function Grocery() {
-    // 👇 same shape you used in Activities
-    const { activeFamilyId, member } = useAuthContext() as any;
-    useFamily(activeFamilyId); // preloads/cache family & members (not strictly required here)
+    // same shape as in Chores
+    const { activeFamilyId, member, family, members } = useAuthContext() as any;
+
+    // hydrate family + members via React Query
+    const { members: membersQuery } = useFamily(activeFamilyId || undefined);
+    useSubscribeTableByFamily(
+        "family_members",
+        activeFamilyId || undefined,
+        ["family-members", activeFamilyId]
+    );
+
+    // family_member_id -> display name (same logic as chores)
+    const nameForId = useMemo(() => {
+        const list = (membersQuery?.data ?? members?.data ?? members ?? family?.members ?? []) as any[];
+        const map: Record<string, string> = {};
+        for (const m of list) {
+            const id = m?.id ?? m?.member_id;
+            if (!id) continue;
+            const name =
+                m?.nickname ||
+                m?.profile?.first_name ||
+                m?.first_name ||
+                m?.profile?.name ||
+                m?.name ||
+                "";
+            map[id] = name || shortId(id);
+        }
+        return (id?: string) => (id ? map[id] || shortId(id) : "—");
+    }, [membersQuery?.data, members, family]);
 
     const [items, setItems] = useState<GroceryItem[]>([]);
     const [addOpen, setAddOpen] = useState(false);
@@ -85,8 +113,6 @@ export default function Grocery() {
                     is_checked: r.purchased,
                     checked_at: r.purchased_at,
                     created_at: r.created_at,
-                    // we can fill addedByName later; fallback uses id anyway
-                    addedByName: undefined,
                     amount: r.amount ?? undefined,
                 }));
 
@@ -163,7 +189,7 @@ export default function Grocery() {
                 is_checked: row.purchased,
                 checked_at: row.purchased_at,
                 created_at: row.created_at,
-                addedByName: whoName,
+                amount: row.amount ?? undefined,
             };
 
             setItems((prev) => [newItem, ...prev]);
@@ -228,10 +254,10 @@ export default function Grocery() {
 
     function showItemInfo(it: GroceryItem) {
         const when = new Date(it.created_at).toLocaleString();
+        const addedBy = nameForId(it.added_by_member_id);
         Alert.alert(
             it.name,
-            `Added by: ${it.addedByName ?? it.added_by_member_id}\nWhen: ${when}\nCategory: ${it.category ?? "Uncategorized"
-            }`
+            `Added by: ${addedBy}\nWhen: ${when}\nCategory: ${it.category ?? "Uncategorized"}`
         );
     }
 
@@ -288,7 +314,11 @@ export default function Grocery() {
 
                                 {/* info icon */}
                                 <TouchableOpacity onPress={() => showItemInfo(it)} style={styles.infoBtn}>
-                                    <MaterialCommunityIcons name="information-outline" size={20} color="#475569" />
+                                    <MaterialCommunityIcons
+                                        name="information-outline"
+                                        size={20}
+                                        color="#475569"
+                                    />
                                 </TouchableOpacity>
                             </Pressable>
                         ))}
@@ -432,7 +462,7 @@ const styles = StyleSheet.create({
         marginLeft: 8,
         paddingHorizontal: 8,
         paddingVertical: 2,
-        backgroundColor: "#e2e8f0", // light slate grey
+        backgroundColor: "#e2e8f0",
         borderRadius: 8,
         justifyContent: "center",
         alignItems: "center",
@@ -484,7 +514,14 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     selectText: { color: "#0f172a", fontSize: 16 },
-    menu: { marginTop: 6, borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 12, backgroundColor: "#fff", overflow: "hidden" },
+    menu: {
+        marginTop: 6,
+        borderWidth: 1,
+        borderColor: "#e5e7eb",
+        borderRadius: 12,
+        backgroundColor: "#fff",
+        overflow: "hidden",
+    },
     menuItem: { paddingHorizontal: 12, paddingVertical: 10 },
     menuItemTxt: { color: "#0f172a", fontSize: 16 },
     modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 10, marginTop: 16 },
