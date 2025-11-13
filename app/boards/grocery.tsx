@@ -1,8 +1,15 @@
 // Grocery.tsx
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
+import {
+    addGroceryItem,
+    deleteGroceryItems,
+    fetchGroceryItems,
+    updateGroceryPurchased,
+    type GroceryRow,
+} from "@/lib/groceries/groceries.api";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     Alert,
     FlatList,
@@ -14,11 +21,6 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-
-const makeId = () =>
-    (globalThis as any)?.crypto?.randomUUID
-        ? (globalThis as any).crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 // Prefer first name from the profile; fall back gracefully.
 const getDisplayName = (m?: any) =>
@@ -63,6 +65,40 @@ export default function Grocery() {
     const [categoryOpen, setCategoryOpen] = useState(false);
     const [category, setCategory] = useState<string | undefined>(undefined);
 
+    useEffect(() => {
+        if (!activeFamilyId) return;
+        let cancelled = false;
+
+        (async () => {
+            try {
+                const rows = await fetchGroceryItems(activeFamilyId);
+                if (cancelled) return;
+
+                const mapped: GroceryItem[] = rows.map((r: GroceryRow) => ({
+                    id: r.id,
+                    family_id: r.family_id,
+                    name: r.text,
+                    category: r.category ?? undefined,
+                    added_by_member_id: r.added_by_member_id,
+                    is_checked: r.purchased,
+                    checked_at: r.purchased_at,
+                    created_at: r.created_at,
+                    // we can fill addedByName later; fallback uses id anyway
+                    addedByName: undefined,
+                }));
+
+                setItems(mapped);
+            } catch (e) {
+                console.error("fetchGroceryItems failed", e);
+                Alert.alert("Error", "Could not load grocery list.");
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeFamilyId]);
+
     // Group by category and sort: unchecked first, then A→Z
     const grouped = useMemo(() => {
         const map = new Map<string, GroceryItem[]>();
@@ -89,62 +125,98 @@ export default function Grocery() {
         setCategory(undefined);
     }
 
-    function addItem() {
+    async function addItem() {
         const trimmed = name.trim();
         if (!trimmed) {
             Alert.alert("Missing name", "Please enter an item name.");
             return;
         }
 
-        // 👇 pull real family/member from context (same as Activities)
-        const familyId = activeFamilyId ?? "temp-family";
+        if (!activeFamilyId) {
+            Alert.alert("No family", "Missing active family.");
+            return;
+        }
+
+        const familyId = activeFamilyId;
         const whoId = member?.id ?? member?.profile_id ?? "guest";
         const whoName = getDisplayName(member);
 
-        const newItem: GroceryItem = {
-            id: makeId(),
-            family_id: familyId,
-            name: trimmed,
-            category: category?.trim() || undefined,
-            added_by_member_id: whoId,
-            is_checked: false,
-            checked_at: null,
-            created_at: new Date().toISOString(),
-            addedByName: whoName,
-        };
+        try {
+            const row = await addGroceryItem({
+                familyId,
+                text: trimmed,
+                category: category?.trim() || undefined,
+                addedByMemberId: whoId,
+            });
 
-        // (Later, replace this with a Supabase insert)
-        setItems((prev) => [newItem, ...prev]);
-        setAddOpen(false);
-        resetAddForm();
+            const newItem: GroceryItem = {
+                id: row.id,
+                family_id: row.family_id,
+                name: row.text,
+                category: row.category ?? undefined,
+                added_by_member_id: row.added_by_member_id,
+                is_checked: row.purchased,
+                checked_at: row.purchased_at,
+                created_at: row.created_at,
+                addedByName: whoName,
+            };
+
+            setItems((prev) => [newItem, ...prev]);
+            setAddOpen(false);
+            resetAddForm();
+        } catch (e) {
+            console.error("addGroceryItem failed", e);
+            Alert.alert("Error", "Could not add grocery item.");
+        }
     }
 
-    function toggleChecked(id: string) {
-        setItems((prev) =>
-            prev.map((it) =>
-                it.id === id
-                    ? {
-                        ...it,
-                        is_checked: !it.is_checked,
-                        checked_at: !it.is_checked ? new Date().toISOString() : null,
-                    }
-                    : it
-            )
-        );
+    async function toggleChecked(id: string) {
+        const target = items.find((i) => i.id === id);
+        if (!target) return;
+
+        const next = !target.is_checked;
+
+        try {
+            const row = await updateGroceryPurchased(id, next);
+
+            setItems((prev) =>
+                prev.map((it) =>
+                    it.id === id
+                        ? {
+                            ...it,
+                            is_checked: row.purchased,
+                            checked_at: row.purchased_at,
+                        }
+                        : it
+                )
+            );
+        } catch (e) {
+            console.error("updateGroceryPurchased failed", e);
+            Alert.alert("Error", "Could not update item.");
+        }
     }
 
     function deleteChecked() {
-        const anyChecked = items.some((i) => i.is_checked);
-        if (!anyChecked) {
+        const checkedIds = items.filter((i) => i.is_checked).map((i) => i.id);
+        if (!checkedIds.length) {
             Alert.alert("Nothing selected", "Check items to delete first.");
             return;
         }
+
         Alert.alert("Delete checked items?", "This will remove all checked items.", [
             { text: "Cancel", style: "cancel" },
             {
                 text: "Delete",
                 style: "destructive",
-                onPress: () => setItems((prev) => prev.filter((it) => !it.is_checked)),
+                onPress: async () => {
+                    try {
+                        await deleteGroceryItems(checkedIds);
+                        setItems((prev) => prev.filter((it) => !it.is_checked));
+                    } catch (e) {
+                        console.error("deleteGroceryItems failed", e);
+                        Alert.alert("Error", "Could not delete items.");
+                    }
+                },
             },
         ]);
     }
