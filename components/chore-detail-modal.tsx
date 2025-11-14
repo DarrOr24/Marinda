@@ -16,6 +16,11 @@ import {
     View,
 } from "react-native";
 
+type MemberOption = {
+    id: string;
+    name: string;
+};
+
 type Props = {
     visible: boolean;
     chore: ChoreView;
@@ -23,7 +28,7 @@ type Props = {
     onClose: () => void;
 
     onAttachProof: (id: string, proof: Proof | null) => void; // null = clear
-    onMarkPending: (id: string) => void;
+    onMarkPending: (id: string, doneById: string) => void;
     onApprove: (id: string, notes?: string) => void;
     onDecline: (id: string, notes?: string) => void;
 
@@ -33,6 +38,11 @@ type Props = {
 
     // resolver from parent so names always render correctly
     nameForId: (id?: string) => string;
+
+    // NEW: who can be chosen as “done by”
+    doneByOptions: MemberOption[];
+    // NEW: default selection = logged-in member
+    defaultDoneById?: string;
 };
 
 export default function ChoreDetailModal({
@@ -47,10 +57,21 @@ export default function ChoreDetailModal({
     onDelete,
     onDuplicate,
     nameForId,
+    doneByOptions,
+    defaultDoneById,
 }: Props) {
     const isParent = currentRole === "MOM" || currentRole === "DAD";
+
     const [notes, setNotes] = useState(chore.notes ?? "");
     React.useEffect(() => setNotes(chore.notes ?? ""), [chore.id, chore.notes]);
+
+    // NEW: selected “done by” in this modal
+    const [selectedDoneById, setSelectedDoneById] = useState<string | undefined>(
+        chore.doneById ?? defaultDoneById
+    );
+    React.useEffect(() => {
+        setSelectedDoneById(chore.doneById ?? defaultDoneById);
+    }, [chore.id, chore.doneById, defaultDoneById]);
 
     const lastProof = useMemo(
         () =>
@@ -116,7 +137,18 @@ export default function ChoreDetailModal({
             );
             return;
         }
-        onMarkPending(chore.id);
+
+        // Use selected member or fall back to default (logged-in member)
+        const finalDoneById = selectedDoneById ?? defaultDoneById;
+        if (!finalDoneById) {
+            Alert.alert(
+                "Choose who did it",
+                "Please select which family member completed this chore."
+            );
+            return;
+        }
+
+        onMarkPending(chore.id, finalDoneById);
         onClose();
     };
 
@@ -156,6 +188,40 @@ export default function ChoreDetailModal({
                         {/* OPEN */}
                         {chore.status === "open" && (
                             <>
+                                {/* NEW: choose who did it */}
+                                {doneByOptions.length > 0 && (
+                                    <>
+                                        <Text style={[s.text, { marginTop: 12 }]}>
+                                            Who did this?
+                                        </Text>
+                                        <View style={s.chipsRow}>
+                                            {doneByOptions.map((opt) => {
+                                                const isSelected =
+                                                    (selectedDoneById ?? defaultDoneById) === opt.id;
+                                                return (
+                                                    <Pressable
+                                                        key={opt.id}
+                                                        onPress={() => setSelectedDoneById(opt.id)}
+                                                        style={[
+                                                            s.chip,
+                                                            isSelected && s.chipSelected,
+                                                        ]}
+                                                    >
+                                                        <Text
+                                                            style={[
+                                                                s.chipTxt,
+                                                                isSelected && s.chipTxtSelected,
+                                                            ]}
+                                                        >
+                                                            {opt.name}
+                                                        </Text>
+                                                    </Pressable>
+                                                );
+                                            })}
+                                        </View>
+                                    </>
+                                )}
+
                                 <Text style={[s.text, { marginTop: 10 }]}>
                                     Upload a quick proof (photo or video) to mark as completed.
                                 </Text>
@@ -189,25 +255,16 @@ export default function ChoreDetailModal({
 
                                 <View style={s.row}>
                                     <Pressable style={[s.btn, s.primary]} onPress={markCompleted}>
-                                        <Text style={[s.btnTxt, s.primaryTxt]}>Mark as completed</Text>
+                                        <Text style={[s.btnTxt, s.primaryTxt]}>
+                                            Mark as completed
+                                        </Text>
                                     </Pressable>
                                     <Pressable style={[s.btn, s.cancel]} onPress={onClose}>
                                         <Text style={[s.btnTxt, s.cancelTxt]}>Cancel</Text>
                                     </Pressable>
                                 </View>
 
-                                {/* (Optional) If you want duplicate/delete in OPEN inside the modal too, uncomment:
-                {isParent && (
-                  <View style={[s.row, { marginTop: 8 }]}>
-                    <Pressable style={[s.btn, s.secondary]} onPress={doDuplicate}>
-                      <Text style={s.btnTxt}>Duplicate</Text>
-                    </Pressable>
-                    <Pressable style={[s.btn, s.cancel]} onPress={doDelete}>
-                      <Text style={[s.btnTxt, s.cancelTxt]}>Delete</Text>
-                    </Pressable>
-                  </View>
-                )}
-                */}
+                                {/* Optional parent duplicate/delete for OPEN if you ever want it here */}
                             </>
                         )}
 
@@ -235,7 +292,9 @@ export default function ChoreDetailModal({
                                 <Text style={s.text}>
                                     Time:{" "}
                                     <Text style={s.bold}>
-                                        {chore.doneAt ? new Date(chore.doneAt).toLocaleString() : "—"}
+                                        {chore.doneAt
+                                            ? new Date(chore.doneAt).toLocaleString()
+                                            : "—"}
                                     </Text>
                                 </Text>
 
@@ -248,7 +307,7 @@ export default function ChoreDetailModal({
                                     multiline
                                 />
 
-                                {/* ✅ Parents see Approve / Deny here */}
+                                {/* Parents see Approve / Deny here */}
                                 {isParent && (
                                     <View style={[s.row, { marginTop: 18 }]}>
                                         <Pressable style={[s.btn, s.cancel]} onPress={deny}>
@@ -293,7 +352,9 @@ export default function ChoreDetailModal({
                                 <Text style={s.text}>
                                     Time:{" "}
                                     <Text style={s.bold}>
-                                        {chore.doneAt ? new Date(chore.doneAt).toLocaleString() : "—"}
+                                        {chore.doneAt
+                                            ? new Date(chore.doneAt).toLocaleString()
+                                            : "—"}
                                     </Text>
                                 </Text>
 
@@ -378,5 +439,33 @@ const s = StyleSheet.create({
         minHeight: 44,
         textAlignVertical: "top",
         backgroundColor: "#fff",
+    },
+
+    // NEW styles for the “done by” chips
+    chipsRow: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
+        marginTop: 8,
+    },
+    chip: {
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: "#e2e8f0",
+        backgroundColor: "#f9fafb",
+    },
+    chipSelected: {
+        backgroundColor: "#2563eb15",
+        borderColor: "#2563eb",
+    },
+    chipTxt: {
+        fontSize: 12,
+        color: "#475569",
+        fontWeight: "600",
+    },
+    chipTxtSelected: {
+        color: "#1d4ed8",
     },
 });

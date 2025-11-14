@@ -75,11 +75,16 @@ export default function Chores() {
   const { members: membersQuery } = useFamily(activeFamilyId || undefined);
   useSubscribeTableByFamily('family_members', activeFamilyId || undefined, ['family-members', activeFamilyId]);
 
+  // Unified raw members list
+  const rawMembers: any[] = useMemo(
+    () => (membersQuery?.data ?? members?.data ?? members ?? family?.members ?? []) as any[],
+    [membersQuery?.data, members, family]
+  );
+
   // Build a stable resolver: family_member_id -> display name
   const nameForId = useMemo(() => {
-    const list = (membersQuery?.data ?? members?.data ?? members ?? family?.members ?? []) as any[];
     const map: Record<string, string> = {};
-    for (const m of list) {
+    for (const m of rawMembers) {
       const id = m?.id ?? m?.member_id;
       if (!id) continue;
       const name =
@@ -92,18 +97,40 @@ export default function Chores() {
       map[id] = name || shortId(id);
     }
     return (id?: string) => (id ? map[id] || shortId(id) : '—');
-  }, [membersQuery?.data, members, family]);
+  }, [rawMembers]);
 
-  // Current signed-in family_member_id (for mutations)
+  // Options for “Done by” selector in the modal
+  const doneByOptions = useMemo(
+    () =>
+      rawMembers
+        .map(m => {
+          const id = m?.id ?? m?.member_id;
+          if (!id) return null;
+          const name =
+            m?.nickname ||
+            m?.profile?.first_name ||
+            m?.first_name ||
+            m?.profile?.name ||
+            m?.name ||
+            '';
+          return { id, name: name || shortId(id) };
+        })
+        .filter(Boolean) as { id: string; name: string }[],
+    [rawMembers]
+  );
+
+  // Current signed-in family_member_id (for default selection + some mutations)
   const myFamilyMemberId: string | undefined = useMemo(() => {
     if (member?.id) return member.id as string; // already a family_member record
-    const list = (membersQuery?.data ?? members?.data ?? members ?? family?.members ?? []) as any[];
     const authUserId = member?.profile?.id || member?.user_id || member?.profile_id;
-    const me = list.find(
-      (m) => m?.user_id === authUserId || m?.profile?.id === authUserId || m?.profile_id === authUserId
+    const me = rawMembers.find(
+      (m: any) =>
+        m?.user_id === authUserId ||
+        m?.profile?.id === authUserId ||
+        m?.profile_id === authUserId
     );
     return me?.id as string | undefined;
-  }, [member, membersQuery?.data, members, family]);
+  }, [member, rawMembers]);
 
   const { templates, createTemplate, deleteTemplate } = useChoreTemplates(activeFamilyId);
 
@@ -270,16 +297,16 @@ export default function Chores() {
     );
   };
 
-  // Kid submits (SUBMITTED)
-  const onMarkPending = async (id: string) => {
+  // Kid submits (SUBMITTED) – now we get doneById from the modal
+  const onMarkPending = async (id: string, doneById: string) => {
     try {
-      if (!myFamilyMemberId) throw new Error('Missing family member id');
+      if (!doneById) throw new Error('Missing selected family member');
       const theChore = list.find((c) => c.id === id);
       const lastProof = theChore?.proofs?.[theChore.proofs.length - 1];
 
-      const row = await submitChore(id, myFamilyMemberId, lastProof as any);
+      const row = await submitChore(id, doneById, lastProof as any);
       const when = row.done_at ? new Date(row.done_at).getTime() : Date.now();
-      const whoId = row.done_by_member_id ?? myFamilyMemberId;
+      const whoId = row.done_by_member_id ?? doneById;
 
       setList((prev) =>
         prev.map((c) =>
@@ -580,6 +607,8 @@ export default function Chores() {
           onDuplicate={onDuplicate}
           onDelete={onDelete}
           nameForId={nameForId}
+          doneByOptions={doneByOptions}
+          defaultDoneById={myFamilyMemberId}
         />
       )}
     </View>
