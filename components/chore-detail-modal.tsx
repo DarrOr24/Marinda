@@ -28,7 +28,7 @@ type Props = {
     onClose: () => void;
 
     onAttachProof: (id: string, proof: Proof | null) => void; // null = clear
-    onMarkPending: (id: string, doneById: string) => void;
+    onMarkPending: (id: string, doneByIds: string[]) => void;
     onApprove: (id: string, notes?: string) => void;
     onDecline: (id: string, notes?: string) => void;
 
@@ -66,12 +66,17 @@ export default function ChoreDetailModal({
     React.useEffect(() => setNotes(chore.notes ?? ""), [chore.id, chore.notes]);
 
     // NEW: selected “done by” in this modal
-    const [selectedDoneById, setSelectedDoneById] = useState<string | undefined>(
-        chore.doneById ?? defaultDoneById
+    const [selectedDoneByIds, setSelectedDoneByIds] = useState<string[]>(
+        chore.doneByIds ?? (chore.doneById ? [chore.doneById] : defaultDoneById ? [defaultDoneById] : [])
     );
+
     React.useEffect(() => {
-        setSelectedDoneById(chore.doneById ?? defaultDoneById);
-    }, [chore.id, chore.doneById, defaultDoneById]);
+        setSelectedDoneByIds(
+            chore.doneByIds ??
+            (chore.doneById ? [chore.doneById] : defaultDoneById ? [defaultDoneById] : [])
+        );
+    }, [chore.id, chore.doneById, chore.doneByIds, defaultDoneById]);
+
 
     const lastProof = useMemo(
         () =>
@@ -131,26 +136,20 @@ export default function ChoreDetailModal({
 
     const markCompleted = () => {
         if (!chore.proofs || chore.proofs.length === 0) {
-            Alert.alert(
-                "Proof required",
-                "Please upload a photo or video before marking as completed."
-            );
+            Alert.alert("Proof required", "Please upload a photo or video before marking as completed.");
             return;
         }
 
-        // Use selected member or fall back to default (logged-in member)
-        const finalDoneById = selectedDoneById ?? defaultDoneById;
-        if (!finalDoneById) {
-            Alert.alert(
-                "Choose who did it",
-                "Please select which family member completed this chore."
-            );
+        if (selectedDoneByIds.length === 0) {
+            Alert.alert("Choose who did it", "Please select which family members completed this chore.");
             return;
         }
 
-        onMarkPending(chore.id, finalDoneById);
+        // SEND ALL SELECTED MEMBERS
+        onMarkPending(chore.id, selectedDoneByIds);
         onClose();
     };
+
 
     const approve = () => {
         onApprove(chore.id, notes.trim() || undefined);
@@ -171,7 +170,13 @@ export default function ChoreDetailModal({
         ]);
     };
 
-    const doneByName = nameForId(chore.doneById);
+    // If we have an array of doneByIds, show all of them.
+    // Otherwise fall back to the single doneById.
+    const doneByName =
+        chore.doneByIds && chore.doneByIds.length > 0
+            ? chore.doneByIds.map(id => nameForId(id)).join(", ")
+            : nameForId(chore.doneById);
+
     const approvedByName = nameForId(chore.approvedById);
 
     return (
@@ -196,12 +201,17 @@ export default function ChoreDetailModal({
                                         </Text>
                                         <View style={s.chipsRow}>
                                             {doneByOptions.map((opt) => {
-                                                const isSelected =
-                                                    (selectedDoneById ?? defaultDoneById) === opt.id;
+                                                const isSelected = selectedDoneByIds.includes(opt.id);
                                                 return (
                                                     <Pressable
                                                         key={opt.id}
-                                                        onPress={() => setSelectedDoneById(opt.id)}
+                                                        onPress={() =>
+                                                            setSelectedDoneByIds((prev) =>
+                                                                prev.includes(opt.id)
+                                                                    ? prev.filter((id) => id !== opt.id) // remove
+                                                                    : [...prev, opt.id] // add
+                                                            )
+                                                        }
                                                         style={[
                                                             s.chip,
                                                             isSelected && s.chipSelected,
@@ -219,6 +229,7 @@ export default function ChoreDetailModal({
                                                 );
                                             })}
                                         </View>
+
                                     </>
                                 )}
 

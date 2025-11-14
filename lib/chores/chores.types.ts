@@ -15,13 +15,14 @@ export type ChoreView = {
 
     // who did the chore
     doneById?: string;
+    doneByIds?: string[];
     doneByName?: string;
     doneAt?: number;
 
     // who approved + when
     approvedById?: string;
     approvedByName?: string;
-    approvedAt?: number;   // 👈 ADD THIS LINE
+    approvedAt?: number;
 
     // extra
     notes?: string;

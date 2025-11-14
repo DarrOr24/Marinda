@@ -38,12 +38,19 @@ export async function addChore(
   return data
 }
 
-export async function submitChore(choreId: string, memberId: string, proof?: ProofPayload) {
+export async function submitChore(
+  choreId: string,
+  memberIds: string[],
+  proof?: ProofPayload
+) {
   const { data, error } = await supabase
     .from('chores')
     .update({
       status: 'SUBMITTED',
-      done_by_member_id: memberId,
+      // keep a single main member for backwards compatibility
+      done_by_member_id: memberIds[0] ?? null,
+      // NEW: store all members
+      done_by_member_ids: memberIds,
       done_at: new Date().toISOString(),
       proof_uri: proof?.uri ?? null,
       proof_kind: proof?.kind ?? null,
@@ -51,9 +58,11 @@ export async function submitChore(choreId: string, memberId: string, proof?: Pro
     .eq('id', choreId)
     .select()
     .single();
+
   if (error) throw new Error(error.message);
   return data;
 }
+
 
 export async function approveChore(choreId: string, parentMemberId: string, notes?: string) {
   const { data, error } = await supabase
@@ -65,7 +74,7 @@ export async function approveChore(choreId: string, parentMemberId: string, note
       notes: notes ?? null,
     })
     .eq('id', choreId)
-    .select()
+    .select('*, done_by_member_ids')
     .single();
   if (error) throw new Error(error.message);
   return data;

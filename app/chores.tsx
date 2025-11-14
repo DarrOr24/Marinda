@@ -175,6 +175,7 @@ export default function Chores() {
             points: r.points ?? 0,
             status: dbToUiStatus(r.status as DbStatus),
             doneById: r.done_by_member_id ?? undefined,
+            doneByIds: r.done_by_member_ids ?? [],
             doneAt,
             approvedById: r.approved_by_member_id ?? undefined,
             approvedAt: r.approved_at ? new Date(r.approved_at).getTime() : undefined,
@@ -298,25 +299,33 @@ export default function Chores() {
   };
 
   // Kid submits (SUBMITTED) – now we get doneById from the modal
-  const onMarkPending = async (id: string, doneById: string) => {
+  // MULTI-MEMBER SUBMIT
+  const onMarkPending = async (id: string, doneByIds: string[]) => {
     try {
-      if (!doneById) throw new Error('Missing selected family member');
-      const theChore = list.find((c) => c.id === id);
+      if (!doneByIds || doneByIds.length === 0)
+        throw new Error('Missing selected family members');
+
+      const theChore = list.find(c => c.id === id);
       const lastProof = theChore?.proofs?.[theChore.proofs.length - 1];
 
-      const row = await submitChore(id, doneById, lastProof as any);
-      const when = row.done_at ? new Date(row.done_at).getTime() : Date.now();
-      const whoId = row.done_by_member_id ?? doneById;
+      // SEND ALL MEMBERS
+      const row = await submitChore(id, doneByIds, lastProof as any);
 
-      setList((prev) =>
-        prev.map((c) =>
+      const when = row.done_at ? new Date(row.done_at).getTime() : Date.now();
+
+      setList(prev =>
+        prev.map(c =>
           c.id === id
             ? {
               ...c,
               status: 'pending',
-              doneById: whoId,
+              doneById: doneByIds[0],       // keep for backwards UI
+              doneByIds: doneByIds,        // NOW THE REAL ARRAY
               doneAt: when,
-              proofs: row.proof_uri && row.proof_kind ? [{ uri: row.proof_uri, kind: row.proof_kind }] : [],
+              proofs:
+                row.proof_uri && row.proof_kind
+                  ? [{ uri: row.proof_uri, kind: row.proof_kind }]
+                  : [],
             }
             : c
         )
@@ -327,21 +336,35 @@ export default function Chores() {
     }
   };
 
+
   // Parent approves (APPROVED) + award points to the member who did it
+  // Parent approves (APPROVED) + split points evenly between all members who did it
   const onApprove = async (id: string, notes?: string) => {
     try {
       if (!myFamilyMemberId) throw new Error('Missing family member id');
 
-      // Approve in chores table
+      // Approve in chores table (row includes done_by_member_ids)
       const row = await approveChore(id, myFamilyMemberId, notes);
       const approverId = row.approved_by_member_id ?? myFamilyMemberId;
       const when = row.approved_at ? new Date(row.approved_at).getTime() : Date.now();
 
-      // Who gets the points + how many
+      // Local chore for fallback data
       const local = list.find(c => c.id === id);
-      const targetMemberId: string | undefined =
-        (row.done_by_member_id as string | undefined) ?? local?.doneById;
-      const delta: number = (row.points as number | undefined) ?? (local?.points ?? 0);
+
+      // Total points for this chore
+      const totalPoints: number =
+        (row.points as number | undefined) ?? (local?.points ?? 0);
+
+      // All members who should get points
+      const idsFromRow = (row.done_by_member_ids as string[] | null | undefined) ?? [];
+      const idsFromLocal =
+        (local?.doneByIds && local.doneByIds.length > 0
+          ? local.doneByIds
+          : local?.doneById
+            ? [local.doneById]
+            : []) as string[];
+
+      const memberIds = (idsFromRow.length ? idsFromRow : idsFromLocal).filter(Boolean);
 
       // Update the chore locally
       setList(prev =>
@@ -358,10 +381,14 @@ export default function Chores() {
         )
       );
 
-      // Award points in Supabase
-      if (targetMemberId && delta > 0) {
-        await awardMemberPoints(targetMemberId, delta);
-        // (no query invalidation for now; scores will refresh next time members are fetched)
+      // Split points evenly, rounding UP per member
+      if (memberIds.length > 0 && totalPoints > 0) {
+        const perMember = Math.ceil(totalPoints / memberIds.length);
+
+        await Promise.all(
+          memberIds.map(memberId => awardMemberPoints(memberId, perMember))
+        );
+        // Note: total awarded can be slightly > totalPoints, by design.
       }
     } catch (e) {
       console.error('approveChore failed', e);
