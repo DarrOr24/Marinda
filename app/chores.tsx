@@ -22,13 +22,50 @@ import type { Role } from '@/lib/families/families.types';
 
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, GestureResponderEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  FlatList,
+  GestureResponderEvent,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 type DbStatus = 'OPEN' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
 const dbToUiStatus = (s: DbStatus): ChoreView['status'] =>
   s === 'OPEN' ? 'open' : s === 'SUBMITTED' ? 'pending' : s === 'APPROVED' ? 'approved' : 'open';
 
 const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 8)}` : '—');
+
+const formatDateTime = (ts?: number) => {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const now = new Date();
+
+  const isToday =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+
+  const time = d.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+
+  if (isToday) {
+    return `Today • ${time}`;
+  }
+
+  const date = d.toLocaleDateString([], {
+    month: 'short',
+    day: 'numeric',
+  });
+
+  return `${date} • ${time}`;
+};
+
+type TabKey = 'open' | 'pending' | 'approved' | 'archived';
 
 export default function Chores() {
   const { activeFamilyId, member, family, members } = useAuthContext() as any;
@@ -78,6 +115,16 @@ export default function Chores() {
   const [editing, setEditing] = useState<ChoreView | null>(null);
   const selected = selectedId ? list.find((c) => c.id === selectedId) ?? null : null;
 
+  // which tab is visible
+  const [tab, setTab] = useState<TabKey>('open');
+
+  // "today" midnight for archiving
+  const startOfToday = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }, []);
+
   // Load chores
   useEffect(() => {
     if (!activeFamilyId) return;
@@ -86,18 +133,32 @@ export default function Chores() {
       try {
         const rows = await fetchChores(activeFamilyId);
         if (cancelled) return;
-        const mapped: ChoreView[] = (rows ?? []).map((r: any) => ({
-          id: r.id,
-          title: r.title,
-          points: r.points ?? 0,
-          status: dbToUiStatus(r.status as DbStatus),
-          doneById: r.done_by_member_id ?? undefined,
-          doneAt: r.done_at ? new Date(r.done_at).getTime() : undefined,
-          approvedById: r.approved_by_member_id ?? undefined,
-          approvedAt: r.approved_at ? new Date(r.approved_at).getTime() : undefined,
-          notes: r.notes ?? undefined,
-          proofs: r.proof_uri && r.proof_kind ? [{ uri: r.proof_uri, kind: r.proof_kind }] : [],
-        }));
+        const mapped: ChoreView[] = (rows ?? []).map((r: any) => {
+          const doneFromDb = r.done_at ? new Date(r.done_at).getTime() : undefined;
+
+          const doneAt =
+            doneFromDb ??
+            (r.status === 'OPEN' && r.created_at
+              ? new Date(r.created_at).getTime()
+              : undefined);
+
+          return {
+            id: r.id,
+            title: r.title,
+            points: r.points ?? 0,
+            status: dbToUiStatus(r.status as DbStatus),
+            doneById: r.done_by_member_id ?? undefined,
+            doneAt,
+            approvedById: r.approved_by_member_id ?? undefined,
+            approvedAt: r.approved_at ? new Date(r.approved_at).getTime() : undefined,
+            notes: r.notes ?? undefined,
+            proofs:
+              r.proof_uri && r.proof_kind
+                ? [{ uri: r.proof_uri, kind: r.proof_kind }]
+                : [],
+          };
+        });
+
         setList(mapped);
       } catch (e) {
         console.error('fetchChores failed', e);
@@ -108,6 +169,42 @@ export default function Chores() {
       cancelled = true;
     };
   }, [activeFamilyId]);
+
+  // ---- derived lists for each tab ----
+  const grouped = useMemo(() => {
+    const open: ChoreView[] = [];
+    const pending: ChoreView[] = [];
+    const approved: ChoreView[] = [];
+    const archived: ChoreView[] = [];
+
+    for (const c of list) {
+      if (c.status === 'open') {
+        open.push(c);
+      } else if (c.status === 'pending') {
+        pending.push(c);
+      } else if (c.status === 'approved') {
+        const ts = c.approvedAt ?? c.doneAt ?? 0;
+        if (ts >= startOfToday) {
+          approved.push(c); // approved today
+        } else {
+          archived.push(c); // older approvals
+        }
+      }
+    }
+
+    // sort a little: newest first per list
+    const sortByRecent = (arr: ChoreView[]) =>
+      [...arr].sort((a, b) => (b.doneAt ?? b.approvedAt ?? 0) - (a.doneAt ?? a.approvedAt ?? 0));
+
+    return {
+      open: sortByRecent(open),
+      pending: sortByRecent(pending),
+      approved: sortByRecent(approved),
+      archived: sortByRecent(archived),
+    } as Record<TabKey, ChoreView[]>;
+  }, [list, startOfToday]);
+
+  const dataForTab = grouped[tab];
 
   // Post a chore (parent)
   const postChore = async ({
@@ -245,7 +342,6 @@ export default function Chores() {
     }
   };
 
-
   // Parent declines -> OPEN
   const onDecline = async (id: string, notes?: string) => {
     try {
@@ -334,6 +430,13 @@ export default function Chores() {
     fn();
   };
 
+  const humanTabLabel: Record<TabKey, string> = {
+    open: 'To do',
+    pending: 'Needs check',
+    approved: 'Approved ⭐',
+    archived: 'History',
+  };
+
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
@@ -346,18 +449,71 @@ export default function Chores() {
         )}
       </View>
 
+      {/* tabs */}
+      <View style={styles.tabsRow}>
+        {(['open', 'pending', 'approved', 'archived'] as TabKey[]).map(key => (
+          <Pressable
+            key={key}
+            onPress={() => setTab(key)}
+            style={[styles.tab, tab === key && styles.tabActive]}
+          >
+            <Text
+              style={[styles.tabLabel, tab === key && styles.tabLabelActive]}
+            >
+              {humanTabLabel[key]}
+            </Text>
+
+            {key !== 'archived' && grouped[key].length > 0 && (
+              <View style={[
+                styles.countBubble,
+                tab === key && styles.countBubbleActive
+              ]}>
+                <Text style={styles.countText}>{grouped[key].length}</Text>
+              </View>
+            )}
+
+          </Pressable>
+        ))}
+      </View>
+
+
       <FlatList
-        contentContainerStyle={{ padding: 16, gap: 12 }}
-        data={list}
+        contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 32 }}
+        data={dataForTab}
         keyExtractor={(c) => c.id}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>No {humanTabLabel[tab].toLowerCase()} yet</Text>
+            {tab === 'open' && (
+              <Text style={styles.emptySubtitle}>
+                Parents can post new chores using the button above.
+              </Text>
+            )}
+          </View>
+        }
         renderItem={({ item }) => (
           <Pressable onPress={() => handleOpen(item)} style={styles.card}>
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>{item.title}</Text>
               <Text style={styles.meta}>
                 {item.points} pts •{' '}
-                {item.status === 'open' ? 'Open' : item.status === 'pending' ? 'Pending approval' : 'Approved'}
+                {item.status === 'open'
+                  ? 'To do'
+                  : item.status === 'pending'
+                    ? 'Needs check'
+                    : 'Approved ⭐'}
               </Text>
+              {item.status === 'open' && item.doneAt && (
+                <Text style={styles.timeText}>
+                  {formatDateTime(item.doneAt)}
+                </Text>
+              )}
+
+              {item.status === 'pending' && item.doneAt && (
+                <Text style={styles.timeText}>
+                  {formatDateTime(item.doneAt)}
+                </Text>
+              )}
             </View>
 
             {/* right side */}
@@ -375,7 +531,11 @@ export default function Chores() {
                   <Pressable onPress={stop(() => setEditing(item))} style={styles.iconBtn} hitSlop={8}>
                     <Feather name="edit-3" size={16} color="#1e3a8a" />
                   </Pressable>
-                  <Pressable onPress={stop(() => onDelete(item.id))} style={[styles.iconBtn, styles.deleteBtn]} hitSlop={8}>
+                  <Pressable
+                    onPress={stop(() => onDelete(item.id))}
+                    style={[styles.iconBtn, styles.deleteBtn]}
+                    hitSlop={8}
+                  >
                     <Feather name="trash-2" size={16} color="#b91c1c" />
                   </Pressable>
                 </View>
@@ -393,7 +553,6 @@ export default function Chores() {
         templates={templates}
         onDeleteTemplate={deleteTemplate}
       />
-
 
       {/* edit */}
       {editing && (
@@ -448,6 +607,42 @@ const styles = StyleSheet.create({
   },
   postTxt: { color: '#fff', fontWeight: '800' },
 
+  tabsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    gap: 8,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#f9fafb',
+  },
+  tabActive: {
+    backgroundColor: '#2563eb15',
+    borderColor: '#2563eb',
+  },
+  tabLabel: {
+    fontSize: 12,
+    color: '#4b5563',
+    fontWeight: '600',
+  },
+  tabLabelActive: {
+    color: '#1d4ed8',
+  },
+  tabCount: {
+    fontSize: 11,
+    color: '#9ca3af',
+    fontWeight: '700',
+  },
+
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -485,4 +680,50 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   badgeTxt: { color: '#1e3a8a', fontWeight: '800' },
+
+  emptyState: {
+    paddingVertical: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#4b5563',
+  },
+  emptySubtitle: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'center',
+    paddingHorizontal: 24,
+  },
+  countBubble: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#d1d5db',
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 3,
+  },
+
+  countBubbleActive: {
+    backgroundColor: '#2563eb',
+  },
+
+  countText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  timeText: {
+    fontSize: 11,
+    color: '#94a3b8',
+    marginTop: 4,
+  },
+
 });
