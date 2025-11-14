@@ -27,6 +27,9 @@ export type ChoreView = {
     // extra
     notes?: string;
     proofs?: Proof[];
+
+    assignedToId?: string;
+    assignedToName?: string;
 };
 
 // (optional) for later, templates:

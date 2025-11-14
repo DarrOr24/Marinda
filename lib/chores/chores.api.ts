@@ -1,16 +1,15 @@
 import { getSupabase } from '../supabase';
 
+export type ChoreStatus = 'OPEN' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
 
-export type ChoreStatus = 'OPEN' | 'SUBMITTED' | 'APPROVED' | 'REJECTED'
-
-const supabase = getSupabase()
+const supabase = getSupabase();
 
 export type ProofPayload = { uri: string; kind: 'image' | 'video' } | undefined;
 
 export async function fetchChores(familyId: string) {
   const { data, error } = await supabase
     .from('chores')
-    .select('*') // proof_* will come back too
+    .select('*') // proof_* + assignee + done_by_* come back
     .eq('family_id', familyId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -21,7 +20,7 @@ export async function addChore(
   familyId: string,
   chore: { title: string; description?: string; points: number; assigned_to?: string }
 ) {
-  const user = (await supabase.auth.getUser()).data.user
+  const user = (await supabase.auth.getUser()).data.user;
   const { data, error } = await supabase
     .from('chores')
     .insert({
@@ -33,9 +32,9 @@ export async function addChore(
       status: 'OPEN',
     })
     .select()
-    .single()
-  if (error) throw new Error(error.message)
-  return data
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
 }
 
 export async function submitChore(
@@ -63,8 +62,11 @@ export async function submitChore(
   return data;
 }
 
-
-export async function approveChore(choreId: string, parentMemberId: string, notes?: string) {
+export async function approveChore(
+  choreId: string,
+  parentMemberId: string,
+  notes?: string
+) {
   const { data, error } = await supabase
     .from('chores')
     .update({
@@ -101,7 +103,6 @@ export async function rejectChore(choreId: string, notes?: string) {
   return data;
 }
 
-// lib/chores/chores.api.ts
 export async function deleteChore(choreId: string) {
   const { error } = await supabase.from('chores').delete().eq('id', choreId);
   if (error) throw new Error(error.message);
@@ -139,16 +140,22 @@ export async function duplicateChore(choreId: string) {
 
 export async function updateChore(
   choreId: string,
-  fields: { title?: string; points?: number }
+  fields: { title?: string; points?: number; assigned_to?: string | null }
 ) {
+  const patch: any = {};
+  if (fields.title !== undefined) patch.title = fields.title;
+  if (fields.points !== undefined) patch.points = fields.points;
+  if (fields.assigned_to !== undefined) {
+    patch.assignee_member_id = fields.assigned_to ?? null;
+  }
+
   const { data, error } = await supabase
     .from('chores')
-    .update(fields)
+    .update(patch)
     .eq('id', choreId)
     .select()
     .single();
+
   if (error) throw new Error(error.message);
   return data;
 }
-
-

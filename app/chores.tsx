@@ -73,11 +73,15 @@ export default function Chores() {
 
   // hydrate family + members via React Query
   const { members: membersQuery } = useFamily(activeFamilyId || undefined);
-  useSubscribeTableByFamily('family_members', activeFamilyId || undefined, ['family-members', activeFamilyId]);
+  useSubscribeTableByFamily('family_members', activeFamilyId || undefined, [
+    'family-members',
+    activeFamilyId,
+  ]);
 
   // Unified raw members list
   const rawMembers: any[] = useMemo(
-    () => (membersQuery?.data ?? members?.data ?? members ?? family?.members ?? []) as any[],
+    () =>
+      (membersQuery?.data ?? members?.data ?? members ?? family?.members ?? []) as any[],
     [membersQuery?.data, members, family]
   );
 
@@ -99,11 +103,11 @@ export default function Chores() {
     return (id?: string) => (id ? map[id] || shortId(id) : '—');
   }, [rawMembers]);
 
-  // Options for “Done by” selector in the modal
+  // Options for “Done by” / “Assign to” selector
   const doneByOptions = useMemo(
     () =>
       rawMembers
-        .map(m => {
+        .map((m) => {
           const id = m?.id ?? m?.member_id;
           if (!id) return null;
           const name =
@@ -134,7 +138,10 @@ export default function Chores() {
 
   const { templates, createTemplate, deleteTemplate } = useChoreTemplates(activeFamilyId);
 
-  const isParent = useMemo(() => currentRole === 'MOM' || currentRole === 'DAD', [currentRole]);
+  const isParent = useMemo(
+    () => currentRole === 'MOM' || currentRole === 'DAD',
+    [currentRole]
+  );
 
   const [list, setList] = useState<ChoreView[]>([]);
   const [showPost, setShowPost] = useState(false);
@@ -174,6 +181,13 @@ export default function Chores() {
             title: r.title,
             points: r.points ?? 0,
             status: dbToUiStatus(r.status as DbStatus),
+
+            // assignment from DB
+            assignedToId: r.assignee_member_id ?? undefined,
+            assignedToName: r.assignee_member_id
+              ? nameForId(r.assignee_member_id)
+              : undefined,
+
             doneById: r.done_by_member_id ?? undefined,
             doneByIds: r.done_by_member_ids ?? [],
             doneAt,
@@ -196,7 +210,7 @@ export default function Chores() {
     return () => {
       cancelled = true;
     };
-  }, [activeFamilyId]);
+  }, [activeFamilyId, nameForId]);
 
   // ---- derived lists for each tab ----
   const grouped = useMemo(() => {
@@ -222,7 +236,9 @@ export default function Chores() {
 
     // sort a little: newest first per list
     const sortByRecent = (arr: ChoreView[]) =>
-      [...arr].sort((a, b) => (b.doneAt ?? b.approvedAt ?? 0) - (a.doneAt ?? a.approvedAt ?? 0));
+      [...arr].sort(
+        (a, b) => (b.doneAt ?? b.approvedAt ?? 0) - (a.doneAt ?? a.approvedAt ?? 0)
+      );
 
     return {
       open: sortByRecent(open),
@@ -239,21 +255,34 @@ export default function Chores() {
     title,
     points,
     saveAsTemplate,
+    assignedToId,
   }: {
     title: string;
     points: number;
     saveAsTemplate?: boolean;
+    assignedToId?: string;
   }) => {
     if (!activeFamilyId) return;
     try {
       // 1) create the actual chore
-      const row = await apiAddChore(activeFamilyId, { title, points });
+      const row = await apiAddChore(activeFamilyId, {
+        title,
+        points,
+        assigned_to: assignedToId,
+      });
+
       const created: ChoreView = {
         id: row.id,
         title: row.title,
         points: row.points ?? points,
-        status: dbToUiStatus(row.status),
+        status: dbToUiStatus(row.status as DbStatus),
         proofs: [],
+        assignedToId: row.assignee_member_id ?? assignedToId,
+        assignedToName: row.assignee_member_id
+          ? nameForId(row.assignee_member_id)
+          : assignedToId
+            ? nameForId(assignedToId)
+            : undefined,
       };
       setList((prev) => [created, ...prev]);
 
@@ -273,12 +302,22 @@ export default function Chores() {
     }
   };
 
-  // Edit (parent, open)
-  const onEdit = async (id: string, updates: { title: string; points: number }) => {
+  // Edit (parent, open) – we do NOT edit assignment for now
+  const onEdit = async (
+    id: string,
+    updates: { title: string; points: number; assignedToId?: string }
+  ) => {
     try {
-      const row = await updateChore(id, { title: updates.title, points: updates.points });
+      const row = await updateChore(id, {
+        title: updates.title,
+        points: updates.points,
+      });
       setList((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, title: row.title, points: row.points ?? updates.points } : c))
+        prev.map((c) =>
+          c.id === id
+            ? { ...c, title: row.title, points: row.points ?? updates.points }
+            : c
+        )
       );
       setEditing(null);
     } catch (e) {
@@ -298,14 +337,13 @@ export default function Chores() {
     );
   };
 
-  // Kid submits (SUBMITTED) – now we get doneById from the modal
-  // MULTI-MEMBER SUBMIT
+  // Kid submits (SUBMITTED) – multi-member submit
   const onMarkPending = async (id: string, doneByIds: string[]) => {
     try {
       if (!doneByIds || doneByIds.length === 0)
         throw new Error('Missing selected family members');
 
-      const theChore = list.find(c => c.id === id);
+      const theChore = list.find((c) => c.id === id);
       const lastProof = theChore?.proofs?.[theChore.proofs.length - 1];
 
       // SEND ALL MEMBERS
@@ -313,14 +351,14 @@ export default function Chores() {
 
       const when = row.done_at ? new Date(row.done_at).getTime() : Date.now();
 
-      setList(prev =>
-        prev.map(c =>
+      setList((prev) =>
+        prev.map((c) =>
           c.id === id
             ? {
               ...c,
               status: 'pending',
-              doneById: doneByIds[0],       // keep for backwards UI
-              doneByIds: doneByIds,        // NOW THE REAL ARRAY
+              doneById: doneByIds[0], // keep for backwards UI
+              doneByIds: doneByIds, // REAL ARRAY
               doneAt: when,
               proofs:
                 row.proof_uri && row.proof_kind
@@ -336,8 +374,6 @@ export default function Chores() {
     }
   };
 
-
-  // Parent approves (APPROVED) + award points to the member who did it
   // Parent approves (APPROVED) + split points evenly between all members who did it
   const onApprove = async (id: string, notes?: string) => {
     try {
@@ -349,26 +385,28 @@ export default function Chores() {
       const when = row.approved_at ? new Date(row.approved_at).getTime() : Date.now();
 
       // Local chore for fallback data
-      const local = list.find(c => c.id === id);
+      const local = list.find((c) => c.id === id);
 
       // Total points for this chore
       const totalPoints: number =
         (row.points as number | undefined) ?? (local?.points ?? 0);
 
       // All members who should get points
-      const idsFromRow = (row.done_by_member_ids as string[] | null | undefined) ?? [];
-      const idsFromLocal =
-        (local?.doneByIds && local.doneByIds.length > 0
-          ? local.doneByIds
-          : local?.doneById
-            ? [local.doneById]
-            : []) as string[];
+      const idsFromRow =
+        (row.done_by_member_ids as string[] | null | undefined) ?? [];
+      const idsFromLocal = (local?.doneByIds && local.doneByIds.length > 0
+        ? local.doneByIds
+        : local?.doneById
+          ? [local.doneById]
+          : []) as string[];
 
-      const memberIds = (idsFromRow.length ? idsFromRow : idsFromLocal).filter(Boolean);
+      const memberIds = (idsFromRow.length ? idsFromRow : idsFromLocal).filter(
+        Boolean
+      );
 
       // Update the chore locally
-      setList(prev =>
-        prev.map(c =>
+      setList((prev) =>
+        prev.map((c) =>
           c.id === id
             ? {
               ...c,
@@ -386,9 +424,8 @@ export default function Chores() {
         const perMember = Math.ceil(totalPoints / memberIds.length);
 
         await Promise.all(
-          memberIds.map(memberId => awardMemberPoints(memberId, perMember))
+          memberIds.map((memberId) => awardMemberPoints(memberId, perMember))
         );
-        // Note: total awarded can be slightly > totalPoints, by design.
       }
     } catch (e) {
       console.error('approveChore failed', e);
@@ -456,8 +493,12 @@ export default function Chores() {
               id: row.id,
               title: row.title,
               points: row.points ?? 0,
-              status: dbToUiStatus(row.status),
+              status: dbToUiStatus(row.status as DbStatus),
               proofs: [],
+              assignedToId: row.assignee_member_id ?? undefined,
+              assignedToName: row.assignee_member_id
+                ? nameForId(row.assignee_member_id)
+                : undefined,
             };
             setList((prev) => [created, ...prev]);
           } catch (e) {
@@ -505,7 +546,7 @@ export default function Chores() {
 
       {/* tabs */}
       <View style={styles.tabsRow}>
-        {(['open', 'pending', 'approved', 'archived'] as TabKey[]).map(key => (
+        {(['open', 'pending', 'approved', 'archived'] as TabKey[]).map((key) => (
           <Pressable
             key={key}
             onPress={() => setTab(key)}
@@ -518,18 +559,18 @@ export default function Chores() {
             </Text>
 
             {key !== 'archived' && grouped[key].length > 0 && (
-              <View style={[
-                styles.countBubble,
-                tab === key && styles.countBubbleActive
-              ]}>
+              <View
+                style={[
+                  styles.countBubble,
+                  tab === key && styles.countBubbleActive,
+                ]}
+              >
                 <Text style={styles.countText}>{grouped[key].length}</Text>
               </View>
             )}
-
           </Pressable>
         ))}
       </View>
-
 
       <FlatList
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 32 }}
@@ -537,7 +578,9 @@ export default function Chores() {
         keyExtractor={(c) => c.id}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>No {humanTabLabel[tab].toLowerCase()} yet</Text>
+            <Text style={styles.emptyTitle}>
+              No {humanTabLabel[tab].toLowerCase()} yet
+            </Text>
             {tab === 'open' && (
               <Text style={styles.emptySubtitle}>
                 Parents can post new chores using the button above.
@@ -557,32 +600,53 @@ export default function Chores() {
                     ? 'Needs check'
                     : 'Approved ⭐'}
               </Text>
-              {item.status === 'open' && item.doneAt && (
-                <Text style={styles.timeText}>
-                  {formatDateTime(item.doneAt)}
+
+              {item.assignedToName && (
+                <Text style={styles.assignedText}>
+                  Assigned to: {item.assignedToName}
                 </Text>
               )}
 
+              {item.status === 'open' && item.doneAt && (
+                <Text style={styles.timeText}>{formatDateTime(item.doneAt)}</Text>
+              )}
+
               {item.status === 'pending' && item.doneAt && (
-                <Text style={styles.timeText}>
-                  {formatDateTime(item.doneAt)}
-                </Text>
+                <Text style={styles.timeText}>{formatDateTime(item.doneAt)}</Text>
               )}
             </View>
 
             {/* right side */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+              }}
+            >
               <View style={styles.badge}>
-                <MaterialCommunityIcons name="star-circle-outline" size={18} color="#1e3a8a" />
+                <MaterialCommunityIcons
+                  name="star-circle-outline"
+                  size={18}
+                  color="#1e3a8a"
+                />
                 <Text style={styles.badgeTxt}>{item.points}</Text>
               </View>
 
               {isParent && item.status === 'open' && (
                 <View style={styles.actions}>
-                  <Pressable onPress={stop(() => onDuplicate(item.id))} style={styles.iconBtn} hitSlop={8}>
+                  <Pressable
+                    onPress={stop(() => onDuplicate(item.id))}
+                    style={styles.iconBtn}
+                    hitSlop={8}
+                  >
                     <Feather name="copy" size={16} color="#1e3a8a" />
                   </Pressable>
-                  <Pressable onPress={stop(() => setEditing(item))} style={styles.iconBtn} hitSlop={8}>
+                  <Pressable
+                    onPress={stop(() => setEditing(item))}
+                    style={styles.iconBtn}
+                    hitSlop={8}
+                  >
                     <Feather name="edit-3" size={16} color="#1e3a8a" />
                   </Pressable>
                   <Pressable
@@ -606,6 +670,7 @@ export default function Chores() {
         onSubmit={postChore}
         templates={templates}
         onDeleteTemplate={deleteTemplate}
+        assigneeOptions={doneByOptions}
       />
 
       {/* edit */}
@@ -715,6 +780,12 @@ const styles = StyleSheet.create({
   title: { fontSize: 16, fontWeight: '800', color: '#111827' },
   meta: { fontSize: 12, color: '#6b7280', marginTop: 2 },
 
+  assignedText: {
+    fontSize: 11,
+    color: '#64748b',
+    marginTop: 2,
+  },
+
   actions: { flexDirection: 'row', gap: 8, marginRight: 2 },
   iconBtn: {
     width: 30,
@@ -781,5 +852,4 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     marginTop: 4,
   },
-
 });
