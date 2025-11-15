@@ -438,11 +438,9 @@ export default function Chores() {
       );
 
       // Split points evenly, rounding UP per member
-      // Split points evenly, rounding UP per member
       if (memberIds.length > 0 && totalPoints > 0) {
         const perMember = Math.ceil(totalPoints / memberIds.length);
         const familyIdForLedger = activeFamilyId; // from useAuthContext
-
         await Promise.all(
           memberIds.map(async (memberId) => {
             // 1) Log into points_ledger (if we know the family id)
@@ -596,6 +594,7 @@ export default function Chores() {
           >
             <Text
               style={[styles.tabLabel, tab === key && styles.tabLabelActive]}
+              numberOfLines={2}
             >
               {humanTabLabel[key]}
             </Text>
@@ -613,6 +612,7 @@ export default function Chores() {
           </Pressable>
         ))}
       </View>
+
 
       <FlatList
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 32 }}
@@ -784,15 +784,15 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    flexDirection: 'row',
+    minHeight: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: '#e5e7eb',
     backgroundColor: '#f9fafb',
+    position: 'relative', // so the bubble can sit in the corner
   },
   tabActive: {
     backgroundColor: '#2563eb15',
@@ -802,6 +802,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#4b5563',
     fontWeight: '600',
+    textAlign: 'center',   // 👈 critical
+    paddingHorizontal: 4,  // a bit of breathing room for 2 lines
   },
   tabLabelActive: {
     color: '#1d4ed8',
@@ -885,11 +887,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 3,
   },
-
   countBubbleActive: {
     backgroundColor: '#2563eb',
   },
-
   countText: {
     color: '#fff',
     fontSize: 10,
@@ -900,4 +900,5 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     marginTop: 4,
   },
+
 });
