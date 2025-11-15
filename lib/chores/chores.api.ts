@@ -236,3 +236,29 @@ export async function updateChore(
   if (error) throw new Error(error.message);
   return data;
 }
+
+// NEW: log a points event into points_ledger for an approved chore
+export async function logChorePointsEvent(params: {
+  familyId: string;
+  memberId: string;
+  choreId: string;
+  delta: number;
+  approverMemberId: string;
+  reason?: string | null;
+}) {
+  const { familyId, memberId, choreId, delta, approverMemberId, reason } = params;
+
+  const { error } = await supabase.from('points_ledger').insert({
+    family_id: familyId,
+    member_id: memberId,
+    delta,
+    reason: reason ?? null,
+    chore_id: choreId,
+    approved_by_member_id: approverMemberId,
+    kind: 'chore_earn', // 👈 uses your new column
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}

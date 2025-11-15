@@ -11,6 +11,7 @@ import {
   duplicateChore as apiDuplicateChore,
   approveChore,
   fetchChores,
+  logChorePointsEvent,
   rejectChore,
   submitChore,
   updateChore,
@@ -437,13 +438,37 @@ export default function Chores() {
       );
 
       // Split points evenly, rounding UP per member
+      // Split points evenly, rounding UP per member
       if (memberIds.length > 0 && totalPoints > 0) {
         const perMember = Math.ceil(totalPoints / memberIds.length);
+        const familyIdForLedger = activeFamilyId; // from useAuthContext
 
         await Promise.all(
-          memberIds.map((memberId) => awardMemberPoints(memberId, perMember))
+          memberIds.map(async (memberId) => {
+            // 1) Log into points_ledger (if we know the family id)
+            if (familyIdForLedger) {
+              const reason =
+                row.notes ??
+                (local?.title
+                  ? `Completed chore: ${local.title}`
+                  : 'Chore approved');
+
+              await logChorePointsEvent({
+                familyId: familyIdForLedger,
+                memberId,
+                choreId: id,
+                delta: perMember,
+                approverMemberId: approverId,
+                reason,
+              });
+            }
+
+            // 2) Still update the member's current points total
+            await awardMemberPoints(memberId, perMember);
+          })
         );
       }
+
     } catch (e) {
       console.error('approveChore failed', e);
       Alert.alert('Error', 'Could not approve the chore.');
