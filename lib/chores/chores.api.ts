@@ -1,3 +1,7 @@
+import { decode } from 'base64-arraybuffer';
+
+import * as FileSystem from 'expo-file-system/legacy';
+
 import { getSupabase } from '../supabase';
 
 export type ChoreStatus = 'OPEN' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
@@ -20,16 +24,18 @@ async function uploadProofForChore(
   const fileName = `${Date.now()}.${ext}`;
   const filePath = `${choreId}/${uploaderMemberId ?? 'unknown'}/${fileName}`;
 
-  // React Native / Expo file object (NOT Blob)
-  const file = {
-    uri: proof.uri, // local file:// or content:// from camera / picker
-    name: fileName,
-    type: mime,
-  };
+  // 🔹 1) Read the local file into base64 (Expo way)
+  const base64 = await FileSystem.readAsStringAsync(proof.uri, {
+    encoding: 'base64',
+  } as any);
 
+  // 🔹 2) Convert base64 → raw bytes (ArrayBuffer)
+  const fileData = decode(base64); // this is what Supabase actually wants
+
+  // 🔹 3) Upload bytes to Supabase Storage
   const { error: uploadError } = await supabase.storage
     .from(PROOFS_BUCKET)
-    .upload(filePath, file as any, {
+    .upload(filePath, fileData, {
       contentType: mime,
       upsert: false,
     });
@@ -38,14 +44,14 @@ async function uploadProofForChore(
     throw new Error(uploadError.message);
   }
 
-  // Get a public URL for all devices to use
+  // 🔹 4) Get a public URL for all devices to use
   const { data: publicData } = supabase.storage
     .from(PROOFS_BUCKET)
     .getPublicUrl(filePath);
 
   const publicUrl = publicData?.publicUrl ?? null;
 
-  // Save metadata row in chore_proofs table
+  // 🔹 5) Save metadata row in chore_proofs table
   const { error: insertError } = await supabase.from('chore_proofs').insert({
     chore_id: choreId,
     uploader_member_id: uploaderMemberId, // <- must match family_members.id FK
@@ -60,7 +66,6 @@ async function uploadProofForChore(
 
   return { publicUrl };
 }
-
 
 export type ProofPayload = { uri: string; kind: 'image' | 'video' } | undefined;
 
