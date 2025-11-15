@@ -15,6 +15,7 @@ import {
   rejectChore,
   submitChore,
   updateChore,
+  uploadChoreAudioDescription
 } from '@/lib/chores/chores.api';
 import { awardMemberPoints } from '@/lib/families/families.api';
 import { useFamily } from '@/lib/families/families.hooks';
@@ -199,6 +200,8 @@ export default function Chores() {
               r.proof_uri && r.proof_kind
                 ? [{ uri: r.proof_uri, kind: r.proof_kind }]
                 : [],
+            audioDescriptionUrl: r.audio_description_url ?? undefined,
+            audioDescriptionDuration: r.audio_description_duration ?? undefined,
           };
         });
 
@@ -258,21 +261,42 @@ export default function Chores() {
     points,
     saveAsTemplate,
     assignedToId,
+    audioLocal,
   }: {
     title: string;
     description?: string;
     points: number;
     saveAsTemplate?: boolean;
     assignedToId?: string;
+    audioLocal?: { uri: string; durationSeconds: number };
   }) => {
     if (!activeFamilyId) return;
     try {
-      // 1) create the actual chore
+      // 🔹 1) upload audio (optional)
+      let audioUrl: string | null = null;
+      let audioDuration: number | null = null;
+
+      if (audioLocal) {
+        const { publicUrl } = await uploadChoreAudioDescription(
+          activeFamilyId,
+          myFamilyMemberId ?? null,
+          {
+            uri: audioLocal.uri,
+            durationSeconds: audioLocal.durationSeconds,
+          }
+        );
+        audioUrl = publicUrl;
+        audioDuration = audioLocal.durationSeconds;
+      }
+
+      // 🔹 2) create the actual chore
       const row = await apiAddChore(activeFamilyId, {
         title,
         description,
         points,
         assigned_to: assignedToId,
+        audioDescriptionUrl: audioUrl,
+        audioDescriptionDuration: audioDuration,
       });
 
       const created: ChoreView = {
@@ -288,6 +312,11 @@ export default function Chores() {
           : assignedToId
             ? nameForId(assignedToId)
             : undefined,
+
+        // 🔹 NEW
+        audioDescriptionUrl: row.audio_description_url ?? audioUrl ?? undefined,
+        audioDescriptionDuration:
+          row.audio_description_duration ?? audioDuration ?? undefined,
       };
       setList((prev) => [created, ...prev]);
 

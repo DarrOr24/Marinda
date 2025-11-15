@@ -1,7 +1,7 @@
 // components/chore-detail-modal.tsx
 import { ChoreView, Proof } from '@/lib/chores/chores.types';
 import { Role } from '@/lib/families/families.types';
-import { ResizeMode, Video } from 'expo-av';
+import { Audio, ResizeMode, Video } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useMemo, useState } from 'react';
 import {
@@ -117,6 +117,19 @@ export default function ChoreDetailModal({
         ]);
     };
 
+    async function playAudioDescription() {
+        if (!chore.audioDescriptionUrl) return;
+        try {
+            const { sound } = await Audio.Sound.createAsync({
+                uri: chore.audioDescriptionUrl,
+            });
+            await sound.playAsync();
+        } catch (err) {
+            console.error('playAudioDescription error', err);
+            Alert.alert('Error', 'Could not play audio description.');
+        }
+    }
+
     async function ensureCameraPermission() {
         const cam = await ImagePicker.requestCameraPermissionsAsync();
         if (!cam.granted) {
@@ -216,6 +229,23 @@ export default function ChoreDetailModal({
                                 {chore.description}
                             </Text>
                         ) : null}
+
+                        {chore.audioDescriptionUrl && (
+                            <View style={{ marginTop: 8 }}>
+                                <Text style={s.text}>
+                                    Audio description{' '}
+                                    {chore.audioDescriptionDuration != null && (
+                                        <Text style={s.bold}>({chore.audioDescriptionDuration}s)</Text>
+                                    )}
+                                </Text>
+                                <Pressable
+                                    style={[s.btn, s.secondary, { marginTop: 6, alignSelf: 'flex-start' }]}
+                                    onPress={playAudioDescription}
+                                >
+                                    <Text style={s.btnTxt}>Play audio</Text>
+                                </Pressable>
+                            </View>
+                        )}
 
                         {assignedToName && (
                             <Text style={[s.text, { marginTop: 4 }]}>

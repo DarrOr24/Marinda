@@ -1,5 +1,4 @@
 import { decode } from 'base64-arraybuffer';
-
 import * as FileSystem from 'expo-file-system/legacy';
 
 import { getSupabase } from '../supabase';
@@ -8,6 +7,17 @@ export type ChoreStatus = 'OPEN' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
 
 const supabase = getSupabase();
 const PROOFS_BUCKET = 'chore-proofs';
+const AUDIO_BUCKET = 'chore-audio'; // 🔹 AUDIO: new bucket const
+
+export type ProofPayload = { uri: string; kind: 'image' | 'video' } | undefined;
+
+// 🔹 AUDIO: payload type for an audio description
+export type AudioDescriptionPayload =
+  | {
+    uri: string; // local file URI from Expo AV
+    durationSeconds: number; // we’ll store this in audio_description_duration
+  }
+  | undefined;
 
 async function uploadProofForChore(
   choreId: string,
@@ -67,7 +77,45 @@ async function uploadProofForChore(
   return { publicUrl };
 }
 
-export type ProofPayload = { uri: string; kind: 'image' | 'video' } | undefined;
+// 🔹 AUDIO: upload helper for audio descriptions
+export async function uploadChoreAudioDescription(
+  familyId: string,
+  uploaderMemberId: string | null,
+  audio: AudioDescriptionPayload
+): Promise<{ publicUrl: string | null }> {
+  if (!audio) return { publicUrl: null };
+
+  const ext = 'm4a'; // Expo AV default for recorded audio
+  const mime = 'audio/m4a';
+
+  const fileName = `${Date.now()}.${ext}`;
+  // path: familyId/memberId/timestamp.m4a
+  const filePath = `${familyId}/${uploaderMemberId ?? 'unknown'}/${fileName}`;
+
+  const base64 = await FileSystem.readAsStringAsync(audio.uri, {
+    encoding: 'base64',
+  } as any);
+  const fileData = decode(base64);
+
+  const { error: uploadError } = await supabase.storage
+    .from(AUDIO_BUCKET)
+    .upload(filePath, fileData, {
+      contentType: mime,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  const { data: publicData } = supabase.storage
+    .from(AUDIO_BUCKET)
+    .getPublicUrl(filePath);
+
+  const publicUrl = publicData?.publicUrl ?? null;
+
+  return { publicUrl };
+}
 
 export async function fetchChores(familyId: string) {
   const { data, error } = await supabase
@@ -81,7 +129,15 @@ export async function fetchChores(familyId: string) {
 
 export async function addChore(
   familyId: string,
-  chore: { title: string; description?: string; points: number; assigned_to?: string }
+  chore: {
+    title: string;
+    description?: string;
+    points: number;
+    assigned_to?: string;
+    // 🔹 AUDIO: optional audio fields when creating a chore
+    audioDescriptionUrl?: string | null;
+    audioDescriptionDuration?: number | null;
+  }
 ) {
   const user = (await supabase.auth.getUser()).data.user;
   const { data, error } = await supabase
@@ -89,11 +145,14 @@ export async function addChore(
     .insert({
       family_id: familyId,
       title: chore.title,
-      description: chore.description ?? null,   // 👈 NEW
+      description: chore.description ?? null, // 👈 already added text description
       points: chore.points,
       assignee_member_id: chore.assigned_to ?? null,
       created_by: user?.id ?? null,
       status: 'OPEN',
+      // 🔹 AUDIO: map to DB columns
+      audio_description_url: chore.audioDescriptionUrl ?? null,
+      audio_description_duration: chore.audioDescriptionDuration ?? null,
     })
     .select()
     .single();
@@ -137,8 +196,6 @@ export async function submitChore(
   if (error) throw new Error(error.message);
   return data;
 }
-
-
 
 export async function approveChore(
   choreId: string,
@@ -220,18 +277,27 @@ export async function updateChore(
   choreId: string,
   fields: {
     title?: string;
-    description?: string | null;   // 👈 NEW
+    description?: string | null; // 👈 text description already here
     points?: number;
     assigned_to?: string | null;
+    // 🔹 AUDIO: allow editing audio description fields
+    audioDescriptionUrl?: string | null;
+    audioDescriptionDuration?: number | null;
   }
 ) {
   const patch: any = {};
   if (fields.title !== undefined) patch.title = fields.title;
   if (fields.description !== undefined)
-    patch.description = fields.description ?? null;  // 👈 NEW
+    patch.description = fields.description ?? null;
   if (fields.points !== undefined) patch.points = fields.points;
   if (fields.assigned_to !== undefined) {
     patch.assignee_member_id = fields.assigned_to ?? null;
+  }
+  if (fields.audioDescriptionUrl !== undefined) {
+    patch.audio_description_url = fields.audioDescriptionUrl;
+  }
+  if (fields.audioDescriptionDuration !== undefined) {
+    patch.audio_description_duration = fields.audioDescriptionDuration;
   }
 
   const { data, error } = await supabase

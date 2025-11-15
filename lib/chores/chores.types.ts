@@ -12,6 +12,8 @@ export type ChoreView = {
     title: string;
     points: number;
     description: string;
+    audioDescriptionUrl?: string | null;
+    audioDescriptionDuration?: number | null; // in seconds
     status: ChoreStatus;
 
     // who did the chore

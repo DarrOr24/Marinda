@@ -1,4 +1,5 @@
 // components/chore-post-modal.tsx
+import { Audio } from 'expo-av';
 import React from 'react';
 import {
     Alert,
@@ -26,6 +27,7 @@ type Props = {
         points: number;
         saveAsTemplate?: boolean;
         assignedToId?: string;
+        audioLocal?: { uri: string; durationSeconds: number };
     }) => void;
     // 🔹 include assignedToId so edit can prefill
     initial?: {
@@ -60,6 +62,9 @@ export default function ChorePostModal({
     const [assignedToId, setAssignedToId] = React.useState<string | null>(
         initial?.assignedToId ?? null
     );
+    const [recording, setRecording] = React.useState<Audio.Recording | null>(null);
+    const [audioUri, setAudioUri] = React.useState<string | null>(null);
+    const [audioDuration, setAudioDuration] = React.useState<number | null>(null);
 
     React.useEffect(() => {
         setTitle(initial?.title ?? '');
@@ -67,9 +72,70 @@ export default function ChorePostModal({
         setPoints(String(initial?.points ?? 5));
         setSaveAsTemplate(false);
         setAssignedToId(initial?.assignedToId ?? null);
+        setRecording(null);
+        setAudioUri(null);
+        setAudioDuration(null);
     }, [initial?.title, initial?.points, initial?.assignedToId, visible]);
 
+
     const disabled = !title.trim() || Number.isNaN(Number(points));
+
+    async function startRecording() {
+        try {
+            const perm = await Audio.requestPermissionsAsync();
+            if (!perm.granted) {
+                Alert.alert('Permission needed', 'Microphone access is required to record.');
+                return;
+            }
+
+            await Audio.setAudioModeAsync({
+                allowsRecordingIOS: true,
+                playsInSilentModeIOS: true,
+            });
+
+            const { recording } = await Audio.Recording.createAsync(
+                Audio.RecordingOptionsPresets.HIGH_QUALITY
+            );
+            setRecording(recording);
+        } catch (err) {
+            console.error('startRecording error', err);
+            Alert.alert('Error', 'Could not start recording.');
+        }
+    }
+
+    async function stopRecording() {
+        if (!recording) return;
+        try {
+            await recording.stopAndUnloadAsync();
+            const uri = recording.getURI();
+            if (!uri) return;
+
+            const status = await recording.getStatusAsync();
+            const durationSeconds =
+                'durationMillis' in status && typeof status.durationMillis === 'number'
+                    ? Math.round(status.durationMillis / 1000)
+                    : null;
+
+            setAudioUri(uri);
+            setAudioDuration(durationSeconds);
+        } catch (err) {
+            console.error('stopRecording error', err);
+            Alert.alert('Error', 'Could not stop recording.');
+        } finally {
+            setRecording(null);
+        }
+    }
+
+    async function playRecording() {
+        if (!audioUri) return;
+        try {
+            const { sound } = await Audio.Sound.createAsync({ uri: audioUri });
+            await sound.playAsync();
+        } catch (err) {
+            console.error('playRecording error', err);
+            Alert.alert('Error', 'Could not play audio.');
+        }
+    }
 
     return (
         <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
@@ -140,6 +206,36 @@ export default function ChorePostModal({
                         style={[styles.input, { minHeight: 60, textAlignVertical: 'top' }]}
                         multiline
                     />
+
+                    <Text style={[styles.label, { marginTop: 8 }]}>Audio description (optional)</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8 }}>
+                        {!recording ? (
+                            <Pressable style={[styles.smallBtn, styles.primary]} onPress={startRecording}>
+                                <Text style={[styles.btnTxt, { color: '#fff', fontSize: 12 }]}>
+                                    {audioUri ? 'Re-record' : 'Record audio'}
+                                </Text>
+                            </Pressable>
+                        ) : (
+                            <Pressable style={[styles.smallBtn, styles.cancel]} onPress={stopRecording}>
+                                <Text style={[styles.btnTxt, styles.cancelTxt, { fontSize: 12 }]}>
+                                    Stop
+                                </Text>
+                            </Pressable>
+                        )}
+
+                        {audioUri && !recording && (
+                            <>
+                                <Pressable style={[styles.smallBtn, styles.secondary]} onPress={playRecording}>
+                                    <Text style={[styles.btnTxt, { fontSize: 12 }]}>Play</Text>
+                                </Pressable>
+                                {audioDuration != null && (
+                                    <Text style={{ fontSize: 12, color: '#64748b' }}>
+                                        ~{audioDuration}s
+                                    </Text>
+                                )}
+                            </>
+                        )}
+                    </View>
 
                     <Text style={styles.label}>Points</Text>
                     <TextInput
@@ -220,12 +316,17 @@ export default function ChorePostModal({
                                     points: Number(points),
                                     saveAsTemplate,
                                     assignedToId: assignedToId ?? undefined,
+                                    audioLocal:
+                                        audioUri && audioDuration != null
+                                            ? { uri: audioUri, durationSeconds: audioDuration }
+                                            : undefined,
                                 })
                             }
                             style={[styles.btn, disabled ? styles.disabled : styles.primary]}
                         >
                             <Text style={[styles.btnTxt, { color: '#fff' }]}>{submitText}</Text>
                         </Pressable>
+
                     </View>
                 </View>
             </KeyboardAvoidingView>
@@ -323,4 +424,14 @@ const styles = StyleSheet.create({
     assigneeChipTxtSelected: {
         color: '#1d4ed8',
     },
+    smallBtn: {
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 999,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    cancel: { backgroundColor: '#fee2e2' },
+    cancelTxt: { color: '#b91c1c', fontWeight: '700' },
+
 });
