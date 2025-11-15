@@ -302,29 +302,46 @@ export default function Chores() {
     }
   };
 
-  // Edit (parent, open) – we do NOT edit assignment for now
+  // Edit (parent, open)
   const onEdit = async (
     id: string,
     updates: { title: string; points: number; assignedToId?: string }
   ) => {
     try {
+      // 1) Save to Supabase – column is `assigned_to`
       const row = await updateChore(id, {
         title: updates.title,
         points: updates.points,
+        assigned_to: updates.assignedToId ?? null,
       });
+
+      // 2) Work out the current assignee id + name for the UI
+      const assigneeId =
+        (row as any).assignee_member_id ?? updates.assignedToId ?? undefined;
+      const assigneeName = assigneeId ? nameForId(assigneeId) : undefined;
+
+      // 3) Update local list (so UI changes immediately)
       setList((prev) =>
         prev.map((c) =>
           c.id === id
-            ? { ...c, title: row.title, points: row.points ?? updates.points }
+            ? {
+              ...c,
+              title: row.title,
+              points: row.points ?? updates.points,
+              assignedToId: assigneeId,
+              assignedToName: assigneeName, // 👈 this is what was missing
+            }
             : c
         )
       );
+
       setEditing(null);
     } catch (e) {
       console.error('updateChore failed', e);
       Alert.alert('Error', 'Could not save changes.');
     }
   };
+
 
   // Local proofs
   const onAttachProof = (id: string, proof: Proof | null) => {
@@ -679,11 +696,17 @@ export default function Chores() {
           visible={!!editing}
           onClose={() => setEditing(null)}
           onSubmit={(vals) => onEdit(editing.id, vals)}
-          initial={{ title: editing.title, points: editing.points }}
+          initial={{
+            title: editing.title,
+            points: editing.points,
+            assignedToId: editing.assignedToId ?? null,
+          }}
           titleText="Edit Chore"
           submitText="Save"
+          assigneeOptions={doneByOptions}
         />
       )}
+
 
       {/* details modal */}
       {selected && (

@@ -26,12 +26,13 @@ type Props = {
         saveAsTemplate?: boolean;
         assignedToId?: string;
     }) => void;
-    initial?: { title?: string; points?: number };
+    // 🔹 include assignedToId so edit can prefill
+    initial?: { title?: string; points?: number; assignedToId?: string | null };
     titleText?: string; // e.g., "Edit Chore"
     submitText?: string;
     templates?: { id: string; title: string; defaultPoints: number }[];
     onDeleteTemplate?: (id: string) => void;
-    // NEW: who can be assigned
+    // who can be assigned
     assigneeOptions?: AssigneeOption[];
 };
 
@@ -49,14 +50,16 @@ export default function ChorePostModal({
     const [title, setTitle] = React.useState(initial?.title ?? '');
     const [points, setPoints] = React.useState(String(initial?.points ?? 5));
     const [saveAsTemplate, setSaveAsTemplate] = React.useState(false);
-    const [assignedToId, setAssignedToId] = React.useState<string | null>(null);
+    const [assignedToId, setAssignedToId] = React.useState<string | null>(
+        initial?.assignedToId ?? null
+    );
 
     React.useEffect(() => {
         setTitle(initial?.title ?? '');
         setPoints(String(initial?.points ?? 5));
         setSaveAsTemplate(false);
-        setAssignedToId(null);
-    }, [initial?.title, initial?.points, visible]);
+        setAssignedToId(initial?.assignedToId ?? null);
+    }, [initial?.title, initial?.points, initial?.assignedToId, visible]);
 
     const disabled = !title.trim() || Number.isNaN(Number(points));
 
@@ -130,8 +133,8 @@ export default function ChorePostModal({
                         style={styles.input}
                     />
 
-                    {/* NEW: Assign to (optional) */}
-                    {assigneeOptions && assigneeOptions.length > 0 && !initial && (
+                    {/* Assign to (optional) – now also shown for EDIT */}
+                    {assigneeOptions && assigneeOptions.length > 0 && (
                         <>
                             <Text style={[styles.label, { marginTop: 8 }]}>Assign to (optional)</Text>
                             <View style={styles.assigneeRow}>
@@ -163,6 +166,7 @@ export default function ChorePostModal({
                         </>
                     )}
 
+                    {/* Save as routine – still only on create */}
                     {!initial && (
                         <Pressable
                             onPress={() => setSaveAsTemplate(!saveAsTemplate)}
@@ -274,7 +278,7 @@ const styles = StyleSheet.create({
         lineHeight: 14,
     },
 
-    // NEW: assignee chips
+    // assignee chips
     assigneeRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
