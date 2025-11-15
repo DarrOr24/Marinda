@@ -3,6 +3,64 @@ import { getSupabase } from '../supabase';
 export type ChoreStatus = 'OPEN' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
 
 const supabase = getSupabase();
+const PROOFS_BUCKET = 'chore-proofs';
+
+async function uploadProofForChore(
+  choreId: string,
+  uploaderMemberId: string | null,
+  proof: ProofPayload
+): Promise<{ publicUrl: string | null }> {
+  if (!proof) return { publicUrl: null };
+
+  // Decide file extension + mime type
+  const ext = proof.kind === 'video' ? 'mp4' : 'jpg';
+  const mime = proof.kind === 'video' ? 'video/mp4' : 'image/jpeg';
+
+  // Example path: choreId/memberId/timestamp.jpg
+  const fileName = `${Date.now()}.${ext}`;
+  const filePath = `${choreId}/${uploaderMemberId ?? 'unknown'}/${fileName}`;
+
+  // React Native / Expo file object (NOT Blob)
+  const file = {
+    uri: proof.uri, // local file:// or content:// from camera / picker
+    name: fileName,
+    type: mime,
+  };
+
+  const { error: uploadError } = await supabase.storage
+    .from(PROOFS_BUCKET)
+    .upload(filePath, file as any, {
+      contentType: mime,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
+
+  // Get a public URL for all devices to use
+  const { data: publicData } = supabase.storage
+    .from(PROOFS_BUCKET)
+    .getPublicUrl(filePath);
+
+  const publicUrl = publicData?.publicUrl ?? null;
+
+  // Save metadata row in chore_proofs table
+  const { error: insertError } = await supabase.from('chore_proofs').insert({
+    chore_id: choreId,
+    uploader_member_id: uploaderMemberId, // <- must match family_members.id FK
+    storage_path: filePath,
+    media_type: proof.kind, // 'image' | 'video'
+    note: null,
+  });
+
+  if (insertError) {
+    throw new Error(insertError.message);
+  }
+
+  return { publicUrl };
+}
+
 
 export type ProofPayload = { uri: string; kind: 'image' | 'video' } | undefined;
 
@@ -42,17 +100,29 @@ export async function submitChore(
   memberIds: string[],
   proof?: ProofPayload
 ) {
+  let proofUri: string | null = null;
+  let proofKind: 'image' | 'video' | null = null;
+
+  if (proof) {
+    const mainMemberId = memberIds[0] ?? null;
+    const { publicUrl } = await uploadProofForChore(
+      choreId,
+      mainMemberId,
+      proof
+    );
+    proofUri = publicUrl;
+    proofKind = proof.kind;
+  }
+
   const { data, error } = await supabase
     .from('chores')
     .update({
       status: 'SUBMITTED',
-      // keep a single main member for backwards compatibility
       done_by_member_id: memberIds[0] ?? null,
-      // NEW: store all members
       done_by_member_ids: memberIds,
       done_at: new Date().toISOString(),
-      proof_uri: proof?.uri ?? null,
-      proof_kind: proof?.kind ?? null,
+      proof_uri: proofUri,
+      proof_kind: proofKind,
     })
     .eq('id', choreId)
     .select()
@@ -61,6 +131,8 @@ export async function submitChore(
   if (error) throw new Error(error.message);
   return data;
 }
+
+
 
 export async function approveChore(
   choreId: string,
