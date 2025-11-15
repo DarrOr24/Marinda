@@ -22,12 +22,18 @@ type Props = {
     onClose: () => void;
     onSubmit: (payload: {
         title: string;
+        description?: string;
         points: number;
         saveAsTemplate?: boolean;
         assignedToId?: string;
     }) => void;
     // 🔹 include assignedToId so edit can prefill
-    initial?: { title?: string; points?: number; assignedToId?: string | null };
+    initial?: {
+        title?: string;
+        description?: string | null;
+        points?: number;
+        assignedToId?: string | null;
+    };
     titleText?: string; // e.g., "Edit Chore"
     submitText?: string;
     templates?: { id: string; title: string; defaultPoints: number }[];
@@ -48,6 +54,7 @@ export default function ChorePostModal({
     assigneeOptions,
 }: Props) {
     const [title, setTitle] = React.useState(initial?.title ?? '');
+    const [description, setDescription] = React.useState(initial?.description ?? '');
     const [points, setPoints] = React.useState(String(initial?.points ?? 5));
     const [saveAsTemplate, setSaveAsTemplate] = React.useState(false);
     const [assignedToId, setAssignedToId] = React.useState<string | null>(
@@ -56,6 +63,7 @@ export default function ChorePostModal({
 
     React.useEffect(() => {
         setTitle(initial?.title ?? '');
+        setDescription(initial?.description ?? '');
         setPoints(String(initial?.points ?? 5));
         setSaveAsTemplate(false);
         setAssignedToId(initial?.assignedToId ?? null);
@@ -122,6 +130,15 @@ export default function ChorePostModal({
                         onChangeText={setTitle}
                         placeholder="e.g. Empty the dishwasher"
                         style={styles.input}
+                    />
+
+                    <Text style={[styles.label, { marginTop: 8 }]}>Description (optional)</Text>
+                    <TextInput
+                        value={description}
+                        onChangeText={setDescription}
+                        placeholder="Add extra details for this chore…"
+                        style={[styles.input, { minHeight: 60, textAlignVertical: 'top' }]}
+                        multiline
                     />
 
                     <Text style={styles.label}>Points</Text>
@@ -199,6 +216,7 @@ export default function ChorePostModal({
                             onPress={() =>
                                 onSubmit({
                                     title: title.trim(),
+                                    description: description.trim() || undefined,
                                     points: Number(points),
                                     saveAsTemplate,
                                     assignedToId: assignedToId ?? undefined,

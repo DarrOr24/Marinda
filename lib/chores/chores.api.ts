@@ -89,6 +89,7 @@ export async function addChore(
     .insert({
       family_id: familyId,
       title: chore.title,
+      description: chore.description ?? null,   // 👈 NEW
       points: chore.points,
       assignee_member_id: chore.assigned_to ?? null,
       created_by: user?.id ?? null,
@@ -217,10 +218,17 @@ export async function duplicateChore(choreId: string) {
 
 export async function updateChore(
   choreId: string,
-  fields: { title?: string; points?: number; assigned_to?: string | null }
+  fields: {
+    title?: string;
+    description?: string | null;   // 👈 NEW
+    points?: number;
+    assigned_to?: string | null;
+  }
 ) {
   const patch: any = {};
   if (fields.title !== undefined) patch.title = fields.title;
+  if (fields.description !== undefined)
+    patch.description = fields.description ?? null;  // 👈 NEW
   if (fields.points !== undefined) patch.points = fields.points;
   if (fields.assigned_to !== undefined) {
     patch.assignee_member_id = fields.assigned_to ?? null;

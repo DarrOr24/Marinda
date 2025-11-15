@@ -170,7 +170,6 @@ export default function Chores() {
         if (cancelled) return;
         const mapped: ChoreView[] = (rows ?? []).map((r: any) => {
           const doneFromDb = r.done_at ? new Date(r.done_at).getTime() : undefined;
-
           const doneAt =
             doneFromDb ??
             (r.status === 'OPEN' && r.created_at
@@ -180,6 +179,7 @@ export default function Chores() {
           return {
             id: r.id,
             title: r.title,
+            description: r.description ?? undefined,
             points: r.points ?? 0,
             status: dbToUiStatus(r.status as DbStatus),
 
@@ -254,11 +254,13 @@ export default function Chores() {
   // Post a chore (parent)
   const postChore = async ({
     title,
+    description,
     points,
     saveAsTemplate,
     assignedToId,
   }: {
     title: string;
+    description?: string;
     points: number;
     saveAsTemplate?: boolean;
     assignedToId?: string;
@@ -268,6 +270,7 @@ export default function Chores() {
       // 1) create the actual chore
       const row = await apiAddChore(activeFamilyId, {
         title,
+        description,
         points,
         assigned_to: assignedToId,
       });
@@ -275,6 +278,7 @@ export default function Chores() {
       const created: ChoreView = {
         id: row.id,
         title: row.title,
+        description: row.description ?? description,
         points: row.points ?? points,
         status: dbToUiStatus(row.status as DbStatus),
         proofs: [],
@@ -306,12 +310,18 @@ export default function Chores() {
   // Edit (parent, open)
   const onEdit = async (
     id: string,
-    updates: { title: string; points: number; assignedToId?: string }
+    updates: {
+      title: string;
+      description?: string;
+      points: number;
+      assignedToId?: string;
+    }
   ) => {
     try {
       // 1) Save to Supabase – column is `assigned_to`
       const row = await updateChore(id, {
         title: updates.title,
+        description: updates.description ?? null,
         points: updates.points,
         assigned_to: updates.assignedToId ?? null,
       });
@@ -328,9 +338,10 @@ export default function Chores() {
             ? {
               ...c,
               title: row.title,
+              description: row.description ?? updates.description,
               points: row.points ?? updates.points,
               assignedToId: assigneeId,
-              assignedToName: assigneeName, // 👈 this is what was missing
+              assignedToName: assigneeName,
             }
             : c
         )
@@ -532,6 +543,7 @@ export default function Chores() {
             const created: ChoreView = {
               id: row.id,
               title: row.title,
+              description: row.description ?? undefined,
               points: row.points ?? 0,
               status: dbToUiStatus(row.status as DbStatus),
               proofs: [],
@@ -723,6 +735,7 @@ export default function Chores() {
           onSubmit={(vals) => onEdit(editing.id, vals)}
           initial={{
             title: editing.title,
+            description: editing.description ?? '',
             points: editing.points,
             assignedToId: editing.assignedToId ?? null,
           }}

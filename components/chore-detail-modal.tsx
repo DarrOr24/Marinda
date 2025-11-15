@@ -211,6 +211,12 @@ export default function ChoreDetailModal({
                             Worth: <Text style={s.bold}>{chore.points} pts</Text>
                         </Text>
 
+                        {chore.description ? (
+                            <Text style={[s.text, { marginTop: 6 }]}>
+                                {chore.description}
+                            </Text>
+                        ) : null}
+
                         {assignedToName && (
                             <Text style={[s.text, { marginTop: 4 }]}>
                                 Assigned to: <Text style={s.bold}>{assignedToName}</Text>

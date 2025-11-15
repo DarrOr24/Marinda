@@ -11,6 +11,7 @@ export type ChoreView = {
     id: string;
     title: string;
     points: number;
+    description: string;
     status: ChoreStatus;
 
     // who did the chore
