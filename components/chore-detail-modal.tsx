@@ -1,7 +1,9 @@
 // components/chore-detail-modal.tsx
-import { ResizeMode, Video } from "expo-av";
-import * as ImagePicker from "expo-image-picker";
-import React, { useMemo, useState } from "react";
+import { ChoreView, Proof } from '@/lib/chores/chores.types';
+import { Role } from '@/lib/families/families.types';
+import { Audio, ResizeMode, Video } from 'expo-av';
+import * as ImagePicker from 'expo-image-picker';
+import React, { useMemo, useState } from 'react';
 import {
     Alert,
     Image,
@@ -12,28 +14,11 @@ import {
     Text,
     TextInput,
     View,
-} from "react-native";
+} from 'react-native';
 
-import { Role } from "@/lib/families/families.types";
-
-type Proof = { uri: string; kind: "image" | "video" };
-export type ChoreStatus = "open" | "pending" | "approved";
-
-export type ChoreView = {
+type MemberOption = {
     id: string;
-    title: string;
-    points: number;
-    status: ChoreStatus;
-    // who did the chore (set when kid marks as completed)
-    doneById?: string;
-    doneByName?: string;
-    doneAt?: number;
-    // who approved (set on approve)
-    approvedById?: string;
-    approvedByName?: string;
-    // notes + media
-    notes?: string;
-    proofs?: Proof[];
+    name: string;
 };
 
 type Props = {
@@ -43,9 +28,21 @@ type Props = {
     onClose: () => void;
 
     onAttachProof: (id: string, proof: Proof | null) => void; // null = clear
-    onMarkPending: (id: string) => void;
+    onMarkPending: (id: string, doneByIds: string[]) => void;
     onApprove: (id: string, notes?: string) => void;
     onDecline: (id: string, notes?: string) => void;
+
+    // still available for OPEN chores if you choose to add buttons there later
+    onDuplicate: (id: string) => void;
+    onDelete: (id: string) => void;
+
+    // resolver from parent so names always render correctly
+    nameForId: (id?: string) => string;
+
+    // who can be chosen as “done by”
+    doneByOptions: MemberOption[];
+    // default selection = logged-in member
+    defaultDoneById?: string;
 };
 
 export default function ChoreDetailModal({
@@ -57,11 +54,45 @@ export default function ChoreDetailModal({
     onMarkPending,
     onApprove,
     onDecline,
+    onDelete,
+    onDuplicate,
+    nameForId,
+    doneByOptions,
+    defaultDoneById,
 }: Props) {
-    const isParent = currentRole === "MOM" || currentRole === "DAD";
-    const [notes, setNotes] = useState(chore.notes ?? "");
+    const isParent = currentRole === 'MOM' || currentRole === 'DAD';
+    const isAssigned = !!chore.assignedToId;
 
-    React.useEffect(() => setNotes(chore.notes ?? ""), [chore.id, chore.notes]);
+    const [notes, setNotes] = useState(chore.notes ?? '');
+    React.useEffect(() => setNotes(chore.notes ?? ''), [chore.id, chore.notes]);
+
+    // initial doneBy selection (respect assignment if present)
+    const initialDoneByIds: string[] =
+        (chore.doneByIds && chore.doneByIds.length > 0
+            ? chore.doneByIds
+            : chore.assignedToId
+                ? [chore.assignedToId]
+                : chore.doneById
+                    ? [chore.doneById]
+                    : defaultDoneById
+                        ? [defaultDoneById]
+                        : []) ?? [];
+
+    const [selectedDoneByIds, setSelectedDoneByIds] = useState<string[]>(initialDoneByIds);
+
+    React.useEffect(() => {
+        const next: string[] =
+            (chore.doneByIds && chore.doneByIds.length > 0
+                ? chore.doneByIds
+                : chore.assignedToId
+                    ? [chore.assignedToId]
+                    : chore.doneById
+                        ? [chore.doneById]
+                        : defaultDoneById
+                            ? [defaultDoneById]
+                            : []) ?? [];
+        setSelectedDoneByIds(next);
+    }, [chore.id, chore.doneById, chore.doneByIds, chore.assignedToId, defaultDoneById]);
 
     const lastProof = useMemo(
         () =>
@@ -71,16 +102,42 @@ export default function ChoreDetailModal({
         [chore.proofs]
     );
 
-    // ---- capture helpers ----
+    const doDuplicate = () => onDuplicate(chore.id);
+    const doDelete = () => {
+        Alert.alert('Delete chore?', 'This cannot be undone.', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: () => {
+                    onDelete(chore.id);
+                    onClose();
+                },
+            },
+        ]);
+    };
+
+    async function playAudioDescription() {
+        if (!chore.audioDescriptionUrl) return;
+        try {
+            const { sound } = await Audio.Sound.createAsync({
+                uri: chore.audioDescriptionUrl,
+            });
+            await sound.playAsync();
+        } catch (err) {
+            console.error('playAudioDescription error', err);
+            Alert.alert('Error', 'Could not play audio description.');
+        }
+    }
+
     async function ensureCameraPermission() {
         const cam = await ImagePicker.requestCameraPermissionsAsync();
         if (!cam.granted) {
-            alert("Camera permission is required.");
+            alert('Camera permission is required.');
             return false;
         }
         return true;
     }
-
     async function takePhoto() {
         if (!(await ensureCameraPermission())) return;
         const res = await ImagePicker.launchCameraAsync({
@@ -88,10 +145,9 @@ export default function ChoreDetailModal({
             quality: 0.9,
         });
         if (!res.canceled && res.assets?.[0]) {
-            onAttachProof(chore.id, { uri: res.assets[0].uri, kind: "image" });
+            onAttachProof(chore.id, { uri: res.assets[0].uri, kind: 'image' });
         }
     }
-
     async function recordVideo() {
         if (!(await ensureCameraPermission())) return;
         const res = await ImagePicker.launchCameraAsync({
@@ -100,24 +156,32 @@ export default function ChoreDetailModal({
             videoMaxDuration: 30,
         });
         if (!res.canceled && res.assets?.[0]) {
-            onAttachProof(chore.id, { uri: res.assets[0].uri, kind: "video" });
+            onAttachProof(chore.id, { uri: res.assets[0].uri, kind: 'video' });
         }
     }
-
     function removeProof() {
         onAttachProof(chore.id, null);
     }
 
-    // ---- actions ----
     const markCompleted = () => {
         if (!chore.proofs || chore.proofs.length === 0) {
             Alert.alert(
-                "Proof required",
-                "Please upload a photo or video before marking as completed."
+                'Proof required',
+                'Please upload a photo or video before marking as completed.'
             );
             return;
         }
-        onMarkPending(chore.id);
+
+        if (selectedDoneByIds.length === 0) {
+            Alert.alert(
+                'Choose who did it',
+                'Please select which family members completed this chore.'
+            );
+            return;
+        }
+
+        // SEND ALL SELECTED MEMBERS
+        onMarkPending(chore.id, selectedDoneByIds);
         onClose();
     };
 
@@ -127,11 +191,11 @@ export default function ChoreDetailModal({
     };
 
     const deny = () => {
-        Alert.alert("Deny chore?", "Are you sure you want to deny this?", [
-            { text: "Cancel", style: "cancel" },
+        Alert.alert('Deny chore?', 'Are you sure you want to deny this?', [
+            { text: 'Cancel', style: 'cancel' },
             {
-                text: "Yes, deny",
-                style: "destructive",
+                text: 'Yes, deny',
+                style: 'destructive',
                 onPress: () => {
                     onDecline(chore.id, notes.trim() || undefined);
                     onClose();
@@ -139,6 +203,15 @@ export default function ChoreDetailModal({
             },
         ]);
     };
+
+    // Done-by label: show all names if multiple
+    const doneByName =
+        chore.doneByIds && chore.doneByIds.length > 0
+            ? chore.doneByIds.map((id) => nameForId(id)).join(', ')
+            : nameForId(chore.doneById);
+
+    const approvedByName = nameForId(chore.approvedById);
+    const assignedToName = chore.assignedToId ? nameForId(chore.assignedToId) : undefined;
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
@@ -151,9 +224,82 @@ export default function ChoreDetailModal({
                             Worth: <Text style={s.bold}>{chore.points} pts</Text>
                         </Text>
 
+                        {chore.description ? (
+                            <Text style={[s.text, { marginTop: 6 }]}>
+                                {chore.description}
+                            </Text>
+                        ) : null}
+
+                        {chore.audioDescriptionUrl && (
+                            <View style={{ marginTop: 8 }}>
+                                <Text style={s.text}>
+                                    Audio description{' '}
+                                    {chore.audioDescriptionDuration != null && (
+                                        <Text style={s.bold}>({chore.audioDescriptionDuration}s)</Text>
+                                    )}
+                                </Text>
+                                <Pressable
+                                    style={[s.btn, s.secondary, { marginTop: 6, alignSelf: 'flex-start' }]}
+                                    onPress={playAudioDescription}
+                                >
+                                    <Text style={s.btnTxt}>Play audio</Text>
+                                </Pressable>
+                            </View>
+                        )}
+
+                        {assignedToName && (
+                            <Text style={[s.text, { marginTop: 4 }]}>
+                                Assigned to: <Text style={s.bold}>{assignedToName}</Text>
+                            </Text>
+                        )}
+
                         {/* OPEN */}
-                        {chore.status === "open" && (
+                        {chore.status === 'open' && (
                             <>
+                                {/* assigned: lock to that member */}
+                                {isAssigned ? (
+                                    <Text style={[s.text, { marginTop: 12 }]}>
+                                        This chore is assigned to{' '}
+                                        <Text style={s.bold}>{assignedToName}</Text>. Only they can
+                                        complete it.
+                                    </Text>
+                                ) : (
+                                    doneByOptions.length > 0 && (
+                                        <>
+                                            <Text style={[s.text, { marginTop: 12 }]}>
+                                                Who did this?
+                                            </Text>
+                                            <View style={s.chipsRow}>
+                                                {doneByOptions.map((opt) => {
+                                                    const isSelected = selectedDoneByIds.includes(opt.id);
+                                                    return (
+                                                        <Pressable
+                                                            key={opt.id}
+                                                            onPress={() =>
+                                                                setSelectedDoneByIds((prev) =>
+                                                                    prev.includes(opt.id)
+                                                                        ? prev.filter((id) => id !== opt.id)
+                                                                        : [...prev, opt.id]
+                                                                )
+                                                            }
+                                                            style={[s.chip, isSelected && s.chipSelected]}
+                                                        >
+                                                            <Text
+                                                                style={[
+                                                                    s.chipTxt,
+                                                                    isSelected && s.chipTxtSelected,
+                                                                ]}
+                                                            >
+                                                                {opt.name}
+                                                            </Text>
+                                                        </Pressable>
+                                                    );
+                                                })}
+                                            </View>
+                                        </>
+                                    )
+                                )}
+
                                 <Text style={[s.text, { marginTop: 10 }]}>
                                     Upload a quick proof (photo or video) to mark as completed.
                                 </Text>
@@ -167,10 +313,9 @@ export default function ChoreDetailModal({
                                     </Pressable>
                                 </View>
 
-                                {/* live preview + remove */}
                                 {lastProof && (
                                     <View style={s.proof}>
-                                        {lastProof.kind === "image" ? (
+                                        {lastProof.kind === 'image' ? (
                                             <Image source={{ uri: lastProof.uri }} style={s.media} />
                                         ) : (
                                             <Video
@@ -188,7 +333,9 @@ export default function ChoreDetailModal({
 
                                 <View style={s.row}>
                                     <Pressable style={[s.btn, s.primary]} onPress={markCompleted}>
-                                        <Text style={[s.btnTxt, s.primaryTxt]}>Mark as completed</Text>
+                                        <Text style={[s.btnTxt, s.primaryTxt]}>
+                                            Mark as completed
+                                        </Text>
                                     </Pressable>
                                     <Pressable style={[s.btn, s.cancel]} onPress={onClose}>
                                         <Text style={[s.btnTxt, s.cancelTxt]}>Cancel</Text>
@@ -198,11 +345,11 @@ export default function ChoreDetailModal({
                         )}
 
                         {/* PENDING */}
-                        {chore.status === "pending" && (
+                        {chore.status === 'pending' && (
                             <>
                                 {lastProof && (
                                     <View style={s.proof}>
-                                        {lastProof.kind === "image" ? (
+                                        {lastProof.kind === 'image' ? (
                                             <Image source={{ uri: lastProof.uri }} style={s.media} />
                                         ) : (
                                             <Video
@@ -215,15 +362,22 @@ export default function ChoreDetailModal({
                                     </View>
                                 )}
 
+                                {assignedToName && (
+                                    <Text style={[s.text, { marginTop: 6 }]}>
+                                        Assigned to:{' '}
+                                        <Text style={s.bold}>{assignedToName}</Text>
+                                    </Text>
+                                )}
+
                                 <Text style={[s.text, { marginTop: 6 }]}>
-                                    Done by: <Text style={s.bold}>{chore.doneByName ?? "—"}</Text>
+                                    Done by: <Text style={s.bold}>{doneByName}</Text>
                                 </Text>
                                 <Text style={s.text}>
-                                    Time:{" "}
+                                    Time:{' '}
                                     <Text style={s.bold}>
                                         {chore.doneAt
                                             ? new Date(chore.doneAt).toLocaleString()
-                                            : "—"}
+                                            : '—'}
                                     </Text>
                                 </Text>
 
@@ -236,18 +390,16 @@ export default function ChoreDetailModal({
                                     multiline
                                 />
 
-                                <View style={[s.row, { marginTop: 18 }]}>
-                                    {isParent && (
-                                        <>
-                                            <Pressable style={[s.btn, s.cancel]} onPress={deny}>
-                                                <Text style={[s.btnTxt, s.cancelTxt]}>Deny</Text>
-                                            </Pressable>
-                                            <Pressable style={[s.btn, s.primary]} onPress={approve}>
-                                                <Text style={[s.btnTxt, s.primaryTxt]}>Approve</Text>
-                                            </Pressable>
-                                        </>
-                                    )}
-                                </View>
+                                {isParent && (
+                                    <View style={[s.row, { marginTop: 18 }]}>
+                                        <Pressable style={[s.btn, s.cancel]} onPress={deny}>
+                                            <Text style={[s.btnTxt, s.cancelTxt]}>Deny</Text>
+                                        </Pressable>
+                                        <Pressable style={[s.btn, s.primary]} onPress={approve}>
+                                            <Text style={[s.btnTxt, s.primaryTxt]}>Approve</Text>
+                                        </Pressable>
+                                    </View>
+                                )}
 
                                 <Pressable
                                     style={[s.btn, s.secondary, { marginTop: 12 }]}
@@ -259,11 +411,11 @@ export default function ChoreDetailModal({
                         )}
 
                         {/* APPROVED */}
-                        {chore.status === "approved" && (
+                        {chore.status === 'approved' && (
                             <>
                                 {lastProof && (
                                     <View style={s.proof}>
-                                        {lastProof.kind === "image" ? (
+                                        {lastProof.kind === 'image' ? (
                                             <Image source={{ uri: lastProof.uri }} style={s.media} />
                                         ) : (
                                             <Video
@@ -275,22 +427,38 @@ export default function ChoreDetailModal({
                                         )}
                                     </View>
                                 )}
+
+                                {assignedToName && (
+                                    <Text style={[s.text, { marginTop: 6 }]}>
+                                        Assigned to:{' '}
+                                        <Text style={s.bold}>{assignedToName}</Text>
+                                    </Text>
+                                )}
+
                                 <Text style={[s.text, { marginTop: 6 }]}>
-                                    Done by: <Text style={s.bold}>{chore.doneByName ?? "—"}</Text>
+                                    Done by: <Text style={s.bold}>{doneByName}</Text>
                                 </Text>
                                 <Text style={s.text}>
-                                    Time:{" "}
+                                    Time:{' '}
                                     <Text style={s.bold}>
                                         {chore.doneAt
                                             ? new Date(chore.doneAt).toLocaleString()
-                                            : "—"}
+                                            : '—'}
                                     </Text>
                                 </Text>
-                                {chore.approvedByName && (
-                                    <Text style={s.text}>
-                                        Approved by: <Text style={s.bold}>{chore.approvedByName}</Text>
+
+                                <Text style={s.text}>
+                                    Approved by: <Text style={s.bold}>{approvedByName}</Text>
+                                </Text>
+                                <Text style={s.text}>
+                                    Approved at:{' '}
+                                    <Text style={s.bold}>
+                                        {chore.approvedAt
+                                            ? new Date(chore.approvedAt).toLocaleString()
+                                            : '—'}
                                     </Text>
-                                )}
+                                </Text>
+
                                 {chore.notes ? (
                                     <Text style={s.text}>
                                         Notes: <Text style={s.bold}>{chore.notes}</Text>
@@ -315,59 +483,82 @@ export default function ChoreDetailModal({
 const s = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.4)",
-        justifyContent: "flex-end",
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'flex-end',
     },
     modal: {
-        backgroundColor: "#fff",
+        backgroundColor: '#fff',
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         padding: 16,
-        maxHeight: "90%",
+        maxHeight: '90%',
     },
-    title: { fontSize: 20, fontWeight: "900", color: "#0f172a" },
-    status: { fontWeight: "700", color: "#64748b", marginTop: 2 },
-    text: { color: "#334155" },
-    bold: { fontWeight: "700" },
-    row: { flexDirection: "row", gap: 12, marginTop: 14 },
-    btn: {
-        flex: 1,
-        borderRadius: 10,
-        alignItems: "center",
-        paddingVertical: 12,
-    },
-    primary: { backgroundColor: "#2563eb" },
-    primaryTxt: { color: "#fff", fontWeight: "700" },
-    secondary: { backgroundColor: "#f1f5f9" },
-    cancel: { backgroundColor: "#fee2e2" },
-    cancelTxt: { color: "#b91c1c", fontWeight: "700" },
-    btnTxt: { fontWeight: "700", color: "#1e293b" },
+    title: { fontSize: 20, fontWeight: '900', color: '#0f172a' },
+    status: { fontWeight: '700', color: '#64748b', marginTop: 2 },
+    text: { color: '#334155' },
+    bold: { fontWeight: '700' },
+    row: { flexDirection: 'row', gap: 12, marginTop: 14 },
+    btn: { flex: 1, borderRadius: 10, alignItems: 'center', paddingVertical: 12 },
+    primary: { backgroundColor: '#2563eb' },
+    primaryTxt: { color: '#fff', fontWeight: '700' },
+    secondary: { backgroundColor: '#f1f5f9' },
+    cancel: { backgroundColor: '#fee2e2' },
+    cancelTxt: { color: '#b91c1c', fontWeight: '700' },
+    btnTxt: { fontWeight: '700', color: '#1e293b' },
     proof: { marginTop: 12 },
     media: {
-        width: "100%",
+        width: '100%',
         height: 220,
         borderRadius: 12,
-        backgroundColor: "#e2e8f0",
+        backgroundColor: '#e2e8f0',
     },
     removeProof: {
-        position: "absolute",
+        position: 'absolute',
         top: 8,
         right: 8,
-        backgroundColor: "rgba(0,0,0,0.6)",
+        backgroundColor: 'rgba(0,0,0,0.6)',
         borderRadius: 16,
         width: 28,
         height: 28,
-        alignItems: "center",
-        justifyContent: "center",
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    removeProofTxt: { color: "#fff", fontWeight: "800", fontSize: 16 },
+    removeProofTxt: { color: '#fff', fontWeight: '800', fontSize: 16 },
     input: {
         borderWidth: 1,
-        borderColor: "#e2e8f0",
+        borderColor: '#e2e8f0',
         borderRadius: 10,
         padding: 10,
         minHeight: 44,
-        textAlignVertical: "top",
-        backgroundColor: "#fff",
+        textAlignVertical: 'top',
+        backgroundColor: '#fff',
+    },
+
+    // “done by” chips
+    chipsRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginTop: 8,
+    },
+    chip: {
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        backgroundColor: '#f9fafb',
+    },
+    chipSelected: {
+        backgroundColor: '#2563eb15',
+        borderColor: '#2563eb',
+    },
+    chipTxt: {
+        fontSize: 12,
+        color: '#475569',
+        fontWeight: '600',
+    },
+    chipTxtSelected: {
+        color: '#1d4ed8',
     },
 });
