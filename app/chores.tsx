@@ -177,6 +177,20 @@ export default function Chores() {
               ? new Date(r.created_at).getTime()
               : undefined);
 
+          // 🔹 NEW: resolve "created by" from auth user id
+          let createdByName: string | undefined;
+          if (r.created_by) {
+            const creator = rawMembers.find((m: any) =>
+              m?.user_id === r.created_by ||
+              m?.profile?.id === r.created_by ||
+              m?.profile_id === r.created_by
+            );
+            if (creator) {
+              const famId = creator.id ?? creator.member_id;
+              createdByName = famId ? nameForId(famId) : undefined;
+            }
+          }
+
           return {
             id: r.id,
             title: r.title,
@@ -184,7 +198,6 @@ export default function Chores() {
             points: r.points ?? 0,
             status: dbToUiStatus(r.status as DbStatus),
 
-            // assignment from DB
             assignedToId: r.assignee_member_id ?? undefined,
             assignedToName: r.assignee_member_id
               ? nameForId(r.assignee_member_id)
@@ -202,8 +215,12 @@ export default function Chores() {
                 : [],
             audioDescriptionUrl: r.audio_description_url ?? undefined,
             audioDescriptionDuration: r.audio_description_duration ?? undefined,
+
+            // 🔹 NEW
+            createdByName,
           };
         });
+
 
         setList(mapped);
       } catch (e) {
@@ -214,7 +231,7 @@ export default function Chores() {
     return () => {
       cancelled = true;
     };
-  }, [activeFamilyId, nameForId]);
+  }, [activeFamilyId, nameForId, rawMembers]);
 
   // ---- derived lists for each tab ----
   const grouped = useMemo(() => {
@@ -317,6 +334,7 @@ export default function Chores() {
         audioDescriptionUrl: row.audio_description_url ?? audioUrl ?? undefined,
         audioDescriptionDuration:
           row.audio_description_duration ?? audioDuration ?? undefined,
+        createdByName: myFamilyMemberId ? nameForId(myFamilyMemberId) : 'You',
       };
       setList((prev) => [created, ...prev]);
 
@@ -617,12 +635,10 @@ export default function Chores() {
     <View style={styles.screen}>
       <View style={styles.header}>
         <Text style={styles.h1}>Chores Game</Text>
-        {isParent && (
-          <Pressable onPress={() => setShowPost(true)} style={styles.postBtn}>
-            <Ionicons name="add" size={20} color="#fff" />
-            <Text style={styles.postTxt}>Post Chore</Text>
-          </Pressable>
-        )}
+        <Pressable onPress={() => setShowPost(true)} style={styles.postBtn}>
+          <Ionicons name="add" size={20} color="#fff" />
+          <Text style={styles.postTxt}>Post Chore</Text>
+        </Pressable>
       </View>
 
       {/* tabs */}
@@ -690,6 +706,12 @@ export default function Chores() {
                 </Text>
               )}
 
+              {item.createdByName && (
+                <Text style={styles.assignedText}>
+                  Created by: {item.createdByName}
+                </Text>
+              )}
+
               {item.status === 'open' && item.doneAt && (
                 <Text style={styles.timeText}>{formatDateTime(item.doneAt)}</Text>
               )}
@@ -716,7 +738,7 @@ export default function Chores() {
                 <Text style={styles.badgeTxt}>{item.points}</Text>
               </View>
 
-              {isParent && item.status === 'open' && (
+              {item.status === 'open' && (
                 <View style={styles.actions}>
                   <Pressable
                     onPress={stop(() => onDuplicate(item.id))}

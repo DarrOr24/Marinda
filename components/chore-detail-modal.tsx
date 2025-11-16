@@ -253,6 +253,12 @@ export default function ChoreDetailModal({
                             </Text>
                         )}
 
+                        {chore.createdByName && (
+                            <Text style={[s.text, { marginTop: 2 }]}>
+                                Created by: <Text style={s.bold}>{chore.createdByName}</Text>
+                            </Text>
+                        )}
+
                         {/* OPEN */}
                         {chore.status === 'open' && (
                             <>
@@ -369,6 +375,12 @@ export default function ChoreDetailModal({
                                     </Text>
                                 )}
 
+                                {chore.createdByName && (
+                                    <Text style={[s.text, { marginTop: 2 }]}>
+                                        Created by: <Text style={s.bold}>{chore.createdByName}</Text>
+                                    </Text>
+                                )}
+
                                 <Text style={[s.text, { marginTop: 6 }]}>
                                     Done by: <Text style={s.bold}>{doneByName}</Text>
                                 </Text>
@@ -432,6 +444,12 @@ export default function ChoreDetailModal({
                                     <Text style={[s.text, { marginTop: 6 }]}>
                                         Assigned to:{' '}
                                         <Text style={s.bold}>{assignedToName}</Text>
+                                    </Text>
+                                )}
+
+                                {chore.createdByName && (
+                                    <Text style={[s.text, { marginTop: 2 }]}>
+                                        Created by: <Text style={s.bold}>{chore.createdByName}</Text>
                                     </Text>
                                 )}
 
