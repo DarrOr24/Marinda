@@ -15,7 +15,7 @@ import {
   rejectChore,
   submitChore,
   updateChore,
-  uploadChoreAudioDescription
+  uploadChoreAudioDescription,
 } from '@/lib/chores/chores.api';
 import { awardMemberPoints } from '@/lib/families/families.api';
 import { useFamily } from '@/lib/families/families.hooks';
@@ -71,6 +71,9 @@ type TabKey = 'open' | 'pending' | 'approved' | 'archived';
 
 export default function Chores() {
   const { activeFamilyId, member, family, members } = useAuthContext() as any;
+
+  const authUserId: string | undefined =
+    member?.profile?.id || member?.user_id || member?.profile_id;
   const currentRole = (member?.role as Role) ?? 'TEEN';
 
   // hydrate family + members via React Query
@@ -127,8 +130,7 @@ export default function Chores() {
 
   // Current signed-in family_member_id (for default selection + some mutations)
   const myFamilyMemberId: string | undefined = useMemo(() => {
-    if (member?.id) return member.id as string; // already a family_member record
-    const authUserId = member?.profile?.id || member?.user_id || member?.profile_id;
+    if (member?.id) return member.id as string;
     const me = rawMembers.find(
       (m: any) =>
         m?.user_id === authUserId ||
@@ -136,7 +138,7 @@ export default function Chores() {
         m?.profile_id === authUserId
     );
     return me?.id as string | undefined;
-  }, [member, rawMembers]);
+  }, [member, rawMembers, authUserId]);
 
   const { templates, createTemplate, deleteTemplate } = useChoreTemplates(activeFamilyId);
 
@@ -177,6 +179,24 @@ export default function Chores() {
               ? new Date(r.created_at).getTime()
               : undefined);
 
+          // resolve "created by" from auth user id -> family member
+          let createdByMemberId: string | undefined;
+          let createdByName: string | undefined;
+          if (r.created_by) {
+            const creator = rawMembers.find(
+              (m: any) =>
+                m?.user_id === r.created_by ||
+                m?.profile?.id === r.created_by ||
+                m?.profile_id === r.created_by
+            );
+            if (creator) {
+              createdByMemberId = creator.id ?? creator.member_id;
+              if (createdByMemberId) {
+                createdByName = nameForId(createdByMemberId);
+              }
+            }
+          }
+
           return {
             id: r.id,
             title: r.title,
@@ -184,7 +204,6 @@ export default function Chores() {
             points: r.points ?? 0,
             status: dbToUiStatus(r.status as DbStatus),
 
-            // assignment from DB
             assignedToId: r.assignee_member_id ?? undefined,
             assignedToName: r.assignee_member_id
               ? nameForId(r.assignee_member_id)
@@ -202,6 +221,10 @@ export default function Chores() {
                 : [],
             audioDescriptionUrl: r.audio_description_url ?? undefined,
             audioDescriptionDuration: r.audio_description_duration ?? undefined,
+
+            createdByName,
+            createdByMemberId,
+            proofNote: r.proof_note ?? undefined,
           };
         });
 
@@ -214,7 +237,7 @@ export default function Chores() {
     return () => {
       cancelled = true;
     };
-  }, [activeFamilyId, nameForId]);
+  }, [activeFamilyId, nameForId, rawMembers]);
 
   // ---- derived lists for each tab ----
   const grouped = useMemo(() => {
@@ -254,7 +277,7 @@ export default function Chores() {
 
   const dataForTab = grouped[tab];
 
-  // Post a chore (parent)
+  // Post a chore (any member)
   const postChore = async ({
     title,
     description,
@@ -272,7 +295,7 @@ export default function Chores() {
   }) => {
     if (!activeFamilyId) return;
     try {
-      // 🔹 1) upload audio (optional)
+      // 1) upload audio (optional)
       let audioUrl: string | null = null;
       let audioDuration: number | null = null;
 
@@ -289,7 +312,7 @@ export default function Chores() {
         audioDuration = audioLocal.durationSeconds;
       }
 
-      // 🔹 2) create the actual chore
+      // 2) create the actual chore
       const row = await apiAddChore(activeFamilyId, {
         title,
         description,
@@ -313,14 +336,16 @@ export default function Chores() {
             ? nameForId(assignedToId)
             : undefined,
 
-        // 🔹 NEW
         audioDescriptionUrl: row.audio_description_url ?? audioUrl ?? undefined,
         audioDescriptionDuration:
           row.audio_description_duration ?? audioDuration ?? undefined,
+
+        createdByMemberId: myFamilyMemberId,
+        createdByName: myFamilyMemberId ? nameForId(myFamilyMemberId) : 'You',
       };
       setList((prev) => [created, ...prev]);
 
-      // 2) optionally also save as routine template
+      // optionally also save as routine template
       if (saveAsTemplate) {
         await createTemplate({
           title,
@@ -336,7 +361,7 @@ export default function Chores() {
     }
   };
 
-  // Edit (parent, open)
+  // Edit (creator or parent, open)
   const onEdit = async (
     id: string,
     updates: {
@@ -347,7 +372,6 @@ export default function Chores() {
     }
   ) => {
     try {
-      // 1) Save to Supabase – column is `assigned_to`
       const row = await updateChore(id, {
         title: updates.title,
         description: updates.description ?? null,
@@ -355,12 +379,10 @@ export default function Chores() {
         assigned_to: updates.assignedToId ?? null,
       });
 
-      // 2) Work out the current assignee id + name for the UI
       const assigneeId =
         (row as any).assignee_member_id ?? updates.assignedToId ?? undefined;
       const assigneeName = assigneeId ? nameForId(assigneeId) : undefined;
 
-      // 3) Update local list (so UI changes immediately)
       setList((prev) =>
         prev.map((c) =>
           c.id === id
@@ -383,7 +405,6 @@ export default function Chores() {
     }
   };
 
-
   // Local proofs
   const onAttachProof = (id: string, proof: Proof | null) => {
     setList((prev) =>
@@ -396,7 +417,11 @@ export default function Chores() {
   };
 
   // Kid submits (SUBMITTED) – multi-member submit
-  const onMarkPending = async (id: string, doneByIds: string[]) => {
+  const onMarkPending = async (
+    id: string,
+    doneByIds: string[],
+    proofNote?: string
+  ) => {
     try {
       if (!doneByIds || doneByIds.length === 0)
         throw new Error('Missing selected family members');
@@ -404,8 +429,7 @@ export default function Chores() {
       const theChore = list.find((c) => c.id === id);
       const lastProof = theChore?.proofs?.[theChore.proofs.length - 1];
 
-      // SEND ALL MEMBERS
-      const row = await submitChore(id, doneByIds, lastProof as any);
+      const row = await submitChore(id, doneByIds, lastProof as any, proofNote);
 
       const when = row.done_at ? new Date(row.done_at).getTime() : Date.now();
 
@@ -415,13 +439,14 @@ export default function Chores() {
             ? {
               ...c,
               status: 'pending',
-              doneById: doneByIds[0], // keep for backwards UI
-              doneByIds: doneByIds, // REAL ARRAY
+              doneById: doneByIds[0],
+              doneByIds: doneByIds,
               doneAt: when,
               proofs:
                 row.proof_uri && row.proof_kind
                   ? [{ uri: row.proof_uri, kind: row.proof_kind }]
                   : [],
+              proofNote: row.proof_note ?? proofNote ?? undefined,
             }
             : c
         )
@@ -432,24 +457,26 @@ export default function Chores() {
     }
   };
 
+
   // Parent approves (APPROVED) + split points evenly between all members who did it
-  const onApprove = async (id: string, notes?: string) => {
+  const onApprove = async (id: string, notes?: string, updatedPoints?: number) => {
     try {
       if (!myFamilyMemberId) throw new Error('Missing family member id');
 
-      // Approve in chores table (row includes done_by_member_ids)
+      // 👉 if parent changed points in the modal, save that first
+      if (typeof updatedPoints === 'number' && !Number.isNaN(updatedPoints)) {
+        await updateChore(id, { points: updatedPoints });
+      }
+
       const row = await approveChore(id, myFamilyMemberId, notes);
       const approverId = row.approved_by_member_id ?? myFamilyMemberId;
       const when = row.approved_at ? new Date(row.approved_at).getTime() : Date.now();
 
-      // Local chore for fallback data
       const local = list.find((c) => c.id === id);
 
-      // Total points for this chore
       const totalPoints: number =
         (row.points as number | undefined) ?? (local?.points ?? 0);
 
-      // All members who should get points
       const idsFromRow =
         (row.done_by_member_ids as string[] | null | undefined) ?? [];
       const idsFromLocal = (local?.doneByIds && local.doneByIds.length > 0
@@ -458,11 +485,8 @@ export default function Chores() {
           ? [local.doneById]
           : []) as string[];
 
-      const memberIds = (idsFromRow.length ? idsFromRow : idsFromLocal).filter(
-        Boolean
-      );
+      const memberIds = (idsFromRow.length ? idsFromRow : idsFromLocal).filter(Boolean);
 
-      // Update the chore locally
       setList((prev) =>
         prev.map((c) =>
           c.id === id
@@ -477,19 +501,16 @@ export default function Chores() {
         )
       );
 
-      // Split points evenly, rounding UP per member
       if (memberIds.length > 0 && totalPoints > 0) {
         const perMember = Math.ceil(totalPoints / memberIds.length);
-        const familyIdForLedger = activeFamilyId; // from useAuthContext
+        const familyIdForLedger = activeFamilyId;
         await Promise.all(
           memberIds.map(async (memberId) => {
-            // 1) Log into points_ledger (if we know the family id)
             if (familyIdForLedger) {
               const reason =
-                row.notes ??
-                (local?.title
+                local?.title
                   ? `Completed chore: ${local.title}`
-                  : 'Chore approved');
+                  : 'Chore approved';
 
               await logChorePointsEvent({
                 familyId: familyIdForLedger,
@@ -501,12 +522,10 @@ export default function Chores() {
               });
             }
 
-            // 2) Still update the member's current points total
             await awardMemberPoints(memberId, perMember);
           })
         );
       }
-
     } catch (e) {
       console.error('approveChore failed', e);
       Alert.alert('Error', 'Could not approve the chore.');
@@ -539,7 +558,7 @@ export default function Chores() {
     }
   };
 
-  // Delete (parent, open) with confirm
+  // Delete (creator or parent, open) with confirm
   const onDelete = (id: string) => {
     Alert.alert('Delete Chore', 'Are you sure you want to delete this chore?', [
       { text: 'Cancel', style: 'cancel' },
@@ -560,7 +579,7 @@ export default function Chores() {
     ]);
   };
 
-  // Duplicate (parent, open) with confirm
+  // Duplicate (anyone, open) with confirm
   const onDuplicate = (id: string) => {
     Alert.alert('Duplicate Chore', 'Do you want to create a duplicate of this chore?', [
       { text: 'Cancel', style: 'cancel' },
@@ -580,6 +599,8 @@ export default function Chores() {
               assignedToName: row.assignee_member_id
                 ? nameForId(row.assignee_member_id)
                 : undefined,
+              createdByMemberId: myFamilyMemberId,
+              createdByName: myFamilyMemberId ? nameForId(myFamilyMemberId) : 'You',
             };
             setList((prev) => [created, ...prev]);
           } catch (e) {
@@ -617,12 +638,10 @@ export default function Chores() {
     <View style={styles.screen}>
       <View style={styles.header}>
         <Text style={styles.h1}>Chores Game</Text>
-        {isParent && (
-          <Pressable onPress={() => setShowPost(true)} style={styles.postBtn}>
-            <Ionicons name="add" size={20} color="#fff" />
-            <Text style={styles.postTxt}>Post Chore</Text>
-          </Pressable>
-        )}
+        <Pressable onPress={() => setShowPost(true)} style={styles.postBtn}>
+          <Ionicons name="add" size={20} color="#fff" />
+          <Text style={styles.postTxt}>Post Chore</Text>
+        </Pressable>
       </View>
 
       {/* tabs */}
@@ -654,7 +673,6 @@ export default function Chores() {
         ))}
       </View>
 
-
       <FlatList
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 32 }}
         data={dataForTab}
@@ -666,84 +684,105 @@ export default function Chores() {
             </Text>
             {tab === 'open' && (
               <Text style={styles.emptySubtitle}>
-                Parents can post new chores using the button above.
+                Use the button above to post a new chore.
               </Text>
             )}
           </View>
         }
-        renderItem={({ item }) => (
-          <Pressable onPress={() => handleOpen(item)} style={styles.card}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.meta}>
-                {item.points} pts •{' '}
-                {item.status === 'open'
-                  ? 'To do'
-                  : item.status === 'pending'
-                    ? 'Needs check'
-                    : 'Approved ⭐'}
-              </Text>
+        renderItem={({ item }) => {
+          const isCreator =
+            !!myFamilyMemberId &&
+            item.createdByMemberId &&
+            item.createdByMemberId === myFamilyMemberId;
+          const canModify = isParent || isCreator;
 
-              {item.assignedToName && (
-                <Text style={styles.assignedText}>
-                  Assigned to: {item.assignedToName}
+          return (
+            <Pressable onPress={() => handleOpen(item)} style={styles.card}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.title}>{item.title}</Text>
+                <Text style={styles.meta}>
+                  {item.points} pts •{' '}
+                  {item.status === 'open'
+                    ? 'To do'
+                    : item.status === 'pending'
+                      ? 'Needs check'
+                      : 'Approved ⭐'}
                 </Text>
-              )}
 
-              {item.status === 'open' && item.doneAt && (
-                <Text style={styles.timeText}>{formatDateTime(item.doneAt)}</Text>
-              )}
+                {item.assignedToName && (
+                  <Text style={styles.assignedText}>
+                    Assigned to: {item.assignedToName}
+                  </Text>
+                )}
 
-              {item.status === 'pending' && item.doneAt && (
-                <Text style={styles.timeText}>{formatDateTime(item.doneAt)}</Text>
-              )}
-            </View>
+                {item.createdByName && (
+                  <Text style={styles.assignedText}>
+                    Created by: {item.createdByName}
+                  </Text>
+                )}
 
-            {/* right side */}
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 10,
-              }}
-            >
-              <View style={styles.badge}>
-                <MaterialCommunityIcons
-                  name="star-circle-outline"
-                  size={18}
-                  color="#1e3a8a"
-                />
-                <Text style={styles.badgeTxt}>{item.points}</Text>
+                {item.status === 'open' && item.doneAt && (
+                  <Text style={styles.timeText}>{formatDateTime(item.doneAt)}</Text>
+                )}
+
+                {item.status === 'pending' && item.doneAt && (
+                  <Text style={styles.timeText}>{formatDateTime(item.doneAt)}</Text>
+                )}
               </View>
 
-              {isParent && item.status === 'open' && (
-                <View style={styles.actions}>
-                  <Pressable
-                    onPress={stop(() => onDuplicate(item.id))}
-                    style={styles.iconBtn}
-                    hitSlop={8}
-                  >
-                    <Feather name="copy" size={16} color="#1e3a8a" />
-                  </Pressable>
-                  <Pressable
-                    onPress={stop(() => setEditing(item))}
-                    style={styles.iconBtn}
-                    hitSlop={8}
-                  >
-                    <Feather name="edit-3" size={16} color="#1e3a8a" />
-                  </Pressable>
-                  <Pressable
-                    onPress={stop(() => onDelete(item.id))}
-                    style={[styles.iconBtn, styles.deleteBtn]}
-                    hitSlop={8}
-                  >
-                    <Feather name="trash-2" size={16} color="#b91c1c" />
-                  </Pressable>
+              {/* right side */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                }}
+              >
+                <View style={styles.badge}>
+                  <MaterialCommunityIcons
+                    name="star-circle-outline"
+                    size={18}
+                    color="#1e3a8a"
+                  />
+                  <Text style={styles.badgeTxt}>{item.points}</Text>
                 </View>
-              )}
-            </View>
-          </Pressable>
-        )}
+
+                {item.status === 'open' && (
+                  <View style={styles.actions}>
+                    {/* Duplicate – everyone */}
+                    <Pressable
+                      onPress={stop(() => onDuplicate(item.id))}
+                      style={styles.iconBtn}
+                      hitSlop={8}
+                    >
+                      <Feather name="copy" size={16} color="#1e3a8a" />
+                    </Pressable>
+
+                    {/* Edit + Delete – only creator or parent */}
+                    {canModify && (
+                      <>
+                        <Pressable
+                          onPress={stop(() => setEditing(item))}
+                          style={styles.iconBtn}
+                          hitSlop={8}
+                        >
+                          <Feather name="edit-3" size={16} color="#1e3a8a" />
+                        </Pressable>
+                        <Pressable
+                          onPress={stop(() => onDelete(item.id))}
+                          style={[styles.iconBtn, styles.deleteBtn]}
+                          hitSlop={8}
+                        >
+                          <Feather name="trash-2" size={16} color="#b91c1c" />
+                        </Pressable>
+                      </>
+                    )}
+                  </View>
+                )}
+              </View>
+            </Pressable>
+          );
+        }}
       />
 
       {/* create */}
@@ -773,7 +812,6 @@ export default function Chores() {
           assigneeOptions={doneByOptions}
         />
       )}
-
 
       {/* details modal */}
       {selected && (
@@ -834,7 +872,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
     backgroundColor: '#f9fafb',
-    position: 'relative', // so the bubble can sit in the corner
+    position: 'relative',
   },
   tabActive: {
     backgroundColor: '#2563eb15',
@@ -844,8 +882,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#4b5563',
     fontWeight: '600',
-    textAlign: 'center',   // 👈 critical
-    paddingHorizontal: 4,  // a bit of breathing room for 2 lines
+    textAlign: 'center',
+    paddingHorizontal: 4,
   },
   tabLabelActive: {
     color: '#1d4ed8',
@@ -942,5 +980,4 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     marginTop: 4,
   },
-
 });

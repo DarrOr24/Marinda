@@ -33,6 +33,11 @@ export type ChoreView = {
 
     assignedToId?: string;
     assignedToName?: string;
+
+    createdByName?: string;
+    createdByMemberId?: string;
+
+    proofNote?: string;
 };
 
 // (optional) for later, templates:
