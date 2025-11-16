@@ -227,14 +227,47 @@ export default function ChoreDetailModal({
     const approve = () => {
         const cleanedNotes = notes.trim() || undefined;
 
-        let updatedPoints: number | undefined;
+        // 1) Parse and validate points text
         const parsed = Number(pointsText);
-        if (!Number.isNaN(parsed) && parsed >= 0 && parsed !== chore.points) {
-            updatedPoints = parsed;
+        if (Number.isNaN(parsed) || parsed < 0) {
+            Alert.alert(
+                'Check points',
+                'Please enter a valid number of points (0 or more).'
+            );
+            return;
         }
 
-        onApprove(chore.id, cleanedNotes, updatedPoints);
-        onClose();
+        const effectivePoints = parsed;
+
+        // Helper that actually calls onApprove + closes
+        const doApprove = () => {
+            let updatedPoints: number | undefined;
+            if (effectivePoints !== chore.points) {
+                updatedPoints = effectivePoints;
+            }
+            onApprove(chore.id, cleanedNotes, updatedPoints);
+            onClose();
+        };
+
+        // 2) If approving with 0 points, warn the parent first
+        if (effectivePoints === 0) {
+            Alert.alert(
+                'Approve with 0 points?',
+                'This chore will be approved with 0 points. Use this only for chores that should not give a reward (like cleaning up a mess they made).',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Approve with 0 pts',
+                        style: 'destructive',
+                        onPress: doApprove,
+                    },
+                ]
+            );
+            return;
+        }
+
+        // 3) Normal path (points > 0)
+        doApprove();
     };
 
     const deny = () => {
