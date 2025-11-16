@@ -33,18 +33,19 @@ export function useCreateFamily() {
   })
 }
 
-export function useJoinFamily() {
+export function useJoinFamily(defaultRole: Role = 'ADULT') {
   const qc = useQueryClient()
   const { setActiveFamilyId } = useAuthContext()
 
   return useMutation({
-    mutationFn: ({ code, role }: { code: string; role?: Role }) => rpcJoinFamily(code, role ?? 'TEEN'),
-
-    onSuccess: (familyId: string) => {
-      setActiveFamilyId(familyId)
+    mutationFn: ({ code, role }: { code: string; role?: Role }) =>
+      rpcJoinFamily(code, role ?? defaultRole),
+    onSuccess: async (familyId: string) => {
+      await setActiveFamilyId(familyId)
       qc.invalidateQueries({ queryKey: ['families'] })
       qc.invalidateQueries({ queryKey: ['family', familyId] })
       qc.invalidateQueries({ queryKey: ['family-members', familyId] })
+      qc.invalidateQueries({ queryKey: ['memberships'] })
     },
   })
 }

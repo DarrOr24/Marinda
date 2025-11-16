@@ -1,21 +1,26 @@
+// providers/auth-provider.tsx
 import type { Session } from '@supabase/supabase-js'
+import { useRouter } from 'expo-router'
 import { PropsWithChildren, useCallback, useEffect, useMemo, useState } from 'react'
 import { Linking, Platform } from 'react-native'
 
-import { AuthContext } from '@/hooks/use-auth-context'
+import { AuthContext, Membership } from '@/hooks/use-auth-context'
 import { appStorage } from '@/lib/app-storage'
 import { fetchMember } from '@/lib/families/families.api'
 import { Member } from '@/lib/families/families.types'
 import { getSupabase } from '@/lib/supabase'
+import { SignUpDetails } from './signup-flow-provider'
 
 
 const ACTIVE_FAMILY_KEY = 'marinda:activeFamilyId'
 
 export default function AuthProvider({ children }: PropsWithChildren) {
   const supabase = getSupabase()
+  const router = useRouter()
 
   const [session, setSession] = useState<Session | null>(null)
   const [member, setMember] = useState<Member | null>(null)
+  const [memberships, setMemberships] = useState<Membership[] | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
   const [activeFamilyId, _setActiveFamilyId] = useState<string | null>(null)
@@ -29,54 +34,59 @@ export default function AuthProvider({ children }: PropsWithChildren) {
 
   // Fetch the session once, and subscribe to auth state changes
   useEffect(() => {
-    const fetchSession = async () => {
+    const init = async () => {
       setIsLoading(true)
-
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession()
-
-      if (error) {
-        console.error('Error fetching session:', error)
-      }
-
-      setSession(session)
+      const { data, error } = await supabase.auth.getSession()
+      if (error) console.error('Error fetching session:', error)
+      setSession(data.session ?? null)
       setIsLoading(false)
     }
+    init()
 
-    fetchSession()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('Auth state changed:', { event: _event, session })
-      setSession(session)
-    })
-
-    // Cleanup subscription on unmount
-    return () => {
-      subscription.unsubscribe()
-    }
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
+    return () => sub.subscription.unsubscribe()
   }, [supabase])
 
   // Native deep linking support
   useEffect(() => {
     if (Platform.OS === 'web') return
-
     const handleUrl = async (url: string | null) => {
-      if (!url) return
+      if (!url || !url.includes('auth-callback')) return
       const { data, error } = await supabase.auth.exchangeCodeForSession(url)
-      if (error) {
-      } else if (data?.session) {
-        setSession(data.session)
-      }
+      if (error) console.error(error)
+      else if (data?.session) setSession(data.session)
     }
-
     const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url))
     Linking.getInitialURL().then(handleUrl)
     return () => sub.remove()
   }, [supabase])
+
+  // fetch memberships whenever session changes
+  useEffect(() => {
+    const fetchMemberships = async () => {
+      if (!session?.user) {
+        setMemberships(null)
+        return
+      }
+      const { data, error } = await supabase
+        .from('family_members')
+        .select(`
+          family_id,
+          family:families( id, name, code )
+        `)
+        .eq('profile_id', session.user.id)
+        .order('joined_at', { ascending: true })
+
+      if (error) throw new Error(error.message)
+
+      setMemberships(data.map((m: any) => ({
+        familyId: m.family.id,
+        familyName: m.family.name,
+        familyCode: m.family.code,
+      })) as unknown as Membership[])
+    }
+    fetchMemberships()
+  }, [session, supabase])
 
   // Fetch the member when the session changes
   useEffect(() => {
@@ -97,37 +107,42 @@ export default function AuthProvider({ children }: PropsWithChildren) {
 
   // Restore or auto-pick active family on login
   useEffect(() => {
-    const fetchActiveFamilyId = async () => {
+    const restoreActiveFamilyOrRoute = async () => {
       if (!session?.user) {
         _setActiveFamilyId(null)
         await appStorage.removeItem(ACTIVE_FAMILY_KEY)
         return
       }
 
+      if (!memberships) return
+
+      // 1) No memberships found, route to onboarding
+      if (memberships.length === 0) {
+        _setActiveFamilyId(null)
+        router.replace('/onboarding')
+        return
+      }
+
+      // 2) Try to restore active family from storage
       const stored = await appStorage.getItem(ACTIVE_FAMILY_KEY)
       if (stored) {
         _setActiveFamilyId(stored)
         return
       }
 
-      const { data, error } = await supabase
-        .from('family_members')
-        .select('family_id')
-        .eq('profile_id', session.user.id)
-        .order('joined_at', { ascending: true })
-        .limit(1)
-
-      if (error) {
-        console.error('Error fetching active family:', error)
+      // 3) If there's only one membership, set it as active
+      if (memberships.length === 1) {
+        const only = memberships[0].familyId
+        await setActiveFamilyId(only)
         return
       }
 
-      const first = data?.[0]?.family_id ?? null
-      if (first) setActiveFamilyId(first)
+      _setActiveFamilyId(null)
+      router.replace('/select-family')
     }
 
-    fetchActiveFamilyId()
-  }, [session, supabase])
+    restoreActiveFamilyOrRoute()
+  }, [session, memberships, router])
 
   const signInWithEmailPassword = useCallback(
     async (email: string, password: string) => {
@@ -147,6 +162,25 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     [supabase]
   )
 
+  const signUpWithEmailPassword = useCallback(
+    async (email: string, password: string, details: SignUpDetails) => {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: details ?? {} }
+      })
+      if (error) {
+        console.error('Error signing up:', error)
+        throw error
+      }
+
+      setSession(data.session ?? null)
+      return data.session ?? null
+    },
+    [supabase]
+  )
+
+
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut()
     if (error) {
@@ -161,14 +195,16 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     () => ({
       session,
       member,
+      memberships,
       isLoading,
       isLoggedIn: !!session,
       signInWithEmailPassword,
+      signUpWithEmailPassword,
       signOut,
       activeFamilyId,
       setActiveFamilyId,
     }),
-    [session, member, isLoading, activeFamilyId, signInWithEmailPassword, signOut, setActiveFamilyId]
+    [session, member, memberships, isLoading, activeFamilyId, signInWithEmailPassword, signUpWithEmailPassword, signOut, setActiveFamilyId]
   )
 
   return (

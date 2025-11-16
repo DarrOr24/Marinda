@@ -12,7 +12,7 @@ import { AppState, Platform, useColorScheme } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 
 import AuthProvider from '@/providers/auth-provider'
-
+import { SignUpFlowProvider } from '@/providers/signup-flow-provider'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,7 +51,11 @@ export default function Providers({ children }: PropsWithChildren) {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>{children}</AuthProvider>
+          <SignUpFlowProvider>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </SignUpFlowProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
     </ThemeProvider>
