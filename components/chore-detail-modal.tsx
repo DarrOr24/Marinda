@@ -41,7 +41,7 @@ type Props = {
 
     // who can be chosen as “done by”
     doneByOptions: MemberOption[];
-    // default selection = logged-in member
+    // default selection = logged-in member (we’ll also treat this as current member id)
     defaultDoneById?: string;
 };
 
@@ -130,7 +130,26 @@ export default function ChoreDetailModal({
         }
     }
 
+    /**
+     * NEW: guard so only the assigned family member can do the chore
+     * when the chore is assigned to a specific member.
+     */
+    function ensureCanModifyAssignedChore(): boolean {
+        if (!chore.assignedToId) return true; // not assigned → anyone can do it
+        if (!defaultDoneById) return true; // we don't know who is logged in
+        if (chore.assignedToId === defaultDoneById) return true; // assigned to me ✅
+
+        Alert.alert(
+            'Assigned chore',
+            'This chore is assigned to someone else. Only the assigned family member can do it.'
+        );
+        return false;
+    }
+
     async function ensureCameraPermission() {
+        // 🔒 first check assignment
+        if (!ensureCanModifyAssignedChore()) return false;
+
         const cam = await ImagePicker.requestCameraPermissionsAsync();
         if (!cam.granted) {
             alert('Camera permission is required.');
@@ -138,6 +157,7 @@ export default function ChoreDetailModal({
         }
         return true;
     }
+
     async function takePhoto() {
         if (!(await ensureCameraPermission())) return;
         const res = await ImagePicker.launchCameraAsync({
@@ -148,6 +168,7 @@ export default function ChoreDetailModal({
             onAttachProof(chore.id, { uri: res.assets[0].uri, kind: 'image' });
         }
     }
+
     async function recordVideo() {
         if (!(await ensureCameraPermission())) return;
         const res = await ImagePicker.launchCameraAsync({
@@ -159,11 +180,15 @@ export default function ChoreDetailModal({
             onAttachProof(chore.id, { uri: res.assets[0].uri, kind: 'video' });
         }
     }
+
     function removeProof() {
         onAttachProof(chore.id, null);
     }
 
     const markCompleted = () => {
+        // 🔒 block marking as completed if this user isn't the assignee
+        if (!ensureCanModifyAssignedChore()) return;
+
         if (!chore.proofs || chore.proofs.length === 0) {
             Alert.alert(
                 'Proof required',
@@ -225,9 +250,7 @@ export default function ChoreDetailModal({
                         </Text>
 
                         {chore.description ? (
-                            <Text style={[s.text, { marginTop: 6 }]}>
-                                {chore.description}
-                            </Text>
+                            <Text style={[s.text, { marginTop: 6 }]}>{chore.description}</Text>
                         ) : null}
 
                         {chore.audioDescriptionUrl && (
@@ -272,9 +295,7 @@ export default function ChoreDetailModal({
                                 ) : (
                                     doneByOptions.length > 0 && (
                                         <>
-                                            <Text style={[s.text, { marginTop: 12 }]}>
-                                                Who did this?
-                                            </Text>
+                                            <Text style={[s.text, { marginTop: 12 }]}>Who did this?</Text>
                                             <View style={s.chipsRow}>
                                                 {doneByOptions.map((opt) => {
                                                     const isSelected = selectedDoneByIds.includes(opt.id);
@@ -370,8 +391,7 @@ export default function ChoreDetailModal({
 
                                 {assignedToName && (
                                     <Text style={[s.text, { marginTop: 6 }]}>
-                                        Assigned to:{' '}
-                                        <Text style={s.bold}>{assignedToName}</Text>
+                                        Assigned to: <Text style={s.bold}>{assignedToName}</Text>
                                     </Text>
                                 )}
 
@@ -442,8 +462,7 @@ export default function ChoreDetailModal({
 
                                 {assignedToName && (
                                     <Text style={[s.text, { marginTop: 6 }]}>
-                                        Assigned to:{' '}
-                                        <Text style={s.bold}>{assignedToName}</Text>
+                                        Assigned to: <Text style={s.bold}>{assignedToName}</Text>
                                     </Text>
                                 )}
 
