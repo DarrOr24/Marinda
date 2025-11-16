@@ -36,7 +36,13 @@ import {
 
 type DbStatus = 'OPEN' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
 const dbToUiStatus = (s: DbStatus): ChoreView['status'] =>
-  s === 'OPEN' ? 'open' : s === 'SUBMITTED' ? 'pending' : s === 'APPROVED' ? 'approved' : 'open';
+  s === 'OPEN'
+    ? 'open'
+    : s === 'SUBMITTED'
+      ? 'pending'
+      : s === 'APPROVED'
+        ? 'approved'
+        : 'open';
 
 const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 8)}` : '—');
 
@@ -197,6 +203,14 @@ export default function Chores() {
             }
           }
 
+          const assignedIds: string[] | undefined =
+            (r.assignee_member_ids as string[] | null | undefined) ??
+            (r.assignee_member_id ? [r.assignee_member_id] : undefined);
+          const assignedNames =
+            assignedIds && assignedIds.length
+              ? assignedIds.map((id: string) => nameForId(id))
+              : undefined;
+
           return {
             id: r.id,
             title: r.title,
@@ -204,10 +218,10 @@ export default function Chores() {
             points: r.points ?? 0,
             status: dbToUiStatus(r.status as DbStatus),
 
-            assignedToId: r.assignee_member_id ?? undefined,
-            assignedToName: r.assignee_member_id
-              ? nameForId(r.assignee_member_id)
-              : undefined,
+            assignedToId: assignedIds?.[0],
+            assignedToName: assignedNames?.[0],
+            assignedToIds: assignedIds,
+            assignedToNames: assignedNames,
 
             doneById: r.done_by_member_id ?? undefined,
             doneByIds: r.done_by_member_ids ?? [],
@@ -283,14 +297,14 @@ export default function Chores() {
     description,
     points,
     saveAsTemplate,
-    assignedToId,
+    assignedToIds,
     audioLocal,
   }: {
     title: string;
     description?: string;
     points: number;
     saveAsTemplate?: boolean;
-    assignedToId?: string;
+    assignedToIds?: string[];
     audioLocal?: { uri: string; durationSeconds: number };
   }) => {
     if (!activeFamilyId) return;
@@ -312,15 +326,31 @@ export default function Chores() {
         audioDuration = audioLocal.durationSeconds;
       }
 
+      const normalizedAssignedIds =
+        assignedToIds && assignedToIds.length > 0 ? assignedToIds : undefined;
+
       // 2) create the actual chore
       const row = await apiAddChore(activeFamilyId, {
         title,
         description,
         points,
-        assigned_to: assignedToId,
+        assigned_to:
+          normalizedAssignedIds && normalizedAssignedIds.length === 1
+            ? normalizedAssignedIds[0]
+            : undefined,
+        assigned_to_ids: normalizedAssignedIds,
         audioDescriptionUrl: audioUrl,
         audioDescriptionDuration: audioDuration,
       });
+
+      const dbAssignedIds: string[] | undefined =
+        (row as any).assignee_member_ids ??
+        ((row as any).assignee_member_id ? [(row as any).assignee_member_id] : undefined) ??
+        normalizedAssignedIds;
+      const dbAssignedNames =
+        dbAssignedIds && dbAssignedIds.length
+          ? dbAssignedIds.map((id: string) => nameForId(id))
+          : undefined;
 
       const created: ChoreView = {
         id: row.id,
@@ -329,12 +359,11 @@ export default function Chores() {
         points: row.points ?? points,
         status: dbToUiStatus(row.status as DbStatus),
         proofs: [],
-        assignedToId: row.assignee_member_id ?? assignedToId,
-        assignedToName: row.assignee_member_id
-          ? nameForId(row.assignee_member_id)
-          : assignedToId
-            ? nameForId(assignedToId)
-            : undefined,
+
+        assignedToId: dbAssignedIds?.[0],
+        assignedToName: dbAssignedNames?.[0],
+        assignedToIds: dbAssignedIds,
+        assignedToNames: dbAssignedNames,
 
         audioDescriptionUrl: row.audio_description_url ?? audioUrl ?? undefined,
         audioDescriptionDuration:
@@ -368,20 +397,34 @@ export default function Chores() {
       title: string;
       description?: string;
       points: number;
-      assignedToId?: string;
+      assignedToIds?: string[];
     }
   ) => {
     try {
+      const normalizedAssignedIds =
+        updates.assignedToIds && updates.assignedToIds.length > 0
+          ? updates.assignedToIds
+          : undefined;
+
       const row = await updateChore(id, {
         title: updates.title,
         description: updates.description ?? null,
         points: updates.points,
-        assigned_to: updates.assignedToId ?? null,
+        assigned_to:
+          normalizedAssignedIds && normalizedAssignedIds.length === 1
+            ? normalizedAssignedIds[0]
+            : null,
+        assigned_to_ids: normalizedAssignedIds ?? null,
       });
 
-      const assigneeId =
-        (row as any).assignee_member_id ?? updates.assignedToId ?? undefined;
-      const assigneeName = assigneeId ? nameForId(assigneeId) : undefined;
+      const dbAssignedIds: string[] | undefined =
+        (row as any).assignee_member_ids ??
+        ((row as any).assignee_member_id ? [(row as any).assignee_member_id] : undefined) ??
+        normalizedAssignedIds;
+      const dbAssignedNames =
+        dbAssignedIds && dbAssignedIds.length
+          ? dbAssignedIds.map((id: string) => nameForId(id))
+          : undefined;
 
       setList((prev) =>
         prev.map((c) =>
@@ -391,8 +434,10 @@ export default function Chores() {
               title: row.title,
               description: row.description ?? updates.description,
               points: row.points ?? updates.points,
-              assignedToId: assigneeId,
-              assignedToName: assigneeName,
+              assignedToId: dbAssignedIds?.[0],
+              assignedToName: dbAssignedNames?.[0],
+              assignedToIds: dbAssignedIds,
+              assignedToNames: dbAssignedNames,
             }
             : c
         )
@@ -417,11 +462,7 @@ export default function Chores() {
   };
 
   // Kid submits (SUBMITTED) – multi-member submit
-  const onMarkPending = async (
-    id: string,
-    doneByIds: string[],
-    proofNote?: string
-  ) => {
+  const onMarkPending = async (id: string, doneByIds: string[], proofNote?: string) => {
     try {
       if (!doneByIds || doneByIds.length === 0)
         throw new Error('Missing selected family members');
@@ -456,7 +497,6 @@ export default function Chores() {
       Alert.alert('Error', 'Could not mark as completed.');
     }
   };
-
 
   // Parent approves (APPROVED) + split points evenly between all members who did it
   const onApprove = async (id: string, notes?: string, updatedPoints?: number) => {
@@ -508,9 +548,7 @@ export default function Chores() {
           memberIds.map(async (memberId) => {
             if (familyIdForLedger) {
               const reason =
-                local?.title
-                  ? `Completed chore: ${local.title}`
-                  : 'Chore approved';
+                local?.title ? `Completed chore: ${local.title}` : 'Chore approved';
 
               await logChorePointsEvent({
                 familyId: familyIdForLedger,
@@ -544,6 +582,7 @@ export default function Chores() {
               status: 'open',
               notes: row.notes ?? notes,
               doneById: undefined,
+              doneByIds: [],
               doneAt: undefined,
               approvedById: undefined,
               approvedAt: undefined,
@@ -588,6 +627,17 @@ export default function Chores() {
         onPress: async () => {
           try {
             const row = await apiDuplicateChore(id);
+
+            const assignedIds: string[] | undefined =
+              (row as any).assignee_member_ids ??
+              ((row as any).assignee_member_id
+                ? [(row as any).assignee_member_id]
+                : undefined);
+            const assignedNames =
+              assignedIds && assignedIds.length
+                ? assignedIds.map((memberId: string) => nameForId(memberId))
+                : undefined;
+
             const created: ChoreView = {
               id: row.id,
               title: row.title,
@@ -595,10 +645,10 @@ export default function Chores() {
               points: row.points ?? 0,
               status: dbToUiStatus(row.status as DbStatus),
               proofs: [],
-              assignedToId: row.assignee_member_id ?? undefined,
-              assignedToName: row.assignee_member_id
-                ? nameForId(row.assignee_member_id)
-                : undefined,
+              assignedToId: assignedIds?.[0],
+              assignedToName: assignedNames?.[0],
+              assignedToIds: assignedIds,
+              assignedToNames: assignedNames,
               createdByMemberId: myFamilyMemberId,
               createdByName: myFamilyMemberId ? nameForId(myFamilyMemberId) : 'You',
             };
@@ -696,6 +746,11 @@ export default function Chores() {
             item.createdByMemberId === myFamilyMemberId;
           const canModify = isParent || isCreator;
 
+          const assignedLabel =
+            item.assignedToNames && item.assignedToNames.length
+              ? item.assignedToNames.join(', ')
+              : item.assignedToName;
+
           return (
             <Pressable onPress={() => handleOpen(item)} style={styles.card}>
               <View style={{ flex: 1 }}>
@@ -715,10 +770,8 @@ export default function Chores() {
                         : 'Approved ⭐'}
                 </Text>
 
-                {item.assignedToName && (
-                  <Text style={styles.assignedText}>
-                    Assigned to: {item.assignedToName}
-                  </Text>
+                {assignedLabel && (
+                  <Text style={styles.assignedText}>Assigned to: {assignedLabel}</Text>
                 )}
 
                 {item.createdByName && (
@@ -814,7 +867,12 @@ export default function Chores() {
             title: editing.title,
             description: editing.description ?? '',
             points: editing.points,
-            assignedToId: editing.assignedToId ?? null,
+            assignedToIds:
+              editing.assignedToIds && editing.assignedToIds.length
+                ? editing.assignedToIds
+                : editing.assignedToId
+                  ? [editing.assignedToId]
+                  : [],
           }}
           titleText="Edit Chore"
           submitText="Save"

@@ -26,15 +26,15 @@ type Props = {
         description?: string;
         points: number;
         saveAsTemplate?: boolean;
-        assignedToId?: string;
+        assignedToIds?: string[];
         audioLocal?: { uri: string; durationSeconds: number };
     }) => void;
-    // 🔹 include assignedToId so edit can prefill
+    // include assignedToIds so edit can prefill
     initial?: {
         title?: string;
         description?: string | null;
         points?: number;
-        assignedToId?: string | null;
+        assignedToIds?: string[] | null;
     };
     titleText?: string; // e.g., "Edit Chore"
     submitText?: string;
@@ -61,8 +61,8 @@ export default function ChorePostModal({
     const [description, setDescription] = React.useState(initial?.description ?? '');
     const [points, setPoints] = React.useState(String(initial?.points ?? 0));
     const [saveAsTemplate, setSaveAsTemplate] = React.useState(false);
-    const [assignedToId, setAssignedToId] = React.useState<string | null>(
-        initial?.assignedToId ?? null
+    const [assignedToIds, setAssignedToIds] = React.useState<string[]>(
+        initial?.assignedToIds ?? []
     );
     const [recording, setRecording] = React.useState<Audio.Recording | null>(null);
     const [audioUri, setAudioUri] = React.useState<string | null>(null);
@@ -73,12 +73,11 @@ export default function ChorePostModal({
         setDescription(initial?.description ?? '');
         setPoints(String(initial?.points ?? 0));
         setSaveAsTemplate(false);
-        setAssignedToId(initial?.assignedToId ?? null);
+        setAssignedToIds(initial?.assignedToIds ?? []);
         setRecording(null);
         setAudioUri(null);
         setAudioDuration(null);
-    }, [initial?.title, initial?.points, initial?.assignedToId, visible]);
-
+    }, [initial?.title, initial?.points, initial?.assignedToIds, visible]);
 
     const disabled = !title.trim() || Number.isNaN(Number(points));
 
@@ -138,6 +137,12 @@ export default function ChorePostModal({
             Alert.alert('Error', 'Could not play audio.');
         }
     }
+
+    const toggleAssignee = (id: string) => {
+        setAssignedToIds((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+        );
+    };
 
     return (
         <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
@@ -209,16 +214,26 @@ export default function ChorePostModal({
                         multiline
                     />
 
-                    <Text style={[styles.label, { marginTop: 8 }]}>Audio description (optional)</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8 }}>
+                    <Text style={[styles.label, { marginTop: 8 }]}>
+                        Audio description (optional)
+                    </Text>
+                    <View
+                        style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8 }}
+                    >
                         {!recording ? (
-                            <Pressable style={[styles.smallBtn, styles.primary]} onPress={startRecording}>
+                            <Pressable
+                                style={[styles.smallBtn, styles.primary]}
+                                onPress={startRecording}
+                            >
                                 <Text style={[styles.btnTxt, { color: '#fff', fontSize: 12 }]}>
                                     {audioUri ? 'Re-record' : 'Record audio'}
                                 </Text>
                             </Pressable>
                         ) : (
-                            <Pressable style={[styles.smallBtn, styles.cancel]} onPress={stopRecording}>
+                            <Pressable
+                                style={[styles.smallBtn, styles.cancel]}
+                                onPress={stopRecording}
+                            >
                                 <Text style={[styles.btnTxt, styles.cancelTxt, { fontSize: 12 }]}>
                                     Stop
                                 </Text>
@@ -227,7 +242,10 @@ export default function ChorePostModal({
 
                         {audioUri && !recording && (
                             <>
-                                <Pressable style={[styles.smallBtn, styles.secondary]} onPress={playRecording}>
+                                <Pressable
+                                    style={[styles.smallBtn, styles.secondary]}
+                                    onPress={playRecording}
+                                >
                                     <Text style={[styles.btnTxt, { fontSize: 12 }]}>Play</Text>
                                 </Pressable>
                                 {audioDuration != null && (
@@ -252,19 +270,19 @@ export default function ChorePostModal({
                         </>
                     )}
 
-                    {/* Assign to (optional) – now also shown for EDIT */}
+                    {/* Assign to (optional) – multi-select */}
                     {assigneeOptions && assigneeOptions.length > 0 && (
                         <>
-                            <Text style={[styles.label, { marginTop: 8 }]}>Assign to (optional)</Text>
+                            <Text style={[styles.label, { marginTop: 8 }]}>
+                                Assign to (optional)
+                            </Text>
                             <View style={styles.assigneeRow}>
                                 {assigneeOptions.map((opt) => {
-                                    const isSelected = assignedToId === opt.id;
+                                    const isSelected = assignedToIds.includes(opt.id);
                                     return (
                                         <Pressable
                                             key={opt.id}
-                                            onPress={() =>
-                                                setAssignedToId((prev) => (prev === opt.id ? null : opt.id))
-                                            }
+                                            onPress={() => toggleAssignee(opt.id)}
                                             style={[
                                                 styles.assigneeChip,
                                                 isSelected && styles.assigneeChipSelected,
@@ -321,7 +339,8 @@ export default function ChorePostModal({
                                     description: description.trim() || undefined,
                                     points: Number(points),
                                     saveAsTemplate,
-                                    assignedToId: assignedToId ?? undefined,
+                                    assignedToIds:
+                                        assignedToIds.length > 0 ? assignedToIds : undefined,
                                     audioLocal:
                                         audioUri && audioDuration != null
                                             ? { uri: audioUri, durationSeconds: audioDuration }
@@ -332,7 +351,6 @@ export default function ChorePostModal({
                         >
                             <Text style={[styles.btnTxt, { color: '#fff' }]}>{submitText}</Text>
                         </Pressable>
-
                     </View>
                 </View>
             </KeyboardAvoidingView>
@@ -439,5 +457,4 @@ const styles = StyleSheet.create({
     },
     cancel: { backgroundColor: '#fee2e2' },
     cancelTxt: { color: '#b91c1c', fontWeight: '700' },
-
 });

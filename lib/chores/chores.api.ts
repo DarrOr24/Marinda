@@ -134,7 +134,7 @@ export async function addChore(
     description?: string;
     points: number;
     assigned_to?: string;
-    // 🔹 AUDIO: optional audio fields when creating a chore
+    assigned_to_ids?: string[];
     audioDescriptionUrl?: string | null;
     audioDescriptionDuration?: number | null;
   }
@@ -145,12 +145,15 @@ export async function addChore(
     .insert({
       family_id: familyId,
       title: chore.title,
-      description: chore.description ?? null, // 👈 already added text description
+      description: chore.description ?? null,
       points: chore.points,
       assignee_member_id: chore.assigned_to ?? null,
+      assignee_member_ids:
+        chore.assigned_to_ids ??
+        (chore.assigned_to ? [chore.assigned_to] : null),
       created_by: user?.id ?? null,
       status: 'OPEN',
-      // 🔹 AUDIO: map to DB columns
+
       audio_description_url: chore.audioDescriptionUrl ?? null,
       audio_description_duration: chore.audioDescriptionDuration ?? null,
     })
@@ -250,7 +253,7 @@ export async function duplicateChore(choreId: string) {
   // get source row (only fields we want to copy)
   const { data: src, error: selErr } = await supabase
     .from('chores')
-    .select('family_id, title, points, assignee_member_id')
+    .select('family_id, title, points, assignee_member_id, assignee_member_ids')
     .eq('id', choreId)
     .single();
   if (selErr) throw new Error(selErr.message);
@@ -264,6 +267,9 @@ export async function duplicateChore(choreId: string) {
       title: src.title,
       points: src.points,
       assignee_member_id: src.assignee_member_id ?? null,
+      assignee_member_ids:
+        src.assignee_member_ids ??
+        (src.assignee_member_id ? [src.assignee_member_id] : null),
       status: 'OPEN',
       created_by: user?.id ?? null,
       // proof_* intentionally not copied; new chore starts fresh
@@ -279,10 +285,11 @@ export async function updateChore(
   choreId: string,
   fields: {
     title?: string;
-    description?: string | null; // 👈 text description already here
+    description?: string | null;
     points?: number;
     assigned_to?: string | null;
-    // 🔹 AUDIO: allow editing audio description fields
+    assigned_to_ids?: string[] | null;
+
     audioDescriptionUrl?: string | null;
     audioDescriptionDuration?: number | null;
   }
@@ -294,7 +301,20 @@ export async function updateChore(
   if (fields.points !== undefined) patch.points = fields.points;
   if (fields.assigned_to !== undefined) {
     patch.assignee_member_id = fields.assigned_to ?? null;
+
+    // if only a single assignee is passed and no explicit array, keep them in sync
+    if (fields.assigned_to && fields.assigned_to_ids === undefined) {
+      patch.assignee_member_ids = [fields.assigned_to];
+    }
+    if (fields.assigned_to === null && fields.assigned_to_ids === undefined) {
+      patch.assignee_member_ids = null;
+    }
   }
+
+  if (fields.assigned_to_ids !== undefined) {
+    patch.assignee_member_ids = fields.assigned_to_ids ?? null;
+  }
+
   if (fields.audioDescriptionUrl !== undefined) {
     patch.audio_description_url = fields.audioDescriptionUrl;
   }

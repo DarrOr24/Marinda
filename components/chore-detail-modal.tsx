@@ -61,7 +61,28 @@ export default function ChoreDetailModal({
     defaultDoneById,
 }: Props) {
     const isParent = currentRole === 'MOM' || currentRole === 'DAD';
-    const isAssigned = !!chore.assignedToId;
+
+    // 🔹 Normalize assignees: use arrays if present
+    const assignedIds: string[] =
+        (chore.assignedToIds && chore.assignedToIds.length > 0
+            ? chore.assignedToIds
+            : chore.assignedToId
+                ? [chore.assignedToId]
+                : []) ?? [];
+
+    const assignedNames: string[] =
+        (chore.assignedToNames && chore.assignedToNames.length > 0
+            ? chore.assignedToNames
+            : assignedIds.length > 0
+                ? assignedIds.map((id) => nameForId(id))
+                : []) ?? [];
+
+    const assignedLabel =
+        assignedNames && assignedNames.length > 0
+            ? assignedNames.join(', ')
+            : undefined;
+
+    const isAssigned = assignedIds.length > 0;
 
     const [notes, setNotes] = useState(chore.notes ?? '');
     React.useEffect(() => setNotes(chore.notes ?? ''), [chore.id, chore.notes]);
@@ -78,33 +99,41 @@ export default function ChoreDetailModal({
         setPointsText(String(chore.points ?? 0));
     }, [chore.id, chore.points]);
 
-    // initial doneBy selection (respect assignment if present)
-    const initialDoneByIds: string[] =
-        (chore.doneByIds && chore.doneByIds.length > 0
-            ? chore.doneByIds
-            : chore.assignedToId
-                ? [chore.assignedToId]
-                : chore.doneById
-                    ? [chore.doneById]
-                    : defaultDoneById
-                        ? [defaultDoneById]
-                        : []) ?? [];
+    // 🔹 initial doneBy selection (respect existing, then assignment, then default)
+    const computeInitialDoneByIds = (): string[] => {
+        // If we already have doneByIds, keep them
+        if (chore.doneByIds && chore.doneByIds.length > 0) {
+            return [...chore.doneByIds];
+        }
 
-    const [selectedDoneByIds, setSelectedDoneByIds] = useState<string[]>(initialDoneByIds);
+        // If the chore is assigned to specific members,
+        // default: everyone assigned is considered to have done it.
+        if (assignedIds.length > 0) {
+            return [...assignedIds];
+        }
+
+        // Fallbacks
+        if (chore.doneById) return [chore.doneById];
+        if (defaultDoneById) return [defaultDoneById];
+        return [];
+    };
+
+
+    const [selectedDoneByIds, setSelectedDoneByIds] = useState<string[]>(
+        computeInitialDoneByIds()
+    );
 
     React.useEffect(() => {
-        const next: string[] =
-            (chore.doneByIds && chore.doneByIds.length > 0
-                ? chore.doneByIds
-                : chore.assignedToId
-                    ? [chore.assignedToId]
-                    : chore.doneById
-                        ? [chore.doneById]
-                        : defaultDoneById
-                            ? [defaultDoneById]
-                            : []) ?? [];
-        setSelectedDoneByIds(next);
-    }, [chore.id, chore.doneById, chore.doneByIds, chore.assignedToId, defaultDoneById]);
+        setSelectedDoneByIds(computeInitialDoneByIds());
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        chore.id,
+        chore.doneById,
+        chore.doneByIds,
+        chore.assignedToId,
+        chore.assignedToIds,
+        defaultDoneById,
+    ]);
 
     const lastProof = useMemo(
         () =>
@@ -143,17 +172,31 @@ export default function ChoreDetailModal({
     }
 
     /**
-     * Guard so only the assigned family member can do the chore
-     * when the chore is assigned to a specific member.
+     * Guard so only assigned family members can do the chore
+     * when the chore is assigned to specific member(s).
      */
     function ensureCanModifyAssignedChore(): boolean {
-        if (!chore.assignedToId) return true; // not assigned → anyone can do it
-        if (!defaultDoneById) return true; // we don't know who is logged in
-        if (chore.assignedToId === defaultDoneById) return true; // assigned to me ✅
+        if (!isAssigned) return true;            // not assigned → anyone can do it
+        if (!defaultDoneById) return true;      // we don't know who is logged in
 
+        // If this logged-in member is one of the assignees → allowed
+        if (assignedIds.includes(defaultDoneById)) return true;
+
+        // Parent: allow, but explain that points go to the assigned kids
+        if (isParent) {
+            Alert.alert(
+                'Assigned chore',
+                assignedLabel
+                    ? `This chore is assigned to ${assignedLabel}. If you mark it as completed, the points will go to the assigned member(s).`
+                    : 'This chore is assigned. If you mark it as completed, the points will go to the assigned member(s).'
+            );
+            return true;
+        }
+
+        // Non-parent & not assigned → still blocked
         Alert.alert(
             'Assigned chore',
-            'This chore is assigned to someone else. Only the assigned family member can do it.'
+            'This chore is assigned to someone else. Only assigned family members can complete it.'
         );
         return false;
     }
@@ -198,7 +241,7 @@ export default function ChoreDetailModal({
     }
 
     const markCompleted = () => {
-        // block marking as completed if this user isn't the assignee
+        // block marking as completed if this user isn't assigned
         if (!ensureCanModifyAssignedChore()) return;
 
         if (!chore.proofs || chore.proofs.length === 0) {
@@ -230,10 +273,7 @@ export default function ChoreDetailModal({
         // 1) Parse and validate points text
         const parsed = Number(pointsText);
         if (Number.isNaN(parsed) || parsed < 0) {
-            Alert.alert(
-                'Check points',
-                'Please enter a valid number of points (0 or more).'
-            );
+            Alert.alert('Check points', 'Please enter a valid number of points (0 or more).');
             return;
         }
 
@@ -291,7 +331,6 @@ export default function ChoreDetailModal({
             : nameForId(chore.doneById);
 
     const approvedByName = nameForId(chore.approvedById);
-    const assignedToName = chore.assignedToId ? nameForId(chore.assignedToId) : undefined;
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
@@ -327,9 +366,9 @@ export default function ChoreDetailModal({
                             </View>
                         )}
 
-                        {assignedToName && (
+                        {assignedLabel && (
                             <Text style={[s.text, { marginTop: 4 }]}>
-                                Assigned to: <Text style={s.bold}>{assignedToName}</Text>
+                                Assigned to: <Text style={s.bold}>{assignedLabel}</Text>
                             </Text>
                         )}
 
@@ -342,45 +381,45 @@ export default function ChoreDetailModal({
                         {/* OPEN */}
                         {chore.status === 'open' && (
                             <>
-                                {/* assigned: lock to that member */}
-                                {isAssigned ? (
+                                {isAssigned && (
                                     <Text style={[s.text, { marginTop: 12 }]}>
-                                        This chore is assigned to <Text style={s.bold}>{assignedToName}</Text>.
-                                        Only they can complete it.
+                                        This chore is assigned to{' '}
+                                        <Text style={s.bold}>{assignedLabel}</Text>. Only assigned family
+                                        members can complete it.
                                     </Text>
-                                ) : (
-                                    doneByOptions.length > 0 && (
-                                        <>
-                                            <Text style={[s.text, { marginTop: 12 }]}>Who did this?</Text>
-                                            <View style={s.chipsRow}>
-                                                {doneByOptions.map((opt) => {
-                                                    const isSelected = selectedDoneByIds.includes(opt.id);
-                                                    return (
-                                                        <Pressable
-                                                            key={opt.id}
-                                                            onPress={() =>
-                                                                setSelectedDoneByIds((prev) =>
-                                                                    prev.includes(opt.id)
-                                                                        ? prev.filter((id) => id !== opt.id)
-                                                                        : [...prev, opt.id]
-                                                                )
-                                                            }
-                                                            style={[s.chip, isSelected && s.chipSelected]}
+                                )}
+
+                                {doneByOptions.length > 0 && (
+                                    <>
+                                        <Text style={[s.text, { marginTop: 12 }]}>Who did this?</Text>
+                                        <View style={s.chipsRow}>
+                                            {(isAssigned
+                                                ? doneByOptions.filter((opt) => assignedIds.includes(opt.id))
+                                                : doneByOptions
+                                            ).map((opt) => {
+                                                const isSelected = selectedDoneByIds.includes(opt.id);
+                                                return (
+                                                    <Pressable
+                                                        key={opt.id}
+                                                        onPress={() =>
+                                                            setSelectedDoneByIds((prev) =>
+                                                                prev.includes(opt.id)
+                                                                    ? prev.filter((id) => id !== opt.id)
+                                                                    : [...prev, opt.id]
+                                                            )
+                                                        }
+                                                        style={[s.chip, isSelected && s.chipSelected]}
+                                                    >
+                                                        <Text
+                                                            style={[s.chipTxt, isSelected && s.chipTxtSelected]}
                                                         >
-                                                            <Text
-                                                                style={[
-                                                                    s.chipTxt,
-                                                                    isSelected && s.chipTxtSelected,
-                                                                ]}
-                                                            >
-                                                                {opt.name}
-                                                            </Text>
-                                                        </Pressable>
-                                                    );
-                                                })}
-                                            </View>
-                                        </>
-                                    )
+                                                            {opt.name}
+                                                        </Text>
+                                                    </Pressable>
+                                                );
+                                            })}
+                                        </View>
+                                    </>
                                 )}
 
                                 <Text style={[s.text, { marginTop: 10 }]}>
@@ -428,9 +467,7 @@ export default function ChoreDetailModal({
 
                                 <View style={s.row}>
                                     <Pressable style={[s.btn, s.primary]} onPress={markCompleted}>
-                                        <Text style={[s.btnTxt, s.primaryTxt]}>
-                                            Mark as completed
-                                        </Text>
+                                        <Text style={[s.btnTxt, s.primaryTxt]}>Mark as completed</Text>
                                     </Pressable>
                                     <Pressable style={[s.btn, s.cancel]} onPress={onClose}>
                                         <Text style={[s.btnTxt, s.cancelTxt]}>Cancel</Text>
@@ -457,9 +494,9 @@ export default function ChoreDetailModal({
                                     </View>
                                 )}
 
-                                {assignedToName && (
+                                {assignedLabel && (
                                     <Text style={[s.text, { marginTop: 6 }]}>
-                                        Assigned to: <Text style={s.bold}>{assignedToName}</Text>
+                                        Assigned to: <Text style={s.bold}>{assignedLabel}</Text>
                                     </Text>
                                 )}
 
@@ -549,9 +586,9 @@ export default function ChoreDetailModal({
                                     </View>
                                 )}
 
-                                {assignedToName && (
+                                {assignedLabel && (
                                     <Text style={[s.text, { marginTop: 6 }]}>
-                                        Assigned to: <Text style={s.bold}>{assignedToName}</Text>
+                                        Assigned to: <Text style={s.bold}>{assignedLabel}</Text>
                                     </Text>
                                 )}
 
