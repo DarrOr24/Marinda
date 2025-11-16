@@ -36,6 +36,8 @@ export type ChoreView = {
 
     createdByName?: string;
     createdByMemberId?: string;
+
+    proofNote?: string;
 };
 
 // (optional) for later, templates:

@@ -28,7 +28,7 @@ type Props = {
     onClose: () => void;
 
     onAttachProof: (id: string, proof: Proof | null) => void; // null = clear
-    onMarkPending: (id: string, doneByIds: string[]) => void;
+    onMarkPending: (id: string, doneByIds: string[], proofNote?: string) => void;
     onApprove: (id: string, notes?: string) => void;
     onDecline: (id: string, notes?: string) => void;
 
@@ -65,6 +65,12 @@ export default function ChoreDetailModal({
 
     const [notes, setNotes] = useState(chore.notes ?? '');
     React.useEffect(() => setNotes(chore.notes ?? ''), [chore.id, chore.notes]);
+
+    // kid's note attached to the proof (optional)
+    const [proofNote, setProofNote] = useState(chore.proofNote ?? '');
+    React.useEffect(() => {
+        setProofNote(chore.proofNote ?? '');
+    }, [chore.id, chore.proofNote]);
 
     // initial doneBy selection (respect assignment if present)
     const initialDoneByIds: string[] =
@@ -131,7 +137,7 @@ export default function ChoreDetailModal({
     }
 
     /**
-     * NEW: guard so only the assigned family member can do the chore
+     * Guard so only the assigned family member can do the chore
      * when the chore is assigned to a specific member.
      */
     function ensureCanModifyAssignedChore(): boolean {
@@ -147,7 +153,7 @@ export default function ChoreDetailModal({
     }
 
     async function ensureCameraPermission() {
-        // 🔒 first check assignment
+        // first check assignment
         if (!ensureCanModifyAssignedChore()) return false;
 
         const cam = await ImagePicker.requestCameraPermissionsAsync();
@@ -186,7 +192,7 @@ export default function ChoreDetailModal({
     }
 
     const markCompleted = () => {
-        // 🔒 block marking as completed if this user isn't the assignee
+        // block marking as completed if this user isn't the assignee
         if (!ensureCanModifyAssignedChore()) return;
 
         if (!chore.proofs || chore.proofs.length === 0) {
@@ -205,8 +211,10 @@ export default function ChoreDetailModal({
             return;
         }
 
-        // SEND ALL SELECTED MEMBERS
-        onMarkPending(chore.id, selectedDoneByIds);
+        const cleanedNote = proofNote?.trim() || undefined;
+
+        // SEND ALL SELECTED MEMBERS + optional explanation
+        onMarkPending(chore.id, selectedDoneByIds, cleanedNote);
         onClose();
     };
 
@@ -288,9 +296,8 @@ export default function ChoreDetailModal({
                                 {/* assigned: lock to that member */}
                                 {isAssigned ? (
                                     <Text style={[s.text, { marginTop: 12 }]}>
-                                        This chore is assigned to{' '}
-                                        <Text style={s.bold}>{assignedToName}</Text>. Only they can
-                                        complete it.
+                                        This chore is assigned to <Text style={s.bold}>{assignedToName}</Text>.
+                                        Only they can complete it.
                                     </Text>
                                 ) : (
                                     doneByOptions.length > 0 && (
@@ -358,6 +365,18 @@ export default function ChoreDetailModal({
                                     </View>
                                 )}
 
+                                {/* optional explanation text for the proof */}
+                                <Text style={[s.text, { marginTop: 10 }]}>
+                                    Add a short note (optional)
+                                </Text>
+                                <TextInput
+                                    placeholder="What did you do here?"
+                                    value={proofNote}
+                                    onChangeText={setProofNote}
+                                    style={[s.input, { marginTop: 6 }]}
+                                    multiline
+                                />
+
                                 <View style={s.row}>
                                     <Pressable style={[s.btn, s.primary]} onPress={markCompleted}>
                                         <Text style={[s.btnTxt, s.primaryTxt]}>
@@ -412,6 +431,13 @@ export default function ChoreDetailModal({
                                             : '—'}
                                     </Text>
                                 </Text>
+
+                                {chore.proofNote ? (
+                                    <Text style={[s.text, { marginTop: 6 }]}>
+                                        Kid&apos;s note:{' '}
+                                        <Text style={s.bold}>{chore.proofNote}</Text>
+                                    </Text>
+                                ) : null}
 
                                 <Text style={[s.text, { marginTop: 12 }]}>Notes</Text>
                                 <TextInput
@@ -483,6 +509,13 @@ export default function ChoreDetailModal({
                                             : '—'}
                                     </Text>
                                 </Text>
+
+                                {chore.proofNote ? (
+                                    <Text style={[s.text, { marginTop: 6 }]}>
+                                        Kid&apos;s note:{' '}
+                                        <Text style={s.bold}>{chore.proofNote}</Text>
+                                    </Text>
+                                ) : null}
 
                                 <Text style={s.text}>
                                     Approved by: <Text style={s.bold}>{approvedByName}</Text>

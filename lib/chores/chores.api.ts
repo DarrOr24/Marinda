@@ -163,7 +163,8 @@ export async function addChore(
 export async function submitChore(
   choreId: string,
   memberIds: string[],
-  proof?: ProofPayload
+  proof?: ProofPayload,
+  proofNote?: string        // 🔹 NEW
 ) {
   let proofUri: string | null = null;
   let proofKind: 'image' | 'video' | null = null;
@@ -188,6 +189,7 @@ export async function submitChore(
       done_at: new Date().toISOString(),
       proof_uri: proofUri,
       proof_kind: proofKind,
+      proof_note: proofNote ?? null,   // 🔹 NEW
     })
     .eq('id', choreId)
     .select()

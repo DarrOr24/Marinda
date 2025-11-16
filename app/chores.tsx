@@ -224,6 +224,7 @@ export default function Chores() {
 
             createdByName,
             createdByMemberId,
+            proofNote: r.proof_note ?? undefined,
           };
         });
 
@@ -416,7 +417,11 @@ export default function Chores() {
   };
 
   // Kid submits (SUBMITTED) – multi-member submit
-  const onMarkPending = async (id: string, doneByIds: string[]) => {
+  const onMarkPending = async (
+    id: string,
+    doneByIds: string[],
+    proofNote?: string
+  ) => {
     try {
       if (!doneByIds || doneByIds.length === 0)
         throw new Error('Missing selected family members');
@@ -424,7 +429,7 @@ export default function Chores() {
       const theChore = list.find((c) => c.id === id);
       const lastProof = theChore?.proofs?.[theChore.proofs.length - 1];
 
-      const row = await submitChore(id, doneByIds, lastProof as any);
+      const row = await submitChore(id, doneByIds, lastProof as any, proofNote);
 
       const when = row.done_at ? new Date(row.done_at).getTime() : Date.now();
 
@@ -441,6 +446,7 @@ export default function Chores() {
                 row.proof_uri && row.proof_kind
                   ? [{ uri: row.proof_uri, kind: row.proof_kind }]
                   : [],
+              proofNote: row.proof_note ?? proofNote ?? undefined,
             }
             : c
         )
