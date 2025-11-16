@@ -1,3 +1,4 @@
+// lib/families/families.hooks.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuthContext } from '@/hooks/use-auth-context'
@@ -53,14 +54,12 @@ export function useFamily(familyId: string | undefined) {
     queryKey: ['family', familyId],
     queryFn: () => fetchFamily(familyId!),
     enabled: !!familyId,
-    staleTime: 5 * 60 * 1000,
   })
 
   const members = useQuery({
     queryKey: ['family-members', familyId],
     queryFn: () => fetchFamilyMembers(familyId!),
     enabled: !!familyId,
-    staleTime: 2 * 60 * 1000,
   })
 
   return { family, members }

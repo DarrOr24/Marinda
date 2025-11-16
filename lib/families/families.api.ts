@@ -1,3 +1,5 @@
+// lib/families/families.api.ts
+import { MEMBER_WITH_PROFILE_SELECT } from '../members/members.select'
 import { getSupabase } from '../supabase'
 import { Member, Role } from './families.types'
 
@@ -28,13 +30,20 @@ export async function fetchFamily(familyId: string) {
 export async function fetchMember(familyId: string, profileId: string): Promise<Member> {
   const { data, error } = await supabase
     .from('family_members')
-    .select(`
-      id, role, nickname, profile_id, joined_at,
-      color:color_palette(name, hex),
-      profile:profiles(id, first_name, last_name, gender, avatar_url, birth_date)
-    `)
+    .select(MEMBER_WITH_PROFILE_SELECT)
     .eq('family_id', familyId)
     .eq('profile_id', profileId)
+    .single()
+
+  if (error) throw new Error(error.message)
+  return data as unknown as Member
+}
+
+export async function fetchMemberById(id: string): Promise<Member> {
+  const { data, error } = await supabase
+    .from('family_members')
+    .select(MEMBER_WITH_PROFILE_SELECT)
+    .eq('id', id)
     .single()
 
   if (error) throw new Error(error.message)
