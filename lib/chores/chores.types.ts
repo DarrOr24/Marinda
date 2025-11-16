@@ -35,6 +35,7 @@ export type ChoreView = {
     assignedToName?: string;
 
     createdByName?: string;
+    createdByMemberId?: string;
 };
 
 // (optional) for later, templates:
