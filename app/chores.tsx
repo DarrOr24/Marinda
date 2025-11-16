@@ -496,10 +496,9 @@ export default function Chores() {
           memberIds.map(async (memberId) => {
             if (familyIdForLedger) {
               const reason =
-                row.notes ??
-                (local?.title
+                local?.title
                   ? `Completed chore: ${local.title}`
-                  : 'Chore approved');
+                  : 'Chore approved';
 
               await logChorePointsEvent({
                 familyId: familyIdForLedger,
