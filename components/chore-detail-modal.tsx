@@ -29,7 +29,7 @@ type Props = {
 
     onAttachProof: (id: string, proof: Proof | null) => void; // null = clear
     onMarkPending: (id: string, doneByIds: string[], proofNote?: string) => void;
-    onApprove: (id: string, notes?: string) => void;
+    onApprove: (id: string, notes?: string, updatedPoints?: number) => void;
     onDecline: (id: string, notes?: string) => void;
 
     // still available for OPEN chores if you choose to add buttons there later
@@ -71,6 +71,12 @@ export default function ChoreDetailModal({
     React.useEffect(() => {
         setProofNote(chore.proofNote ?? '');
     }, [chore.id, chore.proofNote]);
+
+    // parent can tweak points while approving
+    const [pointsText, setPointsText] = useState(String(chore.points ?? 0));
+    React.useEffect(() => {
+        setPointsText(String(chore.points ?? 0));
+    }, [chore.id, chore.points]);
 
     // initial doneBy selection (respect assignment if present)
     const initialDoneByIds: string[] =
@@ -219,7 +225,15 @@ export default function ChoreDetailModal({
     };
 
     const approve = () => {
-        onApprove(chore.id, notes.trim() || undefined);
+        const cleanedNotes = notes.trim() || undefined;
+
+        let updatedPoints: number | undefined;
+        const parsed = Number(pointsText);
+        if (!Number.isNaN(parsed) && parsed >= 0 && parsed !== chore.points) {
+            updatedPoints = parsed;
+        }
+
+        onApprove(chore.id, cleanedNotes, updatedPoints);
         onClose();
     };
 
@@ -438,6 +452,20 @@ export default function ChoreDetailModal({
                                         <Text style={s.bold}>{chore.proofNote}</Text>
                                     </Text>
                                 ) : null}
+
+                                {isParent && (
+                                    <>
+                                        <Text style={[s.text, { marginTop: 12 }]}>
+                                            Points for this chore
+                                        </Text>
+                                        <TextInput
+                                            value={pointsText}
+                                            onChangeText={setPointsText}
+                                            keyboardType="number-pad"
+                                            style={s.input}
+                                        />
+                                    </>
+                                )}
 
                                 <Text style={[s.text, { marginTop: 12 }]}>Notes</Text>
                                 <TextInput

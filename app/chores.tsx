@@ -457,10 +457,16 @@ export default function Chores() {
     }
   };
 
+
   // Parent approves (APPROVED) + split points evenly between all members who did it
-  const onApprove = async (id: string, notes?: string) => {
+  const onApprove = async (id: string, notes?: string, updatedPoints?: number) => {
     try {
       if (!myFamilyMemberId) throw new Error('Missing family member id');
+
+      // 👉 if parent changed points in the modal, save that first
+      if (typeof updatedPoints === 'number' && !Number.isNaN(updatedPoints)) {
+        await updateChore(id, { points: updatedPoints });
+      }
 
       const row = await approveChore(id, myFamilyMemberId, notes);
       const approverId = row.approved_by_member_id ?? myFamilyMemberId;
