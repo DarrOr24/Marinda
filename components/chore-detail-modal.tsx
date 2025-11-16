@@ -267,9 +267,11 @@ export default function ChoreDetailModal({
                     <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
                         <Text style={s.title}>{chore.title}</Text>
                         <Text style={s.status}>{chore.status.toUpperCase()}</Text>
-                        <Text style={[s.text, { marginTop: 2 }]}>
-                            Worth: <Text style={s.bold}>{chore.points} pts</Text>
-                        </Text>
+                        {chore.points > 0 && (
+                            <Text style={[s.text, { marginTop: 2 }]}>
+                                Worth: <Text style={s.bold}>{chore.points} pts</Text>
+                            </Text>
+                        )}
 
                         {chore.description ? (
                             <Text style={[s.text, { marginTop: 6 }]}>{chore.description}</Text>

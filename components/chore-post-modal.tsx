@@ -42,6 +42,7 @@ type Props = {
     onDeleteTemplate?: (id: string) => void;
     // who can be assigned
     assigneeOptions?: AssigneeOption[];
+    canEditPoints?: boolean;
 };
 
 export default function ChorePostModal({
@@ -54,10 +55,11 @@ export default function ChorePostModal({
     templates,
     onDeleteTemplate,
     assigneeOptions,
+    canEditPoints = true,
 }: Props) {
     const [title, setTitle] = React.useState(initial?.title ?? '');
     const [description, setDescription] = React.useState(initial?.description ?? '');
-    const [points, setPoints] = React.useState(String(initial?.points ?? 5));
+    const [points, setPoints] = React.useState(String(initial?.points ?? 0));
     const [saveAsTemplate, setSaveAsTemplate] = React.useState(false);
     const [assignedToId, setAssignedToId] = React.useState<string | null>(
         initial?.assignedToId ?? null
@@ -69,7 +71,7 @@ export default function ChorePostModal({
     React.useEffect(() => {
         setTitle(initial?.title ?? '');
         setDescription(initial?.description ?? '');
-        setPoints(String(initial?.points ?? 5));
+        setPoints(String(initial?.points ?? 0));
         setSaveAsTemplate(false);
         setAssignedToId(initial?.assignedToId ?? null);
         setRecording(null);
@@ -237,14 +239,18 @@ export default function ChorePostModal({
                         )}
                     </View>
 
-                    <Text style={styles.label}>Points</Text>
-                    <TextInput
-                        value={points}
-                        onChangeText={setPoints}
-                        keyboardType="number-pad"
-                        placeholder="e.g. 10"
-                        style={styles.input}
-                    />
+                    {canEditPoints && (
+                        <>
+                            <Text style={styles.label}>Points</Text>
+                            <TextInput
+                                value={points}
+                                onChangeText={setPoints}
+                                keyboardType="number-pad"
+                                placeholder="e.g. 10"
+                                style={styles.input}
+                            />
+                        </>
+                    )}
 
                     {/* Assign to (optional) – now also shown for EDIT */}
                     {assigneeOptions && assigneeOptions.length > 0 && (

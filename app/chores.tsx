@@ -701,12 +701,18 @@ export default function Chores() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.title}>{item.title}</Text>
                 <Text style={styles.meta}>
-                  {item.points} pts •{' '}
-                  {item.status === 'open'
-                    ? 'To do'
-                    : item.status === 'pending'
-                      ? 'Needs check'
-                      : 'Approved ⭐'}
+                  {item.points > 0
+                    ? `${item.points} pts • ${item.status === 'open'
+                      ? 'To do'
+                      : item.status === 'pending'
+                        ? 'Needs check'
+                        : 'Approved ⭐'
+                    }`
+                    : item.status === 'open'
+                      ? 'To do'
+                      : item.status === 'pending'
+                        ? 'Needs check'
+                        : 'Approved ⭐'}
                 </Text>
 
                 {item.assignedToName && (
@@ -738,14 +744,16 @@ export default function Chores() {
                   gap: 10,
                 }}
               >
-                <View style={styles.badge}>
-                  <MaterialCommunityIcons
-                    name="star-circle-outline"
-                    size={18}
-                    color="#1e3a8a"
-                  />
-                  <Text style={styles.badgeTxt}>{item.points}</Text>
-                </View>
+                {item.points > 0 && (
+                  <View style={styles.badge}>
+                    <MaterialCommunityIcons
+                      name="star-circle-outline"
+                      size={18}
+                      color="#1e3a8a"
+                    />
+                    <Text style={styles.badgeTxt}>{item.points}</Text>
+                  </View>
+                )}
 
                 {item.status === 'open' && (
                   <View style={styles.actions}>
@@ -793,6 +801,7 @@ export default function Chores() {
         templates={templates}
         onDeleteTemplate={deleteTemplate}
         assigneeOptions={doneByOptions}
+        canEditPoints={isParent}
       />
 
       {/* edit */}
@@ -810,6 +819,7 @@ export default function Chores() {
           titleText="Edit Chore"
           submitText="Save"
           assigneeOptions={doneByOptions}
+          canEditPoints={isParent}
         />
       )}
 
