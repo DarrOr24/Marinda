@@ -3,14 +3,16 @@ import { Audio } from 'expo-av';
 import React from 'react';
 import {
     Alert,
+    Dimensions,
     KeyboardAvoidingView,
     Modal,
     Platform,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
-    View,
+    View
 } from 'react-native';
 
 type AssigneeOption = {
@@ -46,6 +48,8 @@ type Props = {
     assigneeOptions?: AssigneeOption[];
     canEditPoints?: boolean;
 };
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 export default function ChorePostModal({
     visible,
@@ -167,189 +171,197 @@ export default function ChorePostModal({
                 <View style={styles.card}>
                     <Text style={styles.h1}>{titleText}</Text>
 
-                    {templates && templates.length > 0 && (
-                        <View style={{ marginBottom: 10 }}>
-                            <Text style={styles.label}>Choose from routine</Text>
-                            <View style={styles.templatesRow}>
-                                {templates.map((t) => (
-                                    <View key={t.id} style={styles.templateWrapper}>
-                                        <Pressable
-                                            style={styles.templateBtn}
-                                            onPress={() => {
-                                                setTitle(t.title);
-                                                setPoints(String(t.defaultPoints));
-                                            }}
-                                        >
-                                            <Text style={styles.templateTxt}>{t.title}</Text>
-                                        </Pressable>
-
-                                        {onDeleteTemplate && (
-                                            <Pressable
-                                                style={styles.deleteChipBtn}
-                                                onPress={() => {
-                                                    Alert.alert(
-                                                        'Remove routine chore?',
-                                                        `Are you sure you want to remove "${t.title}" from the routine list?`,
-                                                        [
-                                                            { text: 'Cancel', style: 'cancel' },
-                                                            {
-                                                                text: 'Remove',
-                                                                style: 'destructive',
-                                                                onPress: () => onDeleteTemplate(t.id),
-                                                            },
-                                                        ]
-                                                    );
-                                                }}
-                                                hitSlop={8}
-                                            >
-                                                <Text style={styles.deleteChipTxt}>×</Text>
-                                            </Pressable>
-                                        )}
-                                    </View>
-                                ))}
-                            </View>
-                        </View>
-                    )}
-
-                    <Text style={styles.label}>Title</Text>
-                    <TextInput
-                        value={title}
-                        onChangeText={setTitle}
-                        placeholder="e.g. Empty the dishwasher"
-                        style={styles.input}
-                    />
-
-                    <Text style={[styles.label, { marginTop: 8 }]}>Description (optional)</Text>
-                    <TextInput
-                        value={description}
-                        onChangeText={setDescription}
-                        placeholder="Add extra details for this chore…"
-                        style={[styles.input, { minHeight: 60, textAlignVertical: 'top' }]}
-                        multiline
-                    />
-
-                    <Text style={[styles.label, { marginTop: 8 }]}>
-                        Audio description (optional)
-                    </Text>
-
-                    <Text style={[styles.label, { marginTop: 8 }]}>
-                        Finish by (optional, today)
-                    </Text>
-                    <TextInput
-                        value={finishByTime}
-                        onChangeText={setFinishByTime}
-                        placeholder="e.g. 7:30 pm or 19:30"
-                        style={styles.input}
-                    />
-
-                    <View
-                        style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8 }}
+                    <ScrollView
+                        style={{ maxHeight: 420 }}                // tweak if you want
+                        contentContainerStyle={{ paddingBottom: 8 }}
+                        keyboardShouldPersistTaps="handled"
                     >
-                        {!recording ? (
-                            <Pressable
-                                style={[styles.smallBtn, styles.primary]}
-                                onPress={startRecording}
-                            >
-                                <Text style={[styles.btnTxt, { color: '#fff', fontSize: 12 }]}>
-                                    {audioUri ? 'Re-record' : 'Record audio'}
-                                </Text>
-                            </Pressable>
-                        ) : (
-                            <Pressable
-                                style={[styles.smallBtn, styles.cancel]}
-                                onPress={stopRecording}
-                            >
-                                <Text style={[styles.btnTxt, styles.cancelTxt, { fontSize: 12 }]}>
-                                    Stop
-                                </Text>
-                            </Pressable>
+
+                        {templates && templates.length > 0 && (
+                            <View style={{ marginBottom: 10 }}>
+                                <Text style={styles.label}>Choose from routine</Text>
+                                <View style={styles.templatesRow}>
+                                    {templates.map((t) => (
+                                        <View key={t.id} style={styles.templateWrapper}>
+                                            <Pressable
+                                                style={styles.templateBtn}
+                                                onPress={() => {
+                                                    setTitle(t.title);
+                                                    setPoints(String(t.defaultPoints));
+                                                }}
+                                            >
+                                                <Text style={styles.templateTxt}>{t.title}</Text>
+                                            </Pressable>
+
+                                            {onDeleteTemplate && (
+                                                <Pressable
+                                                    style={styles.deleteChipBtn}
+                                                    onPress={() => {
+                                                        Alert.alert(
+                                                            'Remove routine chore?',
+                                                            `Are you sure you want to remove "${t.title}" from the routine list?`,
+                                                            [
+                                                                { text: 'Cancel', style: 'cancel' },
+                                                                {
+                                                                    text: 'Remove',
+                                                                    style: 'destructive',
+                                                                    onPress: () => onDeleteTemplate(t.id),
+                                                                },
+                                                            ]
+                                                        );
+                                                    }}
+                                                    hitSlop={8}
+                                                >
+                                                    <Text style={styles.deleteChipTxt}>×</Text>
+                                                </Pressable>
+                                            )}
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
                         )}
 
-                        {audioUri && !recording && (
-                            <>
+                        <Text style={styles.label}>Title</Text>
+                        <TextInput
+                            value={title}
+                            onChangeText={setTitle}
+                            placeholder="e.g. Empty the dishwasher"
+                            style={styles.input}
+                        />
+
+                        <Text style={[styles.label, { marginTop: 8 }]}>Description (optional)</Text>
+                        <TextInput
+                            value={description}
+                            onChangeText={setDescription}
+                            placeholder="Add extra details for this chore…"
+                            style={[styles.input, { minHeight: 60, textAlignVertical: 'top' }]}
+                            multiline
+                        />
+
+                        <Text style={[styles.label, { marginTop: 8 }]}>
+                            Finish by (optional, today)
+                        </Text>
+                        <TextInput
+                            value={finishByTime}
+                            onChangeText={setFinishByTime}
+                            placeholder="e.g. 7:30 pm or 19:30"
+                            style={styles.input}
+                        />
+
+                        <Text style={[styles.label, { marginTop: 8 }]}>
+                            Audio description (optional)
+                        </Text>
+
+                        <View
+                            style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8 }}
+                        >
+                            {!recording ? (
                                 <Pressable
-                                    style={[styles.smallBtn, styles.secondary]}
-                                    onPress={playRecording}
+                                    style={[styles.smallBtn, styles.primary]}
+                                    onPress={startRecording}
                                 >
-                                    <Text style={[styles.btnTxt, { fontSize: 12 }]}>Play</Text>
-                                </Pressable>
-                                {audioDuration != null && (
-                                    <Text style={{ fontSize: 12, color: '#64748b' }}>
-                                        ~{audioDuration}s
+                                    <Text style={[styles.btnTxt, { color: '#fff', fontSize: 12 }]}>
+                                        {audioUri ? 'Re-record' : 'Record audio'}
                                     </Text>
-                                )}
+                                </Pressable>
+                            ) : (
+                                <Pressable
+                                    style={[styles.smallBtn, styles.cancel]}
+                                    onPress={stopRecording}
+                                >
+                                    <Text style={[styles.btnTxt, styles.cancelTxt, { fontSize: 12 }]}>
+                                        Stop
+                                    </Text>
+                                </Pressable>
+                            )}
+
+                            {audioUri && !recording && (
+                                <>
+                                    <Pressable
+                                        style={[styles.smallBtn, styles.secondary]}
+                                        onPress={playRecording}
+                                    >
+                                        <Text style={[styles.btnTxt, { fontSize: 12 }]}>Play</Text>
+                                    </Pressable>
+                                    {audioDuration != null && (
+                                        <Text style={{ fontSize: 12, color: '#64748b' }}>
+                                            ~{audioDuration}s
+                                        </Text>
+                                    )}
+                                </>
+                            )}
+                        </View>
+
+                        {canEditPoints && (
+                            <>
+                                <Text style={styles.label}>Points</Text>
+                                <TextInput
+                                    value={points}
+                                    onChangeText={setPoints}
+                                    keyboardType="number-pad"
+                                    placeholder="e.g. 10"
+                                    style={styles.input}
+                                />
                             </>
                         )}
-                    </View>
 
-                    {canEditPoints && (
-                        <>
-                            <Text style={styles.label}>Points</Text>
-                            <TextInput
-                                value={points}
-                                onChangeText={setPoints}
-                                keyboardType="number-pad"
-                                placeholder="e.g. 10"
-                                style={styles.input}
-                            />
-                        </>
-                    )}
-
-                    {/* Assign to (optional) – multi-select */}
-                    {assigneeOptions && assigneeOptions.length > 0 && (
-                        <>
-                            <Text style={[styles.label, { marginTop: 8 }]}>
-                                Assign to (optional)
-                            </Text>
-                            <View style={styles.assigneeRow}>
-                                {assigneeOptions.map((opt) => {
-                                    const isSelected = assignedToIds.includes(opt.id);
-                                    return (
-                                        <Pressable
-                                            key={opt.id}
-                                            onPress={() => toggleAssignee(opt.id)}
-                                            style={[
-                                                styles.assigneeChip,
-                                                isSelected && styles.assigneeChipSelected,
-                                            ]}
-                                        >
-                                            <Text
+                        {/* Assign to (optional) – multi-select */}
+                        {assigneeOptions && assigneeOptions.length > 0 && (
+                            <>
+                                <Text style={[styles.label, { marginTop: 8 }]}>
+                                    Assign to (optional)
+                                </Text>
+                                <View style={styles.assigneeRow}>
+                                    {assigneeOptions.map((opt) => {
+                                        const isSelected = assignedToIds.includes(opt.id);
+                                        return (
+                                            <Pressable
+                                                key={opt.id}
+                                                onPress={() => toggleAssignee(opt.id)}
                                                 style={[
-                                                    styles.assigneeChipTxt,
-                                                    isSelected && styles.assigneeChipTxtSelected,
+                                                    styles.assigneeChip,
+                                                    isSelected && styles.assigneeChipSelected,
                                                 ]}
                                             >
-                                                {opt.name}
-                                            </Text>
-                                        </Pressable>
-                                    );
-                                })}
-                            </View>
-                        </>
-                    )}
+                                                <Text
+                                                    style={[
+                                                        styles.assigneeChipTxt,
+                                                        isSelected && styles.assigneeChipTxtSelected,
+                                                    ]}
+                                                >
+                                                    {opt.name}
+                                                </Text>
+                                            </Pressable>
+                                        );
+                                    })}
+                                </View>
+                            </>
+                        )}
 
-                    {/* Save as routine – still only on create */}
-                    {!initial && (
-                        <Pressable
-                            onPress={() => setSaveAsTemplate(!saveAsTemplate)}
-                            style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}
-                        >
-                            <View
-                                style={{
-                                    width: 22,
-                                    height: 22,
-                                    borderRadius: 4,
-                                    borderWidth: 2,
-                                    borderColor: '#2563eb',
-                                    marginRight: 8,
-                                    backgroundColor: saveAsTemplate ? '#2563eb' : 'transparent',
-                                }}
-                            />
-                            <Text style={{ fontSize: 14, fontWeight: '600', color: '#1e293b' }}>
-                                Save as routine
-                            </Text>
-                        </Pressable>
-                    )}
+                        {/* Save as routine – still only on create */}
+                        {!initial && (
+                            <Pressable
+                                onPress={() => setSaveAsTemplate(!saveAsTemplate)}
+                                style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}
+                            >
+                                <View
+                                    style={{
+                                        width: 22,
+                                        height: 22,
+                                        borderRadius: 4,
+                                        borderWidth: 2,
+                                        borderColor: '#2563eb',
+                                        marginRight: 8,
+                                        backgroundColor: saveAsTemplate ? '#2563eb' : 'transparent',
+                                    }}
+                                />
+                                <Text style={{ fontSize: 14, fontWeight: '600', color: '#1e293b' }}>
+                                    Save as routine
+                                </Text>
+                            </Pressable>
+                        )}
+
+                    </ScrollView>
 
                     <View style={styles.row}>
                         <Pressable onPress={onClose} style={[styles.btn, styles.secondary]}>
@@ -396,7 +408,7 @@ export default function ChorePostModal({
 
                 </View>
             </KeyboardAvoidingView>
-        </Modal>
+        </Modal >
     );
 }
 
@@ -407,7 +419,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         padding: 16,
     },
-    card: { backgroundColor: '#fff', borderRadius: 20, padding: 16, gap: 10 },
+    card: {
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        padding: 16,
+        gap: 10,
+        maxHeight: SCREEN_HEIGHT * 0.82,
+    },
     h1: { fontSize: 18, fontWeight: '800', color: '#0f172a', marginBottom: 6 },
     label: { fontSize: 12, fontWeight: '700', color: '#64748b' },
     input: {
