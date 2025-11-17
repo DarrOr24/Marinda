@@ -173,10 +173,12 @@ export default function Chores() {
   useEffect(() => {
     if (!activeFamilyId) return;
     let cancelled = false;
+
     (async () => {
       try {
         const rows = await fetchChores(activeFamilyId);
         if (cancelled) return;
+
         const mapped: ChoreView[] = (rows ?? []).map((r: any) => {
           const doneFromDb = r.done_at ? new Date(r.done_at).getTime() : undefined;
           const doneAt =
@@ -184,6 +186,10 @@ export default function Chores() {
             (r.status === 'OPEN' && r.created_at
               ? new Date(r.created_at).getTime()
               : undefined);
+
+          const expiresAt = r.expires_at
+            ? new Date(r.expires_at).getTime()
+            : undefined; // 🔹 new
 
           // resolve "created by" from auth user id -> family member
           let createdByMemberId: string | undefined;
@@ -239,19 +245,27 @@ export default function Chores() {
             createdByName,
             createdByMemberId,
             proofNote: r.proof_note ?? undefined,
+
+            expiresAt, // 🔹 new field on ChoreView
           };
         });
 
+        if (cancelled) return;
         setList(mapped);
+
       } catch (e) {
         console.error('fetchChores failed', e);
-        Alert.alert('Error', 'Could not load chores.');
+        if (!cancelled) {
+          Alert.alert('Error', 'Could not load chores.');
+        }
       }
     })();
+
     return () => {
       cancelled = true;
     };
   }, [activeFamilyId, nameForId, rawMembers]);
+
 
   // ---- derived lists for each tab ----
   const grouped = useMemo(() => {
@@ -260,9 +274,28 @@ export default function Chores() {
     const approved: ChoreView[] = [];
     const archived: ChoreView[] = [];
 
+    const now = Date.now();
+
     for (const c of list) {
+      const isExpiredToday =
+        c.status === 'open' &&
+        c.expiresAt &&
+        c.expiresAt < now &&
+        c.expiresAt >= startOfToday;
+
+      const expiredBeforeToday =
+        c.status === 'open' &&
+        c.expiresAt &&
+        c.expiresAt < startOfToday;
+
       if (c.status === 'open') {
-        open.push(c);
+        if (expiredBeforeToday) {
+          // expired on a previous day -> History
+          archived.push(c);
+        } else {
+          // still belongs in "To do" (including expired-today ones)
+          open.push(c);
+        }
       } else if (c.status === 'pending') {
         pending.push(c);
       } else if (c.status === 'approved') {
@@ -275,7 +308,6 @@ export default function Chores() {
       }
     }
 
-    // sort a little: newest first per list
     const sortByRecent = (arr: ChoreView[]) =>
       [...arr].sort(
         (a, b) => (b.doneAt ?? b.approvedAt ?? 0) - (a.doneAt ?? a.approvedAt ?? 0)
@@ -299,6 +331,7 @@ export default function Chores() {
     saveAsTemplate,
     assignedToIds,
     audioLocal,
+    expiresAt,
   }: {
     title: string;
     description?: string;
@@ -306,6 +339,7 @@ export default function Chores() {
     saveAsTemplate?: boolean;
     assignedToIds?: string[];
     audioLocal?: { uri: string; durationSeconds: number };
+    expiresAt?: string | null;
   }) => {
     if (!activeFamilyId) return;
     try {
@@ -341,6 +375,7 @@ export default function Chores() {
         assigned_to_ids: normalizedAssignedIds,
         audioDescriptionUrl: audioUrl,
         audioDescriptionDuration: audioDuration,
+        expiresAt: expiresAt ?? null,
       });
 
       const dbAssignedIds: string[] | undefined =
@@ -359,6 +394,10 @@ export default function Chores() {
         points: row.points ?? points,
         status: dbToUiStatus(row.status as DbStatus),
         proofs: [],
+
+        expiresAt: row.expires_at
+          ? new Date(row.expires_at).getTime()
+          : undefined,
 
         assignedToId: dbAssignedIds?.[0],
         assignedToName: dbAssignedNames?.[0],
@@ -398,6 +437,7 @@ export default function Chores() {
       description?: string;
       points: number;
       assignedToIds?: string[];
+      expiresAt?: string | null;
     }
   ) => {
     try {
@@ -415,6 +455,7 @@ export default function Chores() {
             ? normalizedAssignedIds[0]
             : null,
         assigned_to_ids: normalizedAssignedIds ?? null,
+        expiresAt: updates.expiresAt ?? null,
       });
 
       const dbAssignedIds: string[] | undefined =
@@ -438,6 +479,9 @@ export default function Chores() {
               assignedToName: dbAssignedNames?.[0],
               assignedToIds: dbAssignedIds,
               assignedToNames: dbAssignedNames,
+              expiresAt: row.expires_at
+                ? new Date(row.expires_at).getTime()
+                : undefined,
             }
             : c
         )
@@ -663,6 +707,15 @@ export default function Chores() {
   };
 
   function handleOpen(item: ChoreView) {
+    const now = Date.now();
+    const isExpired =
+      item.status === 'open' && item.expiresAt && item.expiresAt < now;
+
+    if (isExpired) {
+      Alert.alert('Expired', 'This chore has expired and can’t be completed.');
+      return;
+    }
+
     if (item.status === 'pending' && !isParent) {
       Alert.alert('Pending approval', 'Only a parent can review this chore.');
       return;
@@ -745,6 +798,10 @@ export default function Chores() {
             item.createdByMemberId &&
             item.createdByMemberId === myFamilyMemberId;
           const canModify = isParent || isCreator;
+          const now = Date.now();
+          const isExpired =
+            item.status === 'open' && item.expiresAt && item.expiresAt < now;
+
 
           const assignedLabel =
             item.assignedToNames && item.assignedToNames.length
@@ -757,18 +814,23 @@ export default function Chores() {
                 <Text style={styles.title}>{item.title}</Text>
                 <Text style={styles.meta}>
                   {item.points > 0
-                    ? `${item.points} pts • ${item.status === 'open'
-                      ? 'To do'
-                      : item.status === 'pending'
-                        ? 'Needs check'
-                        : 'Approved ⭐'
+                    ? `${item.points} pts • ${isExpired
+                      ? 'Expired'
+                      : item.status === 'open'
+                        ? 'To do'
+                        : item.status === 'pending'
+                          ? 'Needs check'
+                          : 'Approved ⭐'
                     }`
-                    : item.status === 'open'
-                      ? 'To do'
-                      : item.status === 'pending'
-                        ? 'Needs check'
-                        : 'Approved ⭐'}
+                    : isExpired
+                      ? 'Expired'
+                      : item.status === 'open'
+                        ? 'To do'
+                        : item.status === 'pending'
+                          ? 'Needs check'
+                          : 'Approved ⭐'}
                 </Text>
+
 
                 {assignedLabel && (
                   <Text style={styles.assignedText}>Assigned to: {assignedLabel}</Text>
@@ -779,6 +841,15 @@ export default function Chores() {
                     Created by: {item.createdByName}
                   </Text>
                 )}
+
+                {item.status === 'open' && item.expiresAt && (
+                  <Text style={styles.dueText}>
+                    {isExpired
+                      ? `Expired at: ${formatDateTime(item.expiresAt)}`
+                      : `Finish by: ${formatDateTime(item.expiresAt)}`}
+                  </Text>
+                )}
+
 
                 {item.status === 'open' && item.doneAt && (
                   <Text style={styles.timeText}>{formatDateTime(item.doneAt)}</Text>
@@ -873,6 +944,7 @@ export default function Chores() {
                 : editing.assignedToId
                   ? [editing.assignedToId]
                   : [],
+            expiresAt: editing.expiresAt ?? null,
           }}
           titleText="Edit Chore"
           submitText="Save"
@@ -981,6 +1053,12 @@ const styles = StyleSheet.create({
   assignedText: {
     fontSize: 11,
     color: '#64748b',
+    marginTop: 2,
+  },
+
+  dueText: {
+    fontSize: 11,
+    color: '#f97316', // or reuse another soft color if you prefer
     marginTop: 2,
   },
 

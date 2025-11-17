@@ -137,6 +137,7 @@ export async function addChore(
     assigned_to_ids?: string[];
     audioDescriptionUrl?: string | null;
     audioDescriptionDuration?: number | null;
+    expiresAt?: string | null;
   }
 ) {
   const user = (await supabase.auth.getUser()).data.user;
@@ -156,6 +157,8 @@ export async function addChore(
 
       audio_description_url: chore.audioDescriptionUrl ?? null,
       audio_description_duration: chore.audioDescriptionDuration ?? null,
+
+      expires_at: chore.expiresAt ?? null,
     })
     .select()
     .single();
@@ -292,6 +295,8 @@ export async function updateChore(
 
     audioDescriptionUrl?: string | null;
     audioDescriptionDuration?: number | null;
+
+    expiresAt?: string | null;
   }
 ) {
   const patch: any = {};
@@ -320,6 +325,9 @@ export async function updateChore(
   }
   if (fields.audioDescriptionDuration !== undefined) {
     patch.audio_description_duration = fields.audioDescriptionDuration;
+  }
+  if (fields.expiresAt !== undefined) {
+    patch.expires_at = fields.expiresAt; // can be null to clear deadline
   }
 
   const { data, error } = await supabase

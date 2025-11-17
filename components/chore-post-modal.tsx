@@ -28,6 +28,7 @@ type Props = {
         saveAsTemplate?: boolean;
         assignedToIds?: string[];
         audioLocal?: { uri: string; durationSeconds: number };
+        expiresAt?: string | null;
     }) => void;
     // include assignedToIds so edit can prefill
     initial?: {
@@ -35,6 +36,7 @@ type Props = {
         description?: string | null;
         points?: number;
         assignedToIds?: string[] | null;
+        expiresAt?: number | null;
     };
     titleText?: string; // e.g., "Edit Chore"
     submitText?: string;
@@ -68,6 +70,10 @@ export default function ChorePostModal({
     const [audioUri, setAudioUri] = React.useState<string | null>(null);
     const [audioDuration, setAudioDuration] = React.useState<number | null>(null);
 
+    const [finishByTime, setFinishByTime] = React.useState(
+        initial?.expiresAt ? formatTimeForInput(initial.expiresAt) : ''
+    )
+
     React.useEffect(() => {
         setTitle(initial?.title ?? '');
         setDescription(initial?.description ?? '');
@@ -77,7 +83,15 @@ export default function ChorePostModal({
         setRecording(null);
         setAudioUri(null);
         setAudioDuration(null);
-    }, [initial?.title, initial?.points, initial?.assignedToIds, visible]);
+        setFinishByTime(initial?.expiresAt ? formatTimeForInput(initial.expiresAt) : '');
+    }, [
+        initial?.title,
+        initial?.description,
+        initial?.points,
+        initial?.assignedToIds,
+        initial?.expiresAt,
+        visible,
+    ]);
 
     const disabled = !title.trim() || Number.isNaN(Number(points));
 
@@ -217,6 +231,17 @@ export default function ChorePostModal({
                     <Text style={[styles.label, { marginTop: 8 }]}>
                         Audio description (optional)
                     </Text>
+
+                    <Text style={[styles.label, { marginTop: 8 }]}>
+                        Finish by (optional, today)
+                    </Text>
+                    <TextInput
+                        value={finishByTime}
+                        onChangeText={setFinishByTime}
+                        placeholder="e.g. 7:30 pm or 19:30"
+                        style={styles.input}
+                    />
+
                     <View
                         style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8 }}
                     >
@@ -333,7 +358,21 @@ export default function ChorePostModal({
 
                         <Pressable
                             disabled={disabled}
-                            onPress={() =>
+                            onPress={() => {
+                                let expiresAt: string | null | undefined = undefined;
+
+                                if (finishByTime.trim()) {
+                                    const iso = parseFinishTimeToIso(finishByTime);
+                                    if (!iso) {
+                                        Alert.alert(
+                                            'Check time',
+                                            'Please enter a valid time like 7:30 pm or 19:30.'
+                                        );
+                                        return;
+                                    }
+                                    expiresAt = iso;
+                                }
+
                                 onSubmit({
                                     title: title.trim(),
                                     description: description.trim() || undefined,
@@ -345,13 +384,16 @@ export default function ChorePostModal({
                                         audioUri && audioDuration != null
                                             ? { uri: audioUri, durationSeconds: audioDuration }
                                             : undefined,
-                                })
-                            }
+                                    expiresAt, // 🔹 send it out
+                                });
+                            }}
                             style={[styles.btn, disabled ? styles.disabled : styles.primary]}
                         >
                             <Text style={[styles.btnTxt, { color: '#fff' }]}>{submitText}</Text>
                         </Pressable>
+
                     </View>
+
                 </View>
             </KeyboardAvoidingView>
         </Modal>
@@ -458,3 +500,57 @@ const styles = StyleSheet.create({
     cancel: { backgroundColor: '#fee2e2' },
     cancelTxt: { color: '#b91c1c', fontWeight: '700' },
 });
+
+// 🔹 Convert a user-entered time ("7:30 pm", "19:00") into an ISO string for *today*
+function parseFinishTimeToIso(input: string): string | null {
+    const raw = input.trim().toLowerCase();
+    if (!raw) return null;
+
+    let ampm: 'am' | 'pm' | null = null;
+    let text = raw;
+
+    if (text.endsWith('am')) {
+        ampm = 'am';
+        text = text.slice(0, -2).trim();
+    } else if (text.endsWith('pm')) {
+        ampm = 'pm';
+        text = text.slice(0, -2).trim();
+    }
+
+    const parts = text.split(':');
+    const hourPart = parts[0]?.trim();
+    const minutePart = parts[1]?.trim() ?? '0';
+
+    let hour = Number.parseInt(hourPart, 10);
+    let minute = Number.parseInt(minutePart, 10);
+
+    if (
+        Number.isNaN(hour) ||
+        Number.isNaN(minute) ||
+        hour < 0 ||
+        hour > 23 ||
+        minute < 0 ||
+        minute > 59
+    ) {
+        return null;
+    }
+
+    if (ampm) {
+        if (hour === 12) {
+            hour = ampm === 'am' ? 0 : 12;
+        } else if (ampm === 'pm') {
+            hour += 12;
+        }
+    }
+
+    const d = new Date();
+    d.setHours(hour, minute, 0, 0);
+    return d.toISOString();
+}
+
+function formatTimeForInput(ts?: number | null): string {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+

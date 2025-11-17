@@ -16,6 +16,9 @@ export type ChoreView = {
     audioDescriptionDuration?: number | null; // in seconds
     status: ChoreStatus;
 
+    // deadline (optional)
+    expiresAt?: number; // ms since epoch, from expires_at
+
     // who did the chore
     doneById?: string;
     doneByIds?: string[];
