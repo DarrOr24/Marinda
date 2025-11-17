@@ -229,14 +229,18 @@ export default function ChorePostModal({
                             style={styles.input}
                         />
 
-                        <Text style={[styles.label, { marginTop: 8 }]}>Description (optional)</Text>
-                        <TextInput
-                            value={description}
-                            onChangeText={setDescription}
-                            placeholder="Add extra details for this chore…"
-                            style={[styles.input, { minHeight: 60, textAlignVertical: 'top' }]}
-                            multiline
-                        />
+                        {canEditPoints && (
+                            <>
+                                <Text style={styles.label}>Points</Text>
+                                <TextInput
+                                    value={points}
+                                    onChangeText={setPoints}
+                                    keyboardType="number-pad"
+                                    placeholder="e.g. 10"
+                                    style={styles.input}
+                                />
+                            </>
+                        )}
 
                         <Text style={[styles.label, { marginTop: 8 }]}>
                             Finish by (optional, today)
@@ -246,6 +250,15 @@ export default function ChorePostModal({
                             onChangeText={setFinishByTime}
                             placeholder="e.g. 7:30 pm or 19:30"
                             style={styles.input}
+                        />
+
+                        <Text style={[styles.label, { marginTop: 8 }]}>Description (optional)</Text>
+                        <TextInput
+                            value={description}
+                            onChangeText={setDescription}
+                            placeholder="Add extra details for this chore…"
+                            style={[styles.input, { minHeight: 60, textAlignVertical: 'top' }]}
+                            multiline
                         />
 
                         <Text style={[styles.label, { marginTop: 8 }]}>
@@ -291,19 +304,6 @@ export default function ChorePostModal({
                                 </>
                             )}
                         </View>
-
-                        {canEditPoints && (
-                            <>
-                                <Text style={styles.label}>Points</Text>
-                                <TextInput
-                                    value={points}
-                                    onChangeText={setPoints}
-                                    keyboardType="number-pad"
-                                    placeholder="e.g. 10"
-                                    style={styles.input}
-                                />
-                            </>
-                        )}
 
                         {/* Assign to (optional) – multi-select */}
                         {assigneeOptions && assigneeOptions.length > 0 && (
