@@ -172,7 +172,7 @@ export default function ChorePostModal({
                     <Text style={styles.h1}>{titleText}</Text>
 
                     <ScrollView
-                        style={{ maxHeight: 420 }}                // tweak if you want
+                        style={{ maxHeight: SCREEN_HEIGHT * 0.82 }}                // tweak if you want
                         contentContainerStyle={{ paddingBottom: 8 }}
                         keyboardShouldPersistTaps="handled"
                     >
@@ -424,7 +424,6 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         padding: 16,
         gap: 10,
-        maxHeight: SCREEN_HEIGHT * 0.82,
     },
     h1: { fontSize: 18, fontWeight: '800', color: '#0f172a', marginBottom: 6 },
     label: { fontSize: 12, fontWeight: '700', color: '#64748b' },
