@@ -12,7 +12,7 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    View
+    View,
 } from 'react-native';
 
 type AssigneeOption = {
@@ -43,7 +43,6 @@ type Props = {
     titleText?: string; // e.g., "Edit Chore"
     submitText?: string;
     templates?: { id: string; title: string; defaultPoints: number }[];
-    onDeleteTemplate?: (id: string) => void;
     // who can be assigned
     assigneeOptions?: AssigneeOption[];
     canEditPoints?: boolean;
@@ -59,7 +58,6 @@ export default function ChorePostModal({
     titleText = 'Post Chore',
     submitText = 'Post',
     templates,
-    onDeleteTemplate,
     assigneeOptions,
     canEditPoints = true,
 }: Props) {
@@ -76,7 +74,16 @@ export default function ChorePostModal({
 
     const [finishByTime, setFinishByTime] = React.useState(
         initial?.expiresAt ? formatTimeForInput(initial.expiresAt) : ''
-    )
+    );
+
+    // dropdown state for routine chores
+    const [selectedTemplateId, setSelectedTemplateId] = React.useState<string | null>(null);
+    const [isTemplateDropdownOpen, setIsTemplateDropdownOpen] = React.useState(false);
+
+    const selectedTemplate = React.useMemo(
+        () => templates?.find((t) => t.id === selectedTemplateId),
+        [templates, selectedTemplateId]
+    );
 
     React.useEffect(() => {
         setTitle(initial?.title ?? '');
@@ -88,6 +95,8 @@ export default function ChorePostModal({
         setAudioUri(null);
         setAudioDuration(null);
         setFinishByTime(initial?.expiresAt ? formatTimeForInput(initial.expiresAt) : '');
+        setSelectedTemplateId(null);
+        setIsTemplateDropdownOpen(false);
     }, [
         initial?.title,
         initial?.description,
@@ -98,6 +107,14 @@ export default function ChorePostModal({
     ]);
 
     const disabled = !title.trim() || Number.isNaN(Number(points));
+
+    // 🔹 NEW: if user types a title different from the selected routine, clear the selection
+    const handleTitleChange = (text: string) => {
+        setTitle(text);
+        if (selectedTemplate && text !== selectedTemplate.title) {
+            setSelectedTemplateId(null);
+        }
+    };
 
     async function startRecording() {
         try {
@@ -172,59 +189,86 @@ export default function ChorePostModal({
                     <Text style={styles.h1}>{titleText}</Text>
 
                     <ScrollView
-                        style={{ maxHeight: SCREEN_HEIGHT * 0.82 }}                // tweak if you want
+                        style={{ maxHeight: SCREEN_HEIGHT * 0.82 }}
                         contentContainerStyle={{ paddingBottom: 8 }}
                         keyboardShouldPersistTaps="handled"
                     >
-
+                        {/* Routine chores as dropdown */}
                         {templates && templates.length > 0 && (
                             <View style={{ marginBottom: 10 }}>
                                 <Text style={styles.label}>Choose from routine</Text>
-                                <View style={styles.templatesRow}>
-                                    {templates.map((t) => (
-                                        <View key={t.id} style={styles.templateWrapper}>
-                                            <Pressable
-                                                style={styles.templateBtn}
-                                                onPress={() => {
-                                                    setTitle(t.title);
-                                                    setPoints(String(t.defaultPoints));
-                                                }}
-                                            >
-                                                <Text style={styles.templateTxt}>{t.title}</Text>
-                                            </Pressable>
+                                <Pressable
+                                    style={styles.dropdown}
+                                    onPress={() =>
+                                        setIsTemplateDropdownOpen((prev) => !prev)
+                                    }
+                                >
+                                    <Text
+                                        style={
+                                            selectedTemplate
+                                                ? styles.dropdownValue
+                                                : styles.dropdownPlaceholder
+                                        }
+                                    >
+                                        {selectedTemplate
+                                            ? selectedTemplate.title
+                                            : 'Select a routine chore'}
+                                    </Text>
+                                    <Text style={styles.dropdownChevron}>
+                                        {isTemplateDropdownOpen ? '▲' : '▼'}
+                                    </Text>
+                                </Pressable>
 
-                                            {onDeleteTemplate && (
+                                {isTemplateDropdownOpen && (
+                                    <View style={styles.dropdownList}>
+                                        <ScrollView nestedScrollEnabled>
+
+                                            {/* 🔹 "None" option to clear selection */}
+                                            <View style={styles.dropdownItemRow}>
                                                 <Pressable
-                                                    style={styles.deleteChipBtn}
+                                                    style={styles.dropdownItemBtn}
                                                     onPress={() => {
-                                                        Alert.alert(
-                                                            'Remove routine chore?',
-                                                            `Are you sure you want to remove "${t.title}" from the routine list?`,
-                                                            [
-                                                                { text: 'Cancel', style: 'cancel' },
-                                                                {
-                                                                    text: 'Remove',
-                                                                    style: 'destructive',
-                                                                    onPress: () => onDeleteTemplate(t.id),
-                                                                },
-                                                            ]
-                                                        );
+                                                        setSelectedTemplateId(null);
+                                                        setIsTemplateDropdownOpen(false);
                                                     }}
-                                                    hitSlop={8}
                                                 >
-                                                    <Text style={styles.deleteChipTxt}>×</Text>
+                                                    <Text style={styles.dropdownItemTxt}>None</Text>
                                                 </Pressable>
-                                            )}
-                                        </View>
-                                    ))}
-                                </View>
+                                            </View>
+
+                                            {templates.map((t) => (
+                                                <View
+                                                    key={t.id}
+                                                    style={styles.dropdownItemRow}
+                                                >
+                                                    <Pressable
+                                                        style={styles.dropdownItemBtn}
+                                                        onPress={() => {
+                                                            setSelectedTemplateId(t.id);
+                                                            setTitle(t.title);
+                                                            setPoints(String(t.defaultPoints));
+                                                            setIsTemplateDropdownOpen(false);
+                                                        }}
+                                                    >
+                                                        <Text style={styles.dropdownItemTxt}>{t.title}</Text>
+                                                        <Text style={styles.dropdownItemPoints}>
+                                                            {t.defaultPoints} pts
+                                                        </Text>
+                                                    </Pressable>
+                                                </View>
+                                            ))}
+
+                                        </ScrollView>
+                                    </View>
+                                )}
+
                             </View>
                         )}
 
                         <Text style={styles.label}>Title</Text>
                         <TextInput
                             value={title}
-                            onChangeText={setTitle}
+                            onChangeText={handleTitleChange}
                             placeholder="e.g. Empty the dishwasher"
                             style={styles.input}
                         />
@@ -252,7 +296,9 @@ export default function ChorePostModal({
                             style={styles.input}
                         />
 
-                        <Text style={[styles.label, { marginTop: 8 }]}>Description (optional)</Text>
+                        <Text style={[styles.label, { marginTop: 8 }]}>
+                            Description (optional)
+                        </Text>
                         <TextInput
                             value={description}
                             onChangeText={setDescription}
@@ -266,14 +312,24 @@ export default function ChorePostModal({
                         </Text>
 
                         <View
-                            style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8 }}
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                marginTop: 6,
+                                gap: 8,
+                            }}
                         >
                             {!recording ? (
                                 <Pressable
                                     style={[styles.smallBtn, styles.primary]}
                                     onPress={startRecording}
                                 >
-                                    <Text style={[styles.btnTxt, { color: '#fff', fontSize: 12 }]}>
+                                    <Text
+                                        style={[
+                                            styles.btnTxt,
+                                            { color: '#fff', fontSize: 12 },
+                                        ]}
+                                    >
                                         {audioUri ? 'Re-record' : 'Record audio'}
                                     </Text>
                                 </Pressable>
@@ -282,7 +338,13 @@ export default function ChorePostModal({
                                     style={[styles.smallBtn, styles.cancel]}
                                     onPress={stopRecording}
                                 >
-                                    <Text style={[styles.btnTxt, styles.cancelTxt, { fontSize: 12 }]}>
+                                    <Text
+                                        style={[
+                                            styles.btnTxt,
+                                            styles.cancelTxt,
+                                            { fontSize: 12 },
+                                        ]}
+                                    >
                                         Stop
                                     </Text>
                                 </Pressable>
@@ -294,10 +356,17 @@ export default function ChorePostModal({
                                         style={[styles.smallBtn, styles.secondary]}
                                         onPress={playRecording}
                                     >
-                                        <Text style={[styles.btnTxt, { fontSize: 12 }]}>Play</Text>
+                                        <Text style={[styles.btnTxt, { fontSize: 12 }]}>
+                                            Play
+                                        </Text>
                                     </Pressable>
                                     {audioDuration != null && (
-                                        <Text style={{ fontSize: 12, color: '#64748b' }}>
+                                        <Text
+                                            style={{
+                                                fontSize: 12,
+                                                color: '#64748b',
+                                            }}
+                                        >
                                             ~{audioDuration}s
                                         </Text>
                                     )}
@@ -320,13 +389,16 @@ export default function ChorePostModal({
                                                 onPress={() => toggleAssignee(opt.id)}
                                                 style={[
                                                     styles.assigneeChip,
-                                                    isSelected && styles.assigneeChipSelected,
+                                                    isSelected &&
+                                                    styles.assigneeChipSelected,
                                                 ]}
                                             >
                                                 <Text
                                                     style={[
                                                         styles.assigneeChipTxt,
-                                                        isSelected && styles.assigneeChipTxtSelected,
+                                                        isSelected &&
+                                                        styles
+                                                            .assigneeChipTxtSelected,
                                                     ]}
                                                 >
                                                     {opt.name}
@@ -342,7 +414,11 @@ export default function ChorePostModal({
                         {!initial && (
                             <Pressable
                                 onPress={() => setSaveAsTemplate(!saveAsTemplate)}
-                                style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    marginTop: 8,
+                                }}
                             >
                                 <View
                                     style={{
@@ -352,15 +428,22 @@ export default function ChorePostModal({
                                         borderWidth: 2,
                                         borderColor: '#2563eb',
                                         marginRight: 8,
-                                        backgroundColor: saveAsTemplate ? '#2563eb' : 'transparent',
+                                        backgroundColor: saveAsTemplate
+                                            ? '#2563eb'
+                                            : 'transparent',
                                     }}
                                 />
-                                <Text style={{ fontSize: 14, fontWeight: '600', color: '#1e293b' }}>
+                                <Text
+                                    style={{
+                                        fontSize: 14,
+                                        fontWeight: '600',
+                                        color: '#1e293b',
+                                    }}
+                                >
                                     Save as routine
                                 </Text>
                             </Pressable>
                         )}
-
                     </ScrollView>
 
                     <View style={styles.row}>
@@ -394,21 +477,27 @@ export default function ChorePostModal({
                                         assignedToIds.length > 0 ? assignedToIds : undefined,
                                     audioLocal:
                                         audioUri && audioDuration != null
-                                            ? { uri: audioUri, durationSeconds: audioDuration }
+                                            ? {
+                                                uri: audioUri,
+                                                durationSeconds: audioDuration,
+                                            }
                                             : undefined,
-                                    expiresAt, // 🔹 send it out
+                                    expiresAt,
                                 });
                             }}
-                            style={[styles.btn, disabled ? styles.disabled : styles.primary]}
+                            style={[
+                                styles.btn,
+                                disabled ? styles.disabled : styles.primary,
+                            ]}
                         >
-                            <Text style={[styles.btnTxt, { color: '#fff' }]}>{submitText}</Text>
+                            <Text style={[styles.btnTxt, { color: '#fff' }]}>
+                                {submitText}
+                            </Text>
                         </Pressable>
-
                     </View>
-
                 </View>
             </KeyboardAvoidingView>
-        </Modal >
+        </Modal>
     );
 }
 
@@ -436,48 +525,74 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     row: { flexDirection: 'row', gap: 10, marginTop: 8 },
-    btn: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
+    btn: {
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
     primary: { backgroundColor: '#2563eb' },
     secondary: { backgroundColor: '#f3f4f6' },
     disabled: { backgroundColor: '#93c5fd' },
     btnTxt: { fontWeight: '800', color: '#111827' },
 
-    templatesRow: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
+    // dropdown styles for routine chores
+    dropdown: {
         marginTop: 6,
-    },
-    templateBtn: {
-        backgroundColor: '#eef2ff',
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 10,
-    },
-    templateTxt: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#1e3a8a',
-    },
-    templateWrapper: {
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
     },
-
-    deleteChipBtn: {
-        marginLeft: 4,
-        width: 18,
-        height: 18,
-        borderRadius: 9,
-        backgroundColor: '#fee2e2',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    deleteChipTxt: {
-        color: '#b91c1c',
+    dropdownValue: {
         fontSize: 14,
-        fontWeight: '900',
-        lineHeight: 14,
+        color: '#111827',
+        fontWeight: '600',
+    },
+    dropdownPlaceholder: {
+        fontSize: 14,
+        color: '#9ca3af',
+    },
+    dropdownChevron: {
+        fontSize: 12,
+        color: '#6b7280',
+        marginLeft: 8,
+    },
+    dropdownList: {
+        marginTop: 6,
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+        borderRadius: 12,
+        paddingVertical: 4,
+        backgroundColor: '#f9fafb',
+        maxHeight: 200,
+    },
+    dropdownItemRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 4,
+    },
+    dropdownItemBtn: {
+        flex: 1,
+        paddingHorizontal: 8,
+        paddingVertical: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    dropdownItemTxt: {
+        fontSize: 14,
+        color: '#111827',
+        fontWeight: '600',
+    },
+    dropdownItemPoints: {
+        fontSize: 12,
+        color: '#6b7280',
+        marginLeft: 8,
     },
 
     // assignee chips
@@ -518,7 +633,7 @@ const styles = StyleSheet.create({
     cancelTxt: { color: '#b91c1c', fontWeight: '700' },
 });
 
-// 🔹 Convert a user-entered time ("7:30 pm", "19:00") into an ISO string for *today*
+// Convert a user-entered time ("7:30 pm", "19:00") into an ISO string for *today*
 function parseFinishTimeToIso(input: string): string | null {
     const raw = input.trim().toLowerCase();
     if (!raw) return null;
@@ -570,4 +685,3 @@ function formatTimeForInput(ts?: number | null): string {
     const d = new Date(ts);
     return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
-

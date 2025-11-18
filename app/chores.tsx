@@ -950,7 +950,6 @@ export default function Chores() {
         onClose={() => setShowPost(false)}
         onSubmit={postChore}
         templates={templates}
-        onDeleteTemplate={deleteTemplate}
         assigneeOptions={doneByOptions}
         canEditPoints={isParent}
       />
