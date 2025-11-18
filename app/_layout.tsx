@@ -45,6 +45,7 @@ function RootNavigator() {
 
         <Stack.Screen name="chores" options={{ headerTitle: 'Chores 🧹' }} />
         <Stack.Screen name="chores-info" options={{ headerTitle: 'How chore game works 🏁' }} />
+        <Stack.Screen name="chores-settings" options={{ headerTitle: 'Chore Game Settings ⚙️' }} />
 
         <Stack.Screen name="wishList" options={{ headerTitle: 'Wish List 💫' }} />
         <Stack.Screen name="boards/activity" options={{ headerTitle: 'Activities 📆' }} />

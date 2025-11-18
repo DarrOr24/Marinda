@@ -742,23 +742,37 @@ export default function Chores() {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.h1}>Chores Game</Text>
+        <Text style={styles.h1}>Chores Game</Text>
 
+        <View style={styles.headerRight}>
+          {/* info icon – everyone can see */}
           <Pressable
             onPress={() => router.push('/chores-info')}
-            style={styles.infoBtn}
+            style={styles.iconCircle}
             hitSlop={8}
           >
-            <Ionicons name="information-circle-outline" size={20} color="#64748b" />
+            <Ionicons name="information-circle-outline" size={18} color="#1e3a8a" />
+          </Pressable>
+
+          {/* settings icon – parents only */}
+          {isParent && (
+            <Pressable
+              onPress={() => router.push('/chores-settings')}
+              style={styles.iconCircle}
+              hitSlop={8}
+            >
+              <Ionicons name="settings-outline" size={18} color="#1e3a8a" />
+            </Pressable>
+          )}
+
+          {/* Post Chore button */}
+          <Pressable onPress={() => setShowPost(true)} style={styles.postBtn}>
+            <Ionicons name="add" size={20} color="#fff" />
+            <Text style={styles.postTxt}>Post Chore</Text>
           </Pressable>
         </View>
-
-        <Pressable onPress={() => setShowPost(true)} style={styles.postBtn}>
-          <Ionicons name="add" size={20} color="#fff" />
-          <Text style={styles.postTxt}>Post Chore</Text>
-        </Pressable>
       </View>
+
 
       {/* tabs */}
       <View style={styles.tabsRow}>
@@ -1002,6 +1016,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   infoBtn: {
     padding: 2,
