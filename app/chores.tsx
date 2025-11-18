@@ -2,6 +2,7 @@
 import ChoreDetailModal from '@/components/chore-detail-modal';
 import { useChoreTemplates } from '@/lib/chores/chores-templates.hooks';
 import type { ChoreView, Proof } from '@/lib/chores/chores.types';
+import { useRouter } from 'expo-router';
 
 import ChorePostModal from '@/components/chore-post-modal';
 import { useAuthContext } from '@/hooks/use-auth-context';
@@ -77,6 +78,7 @@ type TabKey = 'open' | 'pending' | 'approved' | 'archived';
 
 export default function Chores() {
   const { activeFamilyId, member, family, members } = useAuthContext() as any;
+  const router = useRouter();
 
   const authUserId: string | undefined =
     member?.profile?.id || member?.user_id || member?.profile_id;
@@ -740,7 +742,18 @@ export default function Chores() {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <Text style={styles.h1}>Chores Game</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.h1}>Chores Game</Text>
+
+          <Pressable
+            onPress={() => router.push('/chores-info')}
+            style={styles.infoBtn}
+            hitSlop={8}
+          >
+            <Ionicons name="information-circle-outline" size={20} color="#64748b" />
+          </Pressable>
+        </View>
+
         <Pressable onPress={() => setShowPost(true)} style={styles.postBtn}>
           <Ionicons name="add" size={20} color="#fff" />
           <Text style={styles.postTxt}>Post Chore</Text>
@@ -985,6 +998,14 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   h1: { fontSize: 22, fontWeight: '900', color: '#0f172a' },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  infoBtn: {
+    padding: 2,
+  },
   postBtn: {
     flexDirection: 'row',
     alignItems: 'center',
