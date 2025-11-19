@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     },
     content: {
         paddingHorizontal: 16,
-        paddingVertical: 16,
+        paddingBottom: 16,
     },
     intro: {
         fontSize: 14,

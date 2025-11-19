@@ -742,35 +742,45 @@ export default function Chores() {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <Text style={styles.h1}>Chores Game</Text>
-
-        <View style={styles.headerRight}>
+        {/* left side: info + settings */}
+        <View style={styles.headerLeft}>
           {/* info icon – everyone can see */}
           <Pressable
             onPress={() => router.push('/chores-info')}
             style={styles.iconCircle}
             hitSlop={8}
           >
-            <Ionicons name="information-circle-outline" size={18} color="#1e3a8a" />
+            <Ionicons
+              name="information-circle-outline"
+              size={18}
+              color="#1e3a8a"
+            />
           </Pressable>
 
-          {/* settings icon – parents only */}
-          {isParent && (
-            <Pressable
-              onPress={() => router.push('/chores-settings')}
-              style={styles.iconCircle}
-              hitSlop={8}
-            >
-              <Ionicons name="settings-outline" size={18} color="#1e3a8a" />
-            </Pressable>
-          )}
-
-          {/* Post Chore button */}
-          <Pressable onPress={() => setShowPost(true)} style={styles.postBtn}>
-            <Ionicons name="add" size={20} color="#fff" />
-            <Text style={styles.postTxt}>Post Chore</Text>
+          {/* settings icon – visible to all, parents-only actions */}
+          <Pressable
+            onPress={() => {
+              if (!isParent) {
+                Alert.alert(
+                  'Parents only',
+                  'Only a parent can change the routine chores and points.'
+                );
+                return;
+              }
+              router.push('/chores-settings');
+            }}
+            style={styles.iconCircle}
+            hitSlop={8}
+          >
+            <Ionicons name="settings-outline" size={18} color="#1e3a8a" />
           </Pressable>
         </View>
+
+        {/* right side: Post Chore button */}
+        <Pressable onPress={() => setShowPost(true)} style={styles.postBtn}>
+          <Ionicons name="add" size={20} color="#fff" />
+          <Text style={styles.postTxt}>Post Chore</Text>
+        </Pressable>
       </View>
 
 
@@ -1003,24 +1013,21 @@ export default function Chores() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F7FBFF' },
+
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-between', // icons left, button right
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: 16,
   },
-  h1: { fontSize: 22, fontWeight: '900', color: '#0f172a' },
+
   headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
+
   iconCircle: {
     width: 32,
     height: 32,
@@ -1031,9 +1038,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
-  infoBtn: {
-    padding: 2,
-  },
+
   postBtn: {
     flexDirection: 'row',
     alignItems: 'center',
