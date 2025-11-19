@@ -202,12 +202,9 @@ export default function ChoreDetailModal({
     }
 
     async function ensureCameraPermission() {
-        // first check assignment
-        if (!ensureCanModifyAssignedChore()) return false;
-
         const cam = await ImagePicker.requestCameraPermissionsAsync();
         if (!cam.granted) {
-            alert('Camera permission is required.');
+            Alert.alert('Permission needed', 'Camera permission is required.');
             return false;
         }
         return true;
