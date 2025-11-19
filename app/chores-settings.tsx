@@ -37,11 +37,24 @@ export default function ChoreGameSettingsScreen() {
 
     const isParent = currentRole === 'MOM' || currentRole === 'DAD';
 
+    const requireParent = () => {
+        if (!isParent) {
+            Alert.alert(
+                'Parents only',
+                'Only a parent can add, edit, or delete routine chores. Ask a parent to sign in.'
+            );
+            return false;
+        }
+        return true;
+    };
+
     const startAdd = () => {
+        if (!requireParent()) return;
         setEditing({ id: undefined, title: '', points: '10' });
     };
 
     const startEdit = (tpl: { id: string; title: string; defaultPoints: number }) => {
+        if (!requireParent()) return;
         setEditing({
             id: tpl.id,
             title: tpl.title,
@@ -51,6 +64,7 @@ export default function ChoreGameSettingsScreen() {
 
     const onSaveTemplate = async () => {
         if (!editing || !activeFamilyId) return;
+        if (!requireParent()) return;
 
         const title = editing.title.trim();
         const pointsNum = Number(editing.points);
@@ -67,7 +81,6 @@ export default function ChoreGameSettingsScreen() {
         try {
             setSaving(true);
 
-            // For now, "edit" = delete + recreate with new values.
             if (editing.id) {
                 await deleteTemplate(editing.id);
             }
@@ -88,6 +101,8 @@ export default function ChoreGameSettingsScreen() {
     };
 
     const onDeleteTemplate = (id: string, title: string) => {
+        if (!requireParent()) return;
+
         Alert.alert(
             'Delete routine chore?',
             `Are you sure you want to delete "${title}" from your routine chores?`,
@@ -138,109 +153,103 @@ export default function ChoreGameSettingsScreen() {
                     {!isParent && (
                         <View style={{ marginTop: 8 }}>
                             <Text style={styles.note}>
-                                Only parents can edit routine chores. Ask a parent to sign in to
-                                update this list.
+                                Only parents can change this list. You can still see the routine
+                                chores, but adding, editing, or deleting them is for parents only.
                             </Text>
                         </View>
                     )}
 
-                    {isParent && (
-                        <>
-                            {/* Editor card (add / edit) */}
-                            {editing ? (
-                                <View style={styles.editorCard}>
-                                    <Text style={styles.editorTitle}>
-                                        {editing.id ? 'Edit routine chore' : 'Add routine chore'}
+                    {/* Editor card (add / edit) */}
+                    {editing ? (
+                        <View style={styles.editorCard}>
+                            <Text style={styles.editorTitle}>
+                                {editing.id ? 'Edit routine chore' : 'Add routine chore'}
+                            </Text>
+
+                            <Text style={styles.label}>Title</Text>
+                            <TextInput
+                                value={editing.title}
+                                onChangeText={(txt) =>
+                                    setEditing((prev) => (prev ? { ...prev, title: txt } : prev))
+                                }
+                                placeholder="e.g. Empty the dishwasher"
+                                style={styles.input}
+                            />
+
+                            <Text style={[styles.label, { marginTop: 8 }]}>Points</Text>
+                            <TextInput
+                                value={editing.points}
+                                onChangeText={(txt) =>
+                                    setEditing((prev) => (prev ? { ...prev, points: txt } : prev))
+                                }
+                                keyboardType="number-pad"
+                                placeholder="e.g. 10"
+                                style={styles.input}
+                            />
+
+                            <View style={styles.editorButtonsRow}>
+                                <Pressable
+                                    style={[styles.smallBtn, styles.secondaryBtn]}
+                                    onPress={() => setEditing(null)}
+                                    disabled={saving}
+                                >
+                                    <Text style={styles.smallBtnText}>Cancel</Text>
+                                </Pressable>
+                                <Pressable
+                                    style={[
+                                        styles.smallBtn,
+                                        styles.primaryBtn,
+                                        saving && styles.disabledBtn,
+                                    ]}
+                                    onPress={onSaveTemplate}
+                                    disabled={saving}
+                                >
+                                    <Text style={[styles.smallBtnText, { color: '#fff' }]}>
+                                        {editing.id ? 'Save' : 'Add'}
                                     </Text>
+                                </Pressable>
+                            </View>
+                        </View>
+                    ) : (
+                        <Pressable style={styles.addBtn} onPress={startAdd}>
+                            <Text style={styles.addBtnText}>＋ Add routine chore</Text>
+                        </Pressable>
+                    )}
 
-                                    <Text style={styles.label}>Title</Text>
-                                    <TextInput
-                                        value={editing.title}
-                                        onChangeText={(txt) =>
-                                            setEditing((prev) =>
-                                                prev ? { ...prev, title: txt } : prev
-                                            )
-                                        }
-                                        placeholder="e.g. Empty the dishwasher"
-                                        style={styles.input}
-                                    />
+                    {/* Existing templates list - visible to all, actions guarded */}
+                    {templates && templates.length > 0 && (
+                        <View style={{ marginTop: 12 }}>
+                            <Text style={styles.label}>Current routine chores</Text>
+                            {templates.map((t) => (
+                                <View key={t.id} style={styles.templateRow}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.templateTitle}>{t.title}</Text>
+                                        <Text style={styles.templateMeta}>
+                                            {t.defaultPoints ?? 0} pts
+                                        </Text>
+                                    </View>
 
-                                    <Text style={[styles.label, { marginTop: 8 }]}>Points</Text>
-                                    <TextInput
-                                        value={editing.points}
-                                        onChangeText={(txt) =>
-                                            setEditing((prev) =>
-                                                prev ? { ...prev, points: txt } : prev
-                                            )
-                                        }
-                                        keyboardType="number-pad"
-                                        placeholder="e.g. 10"
-                                        style={styles.input}
-                                    />
-
-                                    <View style={styles.editorButtonsRow}>
+                                    <View style={styles.templateActions}>
                                         <Pressable
-                                            style={[styles.smallBtn, styles.secondaryBtn]}
-                                            onPress={() => setEditing(null)}
-                                            disabled={saving}
+                                            style={[styles.chipBtn, styles.secondaryBtn]}
+                                            onPress={() => startEdit(t)}
                                         >
-                                            <Text style={styles.smallBtnText}>Cancel</Text>
+                                            <Text style={styles.chipBtnText}>Edit</Text>
                                         </Pressable>
                                         <Pressable
-                                            style={[
-                                                styles.smallBtn,
-                                                styles.primaryBtn,
-                                                saving && styles.disabledBtn,
-                                            ]}
-                                            onPress={onSaveTemplate}
-                                            disabled={saving}
+                                            style={[styles.chipBtn, styles.deleteBtn]}
+                                            onPress={() => onDeleteTemplate(t.id, t.title)}
                                         >
-                                            <Text style={[styles.smallBtnText, { color: '#fff' }]}>
-                                                {editing.id ? 'Save' : 'Add'}
+                                            <Text
+                                                style={[styles.chipBtnText, { color: '#b91c1c' }]}
+                                            >
+                                                Delete
                                             </Text>
                                         </Pressable>
                                     </View>
                                 </View>
-                            ) : (
-                                <Pressable style={styles.addBtn} onPress={startAdd}>
-                                    <Text style={styles.addBtnText}>＋ Add routine chore</Text>
-                                </Pressable>
-                            )}
-
-                            {/* Existing templates list */}
-                            {templates && templates.length > 0 && (
-                                <View style={{ marginTop: 12 }}>
-                                    <Text style={styles.label}>Current routine chores</Text>
-                                    {templates.map((t) => (
-                                        <View key={t.id} style={styles.templateRow}>
-                                            <View style={{ flex: 1 }}>
-                                                <Text style={styles.templateTitle}>{t.title}</Text>
-                                                <Text style={styles.templateMeta}>
-                                                    {t.defaultPoints ?? 0} pts
-                                                </Text>
-                                            </View>
-
-                                            <View style={styles.templateActions}>
-                                                <Pressable
-                                                    style={[styles.chipBtn, styles.secondaryBtn]}
-                                                    onPress={() => startEdit(t)}
-                                                >
-                                                    <Text style={styles.chipBtnText}>Edit</Text>
-                                                </Pressable>
-                                                <Pressable
-                                                    style={[styles.chipBtn, styles.deleteBtn]}
-                                                    onPress={() => onDeleteTemplate(t.id, t.title)}
-                                                >
-                                                    <Text style={[styles.chipBtnText, { color: '#b91c1c' }]}>
-                                                        Delete
-                                                    </Text>
-                                                </Pressable>
-                                            </View>
-                                        </View>
-                                    ))}
-                                </View>
-                            )}
-                        </>
+                            ))}
+                        </View>
                     )}
                 </Section>
 

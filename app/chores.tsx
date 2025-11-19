@@ -759,16 +759,7 @@ export default function Chores() {
 
           {/* settings icon – visible to all, parents-only actions */}
           <Pressable
-            onPress={() => {
-              if (!isParent) {
-                Alert.alert(
-                  'Parents only',
-                  'Only a parent can change the routine chores and points.'
-                );
-                return;
-              }
-              router.push('/chores-settings');
-            }}
+            onPress={() => { router.push('/chores-settings'); }}
             style={styles.iconCircle}
             hitSlop={8}
           >
