@@ -30,3 +30,53 @@ export async function fetchMemberPointsHistory(
 
     return (data ?? []) as PointsEntry[];
 }
+
+export async function adjustMemberPoints({
+    familyId,
+    memberId,
+    delta,
+    reason,
+    approverMemberId,
+}: {
+    familyId: string;
+    memberId: string;
+    delta: number;
+    reason: string;
+    approverMemberId: string | null;
+}) {
+    // 1) Get current points
+    const { data: memberRow, error: fetchErr } = await supabase
+        .from("family_members")
+        .select("points")
+        .eq("id", memberId)
+        .single();
+
+    if (fetchErr) throw fetchErr;
+
+    const currentPoints = memberRow?.points ?? 0;
+    const newPoints = currentPoints + delta;
+
+    // 2) Update member points
+    const { error: updateErr } = await supabase
+        .from("family_members")
+        .update({ points: newPoints })
+        .eq("id", memberId);
+
+    if (updateErr) throw updateErr;
+
+    // 3) Insert ledger entry
+    const { error: insertErr } = await supabase
+        .from("points_ledger")
+        .insert({
+            family_id: familyId,
+            member_id: memberId,
+            delta,
+            reason,
+            kind: "manual_adjust",
+            approved_by_member_id: approverMemberId,
+        });
+
+    if (insertErr) throw insertErr;
+
+    return true;
+}

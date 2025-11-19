@@ -1,26 +1,45 @@
 // app/profile/[id].tsx
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import CheckerboardBackground from '@/components/checkerboard-background';
 import MemberSidebar from '@/components/members-sidebar';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useFamily } from '@/lib/families/families.hooks';
 import { useSubscribeTableByFamily } from '@/lib/families/families.realtime';
+import type { Role } from '@/lib/families/families.types';
 import {
+  adjustMemberPoints,
   fetchMemberPointsHistory,
   type PointsEntry,
 } from '@/lib/points/points.api';
 
 export default function MemberProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { activeFamilyId } = useAuthContext();
+  const { activeFamilyId, member } = useAuthContext() as any;
   const { members, family } = useFamily(activeFamilyId || undefined);
 
   const [history, setHistory] = useState<PointsEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+
+  // manual adjust UI state
+  const [adjustDelta, setAdjustDelta] = useState('');
+  const [adjustReason, setAdjustReason] = useState('');
+  const [adjustSaving, setAdjustSaving] = useState(false);
+
+  const currentRole = (member?.role as Role) ?? 'TEEN';
+  const isParent = currentRole === 'MOM' || currentRole === 'DAD';
+  const adminMemberId: string | undefined = (member as any)?.id;
 
   useSubscribeTableByFamily('family_members', activeFamilyId ?? undefined, [
     'family-members',
@@ -65,6 +84,54 @@ export default function MemberProfile() {
       cancelled = true;
     };
   }, [activeFamilyId, id]);
+
+  const handleAdjustPoints = async () => {
+    if (!activeFamilyId || !id) return;
+
+    const deltaNum = Number(adjustDelta);
+
+    if (!adjustDelta.trim() || Number.isNaN(deltaNum) || deltaNum === 0) {
+      Alert.alert(
+        'Check points',
+        'Enter a positive or negative number, for example 10 or -5.'
+      );
+      return;
+    }
+
+    const reason = adjustReason.trim();
+    if (!reason) {
+      Alert.alert('Add a reason', 'Please add a short reason for this adjustment.');
+      return;
+    }
+
+    try {
+      setAdjustSaving(true);
+
+      await adjustMemberPoints({
+        familyId: activeFamilyId,
+        memberId: id,
+        delta: deltaNum,
+        reason,
+        approverMemberId: adminMemberId ?? null,
+      });
+
+      // Clear form
+      setAdjustDelta('');
+      setAdjustReason('');
+
+      // Refresh points + history
+      if (members?.refetch) {
+        members.refetch();
+      }
+      const rows = await fetchMemberPointsHistory(activeFamilyId, id);
+      setHistory(rows);
+    } catch (e) {
+      console.error('adjustMemberPoints failed', e);
+      Alert.alert('Error', 'Could not adjust points. Please try again.');
+    } finally {
+      setAdjustSaving(false);
+    }
+  };
 
   if (!activeFamilyId) {
     return (
@@ -132,11 +199,66 @@ export default function MemberProfile() {
           {family.data?.name ? `Family: ${family.data.name}` : 'Activities feed'}
         </Text>
 
-        {/* Points card – now for everyone (kids + parents) */}
+        {/* Points card – everyone sees current points */}
         <View style={styles.pointsCard}>
           <Text style={styles.pointsLabel}>Points</Text>
           <Text style={styles.pointsValue}>{points}</Text>
         </View>
+
+        {/* Manual adjust – parents only */}
+        {isParent && (
+          <View style={styles.adjustCard}>
+            <Text style={styles.adjustTitle}>Adjust points manually</Text>
+            <Text style={styles.adjustHelp}>
+              Add or subtract points for this member. Use this for bonuses, corrections,
+              or special rewards.
+            </Text>
+
+            <Text style={styles.adjustLabel}>Points change</Text>
+            <TextInput
+              value={adjustDelta}
+              onChangeText={setAdjustDelta}
+              keyboardType="number-pad"
+              placeholder="e.g. 10 or -5"
+              style={styles.adjustInput}
+            />
+
+            <Text style={[styles.adjustLabel, { marginTop: 8 }]}>Reason</Text>
+            <TextInput
+              value={adjustReason}
+              onChangeText={setAdjustReason}
+              placeholder="e.g. Bonus for extra help with dinner"
+              style={[styles.adjustInput, styles.adjustReasonInput]}
+              multiline
+            />
+
+            <View style={styles.adjustButtonsRow}>
+              <Pressable
+                style={[styles.adjustBtn, styles.adjustSecondaryBtn]}
+                onPress={() => {
+                  setAdjustDelta('');
+                  setAdjustReason('');
+                }}
+                disabled={adjustSaving}
+              >
+                <Text style={styles.adjustBtnText}>Clear</Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.adjustBtn,
+                  styles.adjustPrimaryBtn,
+                  adjustSaving && styles.adjustDisabledBtn,
+                ]}
+                onPress={handleAdjustPoints}
+                disabled={adjustSaving}
+              >
+                <Text style={[styles.adjustBtnText, { color: '#fff' }]}>
+                  {adjustSaving ? 'Saving…' : 'Save change'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
 
         {/* Recent points activity */}
         <View style={styles.card}>
@@ -163,34 +285,32 @@ export default function MemberProfile() {
             </View>
           )}
 
-          {!historyLoading &&
-            !historyError &&
-            history.length > 0 && (
-              <View style={styles.historyList}>
-                {history.map((entry) => (
-                  <View key={entry.id} style={styles.historyRow}>
-                    <Text
-                      style={[
-                        styles.historyDelta,
-                        entry.delta > 0
-                          ? styles.historyDeltaPositive
-                          : styles.historyDeltaNegative,
-                      ]}
-                    >
-                      {entry.delta > 0 ? `+${entry.delta}` : entry.delta}
+          {!historyLoading && !historyError && history.length > 0 && (
+            <View style={styles.historyList}>
+              {history.map((entry) => (
+                <View key={entry.id} style={styles.historyRow}>
+                  <Text
+                    style={[
+                      styles.historyDelta,
+                      entry.delta > 0
+                        ? styles.historyDeltaPositive
+                        : styles.historyDeltaNegative,
+                    ]}
+                  >
+                    {entry.delta > 0 ? `+${entry.delta}` : entry.delta}
+                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.historyReason}>
+                      {entry.reason || 'Points update'}
                     </Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.historyReason}>
-                        {entry.reason || 'Points update'}
-                      </Text>
-                      <Text style={styles.historyMeta}>
-                        {humanKind(entry.kind)} • {formatEntryDate(entry.created_at)}
-                      </Text>
-                    </View>
+                    <Text style={styles.historyMeta}>
+                      {humanKind(entry.kind)} • {formatEntryDate(entry.created_at)}
+                    </Text>
                   </View>
-                ))}
-              </View>
-            )}
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       </View>
     </View>
@@ -230,6 +350,7 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   cardText: { color: '#334155' },
+
   pointsCard: {
     marginTop: 8,
     padding: 16,
@@ -251,6 +372,76 @@ const styles = StyleSheet.create({
     color: '#1e3a8a',
     marginTop: 6,
   },
+
+  /* Manual adjust card */
+  adjustCard: {
+    marginTop: 8,
+    padding: 14,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    maxWidth: 360,
+  },
+  adjustTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 4,
+  },
+  adjustHelp: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 10,
+  },
+  adjustLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  adjustInput: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 14,
+    backgroundColor: '#fff',
+  },
+  adjustReasonInput: {
+    marginTop: 2,
+    minHeight: 70,
+    textAlignVertical: 'top',
+  },
+  adjustButtonsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  adjustBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  adjustPrimaryBtn: {
+    backgroundColor: '#2563eb',
+  },
+  adjustSecondaryBtn: {
+    backgroundColor: '#eef2ff',
+  },
+  adjustDisabledBtn: {
+    opacity: 0.5,
+  },
+  adjustBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+  },
+
+  /* History styles */
   historyTitle: {
     fontSize: 16,
     fontWeight: '700',
