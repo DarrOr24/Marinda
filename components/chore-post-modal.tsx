@@ -4,6 +4,7 @@ import React from 'react';
 import {
     Alert,
     Dimensions,
+    Keyboard,
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -108,7 +109,7 @@ export default function ChorePostModal({
 
     const disabled = !title.trim() || Number.isNaN(Number(points));
 
-    // 🔹 NEW: if user types a title different from the selected routine, clear the selection
+    // 🔹 if user types a title different from the selected routine, clear the selection
     const handleTitleChange = (text: string) => {
         setTitle(text);
         if (selectedTemplate && text !== selectedTemplate.title) {
@@ -182,7 +183,8 @@ export default function ChorePostModal({
     return (
         <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
             <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={40}
                 style={styles.backdrop}
             >
                 <View style={styles.card}>
@@ -192,6 +194,7 @@ export default function ChorePostModal({
                         style={{ maxHeight: SCREEN_HEIGHT * 0.82 }}
                         contentContainerStyle={{ paddingBottom: 8 }}
                         keyboardShouldPersistTaps="handled"
+                        keyboardDismissMode="on-drag"
                     >
                         {/* Routine chores as dropdown */}
                         {templates && templates.length > 0 && (
@@ -199,15 +202,11 @@ export default function ChorePostModal({
                                 <Text style={styles.label}>Choose from routine</Text>
                                 <Pressable
                                     style={styles.dropdown}
-                                    onPress={() =>
-                                        setIsTemplateDropdownOpen((prev) => !prev)
-                                    }
+                                    onPress={() => setIsTemplateDropdownOpen((prev) => !prev)}
                                 >
                                     <Text
                                         style={
-                                            selectedTemplate
-                                                ? styles.dropdownValue
-                                                : styles.dropdownPlaceholder
+                                            selectedTemplate ? styles.dropdownValue : styles.dropdownPlaceholder
                                         }
                                     >
                                         {selectedTemplate
@@ -222,8 +221,7 @@ export default function ChorePostModal({
                                 {isTemplateDropdownOpen && (
                                     <View style={styles.dropdownList}>
                                         <ScrollView nestedScrollEnabled>
-
-                                            {/* 🔹 "None" option to clear selection */}
+                                            {/* "None" option to clear selection */}
                                             <View style={styles.dropdownItemRow}>
                                                 <Pressable
                                                     style={styles.dropdownItemBtn}
@@ -237,10 +235,7 @@ export default function ChorePostModal({
                                             </View>
 
                                             {templates.map((t) => (
-                                                <View
-                                                    key={t.id}
-                                                    style={styles.dropdownItemRow}
-                                                >
+                                                <View key={t.id} style={styles.dropdownItemRow}>
                                                     <Pressable
                                                         style={styles.dropdownItemBtn}
                                                         onPress={() => {
@@ -257,11 +252,9 @@ export default function ChorePostModal({
                                                     </Pressable>
                                                 </View>
                                             ))}
-
                                         </ScrollView>
                                     </View>
                                 )}
-
                             </View>
                         )}
 
@@ -271,6 +264,8 @@ export default function ChorePostModal({
                             onChangeText={handleTitleChange}
                             placeholder="e.g. Empty the dishwasher"
                             style={styles.input}
+                            returnKeyType="done"
+                            submitBehavior="submit" onSubmitEditing={() => Keyboard.dismiss()}
                         />
 
                         {canEditPoints && (
@@ -282,6 +277,8 @@ export default function ChorePostModal({
                                     keyboardType="number-pad"
                                     placeholder="e.g. 10"
                                     style={styles.input}
+                                    returnKeyType="done"
+                                    submitBehavior="submit" onSubmitEditing={() => Keyboard.dismiss()}
                                 />
                             </>
                         )}
@@ -294,6 +291,8 @@ export default function ChorePostModal({
                             onChangeText={setFinishByTime}
                             placeholder="e.g. 7:30 pm or 19:30"
                             style={styles.input}
+                            returnKeyType="done"
+                            submitBehavior="submit" onSubmitEditing={() => Keyboard.dismiss()}
                         />
 
                         <Text style={[styles.label, { marginTop: 8 }]}>
@@ -305,6 +304,7 @@ export default function ChorePostModal({
                             placeholder="Add extra details for this chore…"
                             style={[styles.input, { minHeight: 60, textAlignVertical: 'top' }]}
                             multiline
+                            submitBehavior="submit" onSubmitEditing={() => Keyboard.dismiss()}
                         />
 
                         <Text style={[styles.label, { marginTop: 8 }]}>
@@ -356,9 +356,7 @@ export default function ChorePostModal({
                                         style={[styles.smallBtn, styles.secondary]}
                                         onPress={playRecording}
                                     >
-                                        <Text style={[styles.btnTxt, { fontSize: 12 }]}>
-                                            Play
-                                        </Text>
+                                        <Text style={[styles.btnTxt, { fontSize: 12 }]}>Play</Text>
                                     </Pressable>
                                     {audioDuration != null && (
                                         <Text
@@ -389,16 +387,13 @@ export default function ChorePostModal({
                                                 onPress={() => toggleAssignee(opt.id)}
                                                 style={[
                                                     styles.assigneeChip,
-                                                    isSelected &&
-                                                    styles.assigneeChipSelected,
+                                                    isSelected && styles.assigneeChipSelected,
                                                 ]}
                                             >
                                                 <Text
                                                     style={[
                                                         styles.assigneeChipTxt,
-                                                        isSelected &&
-                                                        styles
-                                                            .assigneeChipTxtSelected,
+                                                        isSelected && styles.assigneeChipTxtSelected,
                                                     ]}
                                                 >
                                                     {opt.name}
@@ -428,9 +423,7 @@ export default function ChorePostModal({
                                         borderWidth: 2,
                                         borderColor: '#2563eb',
                                         marginRight: 8,
-                                        backgroundColor: saveAsTemplate
-                                            ? '#2563eb'
-                                            : 'transparent',
+                                        backgroundColor: saveAsTemplate ? '#2563eb' : 'transparent',
                                     }}
                                 />
                                 <Text
@@ -484,15 +477,13 @@ export default function ChorePostModal({
                                             : undefined,
                                     expiresAt,
                                 });
+
+                                // close keyboard after posting
+                                Keyboard.dismiss();
                             }}
-                            style={[
-                                styles.btn,
-                                disabled ? styles.disabled : styles.primary,
-                            ]}
+                            style={[styles.btn, disabled ? styles.disabled : styles.primary]}
                         >
-                            <Text style={[styles.btnTxt, { color: '#fff' }]}>
-                                {submitText}
-                            </Text>
+                            <Text style={[styles.btnTxt, { color: '#fff' }]}>{submitText}</Text>
                         </Pressable>
                     </View>
                 </View>

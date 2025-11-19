@@ -7,7 +7,10 @@ import React, { useMemo, useState } from 'react';
 import {
     Alert,
     Image,
+    Keyboard,
+    KeyboardAvoidingView,
     Modal,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -331,7 +334,11 @@ export default function ChoreDetailModal({
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
-            <View style={s.overlay}>
+            <KeyboardAvoidingView
+                style={s.overlay}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={40}
+            >
                 <View style={s.modal}>
                     <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
                         <Text style={s.title}>{chore.title}</Text>
@@ -460,7 +467,9 @@ export default function ChoreDetailModal({
                                     onChangeText={setProofNote}
                                     style={[s.input, { marginTop: 6 }]}
                                     multiline
+                                    submitBehavior="submit" onSubmitEditing={() => Keyboard.dismiss()}
                                 />
+
 
                                 <View style={s.row}>
                                     <Pressable style={[s.btn, s.primary]} onPress={markCompleted}>
@@ -532,7 +541,10 @@ export default function ChoreDetailModal({
                                             onChangeText={setPointsText}
                                             keyboardType="number-pad"
                                             style={s.input}
+                                            returnKeyType="done"
+                                            submitBehavior="submit" onSubmitEditing={() => Keyboard.dismiss()}
                                         />
+
                                     </>
                                 )}
 
@@ -543,6 +555,7 @@ export default function ChoreDetailModal({
                                     onChangeText={setNotes}
                                     style={s.input}
                                     multiline
+                                    submitBehavior="submit" onSubmitEditing={() => Keyboard.dismiss()}
                                 />
 
                                 {isParent && (
@@ -642,7 +655,7 @@ export default function ChoreDetailModal({
                         )}
                     </ScrollView>
                 </View>
-            </View>
+            </KeyboardAvoidingView>
         </Modal>
     );
 }
