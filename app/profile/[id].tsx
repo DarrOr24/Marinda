@@ -193,142 +193,144 @@ export default function MemberProfile() {
       <MemberSidebar />
 
       {/* Center content */}
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
-      >
-        <ScrollView
+      <View style={{ flex: 1 }}>
+        <KeyboardAvoidingView
           style={{ flex: 1 }}
-          contentContainerStyle={styles.center}
-          keyboardShouldPersistTaps="handled"
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
         >
-          <Text style={styles.title}>
-            {current
-              ? `${current.nickname || current.profile?.first_name || 'Member'}'s Profile`
-              : 'Profile'}
-          </Text>
-          <Text style={styles.subtitle}>
-            {family.data?.name ? `Family: ${family.data.name}` : 'Activities feed'}
-          </Text>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={styles.center}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text style={styles.title}>
+              {current
+                ? `${current.nickname || current.profile?.first_name || 'Member'}'s Profile`
+                : 'Profile'}
+            </Text>
+            <Text style={styles.subtitle}>
+              {family.data?.name ? `Family: ${family.data.name}` : 'Activities feed'}
+            </Text>
 
-          {/* Points card – everyone sees current points */}
-          <View style={styles.pointsCard}>
-            <Text style={styles.pointsLabel}>Points</Text>
-            <Text style={styles.pointsValue}>{points}</Text>
-          </View>
-
-          {/* Manual adjust – parents only */}
-          {isParent && (
-            <View style={styles.adjustCard}>
-              <Text style={styles.adjustTitle}>Adjust points manually</Text>
-              <Text style={styles.adjustHelp}>
-                Add or subtract points for this member. Use this for bonuses, corrections,
-                or special rewards.
-              </Text>
-
-              <Text style={styles.adjustLabel}>Points change</Text>
-              <TextInput
-                value={adjustDelta}
-                onChangeText={setAdjustDelta}
-                keyboardType="number-pad"
-                placeholder="e.g. 10 or -5"
-                style={styles.adjustInput}
-                returnKeyType="done"
-                onSubmitEditing={() => Keyboard.dismiss()}
-              />
-
-              <Text style={[styles.adjustLabel, { marginTop: 8 }]}>Reason</Text>
-              <TextInput
-                value={adjustReason}
-                onChangeText={setAdjustReason}
-                placeholder="e.g. Bonus for extra help with dinner"
-                style={[styles.adjustInput, styles.adjustReasonInput]}
-                multiline
-              />
-
-              <View style={styles.adjustButtonsRow}>
-                <Pressable
-                  style={[styles.adjustBtn, styles.adjustSecondaryBtn]}
-                  onPress={() => {
-                    setAdjustDelta('');
-                    setAdjustReason('');
-                  }}
-                  disabled={adjustSaving}
-                >
-                  <Text style={styles.adjustBtnText}>Clear</Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.adjustBtn,
-                    styles.adjustPrimaryBtn,
-                    adjustSaving && styles.adjustDisabledBtn,
-                  ]}
-                  onPress={handleAdjustPoints}
-                  disabled={adjustSaving}
-                >
-                  <Text style={[styles.adjustBtnText, { color: '#fff' }]}>
-                    {adjustSaving ? 'Saving…' : 'Save change'}
-                  </Text>
-                </Pressable>
-              </View>
+            {/* Points card – everyone sees current points */}
+            <View style={styles.pointsCard}>
+              <Text style={styles.pointsLabel}>Points</Text>
+              <Text style={styles.pointsValue}>{points}</Text>
             </View>
-          )}
 
-          {/* Recent points activity */}
-          <View style={styles.card}>
-            <Text style={styles.historyTitle}>Recent points activity</Text>
-
-            {historyLoading && (
-              <View style={styles.historyEmpty}>
-                <ActivityIndicator size="small" />
-                <Text style={styles.historyEmptyText}>Loading points…</Text>
-              </View>
-            )}
-
-            {!historyLoading && historyError && (
-              <View style={styles.historyEmpty}>
-                <Text style={styles.historyEmptyText}>{historyError}</Text>
-              </View>
-            )}
-
-            {!historyLoading && !historyError && history.length === 0 && (
-              <View style={styles.historyEmpty}>
-                <Text style={styles.historyEmptyText}>
-                  No points activity yet for this member.
+            {/* Manual adjust – parents only */}
+            {isParent && (
+              <View style={styles.adjustCard}>
+                <Text style={styles.adjustTitle}>Adjust points manually</Text>
+                <Text style={styles.adjustHelp}>
+                  Add or subtract points for this member. Use this for bonuses, corrections,
+                  or special rewards.
                 </Text>
+
+                <Text style={styles.adjustLabel}>Points change</Text>
+                <TextInput
+                  value={adjustDelta}
+                  onChangeText={setAdjustDelta}
+                  keyboardType="number-pad"
+                  placeholder="e.g. 10 or -5"
+                  style={styles.adjustInput}
+                  returnKeyType="done"
+                  onSubmitEditing={() => Keyboard.dismiss()}
+                />
+
+                <Text style={[styles.adjustLabel, { marginTop: 8 }]}>Reason</Text>
+                <TextInput
+                  value={adjustReason}
+                  onChangeText={setAdjustReason}
+                  placeholder="e.g. Bonus for extra help with dinner"
+                  style={[styles.adjustInput, styles.adjustReasonInput]}
+                  multiline
+                />
+
+                <View style={styles.adjustButtonsRow}>
+                  <Pressable
+                    style={[styles.adjustBtn, styles.adjustSecondaryBtn]}
+                    onPress={() => {
+                      setAdjustDelta('');
+                      setAdjustReason('');
+                    }}
+                    disabled={adjustSaving}
+                  >
+                    <Text style={styles.adjustBtnText}>Clear</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.adjustBtn,
+                      styles.adjustPrimaryBtn,
+                      adjustSaving && styles.adjustDisabledBtn,
+                    ]}
+                    onPress={handleAdjustPoints}
+                    disabled={adjustSaving}
+                  >
+                    <Text style={[styles.adjustBtnText, { color: '#fff' }]}>
+                      {adjustSaving ? 'Saving…' : 'Save change'}
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
             )}
 
-            {!historyLoading && !historyError && history.length > 0 && (
-              <View style={styles.historyList}>
-                {history.map((entry) => (
-                  <View key={entry.id} style={styles.historyRow}>
-                    <Text
-                      style={[
-                        styles.historyDelta,
-                        entry.delta > 0
-                          ? styles.historyDeltaPositive
-                          : styles.historyDeltaNegative,
-                      ]}
-                    >
-                      {entry.delta > 0 ? `+${entry.delta}` : entry.delta}
-                    </Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.historyReason}>
-                        {entry.reason || 'Points update'}
+            {/* Recent points activity */}
+            <View style={styles.card}>
+              <Text style={styles.historyTitle}>Recent points activity</Text>
+
+              {historyLoading && (
+                <View style={styles.historyEmpty}>
+                  <ActivityIndicator size="small" />
+                  <Text style={styles.historyEmptyText}>Loading points…</Text>
+                </View>
+              )}
+
+              {!historyLoading && historyError && (
+                <View style={styles.historyEmpty}>
+                  <Text style={styles.historyEmptyText}>{historyError}</Text>
+                </View>
+              )}
+
+              {!historyLoading && !historyError && history.length === 0 && (
+                <View style={styles.historyEmpty}>
+                  <Text style={styles.historyEmptyText}>
+                    No points activity yet for this member.
+                  </Text>
+                </View>
+              )}
+
+              {!historyLoading && !historyError && history.length > 0 && (
+                <View style={styles.historyList}>
+                  {history.map((entry) => (
+                    <View key={entry.id} style={styles.historyRow}>
+                      <Text
+                        style={[
+                          styles.historyDelta,
+                          entry.delta > 0
+                            ? styles.historyDeltaPositive
+                            : styles.historyDeltaNegative,
+                        ]}
+                      >
+                        {entry.delta > 0 ? `+${entry.delta}` : entry.delta}
                       </Text>
-                      <Text style={styles.historyMeta}>
-                        {humanKind(entry.kind)} • {formatEntryDate(entry.created_at)}
-                      </Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.historyReason}>
+                          {entry.reason || 'Points update'}
+                        </Text>
+                        <Text style={styles.historyMeta}>
+                          {humanKind(entry.kind)} • {formatEntryDate(entry.created_at)}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+                  ))}
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
 
     </SafeAreaView>
   );
