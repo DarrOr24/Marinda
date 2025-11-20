@@ -1,5 +1,7 @@
 // app/chores.tsx
 import ChoreDetailModal from '@/components/chore-detail-modal';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { useChoreTemplates } from '@/lib/chores/chores-templates.hooks';
 import type { ChoreView, Proof } from '@/lib/chores/chores.types';
 import { useRouter } from 'expo-router';
@@ -740,7 +742,7 @@ export default function Chores() {
   };
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
       <View style={styles.header}>
         {/* left side: info + settings */}
         <View style={styles.headerLeft}>
@@ -998,7 +1000,7 @@ export default function Chores() {
           defaultDoneById={myFamilyMemberId}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

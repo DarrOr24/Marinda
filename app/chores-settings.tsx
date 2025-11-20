@@ -125,7 +125,7 @@ export default function ChoreGameSettingsScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.screen}>
+        <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
             <ScrollView
                 style={styles.scroll}
                 contentContainerStyle={styles.content}

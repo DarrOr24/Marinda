@@ -1,4 +1,15 @@
 // app/profile/[id].tsx
+import CheckerboardBackground from '@/components/checkerboard-background';
+import MemberSidebar from '@/components/members-sidebar';
+import { useAuthContext } from '@/hooks/use-auth-context';
+import { useFamily } from '@/lib/families/families.hooks';
+import { useSubscribeTableByFamily } from '@/lib/families/families.realtime';
+import type { Role } from '@/lib/families/families.types';
+import {
+  adjustMemberPoints,
+  fetchMemberPointsHistory,
+  type PointsEntry,
+} from '@/lib/points/points.api';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -14,18 +25,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-
-import CheckerboardBackground from '@/components/checkerboard-background';
-import MemberSidebar from '@/components/members-sidebar';
-import { useAuthContext } from '@/hooks/use-auth-context';
-import { useFamily } from '@/lib/families/families.hooks';
-import { useSubscribeTableByFamily } from '@/lib/families/families.realtime';
-import type { Role } from '@/lib/families/families.types';
-import {
-  adjustMemberPoints,
-  fetchMemberPointsHistory,
-  type PointsEntry,
-} from '@/lib/points/points.api';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function MemberProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -186,7 +186,7 @@ export default function MemberProfile() {
   };
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
       <CheckerboardBackground colorA="#F6FAFF" colorB="#EAF3FF" size={28} />
 
       {/* Left sidebar */}
@@ -330,7 +330,7 @@ export default function MemberProfile() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -22,6 +22,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Prefer first name from the profile; fall back gracefully.
 const getDisplayName = (m?: any) =>
@@ -317,7 +318,7 @@ export default function Grocery() {
     }
 
     return (
-        <View style={styles.screen}>
+        <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
             {/* Header row (actions) */}
             <View style={styles.actions}>
                 <TouchableOpacity style={styles.btn} onPress={startAdd}>
@@ -500,7 +501,7 @@ export default function Grocery() {
                     </View>
                 </View>
             </Modal>
-        </View>
+        </SafeAreaView>
     );
 }
 
