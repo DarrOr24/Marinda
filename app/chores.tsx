@@ -187,15 +187,17 @@ export default function Chores() {
           const doneFromDb = r.done_at ? new Date(r.done_at).getTime() : undefined;
           const doneAt =
             doneFromDb ??
-            (r.status === 'OPEN' && r.created_at
+            (r.status === "OPEN" && r.created_at
               ? new Date(r.created_at).getTime()
               : undefined);
 
           const expiresAt = r.expires_at
             ? new Date(r.expires_at).getTime()
-            : undefined; // 🔹 new
+            : undefined;
 
-          // resolve "created by" from auth user id -> family member
+          // ───────────────────────────────────
+          // Resolve "created by" → family member
+          // ───────────────────────────────────
           let createdByMemberId: string | undefined;
           let createdByName: string | undefined;
           if (r.created_by) {
@@ -213,13 +215,54 @@ export default function Chores() {
             }
           }
 
+          // ───────────────────────────────────
+          // Assigned members
+          // ───────────────────────────────────
           const assignedIds: string[] | undefined =
             (r.assignee_member_ids as string[] | null | undefined) ??
             (r.assignee_member_id ? [r.assignee_member_id] : undefined);
+
           const assignedNames =
             assignedIds && assignedIds.length
               ? assignedIds.map((id: string) => nameForId(id))
               : undefined;
+
+          // ───────────────────────────────────
+          // BUILD PROOFS ARRAY (BEFORE + AFTER)
+          // ───────────────────────────────────
+
+          const proofs: Proof[] = [];
+
+          // BEFORE
+          if (r.before_uri && r.before_kind) {
+            proofs.push({
+              uri: r.before_uri,
+              kind: r.before_kind, // "image" | "video"
+              type: "BEFORE",
+            });
+          }
+
+          // AFTER
+          if (r.after_uri && r.after_kind) {
+            proofs.push({
+              uri: r.after_uri,
+              kind: r.after_kind,
+              type: "AFTER",
+            });
+          }
+
+          // LEGACY fallback: old schema stored only AFTER as proof_uri
+          if (proofs.length === 0 && r.proof_uri && r.proof_kind) {
+            proofs.push({
+              uri: r.proof_uri,
+              kind: r.proof_kind,
+              type: "AFTER",    // old schema → AFTER only
+            });
+          }
+
+          // ───────────────────────────────────
+          // Return FULL ChoreView
+          // ───────────────────────────────────
 
           return {
             id: r.id,
@@ -238,29 +281,29 @@ export default function Chores() {
             doneAt,
             approvedById: r.approved_by_member_id ?? undefined,
             approvedAt: r.approved_at ? new Date(r.approved_at).getTime() : undefined,
+
             notes: r.notes ?? undefined,
-            proofs:
-              r.proof_uri && r.proof_kind
-                ? [{ uri: r.proof_uri, kind: r.proof_kind }]
-                : [],
+
+            // NEW real proof array
+            proofs,
+
             audioDescriptionUrl: r.audio_description_url ?? undefined,
             audioDescriptionDuration: r.audio_description_duration ?? undefined,
 
             createdByName,
             createdByMemberId,
-            proofNote: r.proof_note ?? undefined,
 
-            expiresAt, // 🔹 new field on ChoreView
+            proofNote: r.proof_note ?? undefined,
+            expiresAt,
           };
         });
 
-        if (cancelled) return;
-        setList(mapped);
+        if (!cancelled) setList(mapped);
 
       } catch (e) {
-        console.error('fetchChores failed', e);
+        console.error("fetchChores failed", e);
         if (!cancelled) {
-          Alert.alert('Error', 'Could not load chores.');
+          Alert.alert("Error", "Could not load chores.");
         }
       }
     })();
@@ -269,6 +312,7 @@ export default function Chores() {
       cancelled = true;
     };
   }, [activeFamilyId, nameForId, rawMembers]);
+
 
 
   // ---- derived lists for each tab ----
@@ -503,48 +547,79 @@ export default function Chores() {
     setList((prev) =>
       prev.map((c) => {
         if (c.id !== id) return c;
-        if (proof === null) return { ...c, proofs: [] };
-        return { ...c, proofs: [...(c.proofs ?? []), proof] };
+
+        if (proof === null) {
+          return { ...c, proofs: [] };
+        }
+
+        const existing = c.proofs ?? [];
+
+        // Replace the existing proof of the same type ("BEFORE" or "AFTER")
+        const filtered = existing.filter((p) => p.type !== proof.type);
+
+        return {
+          ...c,
+          proofs: [...filtered, proof],
+        };
       })
     );
   };
 
+
   // Kid submits (SUBMITTED) – multi-member submit
-  const onMarkPending = async (id: string, doneByIds: string[], proofNote?: string) => {
+  const onMarkPending = async (
+    id: string,
+    doneByIds: string[],
+    proofNote?: string
+  ) => {
     try {
       if (!doneByIds || doneByIds.length === 0)
-        throw new Error('Missing selected family members');
+        throw new Error("Missing selected family members");
 
       const theChore = list.find((c) => c.id === id);
-      const lastProof = theChore?.proofs?.[theChore.proofs.length - 1];
+      if (!theChore) throw new Error("Chore not found");
 
-      const row = await submitChore(id, doneByIds, lastProof as any, proofNote);
+      // Extract BEFORE and AFTER proofs from local UI state
+      const before = theChore.proofs?.find((p) => p.type === "BEFORE") || null;
+      const after = theChore.proofs?.find((p) => p.type === "AFTER") || null;
 
-      const when = row.done_at ? new Date(row.done_at).getTime() : Date.now();
+      if (!after) {
+        Alert.alert("Proof required", "Please attach an AFTER photo or video.");
+        return;
+      }
 
+      // Build the correct payload
+      const proofsPayload = { before, after };
+
+      // SEND to backend (finally the right shape!)
+      const row = await submitChore(id, doneByIds, proofsPayload, proofNote);
+
+      const when = row.done_at
+        ? new Date(row.done_at).getTime()
+        : Date.now();
+
+      // After submitChore, proofs live ONLY in chore_proofs table → keep local version
       setList((prev) =>
         prev.map((c) =>
           c.id === id
             ? {
               ...c,
-              status: 'pending',
+              status: "pending",
               doneById: doneByIds[0],
-              doneByIds: doneByIds,
+              doneByIds,
               doneAt: when,
-              proofs:
-                row.proof_uri && row.proof_kind
-                  ? [{ uri: row.proof_uri, kind: row.proof_kind }]
-                  : [],
-              proofNote: row.proof_note ?? proofNote ?? undefined,
+              proofs: theChore.proofs ?? [],
+              proofNote: proofNote ?? undefined,
             }
             : c
         )
       );
     } catch (e) {
-      console.error('submitChore failed', e);
-      Alert.alert('Error', 'Could not mark as completed.');
+      console.error("submitChore failed", e);
+      Alert.alert("Error", "Could not mark as completed.");
     }
   };
+
 
   // Parent approves (APPROVED) + split points evenly between all members who did it
   const onApprove = async (id: string, notes?: string, updatedPoints?: number) => {

@@ -1,5 +1,7 @@
 import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system/legacy';
+import type { ProofPayload } from './chores.types';
+
 
 import { getSupabase } from '../supabase';
 
@@ -8,8 +10,6 @@ export type ChoreStatus = 'OPEN' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
 const supabase = getSupabase();
 const PROOFS_BUCKET = 'chore-proofs';
 const AUDIO_BUCKET = 'chore-audio'; // 🔹 AUDIO: new bucket const
-
-export type ProofPayload = { uri: string; kind: 'image' | 'video' } | undefined;
 
 // 🔹 AUDIO: payload type for an audio description
 export type AudioDescriptionPayload =
@@ -22,60 +22,47 @@ export type AudioDescriptionPayload =
 async function uploadProofForChore(
   choreId: string,
   uploaderMemberId: string | null,
-  proof: ProofPayload
-): Promise<{ publicUrl: string | null }> {
-  if (!proof) return { publicUrl: null };
+  proof: { uri: string; kind: "image" | "video" },
+  type: "BEFORE" | "AFTER"
+): Promise<string | null> {
 
-  // Decide file extension + mime type
-  const ext = proof.kind === 'video' ? 'mp4' : 'jpg';
-  const mime = proof.kind === 'video' ? 'video/mp4' : 'image/jpeg';
-
-  // Example path: choreId/memberId/timestamp.jpg
+  const ext = proof.kind === "video" ? "mp4" : "jpg";
+  const mime = proof.kind === "video" ? "video/mp4" : "image/jpeg";
   const fileName = `${Date.now()}.${ext}`;
-  const filePath = `${choreId}/${uploaderMemberId ?? 'unknown'}/${fileName}`;
+  const filePath = `${choreId}/${uploaderMemberId ?? "unknown"}/${fileName}`;
 
-  // 🔹 1) Read the local file into base64 (Expo way)
   const base64 = await FileSystem.readAsStringAsync(proof.uri, {
-    encoding: 'base64',
+    encoding: "base64",
   } as any);
+  const fileData = decode(base64);
 
-  // 🔹 2) Convert base64 → raw bytes (ArrayBuffer)
-  const fileData = decode(base64); // this is what Supabase actually wants
-
-  // 🔹 3) Upload bytes to Supabase Storage
-  const { error: uploadError } = await supabase.storage
+  const { error: uploadErr } = await supabase.storage
     .from(PROOFS_BUCKET)
     .upload(filePath, fileData, {
       contentType: mime,
       upsert: false,
     });
 
-  if (uploadError) {
-    throw new Error(uploadError.message);
-  }
+  if (uploadErr) throw new Error(uploadErr.message);
 
-  // 🔹 4) Get a public URL for all devices to use
-  const { data: publicData } = supabase.storage
+  const { data } = supabase.storage
     .from(PROOFS_BUCKET)
     .getPublicUrl(filePath);
 
-  const publicUrl = publicData?.publicUrl ?? null;
+  const publicUrl = data?.publicUrl ?? null;
 
-  // 🔹 5) Save metadata row in chore_proofs table
-  const { error: insertError } = await supabase.from('chore_proofs').insert({
+  await supabase.from("chore_proofs").insert({
     chore_id: choreId,
-    uploader_member_id: uploaderMemberId, // <- must match family_members.id FK
+    uploader_member_id: uploaderMemberId,
     storage_path: filePath,
-    media_type: proof.kind, // 'image' | 'video'
+    media_type: proof.kind,
+    type,         // ⭐ NEW
     note: null,
   });
 
-  if (insertError) {
-    throw new Error(insertError.message);
-  }
-
-  return { publicUrl };
+  return publicUrl;
 }
+
 
 // 🔹 AUDIO: upload helper for audio descriptions
 export async function uploadChoreAudioDescription(
@@ -169,41 +156,49 @@ export async function addChore(
 export async function submitChore(
   choreId: string,
   memberIds: string[],
-  proof?: ProofPayload,
-  proofNote?: string        // 🔹 NEW
+  proofs: ProofPayload,
+  proofNote?: string
 ) {
-  let proofUri: string | null = null;
-  let proofKind: 'image' | 'video' | null = null;
+  const main = memberIds[0] ?? null;
 
-  if (proof) {
-    const mainMemberId = memberIds[0] ?? null;
-    const { publicUrl } = await uploadProofForChore(
+  // BEFORE
+  if (proofs.before) {
+    await uploadProofForChore(
       choreId,
-      mainMemberId,
-      proof
+      main,
+      proofs.before,
+      "BEFORE"
     );
-    proofUri = publicUrl;
-    proofKind = proof.kind;
+  }
+
+  // AFTER (required)
+  if (proofs.after) {
+    await uploadProofForChore(
+      choreId,
+      main,
+      proofs.after,
+      "AFTER"
+    );
   }
 
   const { data, error } = await supabase
-    .from('chores')
+    .from("chores")
     .update({
-      status: 'SUBMITTED',
-      done_by_member_id: memberIds[0] ?? null,
+      status: "SUBMITTED",
+      done_by_member_id: main,
       done_by_member_ids: memberIds,
       done_at: new Date().toISOString(),
-      proof_uri: proofUri,
-      proof_kind: proofKind,
-      proof_note: proofNote ?? null,   // 🔹 NEW
+      proof_note: proofNote ?? null,
+      // ❌ removed: before_proof_uri, before_proof_kind, after_proof_uri, after_proof_kind
     })
-    .eq('id', choreId)
+    .eq("id", choreId)
     .select()
     .single();
 
   if (error) throw new Error(error.message);
   return data;
 }
+
 
 export async function approveChore(
   choreId: string,
@@ -235,16 +230,16 @@ export async function rejectChore(choreId: string, notes?: string) {
       done_at: null,
       approved_by_member_id: null,
       approved_at: null,
-      // clear proof on reject
-      proof_uri: null,
-      proof_kind: null,
+      proof_note: null, // <-- keep this
     })
     .eq('id', choreId)
     .select()
     .single();
+
   if (error) throw new Error(error.message);
   return data;
 }
+
 
 export async function deleteChore(choreId: string) {
   const { error } = await supabase.from('chores').delete().eq('id', choreId);

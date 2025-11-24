@@ -5,6 +5,12 @@ export type ChoreStatus = "open" | "pending" | "approved";
 export type Proof = {
     uri: string;
     kind: "image" | "video";
+    type: "BEFORE" | "AFTER";   // ⭐ NEW
+};
+
+export type ProofPayload = {
+    before?: Proof | null;
+    after?: Proof | null;
 };
 
 export type ChoreView = {
