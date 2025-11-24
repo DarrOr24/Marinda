@@ -10,7 +10,7 @@ import {
   fetchMemberPointsHistory,
   type PointsEntry,
 } from '@/lib/points/points.api';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -31,6 +31,7 @@ export default function MemberProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { activeFamilyId, member } = useAuthContext() as any;
   const { members, family } = useFamily(activeFamilyId || undefined);
+  const navigation = useNavigation();
 
   const [history, setHistory] = useState<PointsEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -166,6 +167,31 @@ export default function MemberProfile() {
   const current = memberList.find((m) => m.id === id);
   const points = (current as any)?.points ?? 0;
 
+  // 🚫 Prevent parents from viewing their own profile page
+  if (current && (current.role === 'MOM' || current.role === 'DAD')) {
+    const firstKid = memberList.find(
+      (m) => m.role === 'CHILD' || m.role === 'TEEN'
+    );
+
+    if (firstKid) {
+      router.replace({ pathname: '/profile/[id]', params: { id: firstKid.id } });
+      return null; // stop parent profile render
+    }
+  }
+
+  useEffect(() => {
+    if (current) {
+      const displayName =
+        current.nickname ||
+        current.profile?.first_name ||
+        'Profile';
+
+      navigation.setOptions({
+        headerTitle: `${displayName}'s Profile`,
+      });
+    }
+  }, [current]);
+
   const formatEntryDate = (iso: string | null | undefined) => {
     if (!iso) return '';
     const d = new Date(iso);
@@ -204,14 +230,6 @@ export default function MemberProfile() {
             contentContainerStyle={styles.center}
             keyboardShouldPersistTaps="handled"
           >
-            <Text style={styles.title}>
-              {current
-                ? `${current.nickname || current.profile?.first_name || 'Member'}'s Profile`
-                : 'Profile'}
-            </Text>
-            <Text style={styles.subtitle}>
-              {family.data?.name ? `Family: ${family.data.name}` : 'Activities feed'}
-            </Text>
 
             {/* Points card – everyone sees current points */}
             <View style={styles.pointsCard}>
