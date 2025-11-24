@@ -105,13 +105,51 @@ export async function uploadChoreAudioDescription(
 }
 
 export async function fetchChores(familyId: string) {
-  const { data, error } = await supabase
-    .from('chores')
-    .select('*') // proof_* + assignee + done_by_* come back
-    .eq('family_id', familyId)
-    .order('created_at', { ascending: false });
+  // Load chores
+  const { data: chores, error } = await supabase
+    .from("chores")
+    .select("*")
+    .eq("family_id", familyId)
+    .order("created_at", { ascending: false });
+
   if (error) throw new Error(error.message);
-  return data;
+
+  // Load proofs (no family_id filter!)
+  const { data: proofs, error: proofsErr } = await supabase
+    .from("chore_proofs")
+    .select("*");
+
+  if (proofsErr) throw new Error(proofsErr.message);
+
+  // Group proofs by chore_id
+  const proofsByChore: Record<
+    string,
+    { uri: string; kind: "image" | "video"; type: "BEFORE" | "AFTER" }[]
+  > = {};
+
+  proofs.forEach((p: any) => {
+    const { data: urlData } = supabase
+      .storage
+      .from("chore-proofs")
+      .getPublicUrl(p.storage_path);
+
+    const url = urlData?.publicUrl ?? null;
+    if (!url) return;
+
+    if (!proofsByChore[p.chore_id]) proofsByChore[p.chore_id] = [];
+
+    proofsByChore[p.chore_id].push({
+      uri: url,
+      kind: p.media_type,
+      type: p.type,
+    });
+  });
+
+  // Merge into chores
+  return (chores ?? []).map((c: any) => ({
+    ...c,
+    proofs: proofsByChore[c.id] ?? [],
+  }));
 }
 
 export async function addChore(

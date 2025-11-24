@@ -184,7 +184,10 @@ export default function Chores() {
         if (cancelled) return;
 
         const mapped: ChoreView[] = (rows ?? []).map((r: any) => {
-          const doneFromDb = r.done_at ? new Date(r.done_at).getTime() : undefined;
+          const doneFromDb = r.done_at
+            ? new Date(r.done_at).getTime()
+            : undefined;
+
           const doneAt =
             doneFromDb ??
             (r.status === "OPEN" && r.created_at
@@ -195,11 +198,10 @@ export default function Chores() {
             ? new Date(r.expires_at).getTime()
             : undefined;
 
-          // ───────────────────────────────────
-          // Resolve "created by" → family member
-          // ───────────────────────────────────
+          // Created by
           let createdByMemberId: string | undefined;
           let createdByName: string | undefined;
+
           if (r.created_by) {
             const creator = rawMembers.find(
               (m: any) =>
@@ -215,9 +217,7 @@ export default function Chores() {
             }
           }
 
-          // ───────────────────────────────────
           // Assigned members
-          // ───────────────────────────────────
           const assignedIds: string[] | undefined =
             (r.assignee_member_ids as string[] | null | undefined) ??
             (r.assignee_member_id ? [r.assignee_member_id] : undefined);
@@ -227,42 +227,14 @@ export default function Chores() {
               ? assignedIds.map((id: string) => nameForId(id))
               : undefined;
 
-          // ───────────────────────────────────
-          // BUILD PROOFS ARRAY (BEFORE + AFTER)
-          // ───────────────────────────────────
-
-          const proofs: Proof[] = [];
-
-          // BEFORE
-          if (r.before_uri && r.before_kind) {
-            proofs.push({
-              uri: r.before_uri,
-              kind: r.before_kind, // "image" | "video"
-              type: "BEFORE",
-            });
-          }
-
-          // AFTER
-          if (r.after_uri && r.after_kind) {
-            proofs.push({
-              uri: r.after_uri,
-              kind: r.after_kind,
-              type: "AFTER",
-            });
-          }
-
-          // LEGACY fallback: old schema stored only AFTER as proof_uri
-          if (proofs.length === 0 && r.proof_uri && r.proof_kind) {
-            proofs.push({
-              uri: r.proof_uri,
-              kind: r.proof_kind,
-              type: "AFTER",    // old schema → AFTER only
-            });
-          }
-
-          // ───────────────────────────────────
-          // Return FULL ChoreView
-          // ───────────────────────────────────
+          // ⭐ NEW: proofs from fetchChores()
+          const proofs: Proof[] = Array.isArray(r.proofs)
+            ? r.proofs.map((p: any) => ({
+              uri: p.uri,
+              kind: p.kind,
+              type: p.type,
+            }))
+            : [];
 
           return {
             id: r.id,
@@ -280,15 +252,17 @@ export default function Chores() {
             doneByIds: r.done_by_member_ids ?? [],
             doneAt,
             approvedById: r.approved_by_member_id ?? undefined,
-            approvedAt: r.approved_at ? new Date(r.approved_at).getTime() : undefined,
+            approvedAt: r.approved_at
+              ? new Date(r.approved_at).getTime()
+              : undefined,
 
             notes: r.notes ?? undefined,
 
-            // NEW real proof array
-            proofs,
+            proofs, // ← USE NEW ARRAY
 
             audioDescriptionUrl: r.audio_description_url ?? undefined,
-            audioDescriptionDuration: r.audio_description_duration ?? undefined,
+            audioDescriptionDuration:
+              r.audio_description_duration ?? undefined,
 
             createdByName,
             createdByMemberId,
@@ -299,7 +273,6 @@ export default function Chores() {
         });
 
         if (!cancelled) setList(mapped);
-
       } catch (e) {
         console.error("fetchChores failed", e);
         if (!cancelled) {
@@ -312,7 +285,6 @@ export default function Chores() {
       cancelled = true;
     };
   }, [activeFamilyId, nameForId, rawMembers]);
-
 
 
   // ---- derived lists for each tab ----
