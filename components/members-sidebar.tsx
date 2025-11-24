@@ -1,13 +1,14 @@
 // components/member-sidebar.tsx
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { usePathname, useRouter } from 'expo-router'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import MemberAvatar from '@/components/member-avatar'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useFamily } from '@/lib/families/families.hooks'
 import { useSubscribeTableByFamily } from '@/lib/families/families.realtime'
 import type { Member } from '@/lib/families/families.types'
+import { useState } from 'react'
 
 const SIDEBAR_WIDTH = 92
 const AVATAR_SIZE = 48
@@ -18,6 +19,9 @@ export default function MemberSidebar() {
   const pathname = usePathname()
   const { activeFamilyId } = useAuthContext()
   const { members } = useFamily(activeFamilyId || undefined)
+  const { member: currentUser } = useAuthContext()
+
+  const [showKidSwitcher, setShowKidSwitcher] = useState(false);
 
   // Realtime updates for this family
   useSubscribeTableByFamily('family_members', activeFamilyId || undefined, ['family-members', activeFamilyId])
@@ -51,13 +55,37 @@ export default function MemberSidebar() {
     )
   }
 
-  const membersData: Member[] = members.data ?? []
+  // Raw list
+  let membersData: Member[] = members.data ?? [];
   if (!membersData.length) {
     return (
       <View style={styles.wrapper}>
         <Text style={styles.muted}>No members yet</Text>
       </View>
-    )
+    );
+  }
+
+  // ─────────────────────────────
+  // FILTER LOGIC
+  // ─────────────────────────────
+
+  // 1) If kid/teen → show ONLY themselves
+  if (currentUser && (currentUser.role === 'CHILD' || currentUser.role === 'TEEN')) {
+    membersData = membersData.filter(m => m.id === currentUser.id);
+  }
+
+  // 2) If parent → show ONLY kids (no parents)
+  if (currentUser && (currentUser.role === 'MOM' || currentUser.role === 'DAD')) {
+    membersData = membersData.filter(
+      m => m.role === 'CHILD' || m.role === 'TEEN'
+    );
+  }
+
+
+  // 🔥 Correct: check for CHILD role
+  // Kids (CHILD or TEEN) can only see themselves
+  if (currentUser && (currentUser.role === 'CHILD' || currentUser.role === 'TEEN')) {
+    membersData = membersData.filter(m => m.id === currentUser.id);
   }
 
   // Active route checks
@@ -67,45 +95,133 @@ export default function MemberSidebar() {
   // Main sidebar UI (formerly Sidebar.tsx)
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-        {/* Home */}
-        <TouchableOpacity
-          onPress={() => router.push('/')}
-          style={styles.item}
-          accessibilityRole="button"
-          accessibilityLabel="Go to Home"
-        >
-          <View style={[styles.avatarBox, isHomeActive && styles.avatarBoxActive]}>
-            <MaterialCommunityIcons name="home-variant-outline" size={28} color="#334155" />
+
+      {/* MAIN SCROLL AREA */}
+      <ScrollView
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+      >
+
+        {/* CHILD / TEEN → only their own avatar */}
+        {(currentUser?.role === 'CHILD' || currentUser?.role === 'TEEN') &&
+          membersData.map((m, idx) => {
+            const isActive = activeMemberId === m.id;
+            return (
+              <TouchableOpacity
+                key={m.id}
+                style={styles.item}
+                accessibilityRole="button"
+                onPress={() =>
+                  router.push({ pathname: '/profile/[id]', params: { id: m.id } })
+                }
+              >
+                <View style={[styles.avatarBox, isActive && styles.avatarBoxActive]}>
+                  <View style={styles.memberAvatarInner}>
+                    <MemberAvatar member={m} index={idx} />
+                  </View>
+                </View>
+                <Text numberOfLines={1} style={styles.name}>
+                  {m.profile?.first_name} {m.profile?.last_name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })
+        }
+
+        {/* PARENT → show active kid avatar only */}
+        {(currentUser?.role === 'MOM' || currentUser?.role === 'DAD') && (
+          (() => {
+            const activeKid =
+              membersData.find(m => m.id === activeMemberId) || membersData[0];
+
+            return (
+              <TouchableOpacity
+                key={activeKid.id}
+                style={styles.item}
+                onPress={() => setShowKidSwitcher(prev => !prev)}
+              >
+                <View
+                  style={[
+                    styles.avatarBox,
+                    activeMemberId === activeKid.id && styles.avatarBoxActive,
+                  ]}
+                >
+                  <View style={styles.memberAvatarInner}>
+                    <MemberAvatar member={activeKid} index={0} />
+                  </View>
+                </View>
+
+                <Text numberOfLines={1} style={styles.name}>
+                  {activeKid.profile?.first_name} {activeKid.profile?.last_name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })()
+        )}
+
+        {/* NAVIGATION ITEMS */}
+        <TouchableOpacity onPress={() => router.push('/chores')} style={styles.item}>
+          <View style={styles.avatarBox}>
+            <MaterialCommunityIcons name="clipboard-check-outline" size={26} color="#2563eb" />
           </View>
-          <Text numberOfLines={1} style={styles.name}>Home</Text>
+          <Text numberOfLines={1} style={styles.name}>Chores</Text>
         </TouchableOpacity>
 
-        {/* Members */}
-        {membersData.map((m, idx) => {
-          const isActive = activeMemberId === m.id
-          return (
-            <TouchableOpacity
-              key={m.id}
-              onPress={() => router.push({ pathname: '/profile/[id]', params: { id: m.id } })}
-              style={styles.item}
-              accessibilityRole="button"
-              accessibilityLabel={`Open ${m.profile?.first_name ?? ''} ${m.profile?.last_name ?? ''}'s profile`}
-            >
-              <View style={[styles.avatarBox, isActive && styles.avatarBoxActive]}>
-                <View style={styles.memberAvatarInner}>
-                  <MemberAvatar member={m} index={idx} />
-                </View>
-              </View>
-              <Text numberOfLines={1} style={styles.name}>
-                {m.profile?.first_name ?? ''} {m.profile?.last_name ?? ''}
-              </Text>
-            </TouchableOpacity>
-          )
-        })}
+        <TouchableOpacity onPress={() => router.push('/boards/grocery')} style={styles.item}>
+          <View style={styles.avatarBox}>
+            <MaterialCommunityIcons name="cart-outline" size={26} color="#16a34a" />
+          </View>
+          <Text numberOfLines={1} style={styles.name}>Groceries</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => router.push('/boards/announcements')} style={styles.item}>
+          <View style={styles.avatarBox}>
+            <MaterialCommunityIcons name="bullhorn-outline" size={26} color="#f59e0b" />
+          </View>
+          <Text numberOfLines={1} style={styles.name}>Announcements</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => router.push('/wishList')} style={styles.item}>
+          <View style={styles.avatarBox}>
+            <MaterialCommunityIcons name="gift-outline" size={26} color="#db2777" />
+          </View>
+          <Text numberOfLines={1} style={styles.name}>Wish List</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => router.push('/boards/activity')} style={styles.item}>
+          <View style={styles.avatarBox}>
+            <MaterialCommunityIcons name="calendar-month-outline" size={26} color="#7c3aed" />
+          </View>
+          <Text numberOfLines={1} style={styles.name}>Activities</Text>
+        </TouchableOpacity>
+
       </ScrollView>
+
+      {/* DROPDOWN OUTSIDE THE SCROLLVIEW → NO MORE CLIPPING */}
+      {(currentUser?.role === 'MOM' || currentUser?.role === 'DAD') && showKidSwitcher && (
+        <View style={styles.switcherBox}>
+          {membersData.map(m => (
+            <Pressable
+              key={m.id}
+              onPress={() => {
+                setShowKidSwitcher(false);
+                router.push({ pathname: '/profile/[id]', params: { id: m.id } });
+              }}
+              style={({ pressed }) => [
+                styles.switcherItem,
+                pressed && styles.switcherItemPressed
+              ]}
+            >
+              <Text style={styles.switcherText}>{m.profile?.first_name}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+
     </View>
-  )
+  );
+
 }
 
 const styles = StyleSheet.create({
@@ -127,6 +243,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.6)',
     borderRightWidth: 1,
     borderRightColor: '#d9e1f2',
+    position: 'relative',
   },
   list: {
     gap: 14,
@@ -171,4 +288,35 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
+  switcherBox: {
+    position: 'absolute',
+    left: SIDEBAR_WIDTH - 6,   // move the list a bit RIGHT of the sidebar
+    top: 6,
+    zIndex: 9999,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    paddingVertical: 4,
+    width: SIDEBAR_WIDTH - 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  switcherItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+
+  switcherItemPressed: {
+    backgroundColor: '#f1f5f9',  // light slate highlight
+  },
+
+  switcherText: {
+    textAlign: 'left',
+    fontSize: 14,
+    color: '#334155',
+    fontWeight: '600',
+  },
+
 })

@@ -1,78 +1,26 @@
 // app/index.tsx
-import { Link } from 'expo-router'
-import { StyleSheet, View } from 'react-native'
-
-import CheckerboardBackground from '@/components/checkerboard-background'
-import FeatureTile from '@/components/feature-tile'
-import MembersSidebar from '@/components/members-sidebar'
+import { useAuthContext } from '@/hooks/use-auth-context';
+import { Redirect } from 'expo-router';
 
 export default function Index() {
-    return (
-        <View style={styles.screen}>
-            <CheckerboardBackground colorA="#F6FAFF" colorB="#EAF3FF" size={28} />
+    const { member, familyMembers } = useAuthContext() as any;
 
-            {/* Left sidebar */}
-            <MembersSidebar />
+    // Still loading?
+    if (!member) return null;
 
-            {/* Center content */}
-            <View style={styles.center}>
-                {/* Row 1 */}
-                <View style={styles.row}>
-                    <Link href="/chores" asChild>
-                        <FeatureTile
-                            label="Chores Game"
-                            icon={{ family: 'MaterialCommunityIcons', name: 'clipboard-check-outline', color: '#2563eb' }}
-                        />
-                    </Link>
+    const isChild = member.role === 'child' || member.role === 'teen';
 
-                    <Link href="/boards/grocery" asChild>
-                        <FeatureTile
-                            label="Grocery Board"
-                            icon={{ family: 'MaterialCommunityIcons', name: 'cart-outline', color: '#16a34a' }}
-                        />
-                    </Link>
-                </View>
+    // Kids go directly to THEIR profile
+    if (isChild) {
+        return <Redirect href={`/profile/${member.id}`} />;
+    }
 
-                {/* Row 2 */}
-                <View style={styles.row}>
-                    <Link href="/boards/announcements" asChild>
-                        <FeatureTile
-                            label="Announcements"
-                            icon={{ family: 'MaterialCommunityIcons', name: 'bullhorn-outline', color: '#f59e0b' }}
-                        />
-                    </Link>
+    // Parents → find first child profile
+    const firstKid = familyMembers?.find(
+        (m: any) => m.role === 'child' || m.role === 'teen'
+    );
 
-                    <Link href="/wishList" asChild>
-                        <FeatureTile
-                            label="Wish List"
-                            icon={{ family: 'Ionicons', name: 'gift-outline', color: '#db2777' }}
-                        />
-                    </Link>
-                </View>
+    const targetId = firstKid?.id || member.id;
 
-                {/* Row 3 */}
-                <View style={styles.row}>
-                    <Link href="/boards/activity" asChild>
-                        <FeatureTile
-                            label="Activity Board"
-                            icon={{ family: 'MaterialCommunityIcons', name: 'calendar-month-outline', color: '#7c3aed' }}
-                        />
-                    </Link>
-                </View>
-            </View>
-        </View>
-    )
+    return <Redirect href={`/profile/${targetId}`} />;
 }
-
-const styles = StyleSheet.create({
-    screen: { flex: 1, flexDirection: 'row', backgroundColor: '#E6F4FE' },
-    center: {
-        flex: 1,
-        paddingHorizontal: 16,
-        paddingTop: 24,
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 26,
-    },
-    row: { flexDirection: 'row', gap: 26, alignItems: 'center', justifyContent: 'center' },
-})
