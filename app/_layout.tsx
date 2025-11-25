@@ -11,7 +11,14 @@ import { useAuthContext } from '@/hooks/use-auth-context';
 import Providers from '@/providers';
 
 function RootNavigator() {
-  const { isLoggedIn } = useAuthContext();
+  const { isLoggedIn, member } = useAuthContext();
+
+  const firstName =
+    member?.profile?.first_name ||
+    member?.nickname ||
+    'Account';
+
+  const accountTitle = `${firstName}'s Account`;
 
   return (
     <Stack
@@ -29,7 +36,7 @@ function RootNavigator() {
           options={{
             headerBackVisible: false,
             headerLeft: () => null,
-            headerTitle: '',
+            headerTitle: accountTitle,
             headerShadowVisible: false,
           }}
         />
@@ -39,7 +46,7 @@ function RootNavigator() {
           options={{
             headerBackVisible: false,
             headerLeft: () => null,
-            headerTitle: '',
+            headerTitle: accountTitle,
             headerShadowVisible: false,
           }}
         />
