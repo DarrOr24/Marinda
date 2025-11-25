@@ -46,6 +46,10 @@ export default function MemberProfile() {
   const isParent = currentRole === 'MOM' || currentRole === 'DAD';
   const adminMemberId: string | undefined = (member as any)?.id;
 
+  const memberList = members.data ?? [];
+  const current = memberList.find((m) => m.id === id);
+  const points = (current as any)?.points ?? 0;
+
   useSubscribeTableByFamily('family_members', activeFamilyId ?? undefined, [
     'family-members',
     activeFamilyId,
@@ -138,6 +142,22 @@ export default function MemberProfile() {
     }
   };
 
+  // Redirect parent away from their own profile page
+  useEffect(() => {
+    if (!current) return;
+
+    if (current.role === 'MOM' || current.role === 'DAD') {
+      const firstKid = memberList.find(
+        (m) => m.role === 'CHILD' || m.role === 'TEEN'
+      );
+
+      if (firstKid) {
+        router.replace({ pathname: '/profile/[id]', params: { id: firstKid.id } });
+      }
+    }
+  }, [current, memberList]);
+
+
   if (!activeFamilyId) {
     return (
       <View style={[styles.screen, styles.centerOnly]}>
@@ -162,26 +182,6 @@ export default function MemberProfile() {
       </View>
     );
   }
-
-  const memberList = members.data ?? [];
-  const current = memberList.find((m) => m.id === id);
-  const points = (current as any)?.points ?? 0;
-
-  // 🚫 Prevent parents from viewing their own profile page
-  // Redirect parent away from their own profile page
-  useEffect(() => {
-    if (!current) return;
-
-    if (current.role === 'MOM' || current.role === 'DAD') {
-      const firstKid = memberList.find(
-        (m) => m.role === 'CHILD' || m.role === 'TEEN'
-      );
-
-      if (firstKid) {
-        router.replace({ pathname: '/profile/[id]', params: { id: firstKid.id } });
-      }
-    }
-  }, [current, memberList]);
 
   const formatEntryDate = (iso: string | null | undefined) => {
     if (!iso) return '';
