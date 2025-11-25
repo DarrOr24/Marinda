@@ -168,29 +168,20 @@ export default function MemberProfile() {
   const points = (current as any)?.points ?? 0;
 
   // 🚫 Prevent parents from viewing their own profile page
-  if (current && (current.role === 'MOM' || current.role === 'DAD')) {
-    const firstKid = memberList.find(
-      (m) => m.role === 'CHILD' || m.role === 'TEEN'
-    );
-
-    if (firstKid) {
-      router.replace({ pathname: '/profile/[id]', params: { id: firstKid.id } });
-      return null; // stop parent profile render
-    }
-  }
-
+  // Redirect parent away from their own profile page
   useEffect(() => {
-    if (current) {
-      const displayName =
-        current.nickname ||
-        current.profile?.first_name ||
-        'Profile';
+    if (!current) return;
 
-      navigation.setOptions({
-        headerTitle: `${displayName}'s Profile`,
-      });
+    if (current.role === 'MOM' || current.role === 'DAD') {
+      const firstKid = memberList.find(
+        (m) => m.role === 'CHILD' || m.role === 'TEEN'
+      );
+
+      if (firstKid) {
+        router.replace({ pathname: '/profile/[id]', params: { id: firstKid.id } });
+      }
     }
-  }, [current]);
+  }, [current, memberList]);
 
   const formatEntryDate = (iso: string | null | undefined) => {
     if (!iso) return '';
