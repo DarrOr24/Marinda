@@ -77,7 +77,7 @@ export default function HeaderProfileButton() {
                         style={styles.item}
                         onPress={() => {
                             setOpen(false)
-                            console.log('settings')
+                            router.push('/settings');
                         }}
                     >
                         <MaterialCommunityIcons name="cog-outline" size={20} color="#334155" />

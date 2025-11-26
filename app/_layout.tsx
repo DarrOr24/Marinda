@@ -51,6 +51,9 @@ function RootNavigator() {
           }}
         />
 
+        <Stack.Screen name="settings" options={{ headerTitle: "Account Settings ⚙️" }} />
+
+
         <Stack.Screen name="chores" options={{ headerTitle: 'Chores Game 🧹' }} />
         <Stack.Screen name="chores-info" options={{ headerTitle: 'How chore game works 🏁' }} />
         <Stack.Screen name="chores-settings" options={{ headerTitle: 'Chore Game Settings ⚙️' }} />
