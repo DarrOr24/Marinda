@@ -31,67 +31,98 @@ export default function SettingsScreen() {
     const [birthDate, setBirthDate] = useState('')
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
+    // local state: selected but NOT uploaded yet
+    const [pendingAvatar, setPendingAvatar] = useState<string | null>(null)
+
     const supabase = getSupabase()
 
-    // Load initial values when profile data arrives
+    // Load initial values
     useEffect(() => {
         if (data) {
             setFirstName(data.first_name ?? '')
             setLastName(data.last_name ?? '')
             setGender(data.gender ?? '')
             setBirthDate(data.birth_date ?? '')
+
             if (data.avatar_url) {
                 const { data: pub } = supabase.storage
                     .from('profile-photos')
                     .getPublicUrl(data.avatar_url)
+
                 setAvatarUrl(pub.publicUrl)
             }
         }
     }, [data])
+
+    // 🔥 Refresh avatar preview when the DB avatar_url changes
+    useEffect(() => {
+        if (data?.avatar_url) {
+            const { data: pub } = supabase.storage
+                .from("profile-photos")
+                .getPublicUrl(data.avatar_url);
+
+            setAvatarUrl(pub.publicUrl);
+        }
+    }, [data?.avatar_url]);
 
     // Detect changes for Save button
     const hasChanges =
         firstName !== (data?.first_name ?? '') ||
         lastName !== (data?.last_name ?? '') ||
         gender !== (data?.gender ?? '') ||
-        birthDate !== (data?.birth_date ?? '')
+        birthDate !== (data?.birth_date ?? '') ||
+        pendingAvatar !== null;
 
-    // Pick and upload avatar (UI only)
+    // Pick avatar
     const pickAvatar = async () => {
+        console.log("Opening picker...")
+
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             quality: 0.9,
-            allowsEditing: true,
-            aspect: [1, 1],
+            allowsEditing: false, // NO BROKEN SAMSUNG CROP SCREEN
         })
 
         if (result.canceled) return
 
-        const localUri = result.assets[0].uri
+        const uri = result.assets[0].uri
+        console.log("Selected file:", uri)
 
-        if (!profileId) return
-
-        // Tell the hook we have an avatar file to upload
-        updateProfile.mutate({
-            profileId,
-            avatarFileUri: localUri,
-            updates: {}, // no field changes
-        })
+        setPendingAvatar(uri)    // local preview
     }
 
-    const handleSave = () => {
-        if (!profileId) return
+    const uploadAvatar = () => {
+        if (!profileId || !pendingAvatar) return
 
         updateProfile.mutate({
             profileId,
+            avatarFileUri: pendingAvatar,
+            updates: {},
+        })
+
+        setPendingAvatar(null)
+    }
+
+    const handleSave = async () => {
+        if (!profileId) return;
+
+        // 🎯 store local copy before we clear it
+        const avatarToUpload = pendingAvatar;
+
+        await updateProfile.mutateAsync({
+            profileId,
+            avatarFileUri: avatarToUpload ?? null,
             updates: {
                 first_name: firstName,
                 last_name: lastName,
                 gender: gender,
                 birth_date: birthDate,
             },
-        })
-    }
+        });
+
+        // Only clear after successful upload
+        setPendingAvatar(null);
+    };
 
     if (isLoading || !data) {
         return (
@@ -105,11 +136,8 @@ export default function SettingsScreen() {
     return (
         <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
             <CheckerboardBackground colorA="#F6FAFF" colorB="#EAF3FF" size={28} />
-
-            {/* Left sidebar */}
             <MemberSidebar />
 
-            {/* Center content */}
             <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={styles.center}
@@ -118,35 +146,22 @@ export default function SettingsScreen() {
 
                 {/* Avatar */}
                 <Text style={styles.label}>Profile Photo</Text>
-                <Pressable onPress={pickAvatar} style={{ alignSelf: 'center' }}>
-                    {avatarUrl ? (
+
+                <Pressable onPress={pickAvatar} style={styles.avatarWrapper}>
+                    {pendingAvatar || avatarUrl ? (
                         <Image
-                            source={{ uri: avatarUrl }}
-                            style={{
-                                width: 120,
-                                height: 120,
-                                borderRadius: 60,
-                                marginBottom: 12,
-                            }}
+                            source={{ uri: pendingAvatar || avatarUrl! }}
+                            style={styles.avatarImage}
                         />
                     ) : (
-                        <View
-                            style={{
-                                width: 120,
-                                height: 120,
-                                borderRadius: 60,
-                                backgroundColor: '#CBD5E1',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                marginBottom: 12,
-                            }}
-                        >
-                            <Text style={{ color: '#334155' }}>Tap to upload</Text>
+                        <View style={styles.avatarEmpty}>
+                            <Text style={styles.avatarEmptyText}>Tap to upload</Text>
                         </View>
                     )}
                 </Pressable>
 
-                {/* First name */}
+
+                {/* First Name */}
                 <Text style={styles.label}>First Name</Text>
                 <TextInput
                     value={firstName}
@@ -154,7 +169,7 @@ export default function SettingsScreen() {
                     style={styles.input}
                 />
 
-                {/* Last name */}
+                {/* Last Name */}
                 <Text style={styles.label}>Last Name</Text>
                 <TextInput
                     value={lastName}
@@ -171,7 +186,7 @@ export default function SettingsScreen() {
                     placeholder="MALE / FEMALE"
                 />
 
-                {/* Birth Date */}
+                {/* Birthdate */}
                 <Text style={styles.label}>Birth Date</Text>
                 <TextInput
                     value={birthDate}
@@ -219,12 +234,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#475569',
     },
-    sectionTitle: {
-        fontSize: 22,
-        fontWeight: '700',
-        color: '#0f172a',
-        marginBottom: 12,
-    },
     label: {
         fontSize: 14,
         fontWeight: '600',
@@ -255,4 +264,43 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         fontSize: 16,
     },
+
+    submitAvatarBtn: {
+        backgroundColor: '#10B981',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 10,
+        alignSelf: 'center',
+        marginBottom: 12,
+    },
+    submitAvatarText: {
+        color: 'white',
+        fontWeight: '700',
+        fontSize: 15,
+    },
+    avatarWrapper: {
+        alignSelf: 'center',
+        marginBottom: 12,
+    },
+
+    avatarImage: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+    },
+
+    avatarEmpty: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: '#CBD5E1',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    avatarEmptyText: {
+        color: '#334155',
+        fontWeight: '600',
+    },
+
 })

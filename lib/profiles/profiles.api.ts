@@ -27,29 +27,39 @@ export async function updateProfile(profileId: string, updates: any) {
 }
 
 export async function uploadAvatar(profileId: string, fileUri: string) {
-    // read file as Blob
-    const file = await fetch(fileUri).then(r => r.blob())
+    console.log("UPLOAD START", { profileId, fileUri });
 
-    // path inside bucket
-    const path = `${profileId}.jpg`
+    const path = `${profileId}.jpg`;
 
-    // upload (upsert allowed by policy)
-    const { error } = await supabase.storage
-        .from('profile-photos')
-        .upload(path, file, {
+    const formData = new FormData();
+    formData.append("file", {
+        uri: fileUri,
+        name: `${profileId}.jpg`,
+        type: "image/jpeg",
+    } as any);
+
+    const { error: uploadError } = await supabase.storage
+        .from("profile-photos")
+        .upload(path, formData, {
             upsert: true,
-            contentType: 'image/jpeg',
-        })
+            contentType: "image/jpeg",
+        });
 
-    if (error) throw error
+    if (uploadError) {
+        console.log("UPLOAD ERROR", uploadError);
+        throw uploadError;
+    }
 
-    // save DB ref
-    const { error: err2 } = await supabase
-        .from('profiles')
+    const { error: dbErr } = await supabase
+        .from("profiles")
         .update({ avatar_url: path })
-        .eq('id', profileId)
+        .eq("id", profileId);
 
-    if (err2) throw err2
+    if (dbErr) {
+        console.log("DB ERROR", dbErr);
+        throw dbErr;
+    }
 
-    return path
+    console.log("UPLOAD + DB SAVE SUCCESS");
+    return path;
 }
