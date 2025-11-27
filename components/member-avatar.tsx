@@ -1,7 +1,8 @@
 import type { Member } from '@/lib/families/families.types';
+import { getAvatarPublicUrl } from '@/lib/profiles/profiles.api';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
 export default function MemberAvatar({
   member,
@@ -10,15 +11,32 @@ export default function MemberAvatar({
   member: Member
   index?: number
 }) {
-  const { iconName, iconColor, bgColor } = getStyleForMember(member, index)
+  // 1️⃣ Check for profile avatar
+  const avatarPath = member?.profile?.avatar_url ?? null;
+  const avatarUrl = avatarPath ? getAvatarPublicUrl(avatarPath) : null;
+
+  // 2️⃣ If profile pic exists → show image
+  if (avatarUrl) {
+    return (
+      <View style={styles.avatarCircle}>
+        <Image
+          source={{ uri: avatarUrl }}
+          style={styles.avatarImage}
+          resizeMode="cover"
+        />
+      </View>
+    );
+  }
+
+  // 3️⃣ Otherwise → fallback icon (existing logic)
+  const { iconName, iconColor, bgColor } = getStyleForMember(member, index);
 
   return (
     <View style={[styles.avatarCircle, { backgroundColor: bgColor }]}>
       <MaterialCommunityIcons name={iconName as any} size={30} color={iconColor} />
     </View>
-  )
+  );
 }
-
 
 function getStyleForMember(m: Member, index: number) {
   const colorHex = m.color?.hex ?? '#2563eb'
@@ -48,8 +66,7 @@ function getStyleForMember(m: Member, index: number) {
   return { iconName, iconColor, bgColor }
 }
 
-
-// Utility: add alpha channel to hex color (#rrggbb -> rgba-like transparency)
+// Utility
 function withAlpha(hex: string, alpha = 0.15) {
   if (!/^#([0-9a-f]{6})$/i.test(hex)) return hex
   const r = parseInt(hex.slice(1, 3), 16)
@@ -67,6 +84,11 @@ const styles = StyleSheet.create({
     borderColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden', // VERY IMPORTANT for cropped circle images
   },
-})
-
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 28,
+  },
+});

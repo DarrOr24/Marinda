@@ -121,7 +121,7 @@ export default function MemberSidebar() {
                   </View>
                 </View>
                 <Text numberOfLines={1} style={styles.name}>
-                  {m.profile?.first_name} {m.profile?.last_name}
+                  {m.profile?.first_name}
                 </Text>
               </TouchableOpacity>
             );
