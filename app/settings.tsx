@@ -3,7 +3,6 @@ import CheckerboardBackground from '@/components/checkerboard-background'
 import MemberSidebar from '@/components/members-sidebar'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useProfile, useUpdateProfile } from '@/lib/profiles/profiles.hooks'
-import { getSupabase } from '@/lib/supabase'
 import * as ImagePicker from 'expo-image-picker'
 import { useEffect, useState } from 'react'
 import {
@@ -29,41 +28,21 @@ export default function SettingsScreen() {
     const [lastName, setLastName] = useState('')
     const [gender, setGender] = useState('')
     const [birthDate, setBirthDate] = useState('')
-    const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-
-    // local state: selected but NOT uploaded yet
+    // just for local preview of a newly picked image
     const [pendingAvatar, setPendingAvatar] = useState<string | null>(null)
 
-    const supabase = getSupabase()
-
-    // Load initial values
+    // when profile data arrives or changes, seed the form fields
     useEffect(() => {
-        if (data) {
-            setFirstName(data.first_name ?? '')
-            setLastName(data.last_name ?? '')
-            setGender(data.gender ?? '')
-            setBirthDate(data.birth_date ?? '')
-
-            if (data.avatar_url) {
-                const { data: pub } = supabase.storage
-                    .from('profile-photos')
-                    .getPublicUrl(data.avatar_url)
-
-                setAvatarUrl(pub.publicUrl)
-            }
-        }
+        if (!data) return
+        setFirstName(data.first_name ?? '')
+        setLastName(data.last_name ?? '')
+        setGender(data.gender ?? '')
+        setBirthDate(data.birth_date ?? '')
     }, [data])
 
-    // 🔥 Refresh avatar preview when the DB avatar_url changes
-    useEffect(() => {
-        if (data?.avatar_url) {
-            const { data: pub } = supabase.storage
-                .from("profile-photos")
-                .getPublicUrl(data.avatar_url);
-
-            setAvatarUrl(pub.publicUrl);
-        }
-    }, [data?.avatar_url]);
+    // effective avatar to show: new pick > server url > nothing
+    const effectiveAvatarUrl: string | null =
+        pendingAvatar ?? (data?.public_avatar_url ?? null)
 
     // Detect changes for Save button
     const hasChanges =
@@ -71,43 +50,27 @@ export default function SettingsScreen() {
         lastName !== (data?.last_name ?? '') ||
         gender !== (data?.gender ?? '') ||
         birthDate !== (data?.birth_date ?? '') ||
-        pendingAvatar !== null;
+        pendingAvatar !== null
 
     // Pick avatar
     const pickAvatar = async () => {
-        console.log("Opening picker...")
-
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             quality: 0.9,
-            allowsEditing: false, // NO BROKEN SAMSUNG CROP SCREEN
+            allowsEditing: false,
         })
 
         if (result.canceled) return
 
         const uri = result.assets[0].uri
-        console.log("Selected file:", uri)
-
-        setPendingAvatar(uri)    // local preview
-    }
-
-    const uploadAvatar = () => {
-        if (!profileId || !pendingAvatar) return
-
-        updateProfile.mutate({
-            profileId,
-            avatarFileUri: pendingAvatar,
-            updates: {},
-        })
-
-        setPendingAvatar(null)
+        console.log('Selected file:', uri)
+        setPendingAvatar(uri) // local preview
     }
 
     const handleSave = async () => {
-        if (!profileId) return;
+        if (!profileId) return
 
-        // 🎯 store local copy before we clear it
-        const avatarToUpload = pendingAvatar;
+        const avatarToUpload = pendingAvatar
 
         await updateProfile.mutateAsync({
             profileId,
@@ -115,14 +78,15 @@ export default function SettingsScreen() {
             updates: {
                 first_name: firstName,
                 last_name: lastName,
-                gender: gender,
+                gender,
                 birth_date: birthDate,
             },
-        });
+        })
 
-        // Only clear after successful upload
-        setPendingAvatar(null);
-    };
+        // after successful upload + update, clear local pending;
+        // query invalidation will refresh data.public_avatar_url
+        setPendingAvatar(null)
+    }
 
     if (isLoading || !data) {
         return (
@@ -143,23 +107,25 @@ export default function SettingsScreen() {
                 contentContainerStyle={styles.center}
                 keyboardShouldPersistTaps="handled"
             >
-
                 {/* Avatar */}
                 <Text style={styles.label}>Profile Photo</Text>
 
                 <Pressable onPress={pickAvatar} style={styles.avatarWrapper}>
-                    {pendingAvatar || avatarUrl ? (
-                        <Image
-                            source={{ uri: pendingAvatar || avatarUrl! }}
-                            style={styles.avatarImage}
-                        />
+                    {effectiveAvatarUrl ? (
+                        <View style={styles.avatarWithText}>
+                            <Image
+                                source={{ uri: effectiveAvatarUrl }}
+                                style={styles.avatarImage}
+                            />
+                            <Text style={styles.avatarOverlayText}>Tap to change</Text>
+                        </View>
+
                     ) : (
                         <View style={styles.avatarEmpty}>
                             <Text style={styles.avatarEmptyText}>Tap to upload</Text>
                         </View>
                     )}
                 </Pressable>
-
 
                 {/* First Name */}
                 <Text style={styles.label}>First Name</Text>
@@ -201,8 +167,7 @@ export default function SettingsScreen() {
                     disabled={updateProfile.isPending || !hasChanges}
                     style={[
                         styles.saveBtn,
-                        (updateProfile.isPending || !hasChanges) &&
-                        styles.saveBtnDisabled,
+                        (updateProfile.isPending || !hasChanges) && styles.saveBtnDisabled,
                     ]}
                 >
                     <Text style={styles.saveBtnText}>
@@ -264,31 +229,15 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         fontSize: 16,
     },
-
-    submitAvatarBtn: {
-        backgroundColor: '#10B981',
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 10,
-        alignSelf: 'center',
-        marginBottom: 12,
-    },
-    submitAvatarText: {
-        color: 'white',
-        fontWeight: '700',
-        fontSize: 15,
-    },
     avatarWrapper: {
         alignSelf: 'center',
         marginBottom: 12,
     },
-
     avatarImage: {
         width: 120,
         height: 120,
         borderRadius: 60,
     },
-
     avatarEmpty: {
         width: 120,
         height: 120,
@@ -297,10 +246,26 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-
     avatarEmptyText: {
         color: '#334155',
         fontWeight: '600',
     },
-
+    avatarWithText: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        overflow: 'hidden',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+    },
+    avatarOverlayText: {
+        position: 'absolute',
+        color: '#ffffff',
+        fontSize: 14,
+        fontWeight: '600',
+        textShadowColor: 'rgba(0,0,0,0.6)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 4,
+    },
 })

@@ -1,15 +1,24 @@
 // lib/profiles/profiles.hooks.ts
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchProfile, updateProfile, uploadAvatar } from './profiles.api'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { fetchProfile, getAvatarPublicUrl, updateProfile, uploadAvatar } from './profiles.api';
 
 export function useProfile(profileId: string | undefined) {
     return useQuery({
         queryKey: ['profile', profileId],
-        queryFn: () => fetchProfile(profileId!),
         enabled: !!profileId,
+        queryFn: async () => {
+            const profile = await fetchProfile(profileId!)
+            return {
+                ...profile,
+                public_avatar_url: profile.avatar_url
+                    ? getAvatarPublicUrl(profile.avatar_url)
+                    : null,
+            }
+        },
     })
 }
+
 
 export function useUpdateProfile() {
     const qc = useQueryClient()
