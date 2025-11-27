@@ -1,6 +1,7 @@
 // app/profile/[id].tsx
 import CheckerboardBackground from '@/components/checkerboard-background';
 import MemberSidebar from '@/components/members-sidebar';
+import WeeklyPointsChart from '@/components/weekly-points-chart';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useFamily } from '@/lib/families/families.hooks';
 import { useSubscribeTableByFamily } from '@/lib/families/families.realtime';
@@ -26,6 +27,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+
 
 export default function MemberProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -284,6 +287,9 @@ export default function MemberProfile() {
                 </View>
               </View>
             )}
+
+            {/* Weekly points chart */}
+            <WeeklyPointsChart history={history} />
 
             {/* Recent points activity */}
             <View style={styles.card}>
