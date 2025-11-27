@@ -1,20 +1,27 @@
 // components/header-profile-button.tsx
 import { useAuthContext } from '@/hooks/use-auth-context'
+import { useProfile } from '@/lib/profiles/profiles.hooks'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import React, { useState } from 'react'
 import {
     Alert,
+    Image,
     Modal,
     Pressable,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
 } from 'react-native'
 
 export default function HeaderProfileButton() {
     const { isLoggedIn, signOut } = useAuthContext()
+    const { member } = useAuthContext() as any
+    const profileId = member?.profile_id
+    const { data: profile } = useProfile(profileId)
+    const avatarUrl = profile?.public_avatar_url ?? null
+
     const [open, setOpen] = useState(false)
 
     const handleLogout = () => {
@@ -53,12 +60,24 @@ export default function HeaderProfileButton() {
         <>
             {/* HeaderRight icon */}
             <TouchableOpacity onPress={onPressIcon}>
-                <MaterialCommunityIcons
-                    name="account-circle-outline"
-                    size={34}
-                    color={isLoggedIn ? '#2563eb' : '#9ca3af'}
-                />
+                {avatarUrl ? (
+                    <Image
+                        source={{ uri: avatarUrl }}
+                        style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 17, // full circle
+                        }}
+                    />
+                ) : (
+                    <MaterialCommunityIcons
+                        name="account-circle-outline"
+                        size={34}
+                        color={isLoggedIn ? '#2563eb' : '#9ca3af'}
+                    />
+                )}
             </TouchableOpacity>
+
 
             {/* Dropdown Modal */}
             <Modal
