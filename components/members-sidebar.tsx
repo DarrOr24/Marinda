@@ -212,9 +212,18 @@ export default function MemberSidebar() {
                 pressed && styles.switcherItemPressed
               ]}
             >
-              <Text style={styles.switcherText}>{m.profile?.first_name}</Text>
+              <View style={styles.switcherRow}>
+                <View style={styles.switcherAvatar}>
+                  <MemberAvatar member={m} index={0} />
+                </View>
+
+                <Text style={styles.switcherText}>
+                  {m.profile?.first_name}
+                </Text>
+              </View>
             </Pressable>
           ))}
+
         </View>
       )}
 
@@ -296,7 +305,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingVertical: 4,
-    width: SIDEBAR_WIDTH - 10,
+    paddingInlineEnd: 4,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 6,
@@ -317,6 +326,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#334155',
     fontWeight: '600',
+    flexShrink: 1,
   },
-
+  switcherRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  switcherAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 })
