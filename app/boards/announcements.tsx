@@ -21,6 +21,7 @@ import {
     useCreateAnnouncement,
     useDeleteAnnouncement,
     useFamilyAnnouncements,
+    useUpdateAnnouncement, // ✅ IMPORT ADDED
 } from '@/lib/announcements/announcements.hooks'
 import { useAnnouncementsRealtime } from '@/lib/announcements/announcements.realtime'
 
@@ -30,7 +31,7 @@ import {
     type AnnouncementTabId,
 } from '@/lib/announcements/announcements.types'
 
-// Small helper like Chores
+// Helper like chores
 const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 8)}` : '—')
 
 export default function AnnouncementsBoard() {
@@ -38,7 +39,7 @@ export default function AnnouncementsBoard() {
     const familyId = activeFamilyId ?? undefined
 
     // -----------------------------
-    // 1) LOAD MEMBERS (same as Chores)
+    // 1) LOAD MEMBERS
     // -----------------------------
     const { members: membersQuery } = useFamily(familyId)
     useSubscribeTableByFamily('family_members', familyId, [
@@ -56,7 +57,6 @@ export default function AnnouncementsBoard() {
         [membersQuery?.data, members, family]
     )
 
-    // Map memberId → display name
     const nameForId = useMemo(() => {
         const map: Record<string, string> = {}
 
@@ -78,7 +78,7 @@ export default function AnnouncementsBoard() {
         return (id?: string) => (id ? map[id] || shortId(id) : '—')
     }, [rawMembers])
 
-    // Find logged-in member
+    // Logged in member ID (family_member.id)
     const authUserId: string | undefined =
         member?.profile?.id || member?.user_id || member?.profile_id
 
@@ -105,31 +105,31 @@ export default function AnnouncementsBoard() {
 
     const createMutation = useCreateAnnouncement(familyId)
     const deleteMutation = useDeleteAnnouncement(familyId)
+    const updateMutation = useUpdateAnnouncement(familyId) // ✅ FIXED
 
     // -----------------------------
-    // 3) ACTIVE TAB
+    // 3) TABS + EDIT STATE
     // -----------------------------
     const [activeKind, setActiveKind] = useState<AnnouncementTabId>('free')
     const [newText, setNewText] = useState('')
+
+    const [editingItem, setEditingItem] = useState<AnnouncementItem | null>(null)
+    const [editText, setEditText] = useState('')
 
     const activeTab =
         ANNOUNCEMENT_TABS.find(t => t.id === activeKind) ??
         ANNOUNCEMENT_TABS[ANNOUNCEMENT_TABS.length - 1]
 
     const filteredAnnouncements =
-        (announcements ?? []).map(a => ({
-            ...a,
-            created_by_name: nameForId(a.created_by_member_id),
-        })).filter(a => a.kind === activeKind)
+        (announcements ?? [])
+            .map(a => ({ ...a, created_by_name: nameForId(a.created_by_member_id) }))
+            .filter(a => a.kind === activeKind)
 
     // -----------------------------
     // 4) ADD ANNOUNCEMENT
     // -----------------------------
     function handleAdd() {
-        if (!familyId || !myFamilyMemberId) {
-            Alert.alert('Missing family', 'Please select a family first.')
-            return
-        }
+        if (!familyId || !myFamilyMemberId) return
 
         const trimmed = newText.trim()
         if (!trimmed) return
@@ -152,10 +152,9 @@ export default function AnnouncementsBoard() {
     }
 
     // -----------------------------
-    // 5) DELETE ANNOUNCEMENT
+    // 5) DELETE (with confirm)
     // -----------------------------
     function handleDelete(item: AnnouncementItem) {
-        // actually perform the delete
         deleteMutation.mutate(item.id, {
             onError: err =>
                 Alert.alert('Error', (err as Error).message),
@@ -183,7 +182,7 @@ export default function AnnouncementsBoard() {
                     style: 'destructive',
                     onPress: () => handleDelete(item),
                 },
-            ],
+            ]
         )
     }
 
@@ -193,9 +192,7 @@ export default function AnnouncementsBoard() {
     if (!familyId) {
         return (
             <View style={styles.center}>
-                <Text style={styles.infoText}>
-                    Please select a family to see announcements.
-                </Text>
+                <Text style={styles.infoText}>Please select a family.</Text>
             </View>
         )
     }
@@ -212,8 +209,7 @@ export default function AnnouncementsBoard() {
         return (
             <View style={styles.center}>
                 <Text style={styles.errorText}>
-                    {(error as Error).message ??
-                        'Failed to load announcements.'}
+                    {(error as Error).message ?? 'Failed to load.'}
                 </Text>
             </View>
         )
@@ -234,10 +230,7 @@ export default function AnnouncementsBoard() {
                     return (
                         <Pressable
                             key={tab.id}
-                            style={[
-                                styles.tab,
-                                isActive && styles.tabActive,
-                            ]}
+                            style={[styles.tab, isActive && styles.tabActive]}
                             onPress={() => {
                                 setActiveKind(tab.id)
                                 setNewText('')
@@ -256,14 +249,12 @@ export default function AnnouncementsBoard() {
                 })}
             </View>
 
-            {/* List */}
+            {/* LIST */}
             <FlatList
                 data={filteredAnnouncements}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={
-                    filteredAnnouncements.length === 0
-                        ? styles.emptyList
-                        : undefined
+                    filteredAnnouncements.length === 0 ? styles.emptyList : undefined
                 }
                 renderItem={({ item }) => (
                     <View style={styles.itemRow}>
@@ -282,11 +273,24 @@ export default function AnnouncementsBoard() {
                             )}
 
                             {item.completed && (
-                                <Text style={styles.itemMeta}>
-                                    ✓ Completed
-                                </Text>
+                                <Text style={styles.itemMeta}>✓ Completed</Text>
                             )}
                         </View>
+
+                        {/* EDIT (creator or parents) */}
+                        {(item.created_by_member_id === myFamilyMemberId ||
+                            member?.role === 'MOM' ||
+                            member?.role === 'DAD') && (
+                                <Pressable
+                                    style={styles.editBtn}
+                                    onPress={() => {
+                                        setEditingItem(item)
+                                        setEditText(item.text)
+                                    }}
+                                >
+                                    <Text style={styles.deleteBtnText}>✎</Text>
+                                </Pressable>
+                            )}
 
                         <Pressable
                             style={styles.deleteBtn}
@@ -294,17 +298,14 @@ export default function AnnouncementsBoard() {
                         >
                             <Text style={styles.deleteBtnText}>✕</Text>
                         </Pressable>
-
                     </View>
                 )}
                 ListEmptyComponent={
-                    <Text style={styles.infoText}>
-                        {activeTab.emptyText}
-                    </Text>
+                    <Text style={styles.infoText}>{activeTab.emptyText}</Text>
                 }
             />
 
-            {/* Input */}
+            {/* ADD INPUT */}
             <View style={styles.inputBar}>
                 <TextInput
                     style={styles.input}
@@ -328,37 +329,57 @@ export default function AnnouncementsBoard() {
                     </Text>
                 </Pressable>
             </View>
+
+            {/* EDIT MODAL */}
+            {editingItem && (
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalBox}>
+                        <Text style={styles.modalTitle}>Edit Announcement</Text>
+
+                        <TextInput
+                            style={styles.modalInput}
+                            multiline
+                            value={editText}
+                            onChangeText={setEditText}
+                        />
+
+                        <View style={styles.modalButtons}>
+                            <Pressable onPress={() => setEditingItem(null)}>
+                                <Text style={styles.modalCancel}>Cancel</Text>
+                            </Pressable>
+
+                            <Pressable
+                                onPress={() => {
+                                    updateMutation.mutate(
+                                        {
+                                            id: editingItem.id,
+                                            updates: { text: editText.trim() },
+                                        },
+                                        {
+                                            onSuccess: () => setEditingItem(null),
+                                            onError: err =>
+                                                Alert.alert('Error', (err as Error).message),
+                                        }
+                                    )
+                                }}
+                            >
+                                <Text style={styles.modalSave}>Save</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            )}
         </KeyboardAvoidingView>
     )
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 16,
-    },
-    center: {
-        flex: 1,
-        padding: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    emptyList: {
-        flexGrow: 1,
-        justifyContent: 'center',
-    },
-    infoText: {
-        fontSize: 16,
-        textAlign: 'center',
-        opacity: 0.7,
-    },
-    errorText: {
-        fontSize: 16,
-        textAlign: 'center',
-        color: 'red',
-    },
+    container: { flex: 1, padding: 16 },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    emptyList: { flexGrow: 1, justifyContent: 'center' },
+    infoText: { fontSize: 16, textAlign: 'center', opacity: 0.7 },
+    errorText: { fontSize: 16, textAlign: 'center', color: 'red' },
 
-    // Tabs
     tabsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -377,16 +398,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#111827',
         borderColor: '#111827',
     },
-    tabLabel: {
-        fontSize: 14,
-        color: '#4b5563',
-    },
-    tabLabelActive: {
-        color: 'white',
-        fontWeight: '600',
-    },
+    tabLabel: { fontSize: 14, color: '#4b5563' },
+    tabLabelActive: { color: 'white', fontWeight: '600' },
 
-    // Items
     itemRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
@@ -395,28 +409,15 @@ const styles = StyleSheet.create({
         borderBottomColor: '#ddd',
         gap: 8,
     },
-    itemTextContainer: {
-        flex: 1,
-    },
-    itemText: {
-        fontSize: 16,
-    },
-    itemMeta: {
-        fontSize: 12,
-        opacity: 0.6,
-        marginTop: 2,
-    },
-    deleteBtn: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        alignSelf: 'center',
-    },
-    deleteBtnText: {
-        fontSize: 20,
-        opacity: 0.6,
-    },
+    itemTextContainer: { flex: 1 },
+    itemText: { fontSize: 16 },
+    itemMeta: { fontSize: 12, opacity: 0.6, marginTop: 2 },
 
-    // Input
+    deleteBtn: { padding: 8, alignSelf: 'center' },
+    deleteBtnText: { fontSize: 18, opacity: 0.6 },
+
+    editBtn: { padding: 8, alignSelf: 'center' },
+
     inputBar: {
         borderTopWidth: StyleSheet.hairlineWidth,
         borderTopColor: '#ddd',
@@ -440,11 +441,40 @@ const styles = StyleSheet.create({
         borderRadius: 999,
         backgroundColor: '#333',
     },
-    addBtnDisabled: {
-        opacity: 0.4,
+    addBtnDisabled: { opacity: 0.4 },
+    addBtnText: { color: 'white', fontWeight: '600' },
+
+    modalOverlay: {
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'rgba(0,0,0,0.35)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    addBtnText: {
-        color: 'white',
-        fontWeight: '600',
+    modalBox: {
+        width: '85%',
+        padding: 20,
+        backgroundColor: 'white',
+        borderRadius: 12,
     },
+    modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
+    modalInput: {
+        minHeight: 80,
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 8,
+        padding: 10,
+        textAlignVertical: 'top',
+        marginBottom: 16,
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 20,
+    },
+    modalCancel: { fontSize: 16, color: '#64748b' },
+    modalSave: { fontSize: 16, color: '#2563eb', fontWeight: '700' },
 })
