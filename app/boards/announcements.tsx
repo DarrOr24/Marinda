@@ -1,5 +1,5 @@
 // app/boards/announcements.tsx
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
     ActivityIndicator,
     Alert,
@@ -14,6 +14,9 @@ import {
 } from 'react-native'
 
 import { useAuthContext } from '@/hooks/use-auth-context'
+import { useFamily } from '@/lib/families/families.hooks'
+import { useSubscribeTableByFamily } from '@/lib/families/families.realtime'
+
 import {
     useCreateAnnouncement,
     useDeleteAnnouncement,
@@ -27,11 +30,74 @@ import {
     type AnnouncementTabId,
 } from '@/lib/announcements/announcements.types'
 
-export default function AnnouncementsBoard() {
-    const { activeFamilyId, member } = useAuthContext() as any
-    const familyId = activeFamilyId ?? undefined
-    const myFamilyMemberId: string | undefined = member?.id
+// Small helper like Chores
+const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 8)}` : '—')
 
+export default function AnnouncementsBoard() {
+    const { activeFamilyId, member, family, members } = useAuthContext() as any
+    const familyId = activeFamilyId ?? undefined
+
+    // -----------------------------
+    // 1) LOAD MEMBERS (same as Chores)
+    // -----------------------------
+    const { members: membersQuery } = useFamily(familyId)
+    useSubscribeTableByFamily('family_members', familyId, [
+        'family-members',
+        familyId,
+    ])
+
+    const rawMembers: any[] = useMemo(
+        () =>
+            (membersQuery?.data ??
+                members?.data ??
+                members ??
+                family?.members ??
+                []) as any[],
+        [membersQuery?.data, members, family]
+    )
+
+    // Map memberId → display name
+    const nameForId = useMemo(() => {
+        const map: Record<string, string> = {}
+
+        for (const m of rawMembers) {
+            const id = m?.id ?? m?.member_id
+            if (!id) continue
+
+            const name =
+                m?.nickname ||
+                m?.profile?.first_name ||
+                m?.first_name ||
+                m?.profile?.name ||
+                m?.name ||
+                ''
+
+            map[id] = name || shortId(id)
+        }
+
+        return (id?: string) => (id ? map[id] || shortId(id) : '—')
+    }, [rawMembers])
+
+    // Find logged-in member
+    const authUserId: string | undefined =
+        member?.profile?.id || member?.user_id || member?.profile_id
+
+    const myFamilyMemberId: string | undefined = useMemo(() => {
+        if (member?.id) return member.id as string
+
+        const me = rawMembers.find(
+            (m: any) =>
+                m?.user_id === authUserId ||
+                m?.profile?.id === authUserId ||
+                m?.profile_id === authUserId
+        )
+
+        return me?.id as string | undefined
+    }, [member, rawMembers, authUserId])
+
+    // -----------------------------
+    // 2) ANNOUNCEMENTS
+    // -----------------------------
     const { data: announcements, isLoading, error } =
         useFamilyAnnouncements(familyId)
 
@@ -40,7 +106,9 @@ export default function AnnouncementsBoard() {
     const createMutation = useCreateAnnouncement(familyId)
     const deleteMutation = useDeleteAnnouncement(familyId)
 
-    // ---- Active tab ----
+    // -----------------------------
+    // 3) ACTIVE TAB
+    // -----------------------------
     const [activeKind, setActiveKind] = useState<AnnouncementTabId>('free')
     const [newText, setNewText] = useState('')
 
@@ -49,8 +117,14 @@ export default function AnnouncementsBoard() {
         ANNOUNCEMENT_TABS[ANNOUNCEMENT_TABS.length - 1]
 
     const filteredAnnouncements =
-        (announcements ?? []).filter(a => a.kind === activeKind)
+        (announcements ?? []).map(a => ({
+            ...a,
+            created_by_name: nameForId(a.created_by_member_id),
+        })).filter(a => a.kind === activeKind)
 
+    // -----------------------------
+    // 4) ADD ANNOUNCEMENT
+    // -----------------------------
     function handleAdd() {
         if (!familyId || !myFamilyMemberId) {
             Alert.alert('Missing family', 'Please select a family first.')
@@ -71,19 +145,35 @@ export default function AnnouncementsBoard() {
             },
             {
                 onSuccess: () => setNewText(''),
-                onError: (err: unknown) => Alert.alert('Error', (err as Error).message),
+                onError: err =>
+                    Alert.alert('Error', (err as Error).message),
             }
         )
     }
 
+    // -----------------------------
+    // 5) DELETE ANNOUNCEMENT
+    // -----------------------------
     function handleDelete(item: AnnouncementItem) {
+        const canDelete =
+            item.created_by_member_id === myFamilyMemberId ||
+            member?.role === 'MOM' ||
+            member?.role === 'DAD'
+
+        if (!canDelete) {
+            Alert.alert('Not allowed', 'You cannot delete this item.')
+            return
+        }
+
         deleteMutation.mutate(item.id, {
-            onError: (err: unknown) => {
-                Alert.alert('Error', (err as Error).message)
-            },
+            onError: err =>
+                Alert.alert('Error', (err as Error).message),
         })
     }
 
+    // -----------------------------
+    // 6) UI STATES
+    // -----------------------------
     if (!familyId) {
         return (
             <View style={styles.center}>
@@ -106,12 +196,16 @@ export default function AnnouncementsBoard() {
         return (
             <View style={styles.center}>
                 <Text style={styles.errorText}>
-                    {(error as Error).message ?? 'Failed to load announcements.'}
+                    {(error as Error).message ??
+                        'Failed to load announcements.'}
                 </Text>
             </View>
         )
     }
 
+    // -----------------------------
+    // 7) RENDER
+    // -----------------------------
     return (
         <KeyboardAvoidingView
             style={styles.container}
@@ -133,7 +227,12 @@ export default function AnnouncementsBoard() {
                                 setNewText('')
                             }}
                         >
-                            <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+                            <Text
+                                style={[
+                                    styles.tabLabel,
+                                    isActive && styles.tabLabelActive,
+                                ]}
+                            >
                                 {tab.label}
                             </Text>
                         </Pressable>
@@ -146,20 +245,31 @@ export default function AnnouncementsBoard() {
                 data={filteredAnnouncements}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={
-                    filteredAnnouncements.length === 0 ? styles.emptyList : undefined
+                    filteredAnnouncements.length === 0
+                        ? styles.emptyList
+                        : undefined
                 }
                 renderItem={({ item }) => (
                     <View style={styles.itemRow}>
                         <View style={styles.itemTextContainer}>
+                            <Text style={styles.itemMeta}>
+                                {item.created_by_name} •{' '}
+                                {new Date(item.created_at).toLocaleString()}
+                            </Text>
+
                             <Text style={styles.itemText}>{item.text}</Text>
-                            {item.week_start ? (
+
+                            {item.week_start && (
                                 <Text style={styles.itemMeta}>
                                     Week of {item.week_start}
                                 </Text>
-                            ) : null}
-                            {item.completed ? (
-                                <Text style={styles.itemMeta}>✓ Completed</Text>
-                            ) : null}
+                            )}
+
+                            {item.completed && (
+                                <Text style={styles.itemMeta}>
+                                    ✓ Completed
+                                </Text>
+                            )}
                         </View>
 
                         <Pressable
@@ -177,7 +287,7 @@ export default function AnnouncementsBoard() {
                 }
             />
 
-            {/* Add new announcement */}
+            {/* Input */}
             <View style={styles.inputBar}>
                 <TextInput
                     style={styles.input}
@@ -186,10 +296,12 @@ export default function AnnouncementsBoard() {
                     onChangeText={setNewText}
                     multiline
                 />
+
                 <Pressable
                     style={[
                         styles.addBtn,
-                        (!newText.trim() || createMutation.isPending) && styles.addBtnDisabled,
+                        (!newText.trim() || createMutation.isPending) &&
+                        styles.addBtnDisabled,
                     ]}
                     onPress={handleAdd}
                     disabled={!newText.trim() || createMutation.isPending}
@@ -228,7 +340,8 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: 'red',
     },
-    // ---- Tabs ----
+
+    // Tabs
     tabsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -255,7 +368,8 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: '600',
     },
-    // ---- Items ----
+
+    // Items
     itemRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
@@ -281,10 +395,11 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
     },
     deleteBtnText: {
-        fontSize: 16,
-        opacity: 0.7,
+        fontSize: 20,
+        opacity: 0.6,
     },
-    // ---- Input ----
+
+    // Input
     inputBar: {
         borderTopWidth: StyleSheet.hairlineWidth,
         borderTopColor: '#ddd',
