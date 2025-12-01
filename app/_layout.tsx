@@ -60,7 +60,13 @@ function RootNavigator() {
 
         <Stack.Screen name="wishList" options={{ headerTitle: 'Wish List 💫' }} />
         <Stack.Screen name="boards/activity" options={{ headerTitle: 'Activities 📆' }} />
+
         <Stack.Screen name="boards/announcements" options={{ headerTitle: 'Announcements 📢' }} />
+        <Stack.Screen
+          name="boards/announcements-info"
+          options={{ headerTitle: 'How announcements work 📖' }}
+        />
+
         <Stack.Screen name="boards/grocery" options={{ headerTitle: 'Groceries 🛒' }} />
       </Stack.Protected>
 

@@ -1,5 +1,8 @@
 // app/boards/announcements.tsx
-import React, { useMemo, useState } from 'react'
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React, { useMemo, useState } from 'react';
+
 import {
     ActivityIndicator,
     Alert,
@@ -11,30 +14,32 @@ import {
     Text,
     TextInput,
     View,
-} from 'react-native'
+} from 'react-native';
 
-import { useAuthContext } from '@/hooks/use-auth-context'
-import { useFamily } from '@/lib/families/families.hooks'
-import { useSubscribeTableByFamily } from '@/lib/families/families.realtime'
+import { useAuthContext } from '@/hooks/use-auth-context';
+import { useFamily } from '@/lib/families/families.hooks';
+import { useSubscribeTableByFamily } from '@/lib/families/families.realtime';
 
 import {
     useCreateAnnouncement,
     useDeleteAnnouncement,
     useFamilyAnnouncements,
     useUpdateAnnouncement, // ✅ IMPORT ADDED
-} from '@/lib/announcements/announcements.hooks'
-import { useAnnouncementsRealtime } from '@/lib/announcements/announcements.realtime'
+} from '@/lib/announcements/announcements.hooks';
+import { useAnnouncementsRealtime } from '@/lib/announcements/announcements.realtime';
 
 import {
     ANNOUNCEMENT_TABS,
     type AnnouncementItem,
     type AnnouncementTabId,
-} from '@/lib/announcements/announcements.types'
+} from '@/lib/announcements/announcements.types';
 
 // Helper like chores
 const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 8)}` : '—')
 
 export default function AnnouncementsBoard() {
+    const router = useRouter();
+
     const { activeFamilyId, member, family, members } = useAuthContext() as any
     const familyId = activeFamilyId ?? undefined
 
@@ -223,6 +228,20 @@ export default function AnnouncementsBoard() {
             style={styles.container}
             behavior={Platform.select({ ios: 'padding', android: undefined })}
         >
+            <View style={styles.headerLeft}>
+                <Pressable
+                    onPress={() => router.push('/boards/announcements-info')}
+                    style={styles.iconCircle}
+                    hitSlop={8}
+                >
+                    <Ionicons
+                        name="information-circle-outline"
+                        size={18}
+                        color="#1e3a8a"
+                    />
+                </Pressable>
+            </View>
+
             {/* Tabs */}
             <View style={styles.tabsContainer}>
                 {ANNOUNCEMENT_TABS.map((tab) => {
@@ -375,6 +394,22 @@ export default function AnnouncementsBoard() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 16 },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    iconCircle: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#eff6ff',
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+    },
+
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     emptyList: { flexGrow: 1, justifyContent: 'center' },
     infoText: { fontSize: 16, textAlign: 'center', opacity: 0.7 },
