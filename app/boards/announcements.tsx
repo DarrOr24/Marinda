@@ -20,14 +20,17 @@ import {
     useFamilyAnnouncements,
 } from '@/lib/announcements/announcements.hooks'
 import { useAnnouncementsRealtime } from '@/lib/announcements/announcements.realtime'
-import type { AnnouncementItem } from '@/lib/announcements/announcements.types'
+
+import {
+    ANNOUNCEMENT_TABS,
+    type AnnouncementItem,
+    type AnnouncementTabId,
+} from '@/lib/announcements/announcements.types'
 
 export default function AnnouncementsBoard() {
     const { activeFamilyId, member } = useAuthContext() as any
-
     const familyId = activeFamilyId ?? undefined
     const myFamilyMemberId: string | undefined = member?.id
-
 
     const { data: announcements, isLoading, error } =
         useFamilyAnnouncements(familyId)
@@ -37,7 +40,16 @@ export default function AnnouncementsBoard() {
     const createMutation = useCreateAnnouncement(familyId)
     const deleteMutation = useDeleteAnnouncement(familyId)
 
+    // ---- Active tab ----
+    const [activeKind, setActiveKind] = useState<AnnouncementTabId>('free')
     const [newText, setNewText] = useState('')
+
+    const activeTab =
+        ANNOUNCEMENT_TABS.find(t => t.id === activeKind) ??
+        ANNOUNCEMENT_TABS[ANNOUNCEMENT_TABS.length - 1]
+
+    const filteredAnnouncements =
+        (announcements ?? []).filter(a => a.kind === activeKind)
 
     function handleAdd() {
         if (!familyId || !myFamilyMemberId) {
@@ -52,7 +64,7 @@ export default function AnnouncementsBoard() {
             {
                 familyId,
                 createdByMemberId: myFamilyMemberId,
-                kind: 'free',
+                kind: activeKind,
                 category: null,
                 text: trimmed,
                 weekStart: null,
@@ -63,7 +75,6 @@ export default function AnnouncementsBoard() {
             }
         )
     }
-
 
     function handleDelete(item: AnnouncementItem) {
         deleteMutation.mutate(item.id, {
@@ -106,12 +117,36 @@ export default function AnnouncementsBoard() {
             style={styles.container}
             behavior={Platform.select({ ios: 'padding', android: undefined })}
         >
+            {/* Tabs */}
+            <View style={styles.tabsContainer}>
+                {ANNOUNCEMENT_TABS.map((tab) => {
+                    const isActive = tab.id === activeKind
+                    return (
+                        <Pressable
+                            key={tab.id}
+                            style={[
+                                styles.tab,
+                                isActive && styles.tabActive,
+                            ]}
+                            onPress={() => {
+                                setActiveKind(tab.id)
+                                setNewText('')
+                            }}
+                        >
+                            <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+                                {tab.label}
+                            </Text>
+                        </Pressable>
+                    )
+                })}
+            </View>
+
             {/* List */}
             <FlatList
-                data={announcements ?? []}
+                data={filteredAnnouncements}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={
-                    (announcements ?? []).length === 0 ? styles.emptyList : undefined
+                    filteredAnnouncements.length === 0 ? styles.emptyList : undefined
                 }
                 renderItem={({ item }) => (
                     <View style={styles.itemRow}>
@@ -137,7 +172,7 @@ export default function AnnouncementsBoard() {
                 )}
                 ListEmptyComponent={
                     <Text style={styles.infoText}>
-                        No announcements yet. Add one below.
+                        {activeTab.emptyText}
                     </Text>
                 }
             />
@@ -146,7 +181,7 @@ export default function AnnouncementsBoard() {
             <View style={styles.inputBar}>
                 <TextInput
                     style={styles.input}
-                    placeholder="Write a new note..."
+                    placeholder={activeTab.placeholder}
                     value={newText}
                     onChangeText={setNewText}
                     multiline
@@ -193,6 +228,34 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: 'red',
     },
+    // ---- Tabs ----
+    tabsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginBottom: 12,
+    },
+    tab: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 999,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: '#d4d4d4',
+        backgroundColor: '#f9fafb',
+    },
+    tabActive: {
+        backgroundColor: '#111827',
+        borderColor: '#111827',
+    },
+    tabLabel: {
+        fontSize: 14,
+        color: '#4b5563',
+    },
+    tabLabelActive: {
+        color: 'white',
+        fontWeight: '600',
+    },
+    // ---- Items ----
     itemRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
@@ -221,6 +284,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         opacity: 0.7,
     },
+    // ---- Input ----
     inputBar: {
         borderTopWidth: StyleSheet.hairlineWidth,
         borderTopColor: '#ddd',

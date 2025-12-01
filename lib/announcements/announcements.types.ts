@@ -34,3 +34,50 @@ export type AnnouncementItem = {
     // Optional helper fields (frontend only)
     created_by_name?: string;
 };
+
+export const ANNOUNCEMENT_TABS = [
+    {
+        id: 'reminder',
+        label: 'Reminders',
+        emptyText: 'No reminders yet. Add one below.',
+        placeholder: 'Add a new reminder (tests, shows, appointments...)',
+    },
+    {
+        id: 'sentence',
+        label: 'Sentence',
+        emptyText: 'No sentence yet. Add the sentence of the week.',
+        placeholder: 'Write the sentence of the week...',
+    },
+    {
+        id: 'good',
+        label: 'Something good',
+        emptyText: 'No “good things” yet. Add something that went well.',
+        placeholder: 'Something good that happened...',
+    },
+    {
+        id: 'kind',
+        label: 'Something kind',
+        emptyText: 'No kindness notes yet. Add something kind you did.',
+        placeholder: 'Something kind I did...',
+    },
+    {
+        id: 'free',
+        label: 'Notes',
+        emptyText: 'No notes yet. Add one below.',
+        placeholder: 'Write a new note...',
+    },
+] as const
+
+export type AnnouncementTabId =
+    | 'reminder'
+    | 'sentence'
+    | 'good'
+    | 'kind'
+    | 'free'
+
+export type AnnouncementTab = {
+    id: AnnouncementTabId;
+    label: string;
+    emptyText: string;
+    placeholder: string;
+}
