@@ -155,6 +155,14 @@ export default function AnnouncementsBoard() {
     // 5) DELETE ANNOUNCEMENT
     // -----------------------------
     function handleDelete(item: AnnouncementItem) {
+        // actually perform the delete
+        deleteMutation.mutate(item.id, {
+            onError: err =>
+                Alert.alert('Error', (err as Error).message),
+        })
+    }
+
+    function confirmDelete(item: AnnouncementItem) {
         const canDelete =
             item.created_by_member_id === myFamilyMemberId ||
             member?.role === 'MOM' ||
@@ -165,10 +173,18 @@ export default function AnnouncementsBoard() {
             return
         }
 
-        deleteMutation.mutate(item.id, {
-            onError: err =>
-                Alert.alert('Error', (err as Error).message),
-        })
+        Alert.alert(
+            'Delete announcement?',
+            'This cannot be undone.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => handleDelete(item),
+                },
+            ],
+        )
     }
 
     // -----------------------------
@@ -274,10 +290,11 @@ export default function AnnouncementsBoard() {
 
                         <Pressable
                             style={styles.deleteBtn}
-                            onPress={() => handleDelete(item)}
+                            onPress={() => confirmDelete(item)}
                         >
                             <Text style={styles.deleteBtnText}>✕</Text>
                         </Pressable>
+
                     </View>
                 )}
                 ListEmptyComponent={
