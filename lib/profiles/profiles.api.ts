@@ -1,43 +1,50 @@
 // lib/profiles/profiles.api.ts
-import { getSupabase } from '../supabase'
+import { decode } from "base64-arraybuffer";
+import * as FileSystem from "expo-file-system/legacy"; // << FULL FIX
+import { getSupabase } from "../supabase";
 
-const supabase = getSupabase()
+const supabase = getSupabase();
 
 export async function fetchProfile(profileId: string) {
     const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', profileId)
-        .single()
+        .from("profiles")
+        .select("*")
+        .eq("id", profileId)
+        .single();
 
-    if (error) throw new Error(error.message)
-    return data
+    if (error) throw new Error(error.message);
+    return data;
 }
 
 export async function updateProfile(profileId: string, updates: any) {
     const { data, error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update(updates)
-        .eq('id', profileId)
+        .eq("id", profileId)
         .select()
-        .single()
+        .single();
 
-    if (error) throw new Error(error.message)
-    return data
+    if (error) throw new Error(error.message);
+    return data;
 }
 
 export async function uploadAvatar(profileId: string, fileUri: string) {
     console.log("UPLOAD START", { profileId, fileUri });
 
-    const file = await fetch(fileUri);
-    const blob = await file.blob();
+    // 1️⃣ Read as base64 (works for all Expo versions)
+    const base64 = await FileSystem.readAsStringAsync(fileUri, {
+        encoding: FileSystem.EncodingType.Base64,
+    });
+
+    // 2️⃣ Convert to binary buffer
+    const fileBuffer = decode(base64);
 
     const path = `${profileId}.jpg`;
-    console.log("UPLOAD PATH:", path);
 
+    // 3️⃣ Upload to Supabase
     const { error: uploadError } = await supabase.storage
         .from("profile-photos")
-        .upload(path, blob, {
+        .upload(path, fileBuffer, {
             upsert: true,
             contentType: "image/jpeg",
         });
@@ -47,23 +54,18 @@ export async function uploadAvatar(profileId: string, fileUri: string) {
         throw uploadError;
     }
 
-    console.log("UPLOAD SUCCESS:", path);
-
-    // Update DB
-    const { data, error: dbErr } = await supabase
+    // 4️⃣ Save path in DB
+    const { error: dbError } = await supabase
         .from("profiles")
         .update({ avatar_url: path })
-        .eq("id", profileId)
-        .select()
-        .single();
+        .eq("id", profileId);
 
-    if (dbErr) {
-        console.log("DB ERROR:", dbErr);
-        throw dbErr;
+    if (dbError) {
+        console.log("DB ERROR:", dbError);
+        throw dbError;
     }
 
-    console.log("DB UPDATED. NEW PROFILE:", data);
-
+    console.log("UPLOAD SUCCESS");
     return path;
 }
 
@@ -74,5 +76,7 @@ export function getAvatarPublicUrl(path: string | null): string | null {
         .from("profile-photos")
         .getPublicUrl(path);
 
-    return data?.publicUrl ?? null;
+    // Add timestamp to force refresh
+    return `${data.publicUrl}?t=${Date.now()}`;
 }
+

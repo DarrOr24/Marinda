@@ -62,7 +62,7 @@ export default function HeaderProfileButton() {
             <TouchableOpacity onPress={onPressIcon}>
                 {avatarUrl ? (
                     <Image
-                        source={{ uri: avatarUrl }}
+                        source={{ uri: `${avatarUrl}?t=${Date.now()}` }}
                         style={{
                             width: 34,
                             height: 34,

@@ -3,6 +3,7 @@ import CheckerboardBackground from '@/components/checkerboard-background'
 import MemberSidebar from '@/components/members-sidebar'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useProfile, useUpdateProfile } from '@/lib/profiles/profiles.hooks'
+import { getSupabase } from '@/lib/supabase'
 import * as ImagePicker from 'expo-image-picker'
 import { useEffect, useState } from 'react'
 import {
@@ -28,53 +29,62 @@ export default function SettingsScreen() {
     const [lastName, setLastName] = useState('')
     const [gender, setGender] = useState('')
     const [birthDate, setBirthDate] = useState('')
-    // just for local preview of a newly picked image
-    const [pendingAvatar, setPendingAvatar] = useState<string | null>(null)
 
-    // when profile data arrives or changes, seed the form fields
+    // avatar state
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null) // actual server URL
+    const [pendingAvatar, setPendingAvatar] = useState<string | null>(null) // local preview before save
+
+    const supabase = getSupabase()
+
+    // Load data from Supabase when arriving
     useEffect(() => {
         if (!data) return
+
         setFirstName(data.first_name ?? '')
         setLastName(data.last_name ?? '')
         setGender(data.gender ?? '')
         setBirthDate(data.birth_date ?? '')
+
+        if (data.avatar_url) {
+            const { data: pub } = supabase.storage
+                .from('profile-photos')
+                .getPublicUrl(data.avatar_url)
+            setAvatarUrl(`${pub.publicUrl}?t=${Date.now()}`);
+        }
     }, [data])
 
-    // effective avatar to show: new pick > server url > nothing
-    const effectiveAvatarUrl: string | null =
-        pendingAvatar ?? (data?.public_avatar_url ?? null)
+    // Avatar preview takes priority
+    const effectiveAvatar = pendingAvatar ?? avatarUrl
 
-    // Detect changes for Save button
+    // True only if something actually changed
     const hasChanges =
+        pendingAvatar !== null ||
         firstName !== (data?.first_name ?? '') ||
         lastName !== (data?.last_name ?? '') ||
         gender !== (data?.gender ?? '') ||
-        birthDate !== (data?.birth_date ?? '') ||
-        pendingAvatar !== null
+        birthDate !== (data?.birth_date ?? '')
 
-    // Pick avatar
+    // Pick avatar (but DO NOT upload yet)
     const pickAvatar = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             quality: 0.9,
-            allowsEditing: false,
+            allowsEditing: true,
+            aspect: [1, 1],
         })
 
         if (result.canceled) return
 
         const uri = result.assets[0].uri
-        console.log('Selected file:', uri)
-        setPendingAvatar(uri) // local preview
+        setPendingAvatar(uri) // show preview only, upload on Save
     }
 
     const handleSave = async () => {
         if (!profileId) return
 
-        const avatarToUpload = pendingAvatar
-
         await updateProfile.mutateAsync({
             profileId,
-            avatarFileUri: avatarToUpload ?? null,
+            avatarFileUri: pendingAvatar, // upload only if user picked a new one
             updates: {
                 first_name: firstName,
                 last_name: lastName,
@@ -83,8 +93,7 @@ export default function SettingsScreen() {
             },
         })
 
-        // after successful upload + update, clear local pending;
-        // query invalidation will refresh data.public_avatar_url
+        // after saving, clear pending so Save button disables correctly
         setPendingAvatar(null)
     }
 
@@ -100,6 +109,7 @@ export default function SettingsScreen() {
     return (
         <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
             <CheckerboardBackground colorA="#F6FAFF" colorB="#EAF3FF" size={28} />
+
             <MemberSidebar />
 
             <ScrollView
@@ -111,15 +121,11 @@ export default function SettingsScreen() {
                 <Text style={styles.label}>Profile Photo</Text>
 
                 <Pressable onPress={pickAvatar} style={styles.avatarWrapper}>
-                    {effectiveAvatarUrl ? (
-                        <View style={styles.avatarWithText}>
-                            <Image
-                                source={{ uri: effectiveAvatarUrl }}
-                                style={styles.avatarImage}
-                            />
-                            <Text style={styles.avatarOverlayText}>Tap to change</Text>
-                        </View>
-
+                    {effectiveAvatar ? (
+                        <Image
+                            source={{ uri: effectiveAvatar }}
+                            style={styles.avatarImage}
+                        />
                     ) : (
                         <View style={styles.avatarEmpty}>
                             <Text style={styles.avatarEmptyText}>Tap to upload</Text>
@@ -127,7 +133,7 @@ export default function SettingsScreen() {
                     )}
                 </Pressable>
 
-                {/* First Name */}
+                {/* First name */}
                 <Text style={styles.label}>First Name</Text>
                 <TextInput
                     value={firstName}
@@ -135,7 +141,7 @@ export default function SettingsScreen() {
                     style={styles.input}
                 />
 
-                {/* Last Name */}
+                {/* Last name */}
                 <Text style={styles.label}>Last Name</Text>
                 <TextInput
                     value={lastName}
@@ -152,7 +158,7 @@ export default function SettingsScreen() {
                     placeholder="MALE / FEMALE"
                 />
 
-                {/* Birthdate */}
+                {/* Birth date */}
                 <Text style={styles.label}>Birth Date</Text>
                 <TextInput
                     value={birthDate}
@@ -161,13 +167,14 @@ export default function SettingsScreen() {
                     placeholder="YYYY-MM-DD"
                 />
 
-                {/* Save Button */}
+                {/* Save */}
                 <Pressable
                     onPress={handleSave}
                     disabled={updateProfile.isPending || !hasChanges}
                     style={[
                         styles.saveBtn,
-                        (updateProfile.isPending || !hasChanges) && styles.saveBtnDisabled,
+                        (updateProfile.isPending || !hasChanges) &&
+                        styles.saveBtnDisabled,
                     ]}
                 >
                     <Text style={styles.saveBtnText}>
@@ -214,21 +221,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#0f172a',
     },
-    saveBtn: {
-        marginTop: 12,
-        backgroundColor: '#2563eb',
-        paddingVertical: 12,
-        borderRadius: 10,
-        alignItems: 'center',
-    },
-    saveBtnDisabled: {
-        backgroundColor: '#93c5fd',
-    },
-    saveBtnText: {
-        color: '#fff',
-        fontWeight: '700',
-        fontSize: 16,
-    },
     avatarWrapper: {
         alignSelf: 'center',
         marginBottom: 12,
@@ -250,22 +242,19 @@ const styles = StyleSheet.create({
         color: '#334155',
         fontWeight: '600',
     },
-    avatarWithText: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        overflow: 'hidden',
+    saveBtn: {
+        marginTop: 12,
+        backgroundColor: '#2563eb',
+        paddingVertical: 12,
+        borderRadius: 10,
         alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
     },
-    avatarOverlayText: {
-        position: 'absolute',
-        color: '#ffffff',
-        fontSize: 14,
-        fontWeight: '600',
-        textShadowColor: 'rgba(0,0,0,0.6)',
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 4,
+    saveBtnDisabled: {
+        backgroundColor: '#93c5fd',
+    },
+    saveBtnText: {
+        color: '#fff',
+        fontWeight: '700',
+        fontSize: 16,
     },
 })

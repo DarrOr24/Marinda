@@ -20,7 +20,7 @@ export default function MemberAvatar({
     return (
       <View style={styles.avatarCircle}>
         <Image
-          source={{ uri: avatarUrl }}
+          source={{ uri: `${avatarUrl}?t=${Date.now()}` }}
           style={styles.avatarImage}
           resizeMode="cover"
         />
