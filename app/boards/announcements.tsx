@@ -45,6 +45,9 @@ export default function AnnouncementsBoard() {
     const { activeFamilyId, member, family, members } = useAuthContext() as any
     const familyId = activeFamilyId ?? undefined
 
+    const [search, setSearch] = useState('');
+
+
     // -----------------------------
     // 1) LOAD MEMBERS
     // -----------------------------
@@ -127,10 +130,28 @@ export default function AnnouncementsBoard() {
         ANNOUNCEMENT_TABS.find(t => t.id === activeKind) ??
         ANNOUNCEMENT_TABS[ANNOUNCEMENT_TABS.length - 1]
 
-    const filteredAnnouncements =
-        (announcements ?? [])
-            .map(a => ({ ...a, created_by_name: nameForId(a.created_by_member_id) }))
-            .filter(a => a.kind === activeKind)
+    const filteredAnnouncements = (announcements ?? [])
+        .map(a => ({
+            ...a,
+            created_by_name: nameForId(a.created_by_member_id),
+        }))
+        // FIRST: Apply search across ALL announcements
+        .filter(a => {
+            if (!search.trim()) return true;
+
+            const term = search.toLowerCase();
+            return (
+                a.text.toLowerCase().includes(term) ||
+                a.created_by_name.toLowerCase().includes(term)
+            );
+        })
+        // THEN: If NOT searching → apply tab filter
+        .filter(a => {
+            if (search.trim()) return true; // 🔥 global search mode, ignore tabs
+            return a.kind === activeKind;   // normal tab mode
+        });
+
+
 
     // -----------------------------
     // 4) ADD ANNOUNCEMENT
@@ -245,6 +266,16 @@ export default function AnnouncementsBoard() {
                     </Pressable>
                 </View>
 
+                {/* SEARCH BAR */}
+                <View style={styles.searchContainer}>
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search announcements..."
+                        value={search}
+                        onChangeText={setSearch}
+                    />
+                </View>
+
                 {/* Tabs */}
                 <View style={styles.tabsContainer}>
                     {ANNOUNCEMENT_TABS.map((tab) => {
@@ -308,7 +339,6 @@ export default function AnnouncementsBoard() {
                                     <Text style={styles.itemMeta}>✓ Completed</Text>
                                 )}
                             </View>
-
 
                             {/* EDIT (creator or parents) */}
                             {(item.created_by_member_id === myFamilyMemberId ||
@@ -417,6 +447,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
+        marginBottom: 12
     },
     iconCircle: {
         width: 32,
@@ -439,7 +470,6 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         gap: 8,
         marginBottom: 12,
-        marginTop: 12,
     },
     tab: {
         paddingHorizontal: 12,
@@ -532,4 +562,16 @@ const styles = StyleSheet.create({
     },
     modalCancel: { fontSize: 16, color: '#64748b' },
     modalSave: { fontSize: 16, color: '#2563eb', fontWeight: '700' },
+    searchContainer: {
+        marginBottom: 10,
+    },
+    searchInput: {
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+
 })
