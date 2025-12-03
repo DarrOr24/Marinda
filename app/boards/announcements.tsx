@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-
 import {
     ActivityIndicator,
     Alert,
@@ -26,7 +25,7 @@ import {
     useCreateAnnouncement,
     useDeleteAnnouncement,
     useFamilyAnnouncements,
-    useUpdateAnnouncement, // ✅ IMPORT ADDED
+    useUpdateAnnouncement,
 } from '@/lib/announcements/announcements.hooks';
 import { useAnnouncementsRealtime } from '@/lib/announcements/announcements.realtime';
 
@@ -36,26 +35,32 @@ import {
     type AnnouncementTabId,
 } from '@/lib/announcements/announcements.types';
 
-// Helper like chores
-const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 8)}` : '—')
+// Helper
+const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 8)}` : '—');
 
 export default function AnnouncementsBoard() {
     const router = useRouter();
 
-    const { activeFamilyId, member, family, members } = useAuthContext() as any
-    const familyId = activeFamilyId ?? undefined
+    const { activeFamilyId, member, family, members } = useAuthContext() as any;
+    const familyId = activeFamilyId ?? undefined;
 
     const [search, setSearch] = useState('');
+    const [sortBy, setSortBy] =
+        useState<'newest' | 'oldest' | 'edited'>('newest');
 
+    const [filterAuthor, setFilterAuthor] = useState<string>('all');
+
+    const [showSortMenu, setShowSortMenu] = useState(false);
+    const [showAuthorMenu, setShowAuthorMenu] = useState(false);
 
     // -----------------------------
-    // 1) LOAD MEMBERS
+    // Load Members
     // -----------------------------
-    const { members: membersQuery } = useFamily(familyId)
+    const { members: membersQuery } = useFamily(familyId);
     useSubscribeTableByFamily('family_members', familyId, [
         'family-members',
         familyId,
-    ])
+    ]);
 
     const rawMembers: any[] = useMemo(
         () =>
@@ -65,14 +70,14 @@ export default function AnnouncementsBoard() {
                 family?.members ??
                 []) as any[],
         [membersQuery?.data, members, family]
-    )
+    );
 
     const nameForId = useMemo(() => {
-        const map: Record<string, string> = {}
+        const map: Record<string, string> = {};
 
         for (const m of rawMembers) {
-            const id = m?.id ?? m?.member_id
-            if (!id) continue
+            const id = m?.id ?? m?.member_id;
+            if (!id) continue;
 
             const name =
                 m?.nickname ||
@@ -80,87 +85,119 @@ export default function AnnouncementsBoard() {
                 m?.first_name ||
                 m?.profile?.name ||
                 m?.name ||
-                ''
+                '';
 
-            map[id] = name || shortId(id)
+            map[id] = name || shortId(id);
         }
 
-        return (id?: string) => (id ? map[id] || shortId(id) : '—')
-    }, [rawMembers])
+        return (id?: string) => (id ? map[id] || shortId(id) : '—');
+    }, [rawMembers]);
 
-    // Logged in member ID (family_member.id)
     const authUserId: string | undefined =
-        member?.profile?.id || member?.user_id || member?.profile_id
+        member?.profile?.id || member?.user_id || member?.profile_id;
 
     const myFamilyMemberId: string | undefined = useMemo(() => {
-        if (member?.id) return member.id as string
+        if (member?.id) return member.id as string;
 
         const me = rawMembers.find(
             (m: any) =>
                 m?.user_id === authUserId ||
                 m?.profile?.id === authUserId ||
                 m?.profile_id === authUserId
-        )
+        );
 
-        return me?.id as string | undefined
-    }, [member, rawMembers, authUserId])
+        return me?.id as string | undefined;
+    }, [member, rawMembers, authUserId]);
 
     // -----------------------------
-    // 2) ANNOUNCEMENTS
+    // Announcements
     // -----------------------------
     const { data: announcements, isLoading, error } =
-        useFamilyAnnouncements(familyId)
+        useFamilyAnnouncements(familyId);
 
-    useAnnouncementsRealtime(familyId)
+    useAnnouncementsRealtime(familyId);
 
-    const createMutation = useCreateAnnouncement(familyId)
-    const deleteMutation = useDeleteAnnouncement(familyId)
-    const updateMutation = useUpdateAnnouncement(familyId) // ✅ FIXED
+    const createMutation = useCreateAnnouncement(familyId);
+    const deleteMutation = useDeleteAnnouncement(familyId);
+    const updateMutation = useUpdateAnnouncement(familyId);
 
     // -----------------------------
-    // 3) TABS + EDIT STATE
+    // Tabs + Editing
     // -----------------------------
-    const [activeKind, setActiveKind] = useState<AnnouncementTabId>('free')
-    const [newText, setNewText] = useState('')
+    const [activeKind, setActiveKind] = useState<AnnouncementTabId>('free');
+    const [newText, setNewText] = useState('');
 
-    const [editingItem, setEditingItem] = useState<AnnouncementItem | null>(null)
-    const [editText, setEditText] = useState('')
+    const [editingItem, setEditingItem] = useState<AnnouncementItem | null>(
+        null
+    );
+    const [editText, setEditText] = useState('');
 
     const activeTab =
         ANNOUNCEMENT_TABS.find(t => t.id === activeKind) ??
-        ANNOUNCEMENT_TABS[ANNOUNCEMENT_TABS.length - 1]
+        ANNOUNCEMENT_TABS[ANNOUNCEMENT_TABS.length - 1];
 
-    const filteredAnnouncements = (announcements ?? [])
-        .map(a => ({
-            ...a,
-            created_by_name: nameForId(a.created_by_member_id),
-        }))
-        // FIRST: Apply search across ALL announcements
-        .filter(a => {
-            if (!search.trim()) return true;
+    // ---------------------------------------------------------
+    // 🚀 GLOBAL SEARCH LOGIC
+    // ---------------------------------------------------------
+    const isSearching = search.trim().length > 0;
 
-            const term = search.toLowerCase();
-            return (
-                a.text.toLowerCase().includes(term) ||
-                a.created_by_name.toLowerCase().includes(term)
-            );
-        })
-        // THEN: If NOT searching → apply tab filter
-        .filter(a => {
-            if (search.trim()) return true; // 🔥 global search mode, ignore tabs
-            return a.kind === activeKind;   // normal tab mode
-        });
+    let filteredAnnouncements =
+        (announcements ?? [])
+            .map(a => ({
+                ...a,
+                created_by_name: nameForId(a.created_by_member_id),
+            }))
+            .filter(a => {
+                // 🔍 GLOBAL SEARCH mode (ignore tab)
+                if (isSearching) {
+                    return (
+                        a.text.toLowerCase().includes(search.toLowerCase()) ||
+                        a.created_by_name
+                            .toLowerCase()
+                            .includes(search.toLowerCase())
+                    );
+                }
 
+                // Normal tab filtering
+                return a.kind === activeKind;
+            });
 
+    // AUTHOR FILTER
+    if (filterAuthor !== 'all') {
+        filteredAnnouncements = filteredAnnouncements.filter(
+            a => a.created_by_name === filterAuthor
+        );
+    }
+
+    // SORTING
+    if (sortBy === 'newest') {
+        filteredAnnouncements.sort(
+            (a, b) =>
+                new Date(b.created_at).getTime() -
+                new Date(a.created_at).getTime()
+        );
+    } else if (sortBy === 'oldest') {
+        filteredAnnouncements.sort(
+            (a, b) =>
+                new Date(a.created_at).getTime() -
+                new Date(b.created_at).getTime()
+        );
+    } else if (sortBy === 'edited') {
+        filteredAnnouncements.sort(
+            (a, b) =>
+                new Date(b.updated_at).getTime() -
+                new Date(a.updated_at).getTime()
+        );
+    }
 
     // -----------------------------
-    // 4) ADD ANNOUNCEMENT
+    // Add Announcement
     // -----------------------------
     function handleAdd() {
-        if (!familyId || !myFamilyMemberId) return
+        if (!familyId || !myFamilyMemberId) return;
 
-        const trimmed = newText.trim()
-        if (!trimmed) return
+        const trimmed = newText.trim();
+        if (!trimmed) return;
 
         createMutation.mutate(
             {
@@ -173,56 +210,50 @@ export default function AnnouncementsBoard() {
             },
             {
                 onSuccess: () => setNewText(''),
-                onError: err =>
-                    Alert.alert('Error', (err as Error).message),
+                onError: err => Alert.alert('Error', (err as Error).message),
             }
-        )
+        );
     }
 
     // -----------------------------
-    // 5) DELETE (with confirm)
+    // Delete
     // -----------------------------
     function handleDelete(item: AnnouncementItem) {
         deleteMutation.mutate(item.id, {
-            onError: err =>
-                Alert.alert('Error', (err as Error).message),
-        })
+            onError: err => Alert.alert('Error', (err as Error).message),
+        });
     }
 
     function confirmDelete(item: AnnouncementItem) {
         const canDelete =
             item.created_by_member_id === myFamilyMemberId ||
             member?.role === 'MOM' ||
-            member?.role === 'DAD'
+            member?.role === 'DAD';
 
         if (!canDelete) {
-            Alert.alert('Not allowed', 'You cannot delete this item.')
-            return
+            Alert.alert('Not allowed', 'You cannot delete this item.');
+            return;
         }
 
-        Alert.alert(
-            'Delete announcement?',
-            'This cannot be undone.',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: () => handleDelete(item),
-                },
-            ]
-        )
+        Alert.alert('Delete announcement?', 'This cannot be undone.', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: () => handleDelete(item),
+            },
+        ]);
     }
 
     // -----------------------------
-    // 6) UI STATES
+    // UI states
     // -----------------------------
     if (!familyId) {
         return (
             <View style={styles.center}>
                 <Text style={styles.infoText}>Please select a family.</Text>
             </View>
-        )
+        );
     }
 
     if (isLoading) {
@@ -230,7 +261,7 @@ export default function AnnouncementsBoard() {
             <View style={styles.center}>
                 <ActivityIndicator />
             </View>
-        )
+        );
     }
 
     if (error) {
@@ -240,11 +271,11 @@ export default function AnnouncementsBoard() {
                     {(error as Error).message ?? 'Failed to load.'}
                 </Text>
             </View>
-        )
+        );
     }
 
     // -----------------------------
-    // 7) RENDER
+    // RENDER
     // -----------------------------
     return (
         <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
@@ -254,7 +285,9 @@ export default function AnnouncementsBoard() {
             >
                 <View style={styles.headerLeft}>
                     <Pressable
-                        onPress={() => router.push('/boards/announcements-info')}
+                        onPress={() =>
+                            router.push('/boards/announcements-info')
+                        }
                         style={styles.iconCircle}
                         hitSlop={8}
                     >
@@ -266,7 +299,7 @@ export default function AnnouncementsBoard() {
                     </Pressable>
                 </View>
 
-                {/* SEARCH BAR */}
+                {/* SEARCH */}
                 <View style={styles.searchContainer}>
                     <TextInput
                         style={styles.searchInput}
@@ -276,17 +309,48 @@ export default function AnnouncementsBoard() {
                     />
                 </View>
 
-                {/* Tabs */}
+                {/* FILTER ROW */}
+                <View style={styles.filterRow}>
+                    <Pressable
+                        style={styles.filterBtn}
+                        onPress={() => setShowSortMenu(true)}
+                    >
+                        <Text style={styles.filterBtnLabel}>
+                            Sort: {sortBy}
+                        </Text>
+                    </Pressable>
+
+                    <Pressable
+                        style={styles.filterBtn}
+                        onPress={() => setShowAuthorMenu(true)}
+                    >
+                        <Text style={styles.filterBtnLabel}>
+                            By:{' '}
+                            {filterAuthor === 'all'
+                                ? 'All'
+                                : filterAuthor}
+                        </Text>
+                    </Pressable>
+                </View>
+
+                {/* TABS */}
                 <View style={styles.tabsContainer}>
-                    {ANNOUNCEMENT_TABS.map((tab) => {
-                        const isActive = tab.id === activeKind
+                    {ANNOUNCEMENT_TABS.map(tab => {
+                        const isActive =
+                            !isSearching && tab.id === activeKind;
+
                         return (
                             <Pressable
                                 key={tab.id}
-                                style={[styles.tab, isActive && styles.tabActive]}
+                                style={[
+                                    styles.tab,
+                                    isActive && styles.tabActive,
+                                ]}
                                 onPress={() => {
-                                    setActiveKind(tab.id)
-                                    setNewText('')
+                                    if (!isSearching) {
+                                        setActiveKind(tab.id);
+                                        setNewText('');
+                                    }
                                 }}
                             >
                                 <Text
@@ -298,60 +362,71 @@ export default function AnnouncementsBoard() {
                                     {tab.label}
                                 </Text>
                             </Pressable>
-                        )
+                        );
                     })}
                 </View>
 
                 {/* LIST */}
                 <FlatList
                     data={filteredAnnouncements}
-                    keyExtractor={(item) => item.id}
+                    keyExtractor={item => item.id}
                     contentContainerStyle={
-                        filteredAnnouncements.length === 0 ? styles.emptyList : undefined
+                        filteredAnnouncements.length === 0
+                            ? styles.emptyList
+                            : undefined
                     }
                     renderItem={({ item }) => (
                         <View style={styles.itemRow}>
                             <View style={styles.itemTextContainer}>
-                                {/* Who + created time */}
                                 <Text style={styles.itemMeta}>
-                                    {item.created_by_name} • {new Date(item.created_at).toLocaleString()}
+                                    {item.created_by_name} •{' '}
+                                    {new Date(
+                                        item.created_at
+                                    ).toLocaleString()}
                                 </Text>
 
-                                {/* Edited line */}
-                                {item.updated_at !== item.created_at && (
-                                    <Text style={styles.itemMeta}>
-                                        (edited • {new Date(item.updated_at).toLocaleString()})
-                                    </Text>
-                                )}
+                                {item.updated_at !==
+                                    item.created_at && (
+                                        <Text style={styles.itemMeta}>
+                                            (edited •{' '}
+                                            {new Date(
+                                                item.updated_at
+                                            ).toLocaleString()}
+                                            )
+                                        </Text>
+                                    )}
 
-                                {/* The actual announcement text */}
-                                <Text style={styles.itemText}>{item.text}</Text>
+                                <Text style={styles.itemText}>
+                                    {item.text}
+                                </Text>
 
-                                {/* Week label */}
                                 {item.week_start && (
                                     <Text style={styles.itemMeta}>
                                         Week of {item.week_start}
                                     </Text>
                                 )}
 
-                                {/* Completed */}
                                 {item.completed && (
-                                    <Text style={styles.itemMeta}>✓ Completed</Text>
+                                    <Text style={styles.itemMeta}>
+                                        ✓ Completed
+                                    </Text>
                                 )}
                             </View>
 
-                            {/* EDIT (creator or parents) */}
-                            {(item.created_by_member_id === myFamilyMemberId ||
+                            {(item.created_by_member_id ===
+                                myFamilyMemberId ||
                                 member?.role === 'MOM' ||
                                 member?.role === 'DAD') && (
                                     <Pressable
                                         style={styles.editBtn}
                                         onPress={() => {
-                                            setEditingItem(item)
-                                            setEditText(item.text)
+                                            setEditingItem(item);
+                                            setEditText(item.text);
                                         }}
                                     >
-                                        <Text style={styles.deleteBtnText}>✎</Text>
+                                        <Text style={styles.deleteBtnText}>
+                                            ✎
+                                        </Text>
                                     </Pressable>
                                 )}
 
@@ -364,7 +439,9 @@ export default function AnnouncementsBoard() {
                         </View>
                     )}
                     ListEmptyComponent={
-                        <Text style={styles.infoText}>{activeTab.emptyText}</Text>
+                        <Text style={styles.infoText}>
+                            {activeTab.emptyText}
+                        </Text>
                     }
                 />
 
@@ -381,11 +458,14 @@ export default function AnnouncementsBoard() {
                     <Pressable
                         style={[
                             styles.addBtn,
-                            (!newText.trim() || createMutation.isPending) &&
+                            (!newText.trim() ||
+                                createMutation.isPending) &&
                             styles.addBtnDisabled,
                         ]}
                         onPress={handleAdd}
-                        disabled={!newText.trim() || createMutation.isPending}
+                        disabled={
+                            !newText.trim() || createMutation.isPending
+                        }
                     >
                         <Text style={styles.addBtnText}>
                             {createMutation.isPending ? '...' : 'Add'}
@@ -397,7 +477,9 @@ export default function AnnouncementsBoard() {
                 {editingItem && (
                     <View style={styles.modalOverlay}>
                         <View style={styles.modalBox}>
-                            <Text style={styles.modalTitle}>Edit Announcement</Text>
+                            <Text style={styles.modalTitle}>
+                                Edit Announcement
+                            </Text>
 
                             <TextInput
                                 style={styles.modalInput}
@@ -407,8 +489,14 @@ export default function AnnouncementsBoard() {
                             />
 
                             <View style={styles.modalButtons}>
-                                <Pressable onPress={() => setEditingItem(null)}>
-                                    <Text style={styles.modalCancel}>Cancel</Text>
+                                <Pressable
+                                    onPress={() =>
+                                        setEditingItem(null)
+                                    }
+                                >
+                                    <Text style={styles.modalCancel}>
+                                        Cancel
+                                    </Text>
                                 </Pressable>
 
                                 <Pressable
@@ -416,38 +504,130 @@ export default function AnnouncementsBoard() {
                                         updateMutation.mutate(
                                             {
                                                 id: editingItem.id,
-                                                updates: { text: editText.trim() },
+                                                updates: {
+                                                    text: editText.trim(),
+                                                },
                                             },
                                             {
-                                                onSuccess: () => setEditingItem(null),
+                                                onSuccess: () =>
+                                                    setEditingItem(
+                                                        null
+                                                    ),
                                                 onError: err =>
-                                                    Alert.alert('Error', (err as Error).message),
+                                                    Alert.alert(
+                                                        'Error',
+                                                        (
+                                                            err as Error
+                                                        ).message
+                                                    ),
                                             }
-                                        )
+                                        );
                                     }}
                                 >
-                                    <Text style={styles.modalSave}>Save</Text>
+                                    <Text style={styles.modalSave}>
+                                        Save
+                                    </Text>
                                 </Pressable>
                             </View>
                         </View>
                     </View>
                 )}
+
+                {/* SORT MENU */}
+                {showSortMenu && (
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.simpleMenu}>
+                            {['newest', 'oldest', 'edited'].map(
+                                option => (
+                                    <Pressable
+                                        key={option}
+                                        style={styles.menuItem}
+                                        onPress={() => {
+                                            setSortBy(option as any);
+                                            setShowSortMenu(false);
+                                        }}
+                                    >
+                                        <Text
+                                            style={
+                                                styles.menuItemText
+                                            }
+                                        >
+                                            {option}
+                                        </Text>
+                                    </Pressable>
+                                )
+                            )}
+                        </View>
+                    </View>
+                )}
+
+                {/* AUTHOR MENU */}
+                {showAuthorMenu && (
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.simpleMenu}>
+                            <Pressable
+                                style={styles.menuItem}
+                                onPress={() => {
+                                    setFilterAuthor('all');
+                                    setShowAuthorMenu(false);
+                                }}
+                            >
+                                <Text style={styles.menuItemText}>
+                                    All
+                                </Text>
+                            </Pressable>
+
+                            {rawMembers.map(m => {
+                                const name =
+                                    m?.nickname ||
+                                    m?.profile?.first_name ||
+                                    m?.name ||
+                                    shortId(m.id);
+
+                                return (
+                                    <Pressable
+                                        key={m.id}
+                                        style={
+                                            styles.menuItem
+                                        }
+                                        onPress={() => {
+                                            setFilterAuthor(
+                                                name
+                                            );
+                                            setShowAuthorMenu(
+                                                false
+                                            );
+                                        }}
+                                    >
+                                        <Text
+                                            style={
+                                                styles.menuItemText
+                                            }
+                                        >
+                                            {name}
+                                        </Text>
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
+                    </View>
+                )}
             </KeyboardAvoidingView>
         </SafeAreaView>
-    )
+    );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 16 },
     screen: {
         flex: 1,
-        backgroundColor: '#F7FBFF',   // SAME as chores
+        backgroundColor: '#F7FBFF',
     },
     headerLeft: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        marginBottom: 12
+        marginBottom: 12,
     },
     iconCircle: {
         width: 32,
@@ -562,6 +742,7 @@ const styles = StyleSheet.create({
     },
     modalCancel: { fontSize: 16, color: '#64748b' },
     modalSave: { fontSize: 16, color: '#2563eb', fontWeight: '700' },
+
     searchContainer: {
         marginBottom: 10,
     },
@@ -573,5 +754,39 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 8,
     },
+    filterRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+    },
 
-})
+    filterBtn: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        backgroundColor: '#eef2ff',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#d1d5db',
+    },
+
+    filterBtnLabel: {
+        fontSize: 14,
+        color: '#1e3a8a',
+    },
+
+    simpleMenu: {
+        backgroundColor: 'white',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 10,
+        width: 200,
+    },
+
+    menuItem: {
+        paddingVertical: 8,
+    },
+
+    menuItemText: {
+        fontSize: 16,
+    },
+});
