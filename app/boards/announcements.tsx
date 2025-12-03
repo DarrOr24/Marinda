@@ -2,6 +2,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 import {
     ActivityIndicator,
@@ -224,176 +226,193 @@ export default function AnnouncementsBoard() {
     // 7) RENDER
     // -----------------------------
     return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.select({ ios: 'padding', android: undefined })}
-        >
-            <View style={styles.headerLeft}>
-                <Pressable
-                    onPress={() => router.push('/boards/announcements-info')}
-                    style={styles.iconCircle}
-                    hitSlop={8}
-                >
-                    <Ionicons
-                        name="information-circle-outline"
-                        size={18}
-                        color="#1e3a8a"
-                    />
-                </Pressable>
-            </View>
-
-            {/* Tabs */}
-            <View style={styles.tabsContainer}>
-                {ANNOUNCEMENT_TABS.map((tab) => {
-                    const isActive = tab.id === activeKind
-                    return (
-                        <Pressable
-                            key={tab.id}
-                            style={[styles.tab, isActive && styles.tabActive]}
-                            onPress={() => {
-                                setActiveKind(tab.id)
-                                setNewText('')
-                            }}
-                        >
-                            <Text
-                                style={[
-                                    styles.tabLabel,
-                                    isActive && styles.tabLabelActive,
-                                ]}
-                            >
-                                {tab.label}
-                            </Text>
-                        </Pressable>
-                    )
-                })}
-            </View>
-
-            {/* LIST */}
-            <FlatList
-                data={filteredAnnouncements}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={
-                    filteredAnnouncements.length === 0 ? styles.emptyList : undefined
-                }
-                renderItem={({ item }) => (
-                    <View style={styles.itemRow}>
-                        <View style={styles.itemTextContainer}>
-                            <Text style={styles.itemMeta}>
-                                {item.created_by_name} •{' '}
-                                {new Date(item.created_at).toLocaleString()}
-                            </Text>
-
-                            <Text style={styles.itemText}>{item.text}</Text>
-
-                            {item.week_start && (
-                                <Text style={styles.itemMeta}>
-                                    Week of {item.week_start}
-                                </Text>
-                            )}
-
-                            {item.completed && (
-                                <Text style={styles.itemMeta}>✓ Completed</Text>
-                            )}
-                        </View>
-
-                        {/* EDIT (creator or parents) */}
-                        {(item.created_by_member_id === myFamilyMemberId ||
-                            member?.role === 'MOM' ||
-                            member?.role === 'DAD') && (
-                                <Pressable
-                                    style={styles.editBtn}
-                                    onPress={() => {
-                                        setEditingItem(item)
-                                        setEditText(item.text)
-                                    }}
-                                >
-                                    <Text style={styles.deleteBtnText}>✎</Text>
-                                </Pressable>
-                            )}
-
-                        <Pressable
-                            style={styles.deleteBtn}
-                            onPress={() => confirmDelete(item)}
-                        >
-                            <Text style={styles.deleteBtnText}>✕</Text>
-                        </Pressable>
-                    </View>
-                )}
-                ListEmptyComponent={
-                    <Text style={styles.infoText}>{activeTab.emptyText}</Text>
-                }
-            />
-
-            {/* ADD INPUT */}
-            <View style={styles.inputBar}>
-                <TextInput
-                    style={styles.input}
-                    placeholder={activeTab.placeholder}
-                    value={newText}
-                    onChangeText={setNewText}
-                    multiline
-                />
-
-                <Pressable
-                    style={[
-                        styles.addBtn,
-                        (!newText.trim() || createMutation.isPending) &&
-                        styles.addBtnDisabled,
-                    ]}
-                    onPress={handleAdd}
-                    disabled={!newText.trim() || createMutation.isPending}
-                >
-                    <Text style={styles.addBtnText}>
-                        {createMutation.isPending ? '...' : 'Add'}
-                    </Text>
-                </Pressable>
-            </View>
-
-            {/* EDIT MODAL */}
-            {editingItem && (
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalBox}>
-                        <Text style={styles.modalTitle}>Edit Announcement</Text>
-
-                        <TextInput
-                            style={styles.modalInput}
-                            multiline
-                            value={editText}
-                            onChangeText={setEditText}
+        <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
+            <KeyboardAvoidingView
+                style={styles.container}
+                behavior={Platform.select({ ios: 'padding', android: undefined })}
+            >
+                <View style={styles.headerLeft}>
+                    <Pressable
+                        onPress={() => router.push('/boards/announcements-info')}
+                        style={styles.iconCircle}
+                        hitSlop={8}
+                    >
+                        <Ionicons
+                            name="information-circle-outline"
+                            size={18}
+                            color="#1e3a8a"
                         />
+                    </Pressable>
+                </View>
 
-                        <View style={styles.modalButtons}>
-                            <Pressable onPress={() => setEditingItem(null)}>
-                                <Text style={styles.modalCancel}>Cancel</Text>
-                            </Pressable>
-
+                {/* Tabs */}
+                <View style={styles.tabsContainer}>
+                    {ANNOUNCEMENT_TABS.map((tab) => {
+                        const isActive = tab.id === activeKind
+                        return (
                             <Pressable
+                                key={tab.id}
+                                style={[styles.tab, isActive && styles.tabActive]}
                                 onPress={() => {
-                                    updateMutation.mutate(
-                                        {
-                                            id: editingItem.id,
-                                            updates: { text: editText.trim() },
-                                        },
-                                        {
-                                            onSuccess: () => setEditingItem(null),
-                                            onError: err =>
-                                                Alert.alert('Error', (err as Error).message),
-                                        }
-                                    )
+                                    setActiveKind(tab.id)
+                                    setNewText('')
                                 }}
                             >
-                                <Text style={styles.modalSave}>Save</Text>
+                                <Text
+                                    style={[
+                                        styles.tabLabel,
+                                        isActive && styles.tabLabelActive,
+                                    ]}
+                                >
+                                    {tab.label}
+                                </Text>
+                            </Pressable>
+                        )
+                    })}
+                </View>
+
+                {/* LIST */}
+                <FlatList
+                    data={filteredAnnouncements}
+                    keyExtractor={(item) => item.id}
+                    contentContainerStyle={
+                        filteredAnnouncements.length === 0 ? styles.emptyList : undefined
+                    }
+                    renderItem={({ item }) => (
+                        <View style={styles.itemRow}>
+                            <View style={styles.itemTextContainer}>
+                                {/* Who + created time */}
+                                <Text style={styles.itemMeta}>
+                                    {item.created_by_name} • {new Date(item.created_at).toLocaleString()}
+                                </Text>
+
+                                {/* Edited line */}
+                                {item.updated_at !== item.created_at && (
+                                    <Text style={styles.itemMeta}>
+                                        (edited • {new Date(item.updated_at).toLocaleString()})
+                                    </Text>
+                                )}
+
+                                {/* The actual announcement text */}
+                                <Text style={styles.itemText}>{item.text}</Text>
+
+                                {/* Week label */}
+                                {item.week_start && (
+                                    <Text style={styles.itemMeta}>
+                                        Week of {item.week_start}
+                                    </Text>
+                                )}
+
+                                {/* Completed */}
+                                {item.completed && (
+                                    <Text style={styles.itemMeta}>✓ Completed</Text>
+                                )}
+                            </View>
+
+
+                            {/* EDIT (creator or parents) */}
+                            {(item.created_by_member_id === myFamilyMemberId ||
+                                member?.role === 'MOM' ||
+                                member?.role === 'DAD') && (
+                                    <Pressable
+                                        style={styles.editBtn}
+                                        onPress={() => {
+                                            setEditingItem(item)
+                                            setEditText(item.text)
+                                        }}
+                                    >
+                                        <Text style={styles.deleteBtnText}>✎</Text>
+                                    </Pressable>
+                                )}
+
+                            <Pressable
+                                style={styles.deleteBtn}
+                                onPress={() => confirmDelete(item)}
+                            >
+                                <Text style={styles.deleteBtnText}>✕</Text>
                             </Pressable>
                         </View>
-                    </View>
+                    )}
+                    ListEmptyComponent={
+                        <Text style={styles.infoText}>{activeTab.emptyText}</Text>
+                    }
+                />
+
+                {/* ADD INPUT */}
+                <View style={styles.inputBar}>
+                    <TextInput
+                        style={styles.input}
+                        placeholder={activeTab.placeholder}
+                        value={newText}
+                        onChangeText={setNewText}
+                        multiline
+                    />
+
+                    <Pressable
+                        style={[
+                            styles.addBtn,
+                            (!newText.trim() || createMutation.isPending) &&
+                            styles.addBtnDisabled,
+                        ]}
+                        onPress={handleAdd}
+                        disabled={!newText.trim() || createMutation.isPending}
+                    >
+                        <Text style={styles.addBtnText}>
+                            {createMutation.isPending ? '...' : 'Add'}
+                        </Text>
+                    </Pressable>
                 </View>
-            )}
-        </KeyboardAvoidingView>
+
+                {/* EDIT MODAL */}
+                {editingItem && (
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalBox}>
+                            <Text style={styles.modalTitle}>Edit Announcement</Text>
+
+                            <TextInput
+                                style={styles.modalInput}
+                                multiline
+                                value={editText}
+                                onChangeText={setEditText}
+                            />
+
+                            <View style={styles.modalButtons}>
+                                <Pressable onPress={() => setEditingItem(null)}>
+                                    <Text style={styles.modalCancel}>Cancel</Text>
+                                </Pressable>
+
+                                <Pressable
+                                    onPress={() => {
+                                        updateMutation.mutate(
+                                            {
+                                                id: editingItem.id,
+                                                updates: { text: editText.trim() },
+                                            },
+                                            {
+                                                onSuccess: () => setEditingItem(null),
+                                                onError: err =>
+                                                    Alert.alert('Error', (err as Error).message),
+                                            }
+                                        )
+                                    }}
+                                >
+                                    <Text style={styles.modalSave}>Save</Text>
+                                </Pressable>
+                            </View>
+                        </View>
+                    </View>
+                )}
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     )
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 16 },
+    screen: {
+        flex: 1,
+        backgroundColor: '#F7FBFF',   // SAME as chores
+    },
     headerLeft: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -420,6 +439,7 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         gap: 8,
         marginBottom: 12,
+        marginTop: 12,
     },
     tab: {
         paddingHorizontal: 12,

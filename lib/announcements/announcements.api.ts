@@ -98,7 +98,10 @@ export async function updateAnnouncement(
 
     const { data, error } = await supabase
         .from('announcement_items')
-        .update(patch)
+        .update({
+            ...patch,
+            updated_at: new Date().toISOString(), // 🔥 force timestamp refresh
+        })
         .eq('id', id)
         .select()
         .single();
