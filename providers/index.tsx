@@ -13,6 +13,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 
 import AuthProvider from '@/providers/auth-provider'
 import { SignUpFlowProvider } from '@/providers/signup-flow-provider'
+import { ToastProvider } from '@/providers/toast-provider'
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,7 +55,9 @@ export default function Providers({ children }: PropsWithChildren) {
         <QueryClientProvider client={queryClient}>
           <SignUpFlowProvider>
             <AuthProvider>
-              {children}
+              <ToastProvider>
+                {children}
+              </ToastProvider>
             </AuthProvider>
           </SignUpFlowProvider>
         </QueryClientProvider>
