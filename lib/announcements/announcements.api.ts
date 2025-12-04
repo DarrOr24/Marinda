@@ -133,3 +133,54 @@ export async function toggleAnnouncementCompleted(id: string, completed: boolean
     if (error) throw new Error(error.message);
     return mapRow(data);
 }
+
+// -----------------------------
+// Fetch tabs
+// -----------------------------
+export async function fetchAnnouncementTabs(familyId: string) {
+    const { data, error } = await supabase
+        .from('announcement_tabs')
+        .select('*')
+        .eq('family_id', familyId)
+        .order('sort_order', { ascending: true })
+        .order('label', { ascending: true });
+
+    if (error) throw new Error(error.message);
+
+    return (data ?? []).map(row => ({
+        id: row.id,
+        label: row.label,
+        placeholder: row.placeholder ?? '',
+        emptyText: `No ${row.label.toLowerCase()} yet.`, // default
+    }));
+}
+
+// -----------------------------
+// Create tab
+// -----------------------------
+export async function createAnnouncementTab(params: {
+    familyId: string;
+    label: string;
+    placeholder?: string;
+}) {
+    const { familyId, label, placeholder } = params;
+
+    const { data, error } = await supabase
+        .from('announcement_tabs')
+        .insert({
+            family_id: familyId,
+            label,
+            placeholder: placeholder ?? null,
+        })
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+
+    return {
+        id: data.id,
+        label: data.label,
+        placeholder: data.placeholder ?? '',
+        emptyText: `No ${data.label.toLowerCase()} yet.`,
+    };
+}

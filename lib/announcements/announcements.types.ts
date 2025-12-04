@@ -1,12 +1,6 @@
 // lib/announcements/announcements.types.ts
 
-export type AnnouncementKind =
-    | 'sentence'   // sentence of the week
-    | 'good'       // something good
-    | 'kind'       // something kind I did
-    | 'reminder'   // reminders (tests, shows, competitions, signatures)
-    | 'free'      // free-flow sticky board
-    | 'requests';
+export type AnnouncementKind = string;
 
 export type AnnouncementCategory =
     | 'competitions'
@@ -26,17 +20,21 @@ export type AnnouncementItem = {
 
     text: string;
 
-    week_start: string | null;       // 'YYYY-MM-DD'
+    week_start: string | null;
     completed: boolean;
 
     created_at: string;
     updated_at: string;
 
-    // Optional helper fields (frontend only)
+    // frontend helper
     created_by_name?: string;
 };
 
-export const ANNOUNCEMENT_TABS = [
+// -------------------------------
+// DEFAULT tabs (built into code)
+// -------------------------------
+
+export const DEFAULT_ANNOUNCEMENT_TABS = [
     {
         id: 'reminder',
         label: 'Reminders',
@@ -73,19 +71,16 @@ export const ANNOUNCEMENT_TABS = [
         emptyText: 'No requests yet.',
         placeholder: 'Write a new request...',
     },
-] as const
+] as const;
 
-export type AnnouncementTabId =
-    | 'reminder'
-    | 'sentence'
-    | 'good'
-    | 'kind'
-    | 'free'
-    | 'requests';
+export type AnnouncementTabId = string;
 
+// -------------------------------
+// NEW: DB-backed custom tab type
+// -------------------------------
 export type AnnouncementTab = {
-    id: AnnouncementTabId;
+    id: string;           // DB id OR default id
     label: string;
-    emptyText: string;
     placeholder: string;
-}
+    emptyText: string;
+};

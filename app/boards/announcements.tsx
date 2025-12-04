@@ -2,8 +2,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
 import {
     ActivityIndicator,
     Alert,
@@ -16,6 +14,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useFamily } from '@/lib/families/families.hooks';
@@ -23,44 +22,40 @@ import { useSubscribeTableByFamily } from '@/lib/families/families.realtime';
 
 import {
     useCreateAnnouncement,
+    useCreateAnnouncementTab,
     useDeleteAnnouncement,
     useFamilyAnnouncements,
+    useFamilyAnnouncementTabs,
     useUpdateAnnouncement,
 } from '@/lib/announcements/announcements.hooks';
 import { useAnnouncementsRealtime } from '@/lib/announcements/announcements.realtime';
 
 import {
-    ANNOUNCEMENT_TABS,
+    DEFAULT_ANNOUNCEMENT_TABS,
     type AnnouncementItem,
-    type AnnouncementTabId,
+    type AnnouncementTab,
 } from '@/lib/announcements/announcements.types';
 
 // Helper
-const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 8)}` : '—');
+const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 6)}` : '—');
 
 export default function AnnouncementsBoard() {
     const router = useRouter();
-
     const { activeFamilyId, member, family, members } = useAuthContext() as any;
     const familyId = activeFamilyId ?? undefined;
 
     const [search, setSearch] = useState('');
-    const [sortBy, setSortBy] =
-        useState<'newest' | 'oldest' | 'edited'>('newest');
-
+    const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'edited'>('newest');
     const [filterAuthor, setFilterAuthor] = useState<string>('all');
 
     const [showSortMenu, setShowSortMenu] = useState(false);
     const [showAuthorMenu, setShowAuthorMenu] = useState(false);
 
     // -----------------------------
-    // Load Members
+    // Load members
     // -----------------------------
     const { members: membersQuery } = useFamily(familyId);
-    useSubscribeTableByFamily('family_members', familyId, [
-        'family-members',
-        familyId,
-    ]);
+    useSubscribeTableByFamily('family_members', familyId, ['family-members', familyId]);
 
     const rawMembers: any[] = useMemo(
         () =>
@@ -74,22 +69,17 @@ export default function AnnouncementsBoard() {
 
     const nameForId = useMemo(() => {
         const map: Record<string, string> = {};
-
         for (const m of rawMembers) {
             const id = m?.id ?? m?.member_id;
             if (!id) continue;
-
             const name =
                 m?.nickname ||
                 m?.profile?.first_name ||
                 m?.first_name ||
                 m?.profile?.name ||
-                m?.name ||
-                '';
-
+                m?.name;
             map[id] = name || shortId(id);
         }
-
         return (id?: string) => (id ? map[id] || shortId(id) : '—');
     }, [rawMembers]);
 
@@ -97,20 +87,17 @@ export default function AnnouncementsBoard() {
         member?.profile?.id || member?.user_id || member?.profile_id;
 
     const myFamilyMemberId: string | undefined = useMemo(() => {
-        if (member?.id) return member.id as string;
-
         const me = rawMembers.find(
             (m: any) =>
                 m?.user_id === authUserId ||
                 m?.profile?.id === authUserId ||
                 m?.profile_id === authUserId
         );
-
         return me?.id as string | undefined;
     }, [member, rawMembers, authUserId]);
 
     // -----------------------------
-    // Announcements
+    // Load announcements + realtime
     // -----------------------------
     const { data: announcements, isLoading, error } =
         useFamilyAnnouncements(familyId);
@@ -122,22 +109,37 @@ export default function AnnouncementsBoard() {
     const updateMutation = useUpdateAnnouncement(familyId);
 
     // -----------------------------
-    // Tabs + Editing
+    // Load custom tabs (React Query)
     // -----------------------------
-    const [activeKind, setActiveKind] = useState<AnnouncementTabId>('free');
+    const { data: customTabs = [] } = useFamilyAnnouncementTabs(familyId);
+    const createTabMutation = useCreateAnnouncementTab(familyId);
+
+    const ALL_TABS: AnnouncementTab[] = [
+        ...DEFAULT_ANNOUNCEMENT_TABS,
+        ...customTabs,
+    ];
+
+    const [activeKind, setActiveKind] = useState<string>('free');
+    const activeTab =
+        ALL_TABS.find(t => t.id === activeKind) ??
+        ALL_TABS[ALL_TABS.length - 1];
+
+    // New tab modal state
+    const [showAddTabModal, setShowAddTabModal] = useState(false);
+    const [newTabLabel, setNewTabLabel] = useState('');
+    const [newTabPlaceholder, setNewTabPlaceholder] = useState('');
+
+    // -----------------------------
+    // UI: new announcement input
+    // -----------------------------
     const [newText, setNewText] = useState('');
 
-    const [editingItem, setEditingItem] = useState<AnnouncementItem | null>(
-        null
-    );
+    // Editing modal
+    const [editingItem, setEditingItem] = useState<AnnouncementItem | null>(null);
     const [editText, setEditText] = useState('');
 
-    const activeTab =
-        ANNOUNCEMENT_TABS.find(t => t.id === activeKind) ??
-        ANNOUNCEMENT_TABS[ANNOUNCEMENT_TABS.length - 1];
-
     // ---------------------------------------------------------
-    // 🚀 GLOBAL SEARCH LOGIC
+    // GLOBAL SEARCH
     // ---------------------------------------------------------
     const isSearching = search.trim().length > 0;
 
@@ -148,17 +150,12 @@ export default function AnnouncementsBoard() {
                 created_by_name: nameForId(a.created_by_member_id),
             }))
             .filter(a => {
-                // 🔍 GLOBAL SEARCH mode (ignore tab)
                 if (isSearching) {
                     return (
                         a.text.toLowerCase().includes(search.toLowerCase()) ||
-                        a.created_by_name
-                            .toLowerCase()
-                            .includes(search.toLowerCase())
+                        a.created_by_name.toLowerCase().includes(search.toLowerCase())
                     );
                 }
-
-                // Normal tab filtering
                 return a.kind === activeKind;
             });
 
@@ -169,7 +166,7 @@ export default function AnnouncementsBoard() {
         );
     }
 
-    // SORTING
+    // SORT
     if (sortBy === 'newest') {
         filteredAnnouncements.sort(
             (a, b) =>
@@ -191,7 +188,7 @@ export default function AnnouncementsBoard() {
     }
 
     // -----------------------------
-    // Add Announcement
+    // Add announcement
     // -----------------------------
     function handleAdd() {
         if (!familyId || !myFamilyMemberId) return;
@@ -246,7 +243,7 @@ export default function AnnouncementsBoard() {
     }
 
     // -----------------------------
-    // UI states
+    // Render states
     // -----------------------------
     if (!familyId) {
         return (
@@ -275,7 +272,7 @@ export default function AnnouncementsBoard() {
     }
 
     // -----------------------------
-    // RENDER
+    // MAIN RENDER
     // -----------------------------
     return (
         <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
@@ -283,19 +280,14 @@ export default function AnnouncementsBoard() {
                 style={styles.container}
                 behavior={Platform.select({ ios: 'padding', android: undefined })}
             >
-                <View style={styles.headerLeft}>
+                {/* TOP ROW ICON RIGHT */}
+                <View style={styles.headerRow}>
+                    <View style={{ flex: 1 }} />
                     <Pressable
-                        onPress={() =>
-                            router.push('/boards/announcements-info')
-                        }
+                        onPress={() => router.push('/boards/announcements-info')}
                         style={styles.iconCircle}
-                        hitSlop={8}
                     >
-                        <Ionicons
-                            name="information-circle-outline"
-                            size={18}
-                            color="#1e3a8a"
-                        />
+                        <Ionicons name="information-circle-outline" size={20} color="#1e3a8a" />
                     </Pressable>
                 </View>
 
@@ -315,9 +307,7 @@ export default function AnnouncementsBoard() {
                         style={styles.filterBtn}
                         onPress={() => setShowSortMenu(true)}
                     >
-                        <Text style={styles.filterBtnLabel}>
-                            Sort: {sortBy}
-                        </Text>
+                        <Text style={styles.filterBtnLabel}>Sort: {sortBy}</Text>
                     </Pressable>
 
                     <Pressable
@@ -325,27 +315,19 @@ export default function AnnouncementsBoard() {
                         onPress={() => setShowAuthorMenu(true)}
                     >
                         <Text style={styles.filterBtnLabel}>
-                            By:{' '}
-                            {filterAuthor === 'all'
-                                ? 'All'
-                                : filterAuthor}
+                            By: {filterAuthor === 'all' ? 'All' : filterAuthor}
                         </Text>
                     </Pressable>
                 </View>
 
-                {/* TABS */}
+                {/* TABS ROW */}
                 <View style={styles.tabsContainer}>
-                    {ANNOUNCEMENT_TABS.map(tab => {
-                        const isActive =
-                            !isSearching && tab.id === activeKind;
-
+                    {ALL_TABS.map(tab => {
+                        const isActive = !isSearching && tab.id === activeKind;
                         return (
                             <Pressable
                                 key={tab.id}
-                                style={[
-                                    styles.tab,
-                                    isActive && styles.tabActive,
-                                ]}
+                                style={[styles.tab, isActive && styles.tabActive]}
                                 onPress={() => {
                                     if (!isSearching) {
                                         setActiveKind(tab.id);
@@ -353,17 +335,24 @@ export default function AnnouncementsBoard() {
                                     }
                                 }}
                             >
-                                <Text
-                                    style={[
-                                        styles.tabLabel,
-                                        isActive && styles.tabLabelActive,
-                                    ]}
-                                >
+                                <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
                                     {tab.label}
                                 </Text>
                             </Pressable>
                         );
                     })}
+
+                    {/* ADD NEW TAB */}
+                    <Pressable
+                        style={styles.addTabBtn}
+                        onPress={() => {
+                            setNewTabLabel('');
+                            setNewTabPlaceholder('');
+                            setShowAddTabModal(true);
+                        }}
+                    >
+                        <Text style={styles.addTabBtnText}>+ Add Tab</Text>
+                    </Pressable>
                 </View>
 
                 {/* LIST */}
@@ -371,50 +360,31 @@ export default function AnnouncementsBoard() {
                     data={filteredAnnouncements}
                     keyExtractor={item => item.id}
                     contentContainerStyle={
-                        filteredAnnouncements.length === 0
-                            ? styles.emptyList
-                            : undefined
+                        filteredAnnouncements.length === 0 ? styles.emptyList : undefined
                     }
                     renderItem={({ item }) => (
                         <View style={styles.itemRow}>
                             <View style={styles.itemTextContainer}>
                                 <Text style={styles.itemMeta}>
                                     {item.created_by_name} •{' '}
-                                    {new Date(
-                                        item.created_at
-                                    ).toLocaleString()}
+                                    {new Date(item.created_at).toLocaleString()}
                                 </Text>
 
-                                {item.updated_at !==
-                                    item.created_at && (
-                                        <Text style={styles.itemMeta}>
-                                            (edited •{' '}
-                                            {new Date(
-                                                item.updated_at
-                                            ).toLocaleString()}
-                                            )
-                                        </Text>
-                                    )}
-
-                                <Text style={styles.itemText}>
-                                    {item.text}
-                                </Text>
-
-                                {item.week_start && (
+                                {item.created_at !== item.updated_at && (
                                     <Text style={styles.itemMeta}>
-                                        Week of {item.week_start}
+                                        (edited • {new Date(item.updated_at).toLocaleString()})
                                     </Text>
                                 )}
 
+                                <Text style={styles.itemText}>{item.text}</Text>
+
                                 {item.completed && (
-                                    <Text style={styles.itemMeta}>
-                                        ✓ Completed
-                                    </Text>
+                                    <Text style={styles.itemMeta}>✓ Completed</Text>
                                 )}
                             </View>
 
-                            {(item.created_by_member_id ===
-                                myFamilyMemberId ||
+                            {/* edit */}
+                            {(item.created_by_member_id === myFamilyMemberId ||
                                 member?.role === 'MOM' ||
                                 member?.role === 'DAD') && (
                                     <Pressable
@@ -424,12 +394,11 @@ export default function AnnouncementsBoard() {
                                             setEditText(item.text);
                                         }}
                                     >
-                                        <Text style={styles.deleteBtnText}>
-                                            ✎
-                                        </Text>
+                                        <Text style={styles.deleteBtnText}>✎</Text>
                                     </Pressable>
                                 )}
 
+                            {/* delete */}
                             <Pressable
                                 style={styles.deleteBtn}
                                 onPress={() => confirmDelete(item)}
@@ -439,9 +408,7 @@ export default function AnnouncementsBoard() {
                         </View>
                     )}
                     ListEmptyComponent={
-                        <Text style={styles.infoText}>
-                            {activeTab.emptyText}
-                        </Text>
+                        <Text style={styles.infoText}>{activeTab.emptyText}</Text>
                     }
                 />
 
@@ -458,14 +425,10 @@ export default function AnnouncementsBoard() {
                     <Pressable
                         style={[
                             styles.addBtn,
-                            (!newText.trim() ||
-                                createMutation.isPending) &&
-                            styles.addBtnDisabled,
+                            (!newText.trim() || createMutation.isPending) && styles.addBtnDisabled,
                         ]}
                         onPress={handleAdd}
-                        disabled={
-                            !newText.trim() || createMutation.isPending
-                        }
+                        disabled={!newText.trim() || createMutation.isPending}
                     >
                         <Text style={styles.addBtnText}>
                             {createMutation.isPending ? '...' : 'Add'}
@@ -477,9 +440,7 @@ export default function AnnouncementsBoard() {
                 {editingItem && (
                     <View style={styles.modalOverlay}>
                         <View style={styles.modalBox}>
-                            <Text style={styles.modalTitle}>
-                                Edit Announcement
-                            </Text>
+                            <Text style={styles.modalTitle}>Edit Announcement</Text>
 
                             <TextInput
                                 style={styles.modalInput}
@@ -489,14 +450,8 @@ export default function AnnouncementsBoard() {
                             />
 
                             <View style={styles.modalButtons}>
-                                <Pressable
-                                    onPress={() =>
-                                        setEditingItem(null)
-                                    }
-                                >
-                                    <Text style={styles.modalCancel}>
-                                        Cancel
-                                    </Text>
+                                <Pressable onPress={() => setEditingItem(null)}>
+                                    <Text style={styles.modalCancel}>Cancel</Text>
                                 </Pressable>
 
                                 <Pressable
@@ -504,28 +459,72 @@ export default function AnnouncementsBoard() {
                                         updateMutation.mutate(
                                             {
                                                 id: editingItem.id,
-                                                updates: {
-                                                    text: editText.trim(),
-                                                },
+                                                updates: { text: editText.trim() },
                                             },
                                             {
-                                                onSuccess: () =>
-                                                    setEditingItem(
-                                                        null
-                                                    ),
+                                                onSuccess: () => setEditingItem(null),
                                                 onError: err =>
-                                                    Alert.alert(
-                                                        'Error',
-                                                        (
-                                                            err as Error
-                                                        ).message
-                                                    ),
+                                                    Alert.alert('Error', (err as Error).message),
+                                            }
+                                        );
+                                    }}
+                                >
+                                    <Text style={styles.modalSave}>Save</Text>
+                                </Pressable>
+                            </View>
+                        </View>
+                    </View>
+                )}
+
+                {/* ADD TAB MODAL */}
+                {showAddTabModal && (
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalBox}>
+                            <Text style={styles.modalTitle}>Create New Tab</Text>
+
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder="Tab name (e.g., Holidays)"
+                                value={newTabLabel}
+                                onChangeText={setNewTabLabel}
+                            />
+
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder="Placeholder (optional)"
+                                value={newTabPlaceholder}
+                                onChangeText={setNewTabPlaceholder}
+                            />
+
+                            <View style={styles.modalButtons}>
+                                <Pressable onPress={() => setShowAddTabModal(false)}>
+                                    <Text style={styles.modalCancel}>Cancel</Text>
+                                </Pressable>
+
+                                <Pressable
+                                    onPress={() => {
+                                        const trimmed = newTabLabel.trim();
+                                        if (!trimmed) return;
+
+                                        createTabMutation.mutate(
+                                            {
+                                                familyId: familyId!,
+                                                label: trimmed,
+                                                placeholder: newTabPlaceholder.trim() || undefined,
+                                            },
+                                            {
+                                                onSuccess: newTab => {
+                                                    setShowAddTabModal(false);
+                                                    setActiveKind(newTab.id);
+                                                },
+                                                onError: err =>
+                                                    Alert.alert('Error', err.message),
                                             }
                                         );
                                     }}
                                 >
                                     <Text style={styles.modalSave}>
-                                        Save
+                                        {createTabMutation.isPending ? '...' : 'Create'}
                                     </Text>
                                 </Pressable>
                             </View>
@@ -537,26 +536,18 @@ export default function AnnouncementsBoard() {
                 {showSortMenu && (
                     <View style={styles.modalOverlay}>
                         <View style={styles.simpleMenu}>
-                            {['newest', 'oldest', 'edited'].map(
-                                option => (
-                                    <Pressable
-                                        key={option}
-                                        style={styles.menuItem}
-                                        onPress={() => {
-                                            setSortBy(option as any);
-                                            setShowSortMenu(false);
-                                        }}
-                                    >
-                                        <Text
-                                            style={
-                                                styles.menuItemText
-                                            }
-                                        >
-                                            {option}
-                                        </Text>
-                                    </Pressable>
-                                )
-                            )}
+                            {['newest', 'oldest', 'edited'].map(option => (
+                                <Pressable
+                                    key={option}
+                                    style={styles.menuItem}
+                                    onPress={() => {
+                                        setSortBy(option as any);
+                                        setShowSortMenu(false);
+                                    }}
+                                >
+                                    <Text style={styles.menuItemText}>{option}</Text>
+                                </Pressable>
+                            ))}
                         </View>
                     </View>
                 )}
@@ -572,9 +563,7 @@ export default function AnnouncementsBoard() {
                                     setShowAuthorMenu(false);
                                 }}
                             >
-                                <Text style={styles.menuItemText}>
-                                    All
-                                </Text>
+                                <Text style={styles.menuItemText}>All</Text>
                             </Pressable>
 
                             {rawMembers.map(m => {
@@ -587,25 +576,13 @@ export default function AnnouncementsBoard() {
                                 return (
                                     <Pressable
                                         key={m.id}
-                                        style={
-                                            styles.menuItem
-                                        }
+                                        style={styles.menuItem}
                                         onPress={() => {
-                                            setFilterAuthor(
-                                                name
-                                            );
-                                            setShowAuthorMenu(
-                                                false
-                                            );
+                                            setFilterAuthor(name);
+                                            setShowAuthorMenu(false);
                                         }}
                                     >
-                                        <Text
-                                            style={
-                                                styles.menuItemText
-                                            }
-                                        >
-                                            {name}
-                                        </Text>
+                                        <Text style={styles.menuItemText}>{name}</Text>
                                     </Pressable>
                                 );
                             })}
@@ -617,18 +594,30 @@ export default function AnnouncementsBoard() {
     );
 }
 
+/* -------------------------
+    STYLES
+--------------------------*/
+
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 16 },
+
     screen: {
         flex: 1,
         backgroundColor: '#F7FBFF',
     },
-    headerLeft: {
+
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    emptyList: { flexGrow: 1, justifyContent: 'center' },
+    infoText: { fontSize: 16, textAlign: 'center', opacity: 0.7 },
+    errorText: { fontSize: 16, textAlign: 'center', color: 'red' },
+
+    headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        justifyContent: 'flex-end',
         marginBottom: 12,
     },
+
     iconCircle: {
         width: 32,
         height: 32,
@@ -640,17 +629,45 @@ const styles = StyleSheet.create({
         borderColor: '#e5e7eb',
     },
 
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    emptyList: { flexGrow: 1, justifyContent: 'center' },
-    infoText: { fontSize: 16, textAlign: 'center', opacity: 0.7 },
-    errorText: { fontSize: 16, textAlign: 'center', color: 'red' },
+    searchContainer: {
+        marginBottom: 10,
+    },
+    searchInput: {
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+
+    filterRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+    },
+
+    filterBtn: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        backgroundColor: '#eef2ff',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#d1d5db',
+    },
+    filterBtnLabel: {
+        fontSize: 14,
+        color: '#1e3a8a',
+    },
 
     tabsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 8,
         marginBottom: 12,
+        alignItems: 'center',
     },
+
     tab: {
         paddingHorizontal: 12,
         paddingVertical: 6,
@@ -665,6 +682,20 @@ const styles = StyleSheet.create({
     },
     tabLabel: { fontSize: 14, color: '#4b5563' },
     tabLabelActive: { color: 'white', fontWeight: '600' },
+
+    addTabBtn: {
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+        borderRadius: 999,
+        backgroundColor: '#e5e7eb',
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: '#ccc',
+    },
+    addTabBtnText: {
+        fontSize: 14,
+        color: '#1f2937',
+        fontWeight: '500',
+    },
 
     itemRow: {
         flexDirection: 'row',
@@ -698,6 +729,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 8,
         marginBottom: 8,
+        textAlignVertical: 'top',
     },
     addBtn: {
         alignSelf: 'flex-end',
@@ -718,6 +750,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.35)',
         justifyContent: 'center',
         alignItems: 'center',
+        zIndex: 20,
     },
     modalBox: {
         width: '85%',
@@ -727,52 +760,22 @@ const styles = StyleSheet.create({
     },
     modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
     modalInput: {
-        minHeight: 80,
+        minHeight: 40,
         borderWidth: 1,
         borderColor: '#ccc',
         borderRadius: 8,
         padding: 10,
         textAlignVertical: 'top',
-        marginBottom: 16,
+        marginBottom: 12,
     },
     modalButtons: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
         gap: 20,
+        marginTop: 8,
     },
     modalCancel: { fontSize: 16, color: '#64748b' },
     modalSave: { fontSize: 16, color: '#2563eb', fontWeight: '700' },
-
-    searchContainer: {
-        marginBottom: 10,
-    },
-    searchInput: {
-        backgroundColor: '#fff',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#ddd',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-    },
-    filterRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 12,
-    },
-
-    filterBtn: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        backgroundColor: '#eef2ff',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#d1d5db',
-    },
-
-    filterBtnLabel: {
-        fontSize: 14,
-        color: '#1e3a8a',
-    },
 
     simpleMenu: {
         backgroundColor: 'white',
@@ -781,11 +784,9 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         width: 200,
     },
-
     menuItem: {
         paddingVertical: 8,
     },
-
     menuItemText: {
         fontSize: 16,
     },

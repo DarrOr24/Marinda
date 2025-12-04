@@ -2,8 +2,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
     addAnnouncement,
+    createAnnouncementTab,
     deleteAnnouncement,
     fetchAnnouncements,
+    fetchAnnouncementTabs,
     updateAnnouncement
 } from './announcements.api'
 import type { AnnouncementItem } from './announcements.types'
@@ -60,4 +62,34 @@ export function useDeleteAnnouncement(familyId?: string) {
             qc.invalidateQueries({ queryKey: announcementsKey(familyId), refetchType: 'active' })
         },
     })
+}
+
+// -----------------------------
+// Tabs query
+// -----------------------------
+const tabsKey = (familyId?: string) =>
+    ['announcement-tabs', familyId ?? null] as const;
+
+export function useFamilyAnnouncementTabs(familyId?: string) {
+    return useQuery({
+        queryKey: tabsKey(familyId),
+        queryFn: () => fetchAnnouncementTabs(familyId!),
+        enabled: !!familyId,
+    });
+}
+
+// -----------------------------
+// Create tab
+// -----------------------------
+export function useCreateAnnouncementTab(familyId?: string) {
+    const qc = useQueryClient();
+
+    return useMutation({
+        mutationFn: (args: Parameters<typeof createAnnouncementTab>[0]) =>
+            createAnnouncementTab(args),
+
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: tabsKey(familyId) });
+        },
+    });
 }
