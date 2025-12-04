@@ -29,7 +29,8 @@ import {
     useWishlist,
 } from "@/lib/wishlist/wishlist.hooks";
 import * as ImagePicker from 'expo-image-picker';
-import { Image } from 'react-native';
+import { Image, Linking } from 'react-native';
+
 
 
 const POINTS_PER_DOLLAR = 10;
@@ -307,6 +308,24 @@ export default function WishList() {
                                     {item.note}
                                 </Text>
                             )}
+
+                            {/* LINK DISPLAY */}
+                            {item.link && (
+                                <Text
+                                    style={styles.cardLink}
+                                    numberOfLines={1}
+                                    onPress={() => {
+                                        const url = item.link!.startsWith('http')
+                                            ? item.link!
+                                            : `https://${item.link!}`;
+                                        Linking.openURL(url);
+                                    }}
+                                >
+                                    {item.link}
+                                </Text>
+                            )}
+
+
 
                             <View style={styles.cardActions}>
                                 {/* EDIT */}
@@ -760,4 +779,11 @@ const styles = StyleSheet.create({
         marginTop: 10,
         resizeMode: 'cover',
     },
+    cardLink: {
+        fontSize: 13,
+        color: "#2563eb",
+        marginTop: 4,
+        textDecorationLine: "underline",
+    },
+
 });
