@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   switcherItem: {
-    paddingBlockStart: 8,
+    paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 8,
   },
@@ -326,6 +326,7 @@ const styles = StyleSheet.create({
     color: '#334155',
     fontWeight: '600',
     flexShrink: 1,
+    lineHeight: 16,
   },
   switcherRow: {
     flexDirection: 'row',
