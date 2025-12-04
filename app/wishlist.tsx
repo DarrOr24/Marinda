@@ -122,6 +122,8 @@ export default function WishList() {
                         title: trimmedTitle,
                         price: parseFloat(newPrice) || null,
                         note: newNote.trim() || null,
+                        link: newLink.trim() || null,
+                        imageUri: newImageUri || null,
                     },
                 },
                 {
@@ -131,6 +133,7 @@ export default function WishList() {
                 }
             );
         }
+
         // --- ADD MODE ---
         else {
             addItem.mutate({
@@ -138,11 +141,12 @@ export default function WishList() {
                 memberId: effectiveMemberId!,
                 title: trimmedTitle,
                 price: parseFloat(newPrice) || null,
-                link: null,
+                link: newLink.trim() || null,
                 note: newNote.trim() || null,
-                imageUri: null,
+                imageUri: newImageUri || null,
             });
         }
+
 
 
         setShowAddModal(false);
