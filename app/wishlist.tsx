@@ -32,7 +32,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'react-native';
 
 
-const POINTS_PER_DOLLAR = 20;
+const POINTS_PER_DOLLAR = 10;
 
 export default function WishList() {
     const { activeFamilyId, member } = useAuthContext() as any;
@@ -143,6 +143,7 @@ export default function WishList() {
                 imageUri: null,
             });
         }
+
 
         setShowAddModal(false);
         setNewTitle("");
@@ -410,7 +411,7 @@ export default function WishList() {
                         style={styles.input}
                     />
                     <Text style={styles.previewText}>
-                        ≈ {previewPoints} points (20 pts = $1)
+                        ≈ {previewPoints} points ({POINTS_PER_DOLLAR} pts = $1)
                     </Text>
                     <TextInput
                         placeholder="Note (optional)"
