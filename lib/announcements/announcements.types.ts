@@ -5,7 +5,8 @@ export type AnnouncementKind =
     | 'good'       // something good
     | 'kind'       // something kind I did
     | 'reminder'   // reminders (tests, shows, competitions, signatures)
-    | 'free';      // free-flow sticky board
+    | 'free'      // free-flow sticky board
+    | 'requests';
 
 export type AnnouncementCategory =
     | 'competitions'
@@ -66,6 +67,12 @@ export const ANNOUNCEMENT_TABS = [
         emptyText: 'No notes yet. Add one below.',
         placeholder: 'Write a new note...',
     },
+    {
+        id: 'requests',
+        label: 'Requests',
+        emptyText: 'No requests yet.',
+        placeholder: 'Write a new request...',
+    },
 ] as const
 
 export type AnnouncementTabId =
@@ -74,6 +81,7 @@ export type AnnouncementTabId =
     | 'good'
     | 'kind'
     | 'free'
+    | 'requests';
 
 export type AnnouncementTab = {
     id: AnnouncementTabId;
