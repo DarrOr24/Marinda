@@ -2,7 +2,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuthContext } from '@/hooks/use-auth-context'
-import { fetchFamily, fetchFamilyMembers, rpcCreateFamily, rpcJoinFamily } from '@/lib/families/families.api'
+import {
+  fetchFamily,
+  fetchFamilyMembers,
+  removeFamilyMember,
+  rotateFamilyCode,
+  rpcCreateFamily,
+  rpcJoinFamily,
+  updateMemberRole,
+} from '@/lib/families/families.api'
 import { Role } from './families.types'
 
 
@@ -64,4 +72,50 @@ export function useFamily(familyId: string | undefined) {
   })
 
   return { family, members }
+}
+
+export function useUpdateMemberRole(familyId?: string) {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ memberId, role }: { memberId: string; role: Role }) =>
+      updateMemberRole(memberId, role),
+    onSuccess: () => {
+      if (familyId) {
+        qc.invalidateQueries({ queryKey: ['family-members', familyId] })
+      }
+    },
+  })
+}
+
+export function useRotateFamilyCode(familyId?: string) {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => {
+      if (!familyId) throw new Error('No family id')
+      return rotateFamilyCode(familyId)
+    },
+    onSuccess: () => {
+      if (familyId) {
+        qc.invalidateQueries({ queryKey: ['family', familyId] })
+      }
+    },
+  })
+}
+
+export function useRemoveMember(familyId?: string) {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ memberId }: { memberId: string }) => {
+      if (!familyId) throw new Error('No family id')
+      return removeFamilyMember(familyId, memberId)
+    },
+    onSuccess: () => {
+      if (familyId) {
+        qc.invalidateQueries({ queryKey: ['family-members', familyId] })
+      }
+    },
+  })
 }

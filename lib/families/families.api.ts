@@ -59,6 +59,7 @@ export async function fetchFamilyMembers(familyId: string): Promise<Member[]> {
       profile:profiles(id, first_name, last_name, gender, avatar_url, birth_date)
     `)
     .eq('family_id', familyId)
+    .eq('is_active', true)
 
   if (error) throw new Error(error.message)
 
@@ -78,6 +79,41 @@ export async function awardMemberPoints(memberId: string, delta: number) {
     p_delta: delta,
   });
   if (error) throw new Error(error.message);
-  return data?.[0]; // { id, points }
+  return data?.[0];
 }
 
+export async function rotateFamilyCode(familyId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('rotate_family_code', {
+    p_family_id: familyId,
+  })
+
+  if (error) throw new Error(error.message)
+  return data as string
+}
+
+export async function removeFamilyMember(
+  familyId: string,
+  memberId: string,
+): Promise<boolean> {
+  const { error } = await supabase.rpc('remove_family_member', {
+    p_family_id: familyId,
+    p_member_id: memberId,
+  })
+  if (error) throw new Error(error.message)
+  return true
+}
+
+export async function updateMemberRole(
+  memberId: string,
+  role: Role,
+): Promise<Pick<Member, 'id' | 'role'>> {
+  const { data, error } = await supabase
+    .from('family_members')
+    .update({ role })
+    .eq('id', memberId)
+    .select('id, role')
+    .single()
+
+  if (error) throw new Error(error.message)
+  return data as Pick<Member, 'id' | 'role'>
+}

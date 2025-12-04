@@ -1,3 +1,4 @@
+// lib/families/families.types.ts
 export type Role = 'MOM' | 'DAD' | 'ADULT' | 'TEEN' | 'CHILD'
 
 export type Gender = 'MALE' | 'FEMALE'
