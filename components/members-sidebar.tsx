@@ -181,7 +181,7 @@ export default function MemberSidebar() {
           <Text numberOfLines={1} style={styles.name}>Announcements</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push('/wishList')} style={styles.item}>
+        <TouchableOpacity onPress={() => router.push('/wishlist')} style={styles.item}>
           <View style={styles.avatarBox}>
             <MaterialCommunityIcons name="gift-outline" size={26} color="#db2777" />
           </View>
