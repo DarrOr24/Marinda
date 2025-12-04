@@ -1,3 +1,4 @@
+// app/wishlist.tsx
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useMemo, useState } from "react";
 import {
@@ -18,13 +19,18 @@ import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
 import { useSubscribeTableByFamily } from "@/lib/families/families.realtime";
 import type { Role } from "@/lib/families/families.types";
+import type { WishlistItem } from "@/lib/wishlist/wishlist.types";
 
 import {
     useAddWishlistItem,
     useDeleteWishlistItem,
     useMarkWishlistPurchased,
+    useUpdateWishlistItem,
     useWishlist,
 } from "@/lib/wishlist/wishlist.hooks";
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'react-native';
+
 
 const POINTS_PER_DOLLAR = 20;
 
@@ -49,11 +55,12 @@ export default function WishList() {
     const addItem = useAddWishlistItem(activeFamilyId || undefined);
     const deleteItem = useDeleteWishlistItem(activeFamilyId || undefined);
     const markPurchased = useMarkWishlistPurchased(activeFamilyId || undefined);
+    const updateWishlistItem = useUpdateWishlistItem(activeFamilyId || undefined);
 
     // -------- member selection logic (for parents) --------
     const memberList = members.data ?? [];
     const kids = memberList.filter(
-        (m) => m.role === "CHILD" || m.role === "TEEN"
+        (m: any) => m.role === "CHILD" || m.role === "TEEN"
     );
 
     const [selectedKidId, setSelectedKidId] = useState<string | null>(null);
@@ -62,7 +69,7 @@ export default function WishList() {
         ? selectedKidId ?? kids[0]?.id
         : (member as any)?.id;
 
-    const viewingMember = memberList.find((m) => m.id === effectiveMemberId);
+    const viewingMember = memberList.find((m: any) => m.id === effectiveMemberId);
 
     // -------- calculator (CAD → points) --------
     const [calcCad, setCalcCad] = useState("");
@@ -83,11 +90,15 @@ export default function WishList() {
     const wishes = itemsForMember.filter((w) => !w.purchased);
     const fulfilled = itemsForMember.filter((w) => w.purchased);
 
-    // -------- add item modal (kids only) --------
+    // -------- add/edit modal --------
     const [showAddModal, setShowAddModal] = useState(false);
     const [newTitle, setNewTitle] = useState("");
     const [newPrice, setNewPrice] = useState("");
     const [newNote, setNewNote] = useState("");
+    const [editingItem, setEditingItem] = useState<WishlistItem | null>(null);
+    const [newLink, setNewLink] = useState("");
+    const [newImageUri, setNewImageUri] = useState<string | null>(null);
+
 
     const previewPoints = useMemo(() => {
         const val = parseFloat(newPrice);
@@ -99,20 +110,39 @@ export default function WishList() {
         !isParent && !!activeFamilyId && !!effectiveMemberId && !addItem.isPending;
 
     const handleSave = () => {
-        if (!canAdd) return;
-
         const trimmedTitle = newTitle.trim();
         if (!trimmedTitle) return;
 
-        addItem.mutate({
-            familyId: activeFamilyId!,
-            memberId: effectiveMemberId!,
-            title: trimmedTitle,
-            price: parseFloat(newPrice) || null,
-            link: null,
-            note: newNote.trim() || null,
-            imageUri: null,
-        });
+        // --- EDIT MODE ---
+        if (editingItem) {
+            updateWishlistItem.mutate(
+                {
+                    itemId: editingItem.id,
+                    fields: {
+                        title: trimmedTitle,
+                        price: parseFloat(newPrice) || null,
+                        note: newNote.trim() || null,
+                    },
+                },
+                {
+                    onSuccess: () => {
+                        setEditingItem(null);
+                    },
+                }
+            );
+        }
+        // --- ADD MODE ---
+        else {
+            addItem.mutate({
+                familyId: activeFamilyId!,
+                memberId: effectiveMemberId!,
+                title: trimmedTitle,
+                price: parseFloat(newPrice) || null,
+                link: null,
+                note: newNote.trim() || null,
+                imageUri: null,
+            });
+        }
 
         setShowAddModal(false);
         setNewTitle("");
@@ -120,10 +150,10 @@ export default function WishList() {
         setNewNote("");
     };
 
-    // -------- parent kid-switcher UI state --------
+    // -------- parent kid-switcher --------
     const [showKidMenu, setShowKidMenu] = useState(false);
 
-    // -------- loading / error guard rails --------
+    // -------- loading/error --------
     if (!activeFamilyId) {
         return (
             <SafeAreaView style={styles.centerScreen}>
@@ -156,7 +186,7 @@ export default function WishList() {
                 contentContainerStyle={styles.container}
                 keyboardShouldPersistTaps="handled"
             >
-                {/* Top row: who are we looking at + switcher for parents */}
+                {/* Top row */}
                 <View style={styles.topRow}>
                     <Text style={styles.title}>
                         {isParent
@@ -182,7 +212,7 @@ export default function WishList() {
 
                             {showKidMenu && (
                                 <View style={styles.switcherMenu}>
-                                    {kids.map((kid) => (
+                                    {kids.map((kid: any) => (
                                         <Pressable
                                             key={kid.id}
                                             style={styles.switcherOption}
@@ -202,7 +232,7 @@ export default function WishList() {
                     )}
                 </View>
 
-                {/* Calculator (everyone sees this) */}
+                {/* Calculator */}
                 <View style={styles.calcBox}>
                     <View style={styles.calcRow}>
                         <TextInput
@@ -262,7 +292,8 @@ export default function WishList() {
 
                             {item.price != null && (
                                 <Text style={styles.cardSubtitle}>
-                                    ${item.price.toFixed(2)} {pts !== null && `· ${pts} pts`}
+                                    ${item.price.toFixed(2)}{" "}
+                                    {pts !== null && `· ${pts} pts`}
                                 </Text>
                             )}
 
@@ -272,41 +303,64 @@ export default function WishList() {
                                 </Text>
                             )}
 
-                            {isParent && !item.purchased && (
-                                <View style={styles.cardActions}>
+                            <View style={styles.cardActions}>
+                                {/* EDIT */}
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        setEditingItem(item);
+                                        setNewTitle(item.title);
+                                        setNewPrice(item.price?.toString() || "");
+                                        setNewNote(item.note || "");
+                                        setNewLink(item.link || "");
+                                        setNewImageUri(item.image_url || null);
+
+                                        setShowAddModal(true);
+                                    }}
+                                >
+                                    <Text style={styles.actionPrimary}>Edit</Text>
+                                </TouchableOpacity>
+
+                                {/* DELETE */}
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        Alert.alert(
+                                            "Delete wish?",
+                                            "Are you sure you want to delete this wish?",
+                                            [
+                                                { text: "Cancel", style: "cancel" },
+                                                {
+                                                    text: "Delete",
+                                                    style: "destructive",
+                                                    onPress: () => deleteItem.mutate(item.id),
+                                                },
+                                            ]
+                                        )
+                                    }
+                                >
+                                    <Text style={styles.actionDanger}>Delete</Text>
+                                </TouchableOpacity>
+
+                                {/* MARK FULFILLED (parents only) */}
+                                {isParent && !item.purchased && (
                                     <TouchableOpacity
                                         onPress={() => markPurchased.mutate(item.id)}
                                     >
-                                        <Text style={styles.actionPrimary}>Mark fulfilled</Text>
+                                        <Text style={styles.actionPrimary}>
+                                            Mark fulfilled
+                                        </Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            Alert.alert(
-                                                "Delete wish?",
-                                                "Are you sure you want to delete this wish?",
-                                                [
-                                                    { text: "Cancel", style: "cancel" },
-                                                    {
-                                                        text: "Delete",
-                                                        style: "destructive",
-                                                        onPress: () => deleteItem.mutate(item.id),
-                                                    },
-                                                ]
-                                            )
-                                        }
-                                    >
-                                        <Text style={styles.actionDanger}>Delete</Text>
-                                    </TouchableOpacity>
-
-                                </View>
-                            )}
+                                )}
+                            </View>
                         </View>
                     );
                 })}
 
                 {itemsForMember.length === 0 && (
                     <Text style={styles.emptyText}>
-                        No wishes here yet. {isParent ? "Ask them to add one!" : "Tap + to add your first wish."}
+                        No wishes yet.{" "}
+                        {isParent
+                            ? "Ask them to add one!"
+                            : "Tap + to add your first wish."}
                     </Text>
                 )}
             </ScrollView>
@@ -315,21 +369,32 @@ export default function WishList() {
             {!isParent && (
                 <TouchableOpacity
                     style={[styles.fab, !canAdd && { opacity: 0.5 }]}
-                    onPress={() => canAdd && setShowAddModal(true)}
+                    onPress={() => {
+                        setEditingItem(null);
+                        setNewTitle("");
+                        setNewPrice("");
+                        setNewNote("");
+                        setShowAddModal(true);
+                    }}
                     disabled={!canAdd}
                 >
                     <MaterialCommunityIcons name="plus" size={26} color="#fff" />
                 </TouchableOpacity>
             )}
 
-            {/* Add wish modal (kids only) */}
+            {/* Add/Edit Modal */}
             <Modal visible={showAddModal} transparent animationType="fade">
                 <Pressable
                     style={styles.modalOverlay}
-                    onPress={() => setShowAddModal(false)}
+                    onPress={() => {
+                        setShowAddModal(false);
+                        setEditingItem(null);
+                    }}
                 />
                 <View style={styles.modalBox}>
-                    <Text style={styles.modalTitle}>Add wish</Text>
+                    <Text style={styles.modalTitle}>
+                        {editingItem ? "Edit Wish" : "Add Wish"}
+                    </Text>
 
                     <TextInput
                         placeholder="Title"
@@ -354,11 +419,49 @@ export default function WishList() {
                         style={[styles.input, { minHeight: 60 }]}
                         multiline
                     />
+                    {/* LINK INPUT */}
+                    <TextInput
+                        placeholder="Link (optional)"
+                        value={newLink}
+                        onChangeText={setNewLink}
+                        style={styles.input}
+                    />
+
+                    {/* IMAGE PICKER */}
+                    <TouchableOpacity
+                        style={styles.imagePicker}
+                        onPress={async () => {
+                            const res = await ImagePicker.launchImageLibraryAsync({
+                                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                                quality: 0.7,
+                            });
+
+                            if (!res.canceled) {
+                                setNewImageUri(res.assets[0].uri);
+                            }
+                        }}
+                    >
+                        <Text style={styles.imagePickerText}>
+                            {newImageUri ? "Change Image" : "Add Image"}
+                        </Text>
+                    </TouchableOpacity>
+
+                    {/* IMAGE PREVIEW */}
+                    {newImageUri && (
+                        <Image
+                            source={{ uri: newImageUri }}
+                            style={styles.imagePreview}
+                        />
+                    )}
+
 
                     <View style={styles.modalButtonsRow}>
                         <TouchableOpacity
                             style={[styles.modalButton, styles.modalCancel]}
-                            onPress={() => setShowAddModal(false)}
+                            onPress={() => {
+                                setShowAddModal(false);
+                                setEditingItem(null);
+                            }}
                         >
                             <Text style={styles.modalCancelText}>Cancel</Text>
                         </TouchableOpacity>
@@ -494,7 +597,6 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         backgroundColor: "#e2e8f0",
         borderRadius: 12,
-        overflow: "hidden",
     },
     tab: {
         flex: 1,
@@ -553,6 +655,7 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: "#dc2626",
     },
+
     emptyText: {
         marginTop: 8,
         fontSize: 13,
@@ -627,5 +730,29 @@ const styles = StyleSheet.create({
     modalSaveText: {
         color: "#ffffff",
         fontWeight: "700",
+    },
+
+    imagePicker: {
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        backgroundColor: '#f2f2f2',
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+    },
+
+    imagePickerText: {
+        fontSize: 16,
+        color: '#333',
+        fontWeight: '500',
+    },
+
+    imagePreview: {
+        width: '100%',
+        height: 180,
+        borderRadius: 10,
+        marginTop: 10,
+        resizeMode: 'cover',
     },
 });
