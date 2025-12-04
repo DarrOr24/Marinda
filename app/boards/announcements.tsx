@@ -28,6 +28,7 @@ import {
     useFamilyAnnouncementTabs,
     useUpdateAnnouncement,
 } from '@/lib/announcements/announcements.hooks';
+
 import { useAnnouncementsRealtime } from '@/lib/announcements/announcements.realtime';
 
 import {
@@ -36,9 +37,21 @@ import {
     type AnnouncementTab,
 } from '@/lib/announcements/announcements.types';
 
+
+// --------------------------------------------
+// Helper: Build a default placeholder
+// --------------------------------------------
+function buildDefaultPlaceholder(label: string) {
+    return `Write a new ${label.trim()}...`;
+}
+
 // Helper
 const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 6)}` : '—');
 
+
+// --------------------------------------------
+// MAIN COMPONENT
+// --------------------------------------------
 export default function AnnouncementsBoard() {
     const router = useRouter();
     const { activeFamilyId, member, family, members } = useAuthContext() as any;
@@ -51,9 +64,9 @@ export default function AnnouncementsBoard() {
     const [showSortMenu, setShowSortMenu] = useState(false);
     const [showAuthorMenu, setShowAuthorMenu] = useState(false);
 
-    // -----------------------------
-    // Load members
-    // -----------------------------
+    // --------------------------------------------
+    // Load Members
+    // --------------------------------------------
     const { members: membersQuery } = useFamily(familyId);
     useSubscribeTableByFamily('family_members', familyId, ['family-members', familyId]);
 
@@ -96,9 +109,10 @@ export default function AnnouncementsBoard() {
         return me?.id as string | undefined;
     }, [member, rawMembers, authUserId]);
 
-    // -----------------------------
-    // Load announcements + realtime
-    // -----------------------------
+
+    // --------------------------------------------
+    // Load Announcements + Realtime
+    // --------------------------------------------
     const { data: announcements, isLoading, error } =
         useFamilyAnnouncements(familyId);
 
@@ -108,9 +122,10 @@ export default function AnnouncementsBoard() {
     const deleteMutation = useDeleteAnnouncement(familyId);
     const updateMutation = useUpdateAnnouncement(familyId);
 
-    // -----------------------------
-    // Load custom tabs (React Query)
-    // -----------------------------
+
+    // --------------------------------------------
+    // Load Custom Tabs
+    // --------------------------------------------
     const { data: customTabs = [] } = useFamilyAnnouncementTabs(familyId);
     const createTabMutation = useCreateAnnouncementTab(familyId);
 
@@ -121,26 +136,24 @@ export default function AnnouncementsBoard() {
 
     const [activeKind, setActiveKind] = useState<string>('free');
     const activeTab =
-        ALL_TABS.find(t => t.id === activeKind) ??
-        ALL_TABS[ALL_TABS.length - 1];
+        ALL_TABS.find(t => t.id === activeKind) ?? ALL_TABS[0];
 
-    // New tab modal state
+
+    // --------------------------------------------
+    // UI State
+    // --------------------------------------------
+    const [newText, setNewText] = useState('');
+    const [editingItem, setEditingItem] = useState<AnnouncementItem | null>(null);
+    const [editText, setEditText] = useState('');
+
     const [showAddTabModal, setShowAddTabModal] = useState(false);
     const [newTabLabel, setNewTabLabel] = useState('');
     const [newTabPlaceholder, setNewTabPlaceholder] = useState('');
 
-    // -----------------------------
-    // UI: new announcement input
-    // -----------------------------
-    const [newText, setNewText] = useState('');
 
-    // Editing modal
-    const [editingItem, setEditingItem] = useState<AnnouncementItem | null>(null);
-    const [editText, setEditText] = useState('');
-
-    // ---------------------------------------------------------
-    // GLOBAL SEARCH
-    // ---------------------------------------------------------
+    // --------------------------------------------
+    // SEARCH LOGIC
+    // --------------------------------------------
     const isSearching = search.trim().length > 0;
 
     let filteredAnnouncements =
@@ -187,9 +200,10 @@ export default function AnnouncementsBoard() {
         );
     }
 
-    // -----------------------------
-    // Add announcement
-    // -----------------------------
+
+    // --------------------------------------------
+    // Add Announcement
+    // --------------------------------------------
     function handleAdd() {
         if (!familyId || !myFamilyMemberId) return;
 
@@ -212,12 +226,13 @@ export default function AnnouncementsBoard() {
         );
     }
 
-    // -----------------------------
+
+    // --------------------------------------------
     // Delete
-    // -----------------------------
+    // --------------------------------------------
     function handleDelete(item: AnnouncementItem) {
         deleteMutation.mutate(item.id, {
-            onError: err => Alert.alert('Error', (err as Error).message),
+            onError: err => Alert.alert('Error', err.message),
         });
     }
 
@@ -242,9 +257,10 @@ export default function AnnouncementsBoard() {
         ]);
     }
 
-    // -----------------------------
+
+    // --------------------------------------------
     // Render states
-    // -----------------------------
+    // --------------------------------------------
     if (!familyId) {
         return (
             <View style={styles.center}>
@@ -264,63 +280,80 @@ export default function AnnouncementsBoard() {
     if (error) {
         return (
             <View style={styles.center}>
-                <Text style={styles.errorText}>
-                    {(error as Error).message ?? 'Failed to load.'}
-                </Text>
+                <Text style={styles.errorText}>{error.message}</Text>
             </View>
         );
     }
 
-    // -----------------------------
+
+    // --------------------------------------------
     // MAIN RENDER
-    // -----------------------------
+    // --------------------------------------------
     return (
         <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
             <KeyboardAvoidingView
                 style={styles.container}
                 behavior={Platform.select({ ios: 'padding', android: undefined })}
             >
-                {/* TOP ROW ICON RIGHT */}
-                <View style={styles.headerRow}>
-                    <View style={{ flex: 1 }} />
+
+                {/* ---------------------------------------------- */}
+                {/* ROW 1: SORT — BY — INFO */}
+                {/* ---------------------------------------------- */}
+                <View style={styles.sortInfoRow}>
+
+                    <View style={styles.sortByGroup}>
+                        <Pressable
+                            style={styles.filterBtn}
+                            onPress={() => setShowSortMenu(true)}
+                        >
+                            <Text style={styles.filterBtnLabel}>Sort: {sortBy}</Text>
+                        </Pressable>
+
+                        <Pressable
+                            style={styles.filterBtn}
+                            onPress={() => setShowAuthorMenu(true)}
+                        >
+                            <Text style={styles.filterBtnLabel}>
+                                By: {filterAuthor === 'all' ? 'All' : filterAuthor}
+                            </Text>
+                        </Pressable>
+                    </View>
+
                     <Pressable
                         onPress={() => router.push('/boards/announcements-info')}
                         style={styles.iconCircle}
                     >
                         <Ionicons name="information-circle-outline" size={20} color="#1e3a8a" />
                     </Pressable>
+
                 </View>
 
-                {/* SEARCH */}
-                <View style={styles.searchContainer}>
+
+
+                {/* ---------------------------------------------- */}
+                {/* ROW 2: SEARCH BAR WITH "X" CLEAR */}
+                {/* ---------------------------------------------- */}
+                <View style={styles.searchWrapper}>
                     <TextInput
                         style={styles.searchInput}
                         placeholder="Search announcements..."
                         value={search}
                         onChangeText={setSearch}
                     />
+                    {search.length > 0 && (
+                        <Pressable
+                            style={styles.clearSearchBtn}
+                            onPress={() => setSearch('')}
+                        >
+                            <Ionicons name="close-circle" size={20} color="#999" />
+                        </Pressable>
+                    )}
                 </View>
 
-                {/* FILTER ROW */}
-                <View style={styles.filterRow}>
-                    <Pressable
-                        style={styles.filterBtn}
-                        onPress={() => setShowSortMenu(true)}
-                    >
-                        <Text style={styles.filterBtnLabel}>Sort: {sortBy}</Text>
-                    </Pressable>
 
-                    <Pressable
-                        style={styles.filterBtn}
-                        onPress={() => setShowAuthorMenu(true)}
-                    >
-                        <Text style={styles.filterBtnLabel}>
-                            By: {filterAuthor === 'all' ? 'All' : filterAuthor}
-                        </Text>
-                    </Pressable>
-                </View>
-
-                {/* TABS ROW */}
+                {/* ---------------------------------------------- */}
+                {/* ROW 3: TABS + +ADD TAB */}
+                {/* ---------------------------------------------- */}
                 <View style={styles.tabsContainer}>
                     {ALL_TABS.map(tab => {
                         const isActive = !isSearching && tab.id === activeKind;
@@ -355,7 +388,10 @@ export default function AnnouncementsBoard() {
                     </Pressable>
                 </View>
 
+
+                {/* ---------------------------------------------- */}
                 {/* LIST */}
+                {/* ---------------------------------------------- */}
                 <FlatList
                     data={filteredAnnouncements}
                     keyExtractor={item => item.id}
@@ -383,7 +419,7 @@ export default function AnnouncementsBoard() {
                                 )}
                             </View>
 
-                            {/* edit */}
+                            {/* EDIT */}
                             {(item.created_by_member_id === myFamilyMemberId ||
                                 member?.role === 'MOM' ||
                                 member?.role === 'DAD') && (
@@ -398,7 +434,7 @@ export default function AnnouncementsBoard() {
                                     </Pressable>
                                 )}
 
-                            {/* delete */}
+                            {/* DELETE */}
                             <Pressable
                                 style={styles.deleteBtn}
                                 onPress={() => confirmDelete(item)}
@@ -412,7 +448,9 @@ export default function AnnouncementsBoard() {
                     }
                 />
 
-                {/* ADD INPUT */}
+                {/* ---------------------------------------------- */}
+                {/* ADD ANNOUNCEMENT INPUT */}
+                {/* ---------------------------------------------- */}
                 <View style={styles.inputBar}>
                     <TextInput
                         style={styles.input}
@@ -425,7 +463,8 @@ export default function AnnouncementsBoard() {
                     <Pressable
                         style={[
                             styles.addBtn,
-                            (!newText.trim() || createMutation.isPending) && styles.addBtnDisabled,
+                            (!newText.trim() || createMutation.isPending) &&
+                            styles.addBtnDisabled,
                         ]}
                         onPress={handleAdd}
                         disabled={!newText.trim() || createMutation.isPending}
@@ -436,7 +475,10 @@ export default function AnnouncementsBoard() {
                     </Pressable>
                 </View>
 
-                {/* EDIT MODAL */}
+
+                {/* ---------------------------------------------- */}
+                {/* EDIT ANNOUNCEMENT MODAL */}
+                {/* ---------------------------------------------- */}
                 {editingItem && (
                     <View style={styles.modalOverlay}>
                         <View style={styles.modalBox}>
@@ -464,7 +506,7 @@ export default function AnnouncementsBoard() {
                                             {
                                                 onSuccess: () => setEditingItem(null),
                                                 onError: err =>
-                                                    Alert.alert('Error', (err as Error).message),
+                                                    Alert.alert('Error', err.message),
                                             }
                                         );
                                     }}
@@ -472,16 +514,21 @@ export default function AnnouncementsBoard() {
                                     <Text style={styles.modalSave}>Save</Text>
                                 </Pressable>
                             </View>
+
                         </View>
                     </View>
                 )}
 
+
+                {/* ---------------------------------------------- */}
                 {/* ADD TAB MODAL */}
+                {/* ---------------------------------------------- */}
                 {showAddTabModal && (
                     <View style={styles.modalOverlay}>
                         <View style={styles.modalBox}>
                             <Text style={styles.modalTitle}>Create New Tab</Text>
 
+                            {/* Label */}
                             <TextInput
                                 style={styles.modalInput}
                                 placeholder="Tab name (e.g., Holidays)"
@@ -489,9 +536,14 @@ export default function AnnouncementsBoard() {
                                 onChangeText={setNewTabLabel}
                             />
 
+                            {/* Placeholder (auto default) */}
                             <TextInput
                                 style={styles.modalInput}
-                                placeholder="Placeholder (optional)"
+                                placeholder={
+                                    newTabLabel.trim()
+                                        ? buildDefaultPlaceholder(newTabLabel)
+                                        : "Placeholder (optional)"
+                                }
                                 value={newTabPlaceholder}
                                 onChangeText={setNewTabPlaceholder}
                             />
@@ -506,14 +558,18 @@ export default function AnnouncementsBoard() {
                                         const trimmed = newTabLabel.trim();
                                         if (!trimmed) return;
 
+                                        const finalPlaceholder =
+                                            newTabPlaceholder.trim() ||
+                                            buildDefaultPlaceholder(trimmed);
+
                                         createTabMutation.mutate(
                                             {
                                                 familyId: familyId!,
                                                 label: trimmed,
-                                                placeholder: newTabPlaceholder.trim() || undefined,
+                                                placeholder: finalPlaceholder,
                                             },
                                             {
-                                                onSuccess: newTab => {
+                                                onSuccess: (newTab) => {
                                                     setShowAddTabModal(false);
                                                     setActiveKind(newTab.id);
                                                 },
@@ -528,11 +584,15 @@ export default function AnnouncementsBoard() {
                                     </Text>
                                 </Pressable>
                             </View>
+
                         </View>
                     </View>
                 )}
 
+
+                {/* ---------------------------------------------- */}
                 {/* SORT MENU */}
+                {/* ---------------------------------------------- */}
                 {showSortMenu && (
                     <View style={styles.modalOverlay}>
                         <View style={styles.simpleMenu}>
@@ -552,7 +612,10 @@ export default function AnnouncementsBoard() {
                     </View>
                 )}
 
+
+                {/* ---------------------------------------------- */}
                 {/* AUTHOR MENU */}
+                {/* ---------------------------------------------- */}
                 {showAuthorMenu && (
                     <View style={styles.modalOverlay}>
                         <View style={styles.simpleMenu}>
@@ -589,15 +652,17 @@ export default function AnnouncementsBoard() {
                         </View>
                     </View>
                 )}
+
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
 
-/* -------------------------
-    STYLES
---------------------------*/
 
+
+// --------------------------------------------
+// STYLES
+// --------------------------------------------
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 16 },
 
@@ -611,11 +676,34 @@ const styles = StyleSheet.create({
     infoText: { fontSize: 16, textAlign: 'center', opacity: 0.7 },
     errorText: { fontSize: 16, textAlign: 'center', color: 'red' },
 
-    headerRow: {
+
+    // --------------------------------------
+    // ROW 1: SORT — BY — INFO
+    // --------------------------------------
+    sortInfoRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+        width: '100%',
+    },
+    sortByGroup: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'flex-end',
-        marginBottom: 12,
+        gap: 8,
+    },
+    filterBtn: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        backgroundColor: '#eef2ff',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#d1d5db',
+        marginRight: 6,
+    },
+    filterBtnLabel: {
+        fontSize: 14,
+        color: '#1e3a8a',
     },
 
     iconCircle: {
@@ -629,9 +717,15 @@ const styles = StyleSheet.create({
         borderColor: '#e5e7eb',
     },
 
-    searchContainer: {
-        marginBottom: 10,
+
+    // --------------------------------------
+    // SEARCH BAR WITH CLEAR X
+    // --------------------------------------
+    searchWrapper: {
+        position: 'relative',
+        marginBottom: 12,
     },
+
     searchInput: {
         backgroundColor: '#fff',
         borderRadius: 8,
@@ -639,33 +733,27 @@ const styles = StyleSheet.create({
         borderColor: '#ddd',
         paddingHorizontal: 12,
         paddingVertical: 8,
+        paddingRight: 32, // space for X
     },
 
-    filterRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 12,
+    clearSearchBtn: {
+        position: 'absolute',
+        right: 10,
+        top: '50%',
+        transform: [{ translateY: -10 }],
+        padding: 4,
     },
 
-    filterBtn: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        backgroundColor: '#eef2ff',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#d1d5db',
-    },
-    filterBtnLabel: {
-        fontSize: 14,
-        color: '#1e3a8a',
-    },
 
+    // --------------------------------------
+    // TABS
+    // --------------------------------------
     tabsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 8,
         marginBottom: 12,
-        alignItems: 'center',
+        width: '100%',
     },
 
     tab: {
@@ -684,10 +772,10 @@ const styles = StyleSheet.create({
     tabLabelActive: { color: 'white', fontWeight: '600' },
 
     addTabBtn: {
-        paddingHorizontal: 14,
+        paddingHorizontal: 12,
         paddingVertical: 6,
-        borderRadius: 999,
         backgroundColor: '#e5e7eb',
+        borderRadius: 999,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: '#ccc',
     },
@@ -697,6 +785,10 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
 
+
+    // --------------------------------------
+    // LIST
+    // --------------------------------------
     itemRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
@@ -711,9 +803,12 @@ const styles = StyleSheet.create({
 
     deleteBtn: { padding: 8, alignSelf: 'center' },
     deleteBtnText: { fontSize: 18, opacity: 0.6 },
-
     editBtn: { padding: 8, alignSelf: 'center' },
 
+
+    // --------------------------------------
+    // ADD ANNOUNCEMENT
+    // --------------------------------------
     inputBar: {
         borderTopWidth: StyleSheet.hairlineWidth,
         borderTopColor: '#ddd',
@@ -741,6 +836,10 @@ const styles = StyleSheet.create({
     addBtnDisabled: { opacity: 0.4 },
     addBtnText: { color: 'white', fontWeight: '600' },
 
+
+    // --------------------------------------
+    // SHARED MODAL STYLES
+    // --------------------------------------
     modalOverlay: {
         position: 'absolute',
         top: 0,
@@ -750,7 +849,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.35)',
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 20,
     },
     modalBox: {
         width: '85%',
@@ -765,18 +863,20 @@ const styles = StyleSheet.create({
         borderColor: '#ccc',
         borderRadius: 8,
         padding: 10,
-        textAlignVertical: 'top',
-        marginBottom: 12,
+        marginBottom: 16,
     },
     modalButtons: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
         gap: 20,
-        marginTop: 8,
     },
     modalCancel: { fontSize: 16, color: '#64748b' },
     modalSave: { fontSize: 16, color: '#2563eb', fontWeight: '700' },
 
+
+    // --------------------------------------
+    // MENUS
+    // --------------------------------------
     simpleMenu: {
         backgroundColor: 'white',
         paddingVertical: 10,
