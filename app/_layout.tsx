@@ -66,6 +66,11 @@ function RootNavigator() {
           name="boards/announcements-info"
           options={{ headerTitle: 'How announcements work 📖' }}
         />
+        <Stack.Screen
+          name="boards/announcements-settings"
+          options={{ headerTitle: "Announcements Settings ⚙️" }}
+        />
+
 
         <Stack.Screen name="boards/grocery" options={{ headerTitle: 'Groceries 🛒' }} />
       </Stack.Protected>

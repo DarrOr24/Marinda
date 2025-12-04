@@ -1,4 +1,3 @@
-// app/boards/announcements-info.tsx
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -86,6 +85,19 @@ export default function AnnouncementsInfoScreen() {
                     <Bullet>“Sentence of the week: I can do hard things.”</Bullet>
                 </Section>
 
+                {/* 6. Custom Tabs & Settings */}
+                <Section title="6. Custom Tabs & Settings">
+                    <Bullet>
+                        Parents can create <Text style={styles.highlight}>custom tabs</Text> to organize the board in a way that fits your family — such as “Holidays,” “Signatures,” “Chores,” or anything else.
+                    </Bullet>
+                    <Bullet>
+                        Custom tabs can be <Text style={styles.highlight}>added, renamed, or deleted</Text> at any time from the Announcement Settings page.
+                    </Bullet>
+                    <Bullet>
+                        Kids and teens can view and post inside custom tabs, but only parents can modify the tabs themselves.
+                    </Bullet>
+                </Section>
+
                 <View style={{ height: 32 }} />
             </ScrollView>
         </SafeAreaView>
@@ -111,25 +123,11 @@ function Bullet({ children }: { children: React.ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: "#F7FBFF",
-    },
-    scroll: {
-        flex: 1,
-    },
-    content: {
-        paddingHorizontal: 16,
-        paddingBottom: 24,
-    },
-    intro: {
-        fontSize: 14,
-        color: "#475569",
-        marginBottom: 16,
-    },
-    section: {
-        marginTop: 12,
-    },
+    screen: { flex: 1, backgroundColor: "#F7FBFF" },
+    scroll: { flex: 1 },
+    content: { paddingHorizontal: 16, paddingBottom: 24 },
+    intro: { fontSize: 14, color: "#475569", marginBottom: 16 },
+    section: { marginTop: 12 },
     sectionTitle: {
         fontSize: 15,
         fontWeight: "800",

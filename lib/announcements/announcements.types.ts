@@ -83,4 +83,5 @@ export type AnnouncementTab = {
     label: string;
     placeholder: string;
     emptyText: string;
+    sort_order?: number;
 };

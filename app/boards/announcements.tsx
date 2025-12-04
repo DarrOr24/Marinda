@@ -319,15 +319,23 @@ export default function AnnouncementsBoard() {
                         </Pressable>
                     </View>
 
-                    <Pressable
-                        onPress={() => router.push('/boards/announcements-info')}
-                        style={styles.iconCircle}
-                    >
-                        <Ionicons name="information-circle-outline" size={20} color="#1e3a8a" />
-                    </Pressable>
+                    <View style={styles.iconGroup}>
+                        <Pressable
+                            onPress={() => router.push('/boards/announcements-info')}
+                            style={styles.iconCircle}
+                        >
+                            <Ionicons name="information-circle-outline" size={20} color="#1e3a8a" />
+                        </Pressable>
+
+                        <Pressable
+                            onPress={() => router.push('/boards/announcements-settings')}
+                            style={styles.iconCircle}
+                        >
+                            <Ionicons name="settings-outline" size={20} color="#1e3a8a" />
+                        </Pressable>
+                    </View>
 
                 </View>
-
 
 
                 {/* ---------------------------------------------- */}
@@ -715,6 +723,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#eff6ff',
         borderWidth: 1,
         borderColor: '#e5e7eb',
+    },
+    iconGroup: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8, // PERFECT subtle spacing between icons
     },
 
 
