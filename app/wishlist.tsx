@@ -293,110 +293,98 @@ export default function WishList() {
                             : null;
 
                     return (
-                        <View key={item.id} style={styles.card}>
-
+                        <View key={item.id} style={styles.cardRow}>
+                            {/* IMAGE LEFT */}
                             {item.image_url && (
                                 <Image
                                     source={{ uri: item.image_url }}
-                                    style={styles.cardImage}
+                                    style={styles.cardThumb}
                                 />
                             )}
 
-                            <Text style={styles.cardTitle}>{item.title}</Text>
+                            {/* RIGHT SIDE CONTENT */}
+                            <View style={styles.cardRight}>
+                                <Text style={styles.cardTitle}>{item.title}</Text>
 
-                            {item.price != null && (
-                                <Text style={styles.cardSubtitle}>
-                                    ${item.price.toFixed(2)}{" "}
-                                    {pts !== null && `· ${pts} pts`}
-                                </Text>
-                            )}
-
-                            {item.note && (
-                                <Text style={styles.cardNote} numberOfLines={2}>
-                                    {item.note}
-                                </Text>
-                            )}
-
-                            {/* CREATED AT */}
-                            <Text style={styles.cardMeta}>
-                                Added {new Date(item.created_at).toLocaleDateString()}
-                            </Text>
-
-                            {/* UPDATED AT (only if different) */}
-                            {item.updated_at !== item.created_at && (
-                                <Text style={styles.cardMeta}>
-                                    Updated {new Date(item.updated_at).toLocaleDateString()}
-                                </Text>
-                            )}
-
-
-                            {/* LINK DISPLAY */}
-                            {item.link && (
-                                <Text
-                                    style={styles.cardLink}
-                                    numberOfLines={1}
-                                    onPress={() => {
-                                        const url = item.link!.startsWith('http')
-                                            ? item.link!
-                                            : `https://${item.link!}`;
-                                        Linking.openURL(url);
-                                    }}
-                                >
-                                    {item.link}
-                                </Text>
-                            )}
-
-
-
-                            <View style={styles.cardActions}>
-                                {/* EDIT */}
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        setEditingItem(item);
-                                        setNewTitle(item.title);
-                                        setNewPrice(item.price?.toString() || "");
-                                        setNewNote(item.note || "");
-                                        setNewLink(item.link || "");
-                                        setNewImageUri(item.image_url || null);
-
-                                        setShowAddModal(true);
-                                    }}
-                                >
-                                    <Text style={styles.actionPrimary}>Edit</Text>
-                                </TouchableOpacity>
-
-                                {/* DELETE */}
-                                <TouchableOpacity
-                                    onPress={() =>
-                                        Alert.alert(
-                                            "Delete wish?",
-                                            "Are you sure you want to delete this wish?",
-                                            [
-                                                { text: "Cancel", style: "cancel" },
-                                                {
-                                                    text: "Delete",
-                                                    style: "destructive",
-                                                    onPress: () => deleteItem.mutate(item.id),
-                                                },
-                                            ]
-                                        )
-                                    }
-                                >
-                                    <Text style={styles.actionDanger}>Delete</Text>
-                                </TouchableOpacity>
-
-                                {/* MARK FULFILLED (parents only) */}
-                                {isParent && !item.purchased && (
-                                    <TouchableOpacity
-                                        onPress={() => markPurchased.mutate(item.id)}
-                                    >
-                                        <Text style={styles.actionPrimary}>
-                                            Mark fulfilled
-                                        </Text>
-                                    </TouchableOpacity>
+                                {item.price != null && (
+                                    <Text style={styles.cardSubtitle}>
+                                        ${item.price.toFixed(2)} · {Math.round(item.price * POINTS_PER_DOLLAR)} pts
+                                    </Text>
                                 )}
+
+                                {item.note && (
+                                    <Text style={styles.cardNote} numberOfLines={2}>
+                                        {item.note}
+                                    </Text>
+                                )}
+
+                                {/* ADDED DATE */}
+                                {item.created_at && (
+                                    <Text style={styles.cardDate}>
+                                        Added {new Date(item.created_at).toLocaleDateString()}
+                                    </Text>
+                                )}
+
+                                {/* LINK */}
+                                {item.link && (
+                                    <Text
+                                        style={styles.cardLink}
+                                        numberOfLines={1}
+                                        onPress={() => {
+                                            const url = item.link!.startsWith('http')
+                                                ? item.link!
+                                                : `https://${item.link!}`;
+                                            Linking.openURL(url);
+                                        }}
+                                    >
+                                        {item.link}
+                                    </Text>
+                                )}
+
+                                {/* ACTIONS */}
+                                <View style={styles.cardActionsRow}>
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            setEditingItem(item);
+                                            setNewTitle(item.title);
+                                            setNewPrice(item.price?.toString() || "");
+                                            setNewNote(item.note || "");
+                                            setNewLink(item.link || "");
+                                            setNewImageUri(item.image_url || null);
+                                            setShowAddModal(true);
+                                        }}
+                                    >
+                                        <Text style={styles.actionPrimary}>Edit</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            Alert.alert(
+                                                "Delete wish?",
+                                                "Are you sure you want to delete this wish?",
+                                                [
+                                                    { text: "Cancel", style: "cancel" },
+                                                    {
+                                                        text: "Delete",
+                                                        style: "destructive",
+                                                        onPress: () => deleteItem.mutate(item.id),
+                                                    },
+                                                ]
+                                            )
+                                        }
+                                    >
+                                        <Text style={styles.actionDanger}>Delete</Text>
+                                    </TouchableOpacity>
+
+                                    {isParent && !item.purchased && (
+                                        <TouchableOpacity onPress={() => markPurchased.mutate(item.id)}>
+                                            <Text style={styles.actionPrimary}>Mark fulfilled</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
                             </View>
                         </View>
+
                     );
                 })}
 
@@ -661,14 +649,6 @@ const styles = StyleSheet.create({
         fontWeight: "600",
     },
 
-    card: {
-        backgroundColor: "#ffffff",
-        borderRadius: 16,
-        padding: 14,
-        borderWidth: 1,
-        borderColor: "#e5e7eb",
-        elevation: 2,
-    },
     cardTitle: {
         fontSize: 16,
         fontWeight: "600",
@@ -683,12 +663,6 @@ const styles = StyleSheet.create({
     cardNote: {
         fontSize: 13,
         color: "#6b7280",
-    },
-    cardActions: {
-        flexDirection: "row",
-        justifyContent: "flex-end",
-        gap: 16,
-        marginTop: 10,
     },
     actionPrimary: {
         fontSize: 13,
@@ -795,31 +769,56 @@ const styles = StyleSheet.create({
 
     imagePreview: {
         width: '100%',
-        height: 180,
+        height: 250,          // taller = fits phone images better
         borderRadius: 10,
         marginTop: 10,
-        resizeMode: 'cover',
+        backgroundColor: '#fff',
+        resizeMode: 'contain',  // <<< prevents cropping
     },
+
     cardLink: {
         fontSize: 13,
         color: "#2563eb",
         marginTop: 4,
         textDecorationLine: "underline",
     },
-
-    cardImage: {
-        width: "100%",
-        height: 180,
-        borderRadius: 12,
-        marginBottom: 10,
-        backgroundColor: "#f1f5f9",
+    cardRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "#e5e7eb",
+        borderRadius: 16,
+        padding: 12,
+        backgroundColor: "#fff",
+        elevation: 2,
+        gap: 12,
     },
 
-    cardMeta: {
+    cardThumb: {
+        width: 90,
+        height: 90,
+        borderRadius: 10,
+        backgroundColor: "#f2f2f2",
+        resizeMode: "cover",
+    },
+
+    cardRight: {
+        flex: 1,
+        justifyContent: "space-between",
+        gap: 4,
+    },
+
+    cardDate: {
         fontSize: 11,
-        color: "#94a3b8",
-        marginTop: 2,
+        color: "#9ca3af",
     },
+
+    cardActionsRow: {
+        flexDirection: "row",
+        marginTop: 6,
+        gap: 16,
+    },
+
 
 
 });
