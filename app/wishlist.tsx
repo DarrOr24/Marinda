@@ -1,6 +1,6 @@
 // app/wishlist.tsx
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -30,8 +30,6 @@ import {
 } from "@/lib/wishlist/wishlist.hooks";
 import * as ImagePicker from 'expo-image-picker';
 import { Image, Linking } from 'react-native';
-
-
 
 const POINTS_PER_DOLLAR = 10;
 
@@ -72,13 +70,43 @@ export default function WishList() {
 
     const viewingMember = memberList.find((m: any) => m.id === effectiveMemberId);
 
-    // -------- calculator (CAD → points) --------
-    const [calcCad, setCalcCad] = useState("");
+    // =============================
+    // ⚡ BIDIRECTIONAL CALCULATOR
+    // =============================
+
+    const [calcCad, setCalcCad] = useState(""); // already existed
+    const [calcPointsStr, setCalcPointsStr] = useState(""); // NEW
+    const [calcLock, setCalcLock] = useState<"cad" | "points" | null>(null); // NEW
+
+    // CAD → Points
     const calcPoints = useMemo(() => {
-        const val = parseFloat(calcCad);
-        if (!calcCad.trim() || Number.isNaN(val)) return 0;
-        return Math.round(val * POINTS_PER_DOLLAR);
+        const cad = parseFloat(calcCad);
+        if (!calcCad.trim() || Number.isNaN(cad)) return 0;
+        return Math.round(cad * POINTS_PER_DOLLAR);
     }, [calcCad]);
+
+    // Points → CAD
+    const calcCadFromPoints = useMemo(() => {
+        const pts = parseFloat(calcPointsStr);
+        if (!calcPointsStr.trim() || Number.isNaN(pts)) return "";
+        return (pts / POINTS_PER_DOLLAR).toFixed(2);
+    }, [calcPointsStr]);
+
+    // Sync when editing CAD
+    useEffect(() => {
+        if (calcLock === "cad") {
+            if (!calcCad.trim()) setCalcPointsStr("");
+            else setCalcPointsStr(String(calcPoints));
+        }
+    }, [calcCad]);
+
+    // Sync when editing Points
+    useEffect(() => {
+        if (calcLock === "points") {
+            if (!calcPointsStr.trim()) setCalcCad("");
+            else setCalcCad(calcCadFromPoints);
+        }
+    }, [calcPointsStr]);
 
     // -------- tabs --------
     const [tab, setTab] = useState<"wishes" | "fulfilled">("wishes");
@@ -100,7 +128,6 @@ export default function WishList() {
     const [newLink, setNewLink] = useState("");
     const [newImageUri, setNewImageUri] = useState<string | null>(null);
 
-
     const previewPoints = useMemo(() => {
         const val = parseFloat(newPrice);
         if (!newPrice.trim() || Number.isNaN(val)) return 0;
@@ -114,7 +141,6 @@ export default function WishList() {
         const trimmedTitle = newTitle.trim();
         if (!trimmedTitle) return;
 
-        // --- EDIT MODE ---
         if (editingItem) {
             updateWishlistItem.mutate(
                 {
@@ -127,16 +153,9 @@ export default function WishList() {
                         imageUri: newImageUri || null,
                     },
                 },
-                {
-                    onSuccess: () => {
-                        setEditingItem(null);
-                    },
-                }
+                { onSuccess: () => setEditingItem(null) }
             );
-        }
-
-        // --- ADD MODE ---
-        else {
+        } else {
             addItem.mutate({
                 familyId: activeFamilyId!,
                 memberId: effectiveMemberId!,
@@ -148,16 +167,11 @@ export default function WishList() {
             });
         }
 
-
-
         setShowAddModal(false);
         setNewTitle("");
         setNewPrice("");
         setNewNote("");
     };
-
-    // -------- parent kid-switcher --------
-    const [showKidMenu, setShowKidMenu] = useState(false);
 
     // -------- loading/error --------
     if (!activeFamilyId) {
@@ -199,64 +213,51 @@ export default function WishList() {
                             ? `${viewingMember?.profile?.first_name || "Child"}'s Wish List`
                             : "My Wish List"}
                     </Text>
-
-                    {isParent && kids.length > 0 && (
-                        <View style={{ position: "relative" }}>
-                            <TouchableOpacity
-                                style={styles.switcher}
-                                onPress={() => setShowKidMenu((prev) => !prev)}
-                            >
-                                <MaterialCommunityIcons
-                                    name="account-switch"
-                                    size={18}
-                                    color="#334155"
-                                />
-                                <Text style={styles.switcherText}>
-                                    {viewingMember?.profile?.first_name || "Select"}
-                                </Text>
-                            </TouchableOpacity>
-
-                            {showKidMenu && (
-                                <View style={styles.switcherMenu}>
-                                    {kids.map((kid: any) => (
-                                        <Pressable
-                                            key={kid.id}
-                                            style={styles.switcherOption}
-                                            onPress={() => {
-                                                setSelectedKidId(kid.id);
-                                                setShowKidMenu(false);
-                                            }}
-                                        >
-                                            <Text style={styles.switcherOptionText}>
-                                                {kid.profile?.first_name}
-                                            </Text>
-                                        </Pressable>
-                                    ))}
-                                </View>
-                            )}
-                        </View>
-                    )}
                 </View>
 
-                {/* Calculator */}
-                <View style={styles.calcBox}>
+                {/* =======================
+                     BIDIRECTIONAL CALCULATOR
+                    ======================= */}
+                <View style={{ gap: 6 }}>
                     <View style={styles.calcRow}>
-                        <TextInput
-                            placeholder="CAD"
-                            keyboardType="numeric"
-                            value={calcCad}
-                            onChangeText={setCalcCad}
-                            style={styles.calcInput}
-                        />
-                        <Text style={styles.arrow}>→</Text>
-                        <View style={styles.pointsChip}>
-                            <Text style={styles.pointsChipText}>{calcPoints} pts</Text>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.calcLabel}>CAD</Text>
+                            <TextInput
+                                placeholder="0"
+                                keyboardType="numeric"
+                                value={calcCad}
+                                onChangeText={(v) => {
+                                    setCalcLock("cad");
+                                    setCalcCad(v);
+                                }}
+                                onBlur={() => setCalcLock(null)}
+                                style={styles.calcInput}
+                            />
+                        </View>
+
+                        <Text style={styles.arrow}>↔</Text>
+
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.calcLabel}>Points</Text>
+                            <TextInput
+                                placeholder="0"
+                                keyboardType="numeric"
+                                value={calcPointsStr}
+                                onChangeText={(v) => {
+                                    setCalcLock("points");
+                                    setCalcPointsStr(v);
+                                }}
+                                onBlur={() => setCalcLock(null)}
+                                style={styles.calcInput}
+                            />
                         </View>
                     </View>
+
                     <Text style={styles.rateText}>
                         {POINTS_PER_DOLLAR} points = $1 CAD
                     </Text>
                 </View>
+
 
                 {/* Tabs */}
                 <View style={styles.tabsRow}>
@@ -606,6 +607,13 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         backgroundColor: "#ffffff",
     },
+    calcLabel: {
+        fontSize: 12,
+        color: "#64748b",
+        marginBottom: 4,
+        marginLeft: 2,
+    },
+
     arrow: {
         fontSize: 18,
         color: "#475569",
