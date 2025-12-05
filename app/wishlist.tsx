@@ -294,6 +294,14 @@ export default function WishList() {
 
                     return (
                         <View key={item.id} style={styles.card}>
+
+                            {item.image_url && (
+                                <Image
+                                    source={{ uri: item.image_url }}
+                                    style={styles.cardImage}
+                                />
+                            )}
+
                             <Text style={styles.cardTitle}>{item.title}</Text>
 
                             {item.price != null && (
@@ -308,6 +316,19 @@ export default function WishList() {
                                     {item.note}
                                 </Text>
                             )}
+
+                            {/* CREATED AT */}
+                            <Text style={styles.cardMeta}>
+                                Added {new Date(item.created_at).toLocaleDateString()}
+                            </Text>
+
+                            {/* UPDATED AT (only if different) */}
+                            {item.updated_at !== item.created_at && (
+                                <Text style={styles.cardMeta}>
+                                    Updated {new Date(item.updated_at).toLocaleDateString()}
+                                </Text>
+                            )}
+
 
                             {/* LINK DISPLAY */}
                             {item.link && (
@@ -785,5 +806,20 @@ const styles = StyleSheet.create({
         marginTop: 4,
         textDecorationLine: "underline",
     },
+
+    cardImage: {
+        width: "100%",
+        height: 180,
+        borderRadius: 12,
+        marginBottom: 10,
+        backgroundColor: "#f1f5f9",
+    },
+
+    cardMeta: {
+        fontSize: 11,
+        color: "#94a3b8",
+        marginTop: 2,
+    },
+
 
 });
