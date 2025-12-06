@@ -181,7 +181,7 @@ export default function MemberSidebar() {
           <Text numberOfLines={1} style={styles.name}>Announcements</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push('/wishList')} style={styles.item}>
+        <TouchableOpacity onPress={() => router.push('/wishlist')} style={styles.item}>
           <View style={styles.avatarBox}>
             <MaterialCommunityIcons name="gift-outline" size={26} color="#db2777" />
           </View>
@@ -304,8 +304,7 @@ const styles = StyleSheet.create({
     zIndex: 9999,
     backgroundColor: '#ffffff',
     borderRadius: 12,
-    paddingVertical: 4,
-    paddingInlineEnd: 4,
+    paddingVertical: 0,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 6,
@@ -327,6 +326,7 @@ const styles = StyleSheet.create({
     color: '#334155',
     fontWeight: '600',
     flexShrink: 1,
+    lineHeight: 16,
   },
   switcherRow: {
     flexDirection: 'row',

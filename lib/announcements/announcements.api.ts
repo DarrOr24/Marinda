@@ -8,6 +8,10 @@ import type {
 
 const supabase = getSupabase();
 
+/* ---------------------------------------------------------
+   ANNOUNCEMENT ITEMS
+--------------------------------------------------------- */
+
 /** Map DB row → front-end announcement item */
 function mapRow(row: any): AnnouncementItem {
     return {
@@ -82,7 +86,7 @@ export async function addAnnouncement(params: {
     return mapRow(data);
 }
 
-/** Update an announcement (text/category/weekStart) */
+/** Update announcement */
 export async function updateAnnouncement(
     id: string,
     updates: {
@@ -98,7 +102,10 @@ export async function updateAnnouncement(
 
     const { data, error } = await supabase
         .from('announcement_items')
-        .update(patch)
+        .update({
+            ...patch,
+            updated_at: new Date().toISOString(),
+        })
         .eq('id', id)
         .select()
         .single();
@@ -118,7 +125,7 @@ export async function deleteAnnouncement(id: string) {
     return true;
 }
 
-/** Toggle reminder completed */
+/** Toggle completed */
 export async function toggleAnnouncementCompleted(id: string, completed: boolean) {
     const { data, error } = await supabase
         .from('announcement_items')
@@ -129,4 +136,88 @@ export async function toggleAnnouncementCompleted(id: string, completed: boolean
 
     if (error) throw new Error(error.message);
     return mapRow(data);
+}
+
+/* ---------------------------------------------------------
+   ANNOUNCEMENT TABS
+--------------------------------------------------------- */
+
+/** Map DB row → tab object */
+function mapTabRow(row: any) {
+    return {
+        id: row.id,
+        label: row.label,
+        placeholder: row.placeholder ?? '',
+        emptyText: `No ${row.label.toLowerCase()} yet.`,
+        sort_order: row.sort_order ?? 0,
+    };
+}
+
+/** Fetch tabs */
+export async function fetchAnnouncementTabs(familyId: string) {
+    const { data, error } = await supabase
+        .from('announcement_tabs')
+        .select('*')
+        .eq('family_id', familyId)
+        .order('sort_order', { ascending: true })
+        .order('label', { ascending: true });
+
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(mapTabRow);
+}
+
+/** Create tab */
+export async function createAnnouncementTab(params: {
+    familyId: string;
+    label: string;
+    placeholder?: string;
+}) {
+    const { familyId, label, placeholder } = params;
+
+    const { data, error } = await supabase
+        .from('announcement_tabs')
+        .insert({
+            family_id: familyId,
+            label,
+            placeholder: placeholder ?? null,
+        })
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+    return mapTabRow(data);
+}
+
+/** Update tab */
+export async function updateAnnouncementTab(
+    id: string,
+    updates: { label?: string; placeholder?: string }
+) {
+    const patch: any = {};
+    if (updates.label !== undefined) patch.label = updates.label;
+    if (updates.placeholder !== undefined) patch.placeholder = updates.placeholder;
+
+    const { data, error } = await supabase
+        .from('announcement_tabs')
+        .update({
+            ...patch,
+            updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+    return mapTabRow(data);
+}
+
+/** Delete tab */
+export async function deleteAnnouncementTab(id: string) {
+    const { error } = await supabase
+        .from('announcement_tabs')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw new Error(error.message);
+    return true;
 }

@@ -57,7 +57,7 @@ function RootNavigator() {
         <Stack.Screen name="chores-info" options={{ headerTitle: 'How chore game works 🏁' }} />
         <Stack.Screen name="chores-settings" options={{ headerTitle: 'Chore Game Settings ⚙️' }} />
 
-        <Stack.Screen name="wishList" options={{ headerTitle: 'Wish List 💫' }} />
+        <Stack.Screen name="wishlist" options={{ headerTitle: 'Wish List 💫' }} />
         <Stack.Screen name="boards/activity" options={{ headerTitle: 'Activities 📆' }} />
 
         <Stack.Screen name="boards/announcements" options={{ headerTitle: 'Announcements 📢' }} />
@@ -65,6 +65,11 @@ function RootNavigator() {
           name="boards/announcements-info"
           options={{ headerTitle: 'How announcements work 📖' }}
         />
+        <Stack.Screen
+          name="boards/announcements-settings"
+          options={{ headerTitle: "Announcements Settings ⚙️" }}
+        />
+
 
         <Stack.Screen name="boards/grocery" options={{ headerTitle: 'Groceries 🛒' }} />
       </Stack.Protected>
