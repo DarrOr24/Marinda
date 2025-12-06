@@ -535,11 +535,21 @@ export default function WishList() {
 
                             {/* IMAGE PREVIEW */}
                             {newImageUri && (
-                                <Image
-                                    source={{ uri: newImageUri }}
-                                    style={styles.imagePreview}
-                                />
+                                <>
+                                    <Image
+                                        source={{ uri: newImageUri }}
+                                        style={styles.imagePreview}
+                                    />
+
+                                    <TouchableOpacity
+                                        onPress={() => setNewImageUri(null)}
+                                        style={styles.removeImageBtn}
+                                    >
+                                        <Text style={styles.removeImageText}>Remove Image</Text>
+                                    </TouchableOpacity>
+                                </>
                             )}
+
 
 
                             <View style={styles.modalButtonsRow}>
@@ -879,7 +889,19 @@ const styles = StyleSheet.create({
         marginTop: 6,
         gap: 16,
     },
+    removeImageBtn: {
+        marginTop: 8,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        backgroundColor: "#fee2e2", // light red
+        alignItems: "center",
+    },
 
-
+    removeImageText: {
+        color: "#b91c1c",
+        fontWeight: "600",
+        fontSize: 13,
+    },
 
 });
