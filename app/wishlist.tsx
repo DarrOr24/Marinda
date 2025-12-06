@@ -69,6 +69,9 @@ export default function WishList() {
         : (member as any)?.id;
 
     const viewingMember = memberList.find((m: any) => m.id === effectiveMemberId);
+    // -------- parent kid-switcher --------
+    const [showKidMenu, setShowKidMenu] = useState(false);
+
 
     // =============================
     // ⚡ BIDIRECTIONAL CALCULATOR
@@ -213,7 +216,45 @@ export default function WishList() {
                             ? `${viewingMember?.profile?.first_name || "Child"}'s Wish List`
                             : "My Wish List"}
                     </Text>
+
+                    {isParent && kids.length > 0 && (
+                        <View style={{ position: "relative" }}>
+                            <TouchableOpacity
+                                style={styles.switcher}
+                                onPress={() => setShowKidMenu((prev) => !prev)}
+                            >
+                                <MaterialCommunityIcons
+                                    name="account-switch"
+                                    size={18}
+                                    color="#334155"
+                                />
+                                <Text style={styles.switcherText}>
+                                    {viewingMember?.profile?.first_name || "Select"}
+                                </Text>
+                            </TouchableOpacity>
+
+                            {showKidMenu && (
+                                <View style={styles.switcherMenu}>
+                                    {kids.map((kid: any) => (
+                                        <Pressable
+                                            key={kid.id}
+                                            style={styles.switcherOption}
+                                            onPress={() => {
+                                                setSelectedKidId(kid.id);
+                                                setShowKidMenu(false);
+                                            }}
+                                        >
+                                            <Text style={styles.switcherOptionText}>
+                                                {kid.profile?.first_name}
+                                            </Text>
+                                        </Pressable>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                    )}
                 </View>
+
 
                 {/* =======================
                      BIDIRECTIONAL CALCULATOR
