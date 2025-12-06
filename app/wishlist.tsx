@@ -206,6 +206,16 @@ export default function WishList() {
         );
     }
 
+    // Reset all modal fields
+    function resetForm() {
+        setNewTitle("");
+        setNewPrice("");
+        setNewNote("");
+        setNewLink("");
+        setNewImageUri(null);
+        setEditingItem(null);
+    }
+
     return (
         <SafeAreaView style={styles.screen} edges={["bottom", "left", "right"]}>
             <ScrollView
@@ -449,12 +459,10 @@ export default function WishList() {
                 <TouchableOpacity
                     style={[styles.fab, !canAdd && { opacity: 0.5 }]}
                     onPress={() => {
-                        setEditingItem(null);
-                        setNewTitle("");
-                        setNewPrice("");
-                        setNewNote("");
+                        resetForm();
                         setShowAddModal(true);
                     }}
+
                     disabled={!canAdd}
                 >
                     <MaterialCommunityIcons name="plus" size={26} color="#fff" />
@@ -467,7 +475,7 @@ export default function WishList() {
                     style={styles.modalOverlay}
                     onPress={() => {
                         setShowAddModal(false);
-                        setEditingItem(null);
+                        resetForm();
                     }}
                 />
                 <KeyboardAvoidingView
@@ -557,7 +565,7 @@ export default function WishList() {
                                     style={[styles.modalButton, styles.modalCancel]}
                                     onPress={() => {
                                         setShowAddModal(false);
-                                        setEditingItem(null);
+                                        resetForm();
                                     }}
                                 >
                                     <Text style={styles.modalCancelText}>Cancel</Text>
