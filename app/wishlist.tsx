@@ -4,14 +4,18 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    Keyboard,
+    KeyboardAvoidingView,
     Modal,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
-    TouchableOpacity,
-    View,
+    TouchableOpacity, // ✅ for dismiss
+    TouchableWithoutFeedback,
+    View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -466,90 +470,98 @@ export default function WishList() {
                         setEditingItem(null);
                     }}
                 />
-                <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: 20 }}>
-                    <View style={styles.modalBox}>
-                        <Text style={styles.modalTitle}>
-                            {editingItem ? "Edit Wish" : "Add Wish"}
-                        </Text>
-
-                        <TextInput
-                            placeholder="Title"
-                            value={newTitle}
-                            onChangeText={setNewTitle}
-                            style={styles.input}
-                        />
-                        <TextInput
-                            placeholder="Price (CAD)"
-                            keyboardType="numeric"
-                            value={newPrice}
-                            onChangeText={setNewPrice}
-                            style={styles.input}
-                        />
-                        <Text style={styles.previewText}>
-                            ≈ {previewPoints} points ({POINTS_PER_DOLLAR} pts = $1)
-                        </Text>
-                        <TextInput
-                            placeholder="Note (optional)"
-                            value={newNote}
-                            onChangeText={setNewNote}
-                            style={[styles.input, { minHeight: 60 }]}
-                            multiline
-                        />
-                        {/* LINK INPUT */}
-                        <TextInput
-                            placeholder="Link (optional)"
-                            value={newLink}
-                            onChangeText={setNewLink}
-                            style={styles.input}
-                        />
-
-                        {/* IMAGE PICKER */}
-                        <TouchableOpacity
-                            style={styles.imagePicker}
-                            onPress={async () => {
-                                const res = await ImagePicker.launchImageLibraryAsync({
-                                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                                    quality: 0.7,
-                                });
-
-                                if (!res.canceled) {
-                                    setNewImageUri(res.assets[0].uri);
-                                }
-                            }}
-                        >
-                            <Text style={styles.imagePickerText}>
-                                {newImageUri ? "Change Image" : "Add Image"}
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={{ flex: 1, justifyContent: "center", paddingHorizontal: 20 }}
+                >
+                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                        <View style={styles.modalBox}>
+                            <Text style={styles.modalTitle}>
+                                {editingItem ? "Edit Wish" : "Add Wish"}
                             </Text>
-                        </TouchableOpacity>
 
-                        {/* IMAGE PREVIEW */}
-                        {newImageUri && (
-                            <Image
-                                source={{ uri: newImageUri }}
-                                style={styles.imagePreview}
+                            <TextInput
+                                placeholder="Title"
+                                value={newTitle}
+                                onChangeText={setNewTitle}
+                                style={styles.input}
                             />
-                        )}
+                            <TextInput
+                                placeholder="Price (CAD)"
+                                keyboardType="numeric"
+                                value={newPrice}
+                                onChangeText={setNewPrice}
+                                style={styles.input}
+                            />
+                            <Text style={styles.previewText}>
+                                ≈ {previewPoints} points ({POINTS_PER_DOLLAR} pts = $1)
+                            </Text>
+                            <TextInput
+                                placeholder="Note (optional)"
+                                value={newNote}
+                                onChangeText={setNewNote}
+                                style={[styles.input, { minHeight: 60 }]}
+                                multiline
+                                returnKeyType="done"
+                                onSubmitEditing={Keyboard.dismiss}
+                                submitBehavior="submit"
+                            />
+                            {/* LINK INPUT */}
+                            <TextInput
+                                placeholder="Link (optional)"
+                                value={newLink}
+                                onChangeText={setNewLink}
+                                style={styles.input}
+                            />
 
-
-                        <View style={styles.modalButtonsRow}>
+                            {/* IMAGE PICKER */}
                             <TouchableOpacity
-                                style={[styles.modalButton, styles.modalCancel]}
-                                onPress={() => {
-                                    setShowAddModal(false);
-                                    setEditingItem(null);
+                                style={styles.imagePicker}
+                                onPress={async () => {
+                                    const res = await ImagePicker.launchImageLibraryAsync({
+                                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                                        quality: 0.7,
+                                    });
+
+                                    if (!res.canceled) {
+                                        setNewImageUri(res.assets[0].uri);
+                                    }
                                 }}
                             >
-                                <Text style={styles.modalCancelText}>Cancel</Text>
+                                <Text style={styles.imagePickerText}>
+                                    {newImageUri ? "Change Image" : "Add Image"}
+                                </Text>
                             </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.modalButton, styles.modalSave]}
-                                onPress={handleSave}
-                            >
-                                <Text style={styles.modalSaveText}>Save</Text>
-                            </TouchableOpacity>
+
+                            {/* IMAGE PREVIEW */}
+                            {newImageUri && (
+                                <Image
+                                    source={{ uri: newImageUri }}
+                                    style={styles.imagePreview}
+                                />
+                            )}
+
+
+                            <View style={styles.modalButtonsRow}>
+                                <TouchableOpacity
+                                    style={[styles.modalButton, styles.modalCancel]}
+                                    onPress={() => {
+                                        setShowAddModal(false);
+                                        setEditingItem(null);
+                                    }}
+                                >
+                                    <Text style={styles.modalCancelText}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.modalButton, styles.modalSave]}
+                                    onPress={handleSave}
+                                >
+                                    <Text style={styles.modalSaveText}>Save</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
-                    </View>
-                </View>
+                    </TouchableWithoutFeedback>
+                </KeyboardAvoidingView>
             </Modal>
         </SafeAreaView>
     );
