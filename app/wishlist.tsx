@@ -466,86 +466,88 @@ export default function WishList() {
                         setEditingItem(null);
                     }}
                 />
-                <View style={styles.modalBox}>
-                    <Text style={styles.modalTitle}>
-                        {editingItem ? "Edit Wish" : "Add Wish"}
-                    </Text>
-
-                    <TextInput
-                        placeholder="Title"
-                        value={newTitle}
-                        onChangeText={setNewTitle}
-                        style={styles.input}
-                    />
-                    <TextInput
-                        placeholder="Price (CAD)"
-                        keyboardType="numeric"
-                        value={newPrice}
-                        onChangeText={setNewPrice}
-                        style={styles.input}
-                    />
-                    <Text style={styles.previewText}>
-                        ≈ {previewPoints} points ({POINTS_PER_DOLLAR} pts = $1)
-                    </Text>
-                    <TextInput
-                        placeholder="Note (optional)"
-                        value={newNote}
-                        onChangeText={setNewNote}
-                        style={[styles.input, { minHeight: 60 }]}
-                        multiline
-                    />
-                    {/* LINK INPUT */}
-                    <TextInput
-                        placeholder="Link (optional)"
-                        value={newLink}
-                        onChangeText={setNewLink}
-                        style={styles.input}
-                    />
-
-                    {/* IMAGE PICKER */}
-                    <TouchableOpacity
-                        style={styles.imagePicker}
-                        onPress={async () => {
-                            const res = await ImagePicker.launchImageLibraryAsync({
-                                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                                quality: 0.7,
-                            });
-
-                            if (!res.canceled) {
-                                setNewImageUri(res.assets[0].uri);
-                            }
-                        }}
-                    >
-                        <Text style={styles.imagePickerText}>
-                            {newImageUri ? "Change Image" : "Add Image"}
+                <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: 20 }}>
+                    <View style={styles.modalBox}>
+                        <Text style={styles.modalTitle}>
+                            {editingItem ? "Edit Wish" : "Add Wish"}
                         </Text>
-                    </TouchableOpacity>
 
-                    {/* IMAGE PREVIEW */}
-                    {newImageUri && (
-                        <Image
-                            source={{ uri: newImageUri }}
-                            style={styles.imagePreview}
+                        <TextInput
+                            placeholder="Title"
+                            value={newTitle}
+                            onChangeText={setNewTitle}
+                            style={styles.input}
                         />
-                    )}
+                        <TextInput
+                            placeholder="Price (CAD)"
+                            keyboardType="numeric"
+                            value={newPrice}
+                            onChangeText={setNewPrice}
+                            style={styles.input}
+                        />
+                        <Text style={styles.previewText}>
+                            ≈ {previewPoints} points ({POINTS_PER_DOLLAR} pts = $1)
+                        </Text>
+                        <TextInput
+                            placeholder="Note (optional)"
+                            value={newNote}
+                            onChangeText={setNewNote}
+                            style={[styles.input, { minHeight: 60 }]}
+                            multiline
+                        />
+                        {/* LINK INPUT */}
+                        <TextInput
+                            placeholder="Link (optional)"
+                            value={newLink}
+                            onChangeText={setNewLink}
+                            style={styles.input}
+                        />
 
-
-                    <View style={styles.modalButtonsRow}>
+                        {/* IMAGE PICKER */}
                         <TouchableOpacity
-                            style={[styles.modalButton, styles.modalCancel]}
-                            onPress={() => {
-                                setShowAddModal(false);
-                                setEditingItem(null);
+                            style={styles.imagePicker}
+                            onPress={async () => {
+                                const res = await ImagePicker.launchImageLibraryAsync({
+                                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                                    quality: 0.7,
+                                });
+
+                                if (!res.canceled) {
+                                    setNewImageUri(res.assets[0].uri);
+                                }
                             }}
                         >
-                            <Text style={styles.modalCancelText}>Cancel</Text>
+                            <Text style={styles.imagePickerText}>
+                                {newImageUri ? "Change Image" : "Add Image"}
+                            </Text>
                         </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[styles.modalButton, styles.modalSave]}
-                            onPress={handleSave}
-                        >
-                            <Text style={styles.modalSaveText}>Save</Text>
-                        </TouchableOpacity>
+
+                        {/* IMAGE PREVIEW */}
+                        {newImageUri && (
+                            <Image
+                                source={{ uri: newImageUri }}
+                                style={styles.imagePreview}
+                            />
+                        )}
+
+
+                        <View style={styles.modalButtonsRow}>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.modalCancel]}
+                                onPress={() => {
+                                    setShowAddModal(false);
+                                    setEditingItem(null);
+                                }}
+                            >
+                                <Text style={styles.modalCancelText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.modalSave]}
+                                onPress={handleSave}
+                            >
+                                <Text style={styles.modalSaveText}>Save</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
             </Modal>
@@ -748,8 +750,6 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(0,0,0,0.25)",
     },
     modalBox: {
-        marginTop: 120,
-        marginHorizontal: 20,
         padding: 20,
         borderRadius: 16,
         backgroundColor: "#ffffff",
@@ -845,10 +845,10 @@ const styles = StyleSheet.create({
 
     cardThumb: {
         width: 90,
-        height: 90,
-        borderRadius: 10,
-        backgroundColor: "#f2f2f2",
-        resizeMode: "cover",
+        aspectRatio: 0.75,
+        borderRadius: 8,
+        backgroundColor: "#f8f8f8",
+        resizeMode: "contain",
     },
 
     cardRight: {
