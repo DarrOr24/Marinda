@@ -1,6 +1,5 @@
 // app/settings/family.tsx
-import * as ImagePicker from 'expo-image-picker'
-import { useEffect, useState } from 'react'
+import React from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -12,19 +11,31 @@ import {
 
 import { FamilyAvatar } from '@/components/avatar/family-avatar'
 import { ProfileAvatar } from '@/components/avatar/profile-avatar'
+import { ChipSelector } from '@/components/chip-selector'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import {
   useFamily,
   useRemoveMember,
   useRotateFamilyCode,
-  useUpdateFamilyAvatar,
   useUpdateMemberRole,
 } from '@/lib/families/families.hooks'
 import type { Member, Role } from '@/lib/families/families.types'
-import { getSupabase } from '@/lib/supabase'
 
+// Derive ROLE_OPTIONS from Role type - ensures all roles are included
+const ALL_ROLES: readonly Role[] = ['MOM', 'DAD', 'ADULT', 'TEEN', 'CHILD'] as const
 
-const ROLE_OPTIONS: Role[] = ['MOM', 'DAD', 'ADULT', 'TEEN', 'CHILD']
+const ROLE_LABELS: Record<Role, string> = {
+  MOM: 'Mom',
+  DAD: 'Dad',
+  ADULT: 'Adult',
+  TEEN: 'Teen',
+  CHILD: 'Child',
+}
+
+const ROLE_OPTIONS = ALL_ROLES.map((role) => ({
+  label: ROLE_LABELS[role],
+  value: role,
+}))
 
 export default function FamilySettingsScreen() {
   const { member } = useAuthContext() as any
@@ -34,19 +45,15 @@ export default function FamilySettingsScreen() {
   const isParent = myRole === 'MOM' || myRole === 'DAD'
 
   const { family, members } = useFamily(familyId)
-  const supabase = getSupabase()
 
   const updateMemberRole = useUpdateMemberRole(familyId)
   const rotateCode = useRotateFamilyCode(familyId)
   const removeMember = useRemoveMember(familyId)
-  const updateFamilyAvatar = useUpdateFamilyAvatar(familyId)
 
   const familyData = family.data
   const familyMembers: Member[] = members.data ?? []
   const isLoadingMembers = members.isLoading
   const isLoadingFamily = family.isLoading
-
-  const [familyAvatarUri, setFamilyAvatarUri] = useState<string | null>(null)
 
   if (!isParent) {
     return (
@@ -126,47 +133,6 @@ export default function FamilySettingsScreen() {
     )
   }
 
-  useEffect(() => {
-    if (!familyData?.avatar_url) {
-      setFamilyAvatarUri(null)
-      return
-    }
-
-    const { data: pub } = supabase.storage
-      .from('family-photos')
-      .getPublicUrl(familyData.avatar_url)
-
-    setFamilyAvatarUri(pub.publicUrl ?? null)
-  }, [familyData?.avatar_url, supabase])
-
-  const handleChangeFamilyAvatar = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.9,
-      allowsEditing: true,
-      aspect: [1, 1],
-    })
-
-    if (result.canceled) return
-    const uri = result.assets[0].uri
-
-    // Optimistic local update for snappier UI
-    setFamilyAvatarUri(uri)
-
-    updateFamilyAvatar.mutate(uri, {
-      onError: () => {
-        // revert to previous avatar if upload fails
-        if (familyData?.avatar_url) {
-          const { data: pub } = supabase.storage
-            .from('family-photos')
-            .getPublicUrl(familyData.avatar_url)
-          setFamilyAvatarUri(pub.publicUrl ?? null)
-        } else {
-          setFamilyAvatarUri(null)
-        }
-      },
-    })
-  }
 
   return (
     <View style={styles.section}>
@@ -265,27 +231,12 @@ export default function FamilySettingsScreen() {
                     Role: {m.role.toLowerCase()}
                   </Text>
 
-                  <View style={styles.roleChipsRow}>
-                    {ROLE_OPTIONS.map(r => (
-                      <Pressable
-                        key={r}
-                        onPress={() => handleChangeRole(m, r)}
-                        style={[
-                          styles.roleChip,
-                          m.role === r && styles.roleChipActive,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.roleChipText,
-                            m.role === r && styles.roleChipTextActive,
-                          ]}
-                        >
-                          {r.toLowerCase()}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
+                  <ChipSelector
+                    options={ROLE_OPTIONS}
+                    value={m.role}
+                    onChange={(value: string) => handleChangeRole(m, value as Role)}
+                    style={styles.roleChipsRow}
+                  />
                 </View>
 
                 {/* remove (hidden for self) */}
@@ -420,33 +371,8 @@ const styles = StyleSheet.create({
   },
 
   roleChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
     marginTop: 4,
   },
-  roleChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    backgroundColor: '#f9fafb',
-  },
-  roleChipActive: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
-  },
-  roleChipText: {
-    fontSize: 11,
-    color: '#4b5563',
-    textTransform: 'capitalize',
-  },
-  roleChipTextActive: {
-    color: '#ffffff',
-    fontWeight: '600',
-  },
-
   removeButton: {
     alignSelf: 'flex-start',
     paddingHorizontal: 10,

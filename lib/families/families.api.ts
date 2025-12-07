@@ -1,7 +1,7 @@
 // lib/families/families.api.ts
 import { MEMBER_WITH_PROFILE_SELECT } from '../members/members.select'
 import { getSupabase } from '../supabase'
-import { Member, Role } from './families.types'
+import { Member, MyFamily, Role } from './families.types'
 
 const supabase = getSupabase()
 
@@ -143,4 +143,32 @@ export async function updateMemberRole(
 
   if (error) throw new Error(error.message)
   return data as Pick<Member, 'id' | 'role'>
+}
+
+export async function fetchMyFamilies(profileId: string): Promise<MyFamily[]> {
+  const { data, error } = await supabase
+    .from('family_members')
+    .select(`
+      family_id,
+      role,
+      is_active,
+      family:families!family_members_family_id_fkey (
+        id,
+        name,
+        avatar_url
+      )
+    `)
+    .eq('profile_id', profileId)
+    .eq('is_active', true)
+
+  if (error) throw new Error(error.message)
+
+  const rows = (data ?? []) as any[]
+
+  return rows.map((row) => ({
+    id: row.family.id,
+    name: row.family.name,
+    avatar_url: row.family.avatar_url ?? null,
+    role: row.role as Role,
+  }))
 }

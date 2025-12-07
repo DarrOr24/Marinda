@@ -1,8 +1,5 @@
 // app/settings/account.tsx
-import { ProfileAvatar } from '@/components/avatar/profile-avatar'
-import { useAuthContext } from '@/hooks/use-auth-context'
-import { useProfile, useUpdateProfile } from '@/lib/profiles/profiles.hooks'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   Pressable,
@@ -12,32 +9,48 @@ import {
   View,
 } from 'react-native'
 
+import { FamilyAvatar } from '@/components/avatar/family-avatar'
+import { ProfileAvatar } from '@/components/avatar/profile-avatar'
+import { ChipSelector } from '@/components/chip-selector'
+import { useAuthContext } from '@/hooks/use-auth-context'
+import { useMyFamilies } from '@/lib/families/families.hooks'
+import { useProfile, useUpdateProfile } from '@/lib/profiles/profiles.hooks'
+
+const GENDER_OPTIONS = [
+  { label: 'Male', value: 'MALE' },
+  { label: 'Female', value: 'FEMALE' },
+]
+
 export default function AccountSettingsScreen() {
   const { member } = useAuthContext() as any
   const profileId = member?.profile_id
+  const activeFamilyId = member?.family_id ?? null
 
   const { data, isLoading } = useProfile(profileId)
   const updateProfile = useUpdateProfile()
+  const {
+    data: myFamilies,
+    isLoading: isLoadingFamilies,
+  } = useMyFamilies(profileId)
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [gender, setGender] = useState('')
+  const [gender, setGender] = useState<string | null>(null)
   const [birthDate, setBirthDate] = useState('')
 
-  // Load data when profile arrives
   useEffect(() => {
     if (!data) return
 
     setFirstName(data.first_name ?? '')
     setLastName(data.last_name ?? '')
-    setGender(data.gender ?? '')
+    setGender((data.gender as string) ?? null)
     setBirthDate(data.birth_date ?? '')
   }, [data])
 
   const hasChanges =
     firstName !== (data?.first_name ?? '') ||
     lastName !== (data?.last_name ?? '') ||
-    gender !== (data?.gender ?? '') ||
+    (gender ?? '') !== (data?.gender ?? '') ||
     birthDate !== (data?.birth_date ?? '')
 
   const handleSave = async () => {
@@ -48,11 +61,16 @@ export default function AccountSettingsScreen() {
       updates: {
         first_name: firstName,
         last_name: lastName,
-        gender,
+        gender: gender ?? undefined,
         birth_date: birthDate,
       },
     })
   }
+
+  const families = useMemo(
+    () => myFamilies ?? [],
+    [myFamilies],
+  )
 
   if (isLoading || !data) {
     return (
@@ -79,6 +97,45 @@ export default function AccountSettingsScreen() {
         ) : null}
       </View>
 
+      {/* My families */}
+      <Text style={styles.label}>My families</Text>
+      {isLoadingFamilies ? (
+        <View style={styles.familiesLoadingRow}>
+          <ActivityIndicator size="small" />
+          <Text style={styles.subtitle}>Loading families…</Text>
+        </View>
+      ) : families.length === 0 ? (
+        <Text style={styles.subtitle}>
+          You are not a member of any families yet.
+        </Text>
+      ) : (
+        <View style={styles.familiesRow}>
+          {families.map((fam) => {
+            const isSelected = families.length > 1 && fam.id === activeFamilyId
+            return (
+              <View key={fam.id} style={styles.familyItem}>
+                <FamilyAvatar
+                  familyId={fam.id}
+                  size="md"
+                  isSelected={isSelected}
+                  // selection logic – can adjust later if needed
+                  onSelect={() => {
+                    // TODO: select family
+                    console.log('TODO: select family', fam.id)
+                  }}
+                />
+                <Text style={styles.familyName} numberOfLines={1}>
+                  {fam.name}
+                </Text>
+                <Text style={styles.familyRole}>
+                  {fam.role.toLowerCase()}
+                </Text>
+              </View>
+            )
+          })}
+        </View>
+      )}
+
       {/* First name */}
       <Text style={styles.label}>First Name</Text>
       <TextInput
@@ -97,11 +154,11 @@ export default function AccountSettingsScreen() {
 
       {/* Gender */}
       <Text style={styles.label}>Gender</Text>
-      <TextInput
+      <ChipSelector
+        options={GENDER_OPTIONS}
         value={gender}
-        onChangeText={setGender}
-        style={styles.input}
-        placeholder="MALE / FEMALE"
+        onChange={setGender}
+        style={{ marginTop: 4 }}
       />
 
       {/* Birth date */}
@@ -165,6 +222,32 @@ const styles = StyleSheet.create({
   avatarWrapper: {
     alignSelf: 'flex-start',
     marginBottom: 12,
+  },
+  familiesLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  familiesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  familyItem: {
+    width: 84,
+    alignItems: 'center',
+    gap: 4,
+  },
+  familyName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  familyRole: {
+    fontSize: 11,
+    color: '#6b7280',
+    textTransform: 'capitalize',
   },
   saveBtn: {
     marginTop: 12,

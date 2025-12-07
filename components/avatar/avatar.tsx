@@ -21,6 +21,13 @@ const SIZE_MAP: Record<AvatarSize, number> = {
   xl: 120,
 }
 
+const SELECT_BORDER_MAP: Record<AvatarSize, number> = {
+  sm: 2,
+  md: 2,
+  lg: 3,
+  xl: 4,
+}
+
 interface AvatarProps {
   uri?: string | null
   label?: string
@@ -28,6 +35,7 @@ interface AvatarProps {
   size?: AvatarSize
   onPress?: () => void
   style?: StyleProp<ViewStyle>
+  isSelected?: boolean
 }
 
 export function Avatar({
@@ -37,9 +45,14 @@ export function Avatar({
   size = 'md',
   onPress,
   style,
+  isSelected = false,
 }: AvatarProps) {
   const dimension = SIZE_MAP[size]
   const radius = dimension / 2
+
+  const wrapperDimension = isSelected ? dimension + 8 : dimension
+  const wrapperRadius = wrapperDimension / 2
+  const borderWidth = isSelected ? SELECT_BORDER_MAP[size] : 0
 
   const fallbackIconName =
     type === 'family'
@@ -81,22 +94,28 @@ export function Avatar({
     </View>
   )
 
-  if (onPress) {
-    return (
-      <Pressable
-        style={({ pressed }) => [
-          styles.wrapper,
-          { opacity: pressed ? 0.8 : 1 },
-          style,
-        ]}
-        onPress={onPress}
-      >
-        {content}
-      </Pressable>
-    )
-  }
+  const WrapperComponent = onPress ? Pressable : View
 
-  return <View style={[styles.wrapper, style]}>{content}</View>
+  return (
+    <WrapperComponent
+      //@ts-ignore Pressable vs View style prop type
+      style={({ pressed }: any) => [
+        styles.wrapper,
+        {
+          width: wrapperDimension,
+          height: wrapperDimension,
+          borderRadius: wrapperRadius,
+          borderWidth,
+          borderColor: isSelected ? '#2563eb' : 'transparent',
+          opacity: onPress && pressed ? 0.8 : 1,
+        },
+        style,
+      ]}
+      {...(onPress ? { onPress } : {})}
+    >
+      {content}
+    </WrapperComponent>
+  )
 }
 
 const styles = StyleSheet.create({

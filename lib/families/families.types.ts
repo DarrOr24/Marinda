@@ -28,3 +28,10 @@ export interface Member {
   color: Color | null
   points: number
 }
+
+export interface MyFamily {
+  id: string
+  name: string
+  avatar_url: string | null
+  role: Role
+}

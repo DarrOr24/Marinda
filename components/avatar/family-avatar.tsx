@@ -1,3 +1,4 @@
+// components/avatar/family-avatar.tsx
 import * as ImagePicker from 'expo-image-picker'
 import React, { useEffect, useState } from 'react'
 
@@ -10,12 +11,16 @@ type FamilyAvatarProps = {
   familyId: string
   isUpdatable?: boolean
   size?: AvatarSize
+  isSelected?: boolean
+  onSelect?: () => void
 }
 
 export function FamilyAvatar({
   familyId,
   isUpdatable = false,
   size = 'md',
+  isSelected = false,
+  onSelect,
 }: FamilyAvatarProps) {
   const { family } = useFamily(familyId)
   const familyData = family.data
@@ -38,6 +43,12 @@ export function FamilyAvatar({
   }, [familyData?.avatar_url, supabase])
 
   const handlePress = async () => {
+    // selection logic has priority over editing
+    if (onSelect) {
+      onSelect()
+      return
+    }
+
     if (!isUpdatable) return
 
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -52,7 +63,6 @@ export function FamilyAvatar({
     const localUri = result.assets[0].uri
     const previousUri = uri
 
-    // optimistic preview
     setUri(localUri)
 
     updateFamilyAvatar.mutate(localUri, {
@@ -67,7 +77,8 @@ export function FamilyAvatar({
       type="family"
       uri={uri ?? undefined}
       size={size}
-      onPress={isUpdatable ? handlePress : undefined}
+      onPress={isUpdatable || onSelect ? handlePress : undefined}
+      isSelected={isSelected}
     />
   )
 }

@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast-context'
 import {
   fetchFamily,
   fetchFamilyMembers,
+  fetchMyFamilies,
   removeFamilyMember,
   rotateFamilyCode,
   rpcCreateFamily,
@@ -13,8 +14,7 @@ import {
   updateFamilyAvatar,
   updateMemberRole,
 } from '@/lib/families/families.api'
-import { Member } from '@/lib/families/families.types'
-import { Role } from './families.types'
+import { Member, MyFamily, Role } from '@/lib/families/families.types'
 
 
 export function useCreateFamily() {
@@ -141,5 +141,13 @@ export function useRemoveMember(familyId: string) {
   return useMutation({
     mutationFn: ({ memberId }: { memberId: string }) => removeFamilyMember(familyId, memberId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['family-members', familyId] }),
+  })
+}
+
+export function useMyFamilies(profileId?: string) {
+  return useQuery<MyFamily[]>({
+    queryKey: ['my-families', profileId],
+    queryFn: () => fetchMyFamilies(profileId!),
+    enabled: !!profileId,
   })
 }

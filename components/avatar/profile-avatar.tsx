@@ -1,3 +1,4 @@
+// components/avatar/profile-avatar.tsx
 import * as ImagePicker from 'expo-image-picker'
 import React, { useEffect, useState } from 'react'
 
