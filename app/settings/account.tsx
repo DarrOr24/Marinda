@@ -1,12 +1,10 @@
 // app/settings/account.tsx
+import { ProfileAvatar } from '@/components/avatar/profile-avatar'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useProfile, useUpdateProfile } from '@/lib/profiles/profiles.hooks'
-import { getSupabase } from '@/lib/supabase'
-import * as ImagePicker from 'expo-image-picker'
 import { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -26,12 +24,6 @@ export default function AccountSettingsScreen() {
   const [gender, setGender] = useState('')
   const [birthDate, setBirthDate] = useState('')
 
-  // avatar state
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null) // server public URL
-  const [pendingAvatar, setPendingAvatar] = useState<string | null>(null) // local preview
-
-  const supabase = getSupabase()
-
   // Load data when profile arrives
   useEffect(() => {
     if (!data) return
@@ -40,46 +32,19 @@ export default function AccountSettingsScreen() {
     setLastName(data.last_name ?? '')
     setGender(data.gender ?? '')
     setBirthDate(data.birth_date ?? '')
-
-    if (data.avatar_url) {
-      const { data: pub } = supabase.storage
-        .from('profile-photos')
-        .getPublicUrl(data.avatar_url)
-      // cache-bust with timestamp so new avatars show immediately
-      setAvatarUrl(`${pub.publicUrl}?t=${Date.now()}`)
-    }
   }, [data])
 
-  // Preview > server URL
-  const effectiveAvatar = pendingAvatar ?? avatarUrl
-
   const hasChanges =
-    pendingAvatar !== null ||
     firstName !== (data?.first_name ?? '') ||
     lastName !== (data?.last_name ?? '') ||
     gender !== (data?.gender ?? '') ||
     birthDate !== (data?.birth_date ?? '')
-
-  // Pick avatar (preview only)
-  const pickAvatar = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.9,
-      allowsEditing: true,
-      aspect: [1, 1],
-    })
-
-    if (result.canceled) return
-    const uri = result.assets[0].uri
-    setPendingAvatar(uri)
-  }
 
   const handleSave = async () => {
     if (!profileId) return
 
     await updateProfile.mutateAsync({
       profileId,
-      avatarFileUri: pendingAvatar, // upload only if user picked new one
       updates: {
         first_name: firstName,
         last_name: lastName,
@@ -87,9 +52,6 @@ export default function AccountSettingsScreen() {
         birth_date: birthDate,
       },
     })
-
-    // after saving, clear pending so Save button disables correctly
-    setPendingAvatar(null)
   }
 
   if (isLoading || !data) {
@@ -103,19 +65,19 @@ export default function AccountSettingsScreen() {
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Account</Text>
+      <Text style={styles.sectionTitle}>Account Settings</Text>
 
       {/* Avatar */}
       <Text style={styles.label}>Profile Photo</Text>
-      <Pressable onPress={pickAvatar} style={styles.avatarWrapper}>
-        {effectiveAvatar ? (
-          <Image source={{ uri: effectiveAvatar }} style={styles.avatarImage} />
-        ) : (
-          <View style={styles.avatarEmpty}>
-            <Text style={styles.avatarEmptyText}>Tap to upload</Text>
-          </View>
-        )}
-      </Pressable>
+      <View style={styles.avatarWrapper}>
+        {profileId ? (
+          <ProfileAvatar
+            profileId={profileId}
+            size="xl"
+            isUpdatable={true}
+          />
+        ) : null}
+      </View>
 
       {/* First name */}
       <Text style={styles.label}>First Name</Text>
@@ -201,25 +163,8 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   avatarWrapper: {
-    alignSelf: 'center',
+    alignSelf: 'flex-start',
     marginBottom: 12,
-  },
-  avatarImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-  },
-  avatarEmpty: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#CBD5E1',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarEmptyText: {
-    color: '#334155',
-    fontWeight: '600',
   },
   saveBtn: {
     marginTop: 12,

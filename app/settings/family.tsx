@@ -1,26 +1,28 @@
 // app/settings/family.tsx
 import * as ImagePicker from 'expo-image-picker'
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Pressable,
   StyleSheet,
   Text,
-  View,
+  View
 } from 'react-native'
 
+import { FamilyAvatar } from '@/components/avatar/family-avatar'
+import { ProfileAvatar } from '@/components/avatar/profile-avatar'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import {
   useFamily,
   useRemoveMember,
   useRotateFamilyCode,
+  useUpdateFamilyAvatar,
   useUpdateMemberRole,
 } from '@/lib/families/families.hooks'
 import type { Member, Role } from '@/lib/families/families.types'
-import { useUpdateProfile } from '@/lib/profiles/profiles.hooks'
 import { getSupabase } from '@/lib/supabase'
+
 
 const ROLE_OPTIONS: Role[] = ['MOM', 'DAD', 'ADULT', 'TEEN', 'CHILD']
 
@@ -34,34 +36,17 @@ export default function FamilySettingsScreen() {
   const { family, members } = useFamily(familyId)
   const supabase = getSupabase()
 
-  const updateProfile = useUpdateProfile()
   const updateMemberRole = useUpdateMemberRole(familyId)
   const rotateCode = useRotateFamilyCode(familyId)
   const removeMember = useRemoveMember(familyId)
+  const updateFamilyAvatar = useUpdateFamilyAvatar(familyId)
 
   const familyData = family.data
   const familyMembers: Member[] = members.data ?? []
   const isLoadingMembers = members.isLoading
   const isLoadingFamily = family.isLoading
 
-  // local pending avatar previews per member
-  const [pendingAvatars, setPendingAvatars] = useState<
-    Record<string, string | null>
-  >({})
-
-  // compute public avatar URLs
-  const membersWithAvatar = useMemo(() => {
-    return familyMembers.map(m => {
-      let avatarPublicUrl: string | null = null
-      if (m.profile?.avatar_url) {
-        const { data: pub } = supabase.storage
-          .from('profile-photos')
-          .getPublicUrl(m.profile.avatar_url)
-        avatarPublicUrl = pub.publicUrl ?? null
-      }
-      return { ...m, avatarPublicUrl }
-    })
-  }, [familyMembers, supabase])
+  const [familyAvatarUri, setFamilyAvatarUri] = useState<string | null>(null)
 
   if (!isParent) {
     return (
@@ -99,36 +84,6 @@ export default function FamilySettingsScreen() {
         </View>
       </View>
     )
-  }
-
-  const handleChangeAvatar = async (
-    m: Member & { avatarPublicUrl?: string | null },
-  ) => {
-    if (!m.profile_id) return
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.9,
-      allowsEditing: true,
-      aspect: [1, 1],
-    })
-
-    if (result.canceled) return
-    const uri = result.assets[0].uri
-
-    setPendingAvatars(prev => ({ ...prev, [m.id]: uri }))
-
-    try {
-      await updateProfile.mutateAsync({
-        profileId: m.profile_id,
-        avatarFileUri: uri,
-        updates: {},
-      })
-      setPendingAvatars(prev => ({ ...prev, [m.id]: null }))
-    } catch (err: any) {
-      Alert.alert('Avatar update failed', err?.message ?? 'Please try again.')
-      setPendingAvatars(prev => ({ ...prev, [m.id]: null }))
-    }
   }
 
   const handleChangeRole = (m: Member, newRole: Role) => {
@@ -171,12 +126,67 @@ export default function FamilySettingsScreen() {
     )
   }
 
+  useEffect(() => {
+    if (!familyData?.avatar_url) {
+      setFamilyAvatarUri(null)
+      return
+    }
+
+    const { data: pub } = supabase.storage
+      .from('family-photos')
+      .getPublicUrl(familyData.avatar_url)
+
+    setFamilyAvatarUri(pub.publicUrl ?? null)
+  }, [familyData?.avatar_url, supabase])
+
+  const handleChangeFamilyAvatar = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.9,
+      allowsEditing: true,
+      aspect: [1, 1],
+    })
+
+    if (result.canceled) return
+    const uri = result.assets[0].uri
+
+    // Optimistic local update for snappier UI
+    setFamilyAvatarUri(uri)
+
+    updateFamilyAvatar.mutate(uri, {
+      onError: () => {
+        // revert to previous avatar if upload fails
+        if (familyData?.avatar_url) {
+          const { data: pub } = supabase.storage
+            .from('family-photos')
+            .getPublicUrl(familyData.avatar_url)
+          setFamilyAvatarUri(pub.publicUrl ?? null)
+        } else {
+          setFamilyAvatarUri(null)
+        }
+      },
+    })
+  }
+
   return (
     <View style={styles.section}>
-      {/* Family name + code */}
-      <Text style={styles.sectionTitle}>
-        {`${familyData?.name} Family Management`}
-      </Text>
+
+      {/* Family avatar + name */}
+      <View style={styles.familyHeaderRow}>
+        <FamilyAvatar
+          familyId={familyId}
+          size="lg"
+          isUpdatable={true}
+        />
+        <View style={{ marginLeft: 12, flex: 1 }}>
+          <Text style={styles.sectionTitle}>
+            {`${familyData?.name} Family`}
+          </Text>
+          <Text style={styles.sectionSubtitle}>
+            Tap the photo to change your family avatar.
+          </Text>
+        </View>
+      </View>
 
       <Text style={styles.sectionSubtitle}>
         Share the family code with your kids so they can join during signup.
@@ -214,9 +224,7 @@ export default function FamilySettingsScreen() {
         )}
 
         {!isLoadingMembers &&
-          membersWithAvatar.map(m => {
-            const avatarUri =
-              pendingAvatars[m.id] ?? m.avatarPublicUrl ?? undefined
+          familyMembers.map(m => {
             const name =
               m.profile?.first_name ||
               m.nickname ||
@@ -227,22 +235,21 @@ export default function FamilySettingsScreen() {
             return (
               <View key={m.id} style={styles.memberRow}>
                 {/* avatar */}
-                <Pressable
-                  onPress={() => handleChangeAvatar(m)}
-                  style={styles.memberAvatarWrapper}
-                >
-                  {avatarUri ? (
-                    <Image
-                      source={{ uri: avatarUri }}
-                      style={styles.memberAvatar}
+                <View style={styles.memberAvatarWrapper}>
+                  {m.profile_id ? (
+                    <ProfileAvatar
+                      profileId={m.profile_id}
+                      size="md"
+                      isUpdatable={true}
                     />
                   ) : (
-                    <View style={styles.memberAvatarEmpty}>
-                      <Text style={styles.memberAvatarEmptyText}>👤</Text>
+                    <View style={styles.memberAvatarPlaceholder}>
+                      <Text style={styles.memberAvatarPlaceholderText}>
+                        {name.charAt(0)?.toUpperCase() ?? '👤'}
+                      </Text>
                     </View>
                   )}
-                  <Text style={styles.changeAvatarText}>Change</Text>
-                </Pressable>
+                </View>
 
                 {/* name + role */}
                 <View style={{ flex: 1, gap: 4 }}>
@@ -301,6 +308,12 @@ export default function FamilySettingsScreen() {
 const styles = StyleSheet.create({
   section: {
     gap: 12,
+  },
+  familyHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 4,
   },
   sectionTitle: {
     fontSize: 18,
@@ -379,27 +392,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  memberAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-  },
-  memberAvatarEmpty: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+  memberAvatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#e5e7eb',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  memberAvatarEmptyText: {
-    fontSize: 20,
+  memberAvatarPlaceholderText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#475569',
   },
-  changeAvatarText: {
-    fontSize: 10,
-    color: '#2563eb',
-  },
-
   memberName: {
     fontSize: 16,
     fontWeight: '600',

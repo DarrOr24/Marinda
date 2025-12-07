@@ -20,7 +20,7 @@ export async function rpcJoinFamily(code: string, role: Role = 'TEEN'): Promise<
 export async function fetchFamily(familyId: string) {
   const { data, error } = await supabase
     .from('families')
-    .select('id, name, code, created_at')
+    .select('id, name, code, avatar_url, created_at')
     .eq('id', familyId)
     .single()
   if (error) throw new Error(error.message)
@@ -71,6 +71,33 @@ export async function fetchFamilyMembers(familyId: string): Promise<Member[]> {
   )
 
   return members
+}
+
+export async function updateFamilyAvatar(
+  familyId: string,
+  fileUri: string,
+): Promise<{ id: string; avatar_url: string | null }> {
+  const ext = fileUri.split('.').pop() || 'jpg'
+  const path = `${familyId}/avatar-${Date.now()}.${ext}`
+
+  const res = await fetch(fileUri)
+  const blob = await res.blob()
+
+  const { error: uploadError } = await supabase.storage
+    .from('family-avatars')
+    .upload(path, blob, { upsert: true })
+
+  if (uploadError) throw new Error(uploadError.message)
+
+  const { data, error } = await supabase
+    .from('families')
+    .update({ avatar_url: path })
+    .eq('id', familyId)
+    .select('id, avatar_url')
+    .single()
+
+  if (error) throw new Error(error.message)
+  return data
 }
 
 export async function awardMemberPoints(memberId: string, delta: number) {

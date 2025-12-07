@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuthContext } from '@/hooks/use-auth-context'
+import { useToast } from '@/hooks/use-toast-context'
 import {
   fetchFamily,
   fetchFamilyMembers,
@@ -9,8 +10,10 @@ import {
   rotateFamilyCode,
   rpcCreateFamily,
   rpcJoinFamily,
+  updateFamilyAvatar,
   updateMemberRole,
 } from '@/lib/families/families.api'
+import { Member } from '@/lib/families/families.types'
 import { Role } from './families.types'
 
 
@@ -58,64 +61,85 @@ export function useJoinFamily(defaultRole: Role = 'ADULT') {
   })
 }
 
-export function useFamily(familyId: string | undefined) {
+export function useFamily(familyId: string) {
   const family = useQuery({
     queryKey: ['family', familyId],
-    queryFn: () => fetchFamily(familyId!),
-    enabled: !!familyId,
+    queryFn: () => fetchFamily(familyId),
   })
 
   const members = useQuery({
     queryKey: ['family-members', familyId],
-    queryFn: () => fetchFamilyMembers(familyId!),
-    enabled: !!familyId,
+    queryFn: () => fetchFamilyMembers(familyId),
   })
 
   return { family, members }
 }
 
-export function useUpdateMemberRole(familyId?: string) {
+export function useUpdateMemberRole(familyId: string) {
   const qc = useQueryClient()
+  const { showToast } = useToast()
 
   return useMutation({
     mutationFn: ({ memberId, role }: { memberId: string; role: Role }) =>
       updateMemberRole(memberId, role),
-    onSuccess: () => {
-      if (familyId) {
-        qc.invalidateQueries({ queryKey: ['family-members', familyId] })
+
+    // Optimistically update the family members list
+    onMutate: async (variables) => {
+      const { memberId, role } = variables
+      await qc.cancelQueries({ queryKey: ['family-members', familyId] })
+      const previousMembers = qc.getQueryData<Member[]>(['family-members', familyId]) ?? []
+      qc.setQueryData<Member[]>(['family-members', familyId], (old) => {
+        if (!old) return old
+        return old.map((m) => m.id === memberId ? { ...m, role } : m)
+      })
+
+      return { previousMembers }
+    },
+
+    onError: (error, _vars, context) => {
+      if (context?.previousMembers) {
+        qc.setQueryData<Member[]>(
+          ['family-members', familyId],
+          context.previousMembers
+        )
       }
+
+      const message = error?.message ?? 'Could not update role. Please try again.'
+      showToast(message, 'error')
     },
   })
 }
 
-export function useRotateFamilyCode(familyId?: string) {
+export function useUpdateFamilyAvatar(familyId: string) {
   const qc = useQueryClient()
+  const { showToast } = useToast()
 
   return useMutation({
-    mutationFn: () => {
-      if (!familyId) throw new Error('No family id')
-      return rotateFamilyCode(familyId)
-    },
-    onSuccess: () => {
-      if (familyId) {
-        qc.invalidateQueries({ queryKey: ['family', familyId] })
-      }
+    mutationFn: (fileUri: string) => updateFamilyAvatar(familyId, fileUri),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['family', familyId] }),
+    onError: (error: any) => {
+      showToast(
+        error?.message ?? 'Could not update family photo. Please try again.',
+        'error'
+      )
     },
   })
 }
 
-export function useRemoveMember(familyId?: string) {
+export function useRotateFamilyCode(familyId: string) {
   const qc = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ memberId }: { memberId: string }) => {
-      if (!familyId) throw new Error('No family id')
-      return removeFamilyMember(familyId, memberId)
-    },
-    onSuccess: () => {
-      if (familyId) {
-        qc.invalidateQueries({ queryKey: ['family-members', familyId] })
-      }
-    },
+    mutationFn: () => rotateFamilyCode(familyId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['family', familyId] }),
+  })
+}
+
+export function useRemoveMember(familyId: string) {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ memberId }: { memberId: string }) => removeFamilyMember(familyId, memberId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['family-members', familyId] }),
   })
 }
