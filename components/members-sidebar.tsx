@@ -3,12 +3,13 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { usePathname, useRouter } from 'expo-router'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
-import MemberAvatar from '@/components/member-avatar'
+import { ProfileAvatar } from '@/components/avatar/profile-avatar'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useFamily } from '@/lib/families/families.hooks'
 import { useSubscribeTableByFamily } from '@/lib/families/families.realtime'
 import type { Member } from '@/lib/families/families.types'
 import { useState } from 'react'
+
 
 const SIDEBAR_WIDTH = 92
 const AVATAR_SIZE = 48
@@ -19,6 +20,7 @@ export default function MemberSidebar() {
   const pathname = usePathname()
   const { activeFamilyId } = useAuthContext()
   const { members } = useFamily(activeFamilyId || undefined)
+
   const { member: currentUser } = useAuthContext()
 
   const [showKidSwitcher, setShowKidSwitcher] = useState(false);
@@ -116,9 +118,7 @@ export default function MemberSidebar() {
                 }
               >
                 <View style={[styles.avatarBox, isActive && styles.avatarBoxActive]}>
-                  <View style={styles.memberAvatarInner}>
-                    <MemberAvatar member={m} index={idx} />
-                  </View>
+                  <ProfileAvatar profileId={m.profile_id} size="sm" />
                 </View>
                 <Text numberOfLines={1} style={styles.name}>
                   {m.profile?.first_name}
@@ -146,9 +146,7 @@ export default function MemberSidebar() {
                     activeMemberId === activeKid.id && styles.avatarBoxActive,
                   ]}
                 >
-                  <View style={styles.memberAvatarInner}>
-                    <MemberAvatar member={activeKid} index={0} />
-                  </View>
+                  <ProfileAvatar profileId={activeKid.profile_id} size="sm" />
                 </View>
 
                 <Text numberOfLines={1} style={styles.name}>
@@ -213,10 +211,7 @@ export default function MemberSidebar() {
               ]}
             >
               <View style={styles.switcherRow}>
-                <View style={styles.switcherAvatar}>
-                  <MemberAvatar member={m} index={0} />
-                </View>
-
+                <ProfileAvatar profileId={m.profile_id} size="sm" />
                 <Text style={styles.switcherText}>
                   {m.profile?.first_name}
                 </Text>
@@ -281,14 +276,6 @@ const styles = StyleSheet.create({
   avatarBoxActive: {
     borderColor: '#2563eb',
   },
-  memberAvatarInner: {
-    width: AVATAR_SIZE - AVATAR_BORDER * 2 - 4,
-    height: AVATAR_SIZE - AVATAR_BORDER * 2 - 4,
-    borderRadius: (AVATAR_SIZE - AVATAR_BORDER * 2 - 4) / 2,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   name: {
     marginTop: 6,
     fontSize: 11,
@@ -332,13 +319,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  switcherAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 })
