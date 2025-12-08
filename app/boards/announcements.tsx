@@ -6,6 +6,7 @@ import {
     ActivityIndicator,
     Alert,
     FlatList,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -36,6 +37,7 @@ import {
     type AnnouncementItem,
     type AnnouncementTab,
 } from '@/lib/announcements/announcements.types';
+
 
 
 // --------------------------------------------
@@ -257,7 +259,6 @@ export default function AnnouncementsBoard() {
         ]);
     }
 
-
     // --------------------------------------------
     // Render states
     // --------------------------------------------
@@ -285,7 +286,6 @@ export default function AnnouncementsBoard() {
         );
     }
 
-
     // --------------------------------------------
     // MAIN RENDER
     // --------------------------------------------
@@ -293,9 +293,9 @@ export default function AnnouncementsBoard() {
         <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
             <KeyboardAvoidingView
                 style={styles.container}
-                behavior={Platform.select({ ios: 'padding', android: undefined })}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
-
                 {/* ---------------------------------------------- */}
                 {/* ROW 1: SORT — BY — INFO */}
                 {/* ---------------------------------------------- */}
@@ -403,9 +403,10 @@ export default function AnnouncementsBoard() {
                 <FlatList
                     data={filteredAnnouncements}
                     keyExtractor={item => item.id}
-                    contentContainerStyle={
-                        filteredAnnouncements.length === 0 ? styles.emptyList : undefined
-                    }
+                    contentContainerStyle={[
+                        filteredAnnouncements.length === 0 ? styles.emptyList : undefined,
+                        { paddingBottom: 120 } // ⭐ Prevent Samsung nav bar + room for input
+                    ]}
                     renderItem={({ item }) => (
                         <View style={styles.itemRow}>
                             <View style={styles.itemTextContainer}>
@@ -456,16 +457,25 @@ export default function AnnouncementsBoard() {
                     }
                 />
 
+
                 {/* ---------------------------------------------- */}
                 {/* ADD ANNOUNCEMENT INPUT */}
                 {/* ---------------------------------------------- */}
-                <View style={styles.inputBar}>
+                <View
+                    style={[
+                        styles.inputBar,
+                        { paddingBottom: Platform.OS === 'android' ? 24 : 0 }
+                    ]}
+                >
                     <TextInput
                         style={styles.input}
                         placeholder={activeTab.placeholder}
                         value={newText}
                         onChangeText={setNewText}
                         multiline
+                        numberOfLines={1}                   // enables Samsung DONE/checkmark
+                        returnKeyType="done"                // tells keyboard to show action key
+                        onSubmitEditing={() => Keyboard.dismiss()}
                     />
 
                     <Pressable
@@ -665,7 +675,6 @@ export default function AnnouncementsBoard() {
         </SafeAreaView>
     );
 }
-
 
 
 // --------------------------------------------
