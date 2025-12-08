@@ -1,0 +1,279 @@
+// app/wishlist-settings.tsx
+import React, { useEffect, useState } from "react";
+import {
+    Alert,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { useAuthContext } from "@/hooks/use-auth-context";
+import type { Role } from "@/lib/families/families.types";
+import {
+    useFamilyWishlistSettings,
+    useUpdateWishlistSettings,
+} from "@/lib/wishlist/wishlist-settings.hooks";
+
+const CURRENCIES = ["CAD", "USD", "EUR", "GBP", "ILS"];
+
+export default function WishlistSettingsScreen() {
+    const { activeFamilyId, member } = useAuthContext() as any;
+
+    const currentRole = (member?.role as Role) ?? "TEEN";
+    const isParent = currentRole === "MOM" || currentRole === "DAD";
+
+    const {
+        data: settings,
+        isLoading,
+        isError,
+    } = useFamilyWishlistSettings(activeFamilyId);
+
+    const updateSettings = useUpdateWishlistSettings(activeFamilyId);
+
+    const [currency, setCurrency] = useState("CAD");
+    const [pointsRate, setPointsRate] = useState("10");
+    const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+
+    useEffect(() => {
+        if (settings) {
+            setCurrency(settings.currency);
+            setPointsRate(String(settings.points_per_currency));
+        }
+    }, [settings]);
+
+    const blockIfNotParent = () => {
+        if (!isParent) {
+            Alert.alert("Parents only", "Only parents can change wishlist settings.");
+            return true;
+        }
+        return false;
+    };
+
+    const onSave = () => {
+        if (blockIfNotParent()) return;
+        if (!activeFamilyId) return;
+
+        const num = Number(pointsRate);
+        if (!num || num <= 0) {
+            Alert.alert("Invalid value", "Points must be greater than zero.");
+            return;
+        }
+
+        updateSettings.mutate(
+            { currency, points_per_currency: num },
+            {
+                onSuccess: () => Alert.alert("Saved!", "Settings updated successfully."),
+                onError: () => Alert.alert("Error", "Could not update settings."),
+            }
+        );
+    };
+
+    const onChangeRate = (txt: string) => {
+        // Remove everything that isn't a digit
+        let cleaned = txt.replace(/[^0-9]/g, "");
+
+        // Prevent leading zero unless the value is exactly "0"
+        if (cleaned.length > 1 && cleaned.startsWith("0")) {
+            cleaned = cleaned.replace(/^0+/, "");
+        }
+
+        // Prevent zero or empty as a valid value
+        if (cleaned === "" || cleaned === "0") {
+            setPointsRate("");
+            return;
+        }
+
+        setPointsRate(cleaned);
+    };
+
+    if (isLoading) {
+        return (
+            <SafeAreaView style={styles.center}>
+                <Text>Loading wishlist settings…</Text>
+            </SafeAreaView>
+        );
+    }
+
+    if (isError) {
+        return (
+            <SafeAreaView style={styles.center}>
+                <Text>Failed to load wishlist settings.</Text>
+            </SafeAreaView>
+        );
+    }
+
+    return (
+        <SafeAreaView style={styles.screen} edges={["bottom", "left", "right"]}>
+            <ScrollView
+                contentContainerStyle={styles.container}
+                showsVerticalScrollIndicator={false}
+            >
+                <Text style={styles.intro}>
+                    Parents can configure the currency and conversion rate for wish list items.
+                </Text>
+
+                {/* Currency Section */}
+                <Section title="Currency">
+                    <Text style={styles.label}>Currency Type</Text>
+
+                    <Pressable
+                        onPress={() => {
+                            if (!isParent) return blockIfNotParent();
+                            setShowCurrencyPicker(true);
+                        }}
+                        style={[styles.input, styles.dropdownBox, !isParent && styles.disabledInput]}
+                    >
+                        <Text style={styles.dropdownText}>{currency}</Text>
+                    </Pressable>
+
+                    {/* Modal */}
+                    <Modal
+                        visible={showCurrencyPicker}
+                        transparent
+                        animationType="fade"
+                    >
+                        <Pressable
+                            style={styles.modalOverlay}
+                            onPress={() => setShowCurrencyPicker(false)}
+                        >
+                            <View style={styles.modalSheet}>
+                                {CURRENCIES.map((cur) => (
+                                    <TouchableOpacity
+                                        key={cur}
+                                        style={styles.modalOption}
+                                        onPress={() => {
+                                            setCurrency(cur);
+                                            setShowCurrencyPicker(false);
+                                        }}
+                                    >
+                                        <Text style={styles.modalOptionText}>{cur}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </Pressable>
+                    </Modal>
+                </Section>
+
+                {/* Points Section */}
+                <Section title="Points Conversion">
+                    <Text style={styles.label}>Points per 1 unit of currency</Text>
+
+                    <Pressable
+                        onPress={() => {
+                            if (!isParent) {
+                                Alert.alert("Parents only", "Only parents can change wishlist settings.");
+                            }
+                        }}
+                    >
+                        <TextInput
+                            value={pointsRate}
+                            onChangeText={setPointsRate}
+                            editable={isParent}
+                            keyboardType="numeric"
+                            style={[styles.input, !isParent && styles.disabledInput]}
+                            placeholder="e.g. 10"
+                            pointerEvents={isParent ? "auto" : "none"} // prevents typing
+                        />
+                    </Pressable>
+
+
+                    <Text style={styles.note}>
+                        Whole numbers only — must be 1 or higher.
+                    </Text>
+                </Section>
+
+
+                {isParent && (
+                    <Pressable
+                        style={[styles.saveButton, updateSettings.isPending && styles.disabled]}
+                        onPress={onSave}
+                    >
+                        <Text style={styles.saveButtonText}>
+                            {updateSettings.isPending ? "Saving…" : "Save Settings"}
+                        </Text>
+                    </Pressable>
+                )}
+
+                <View style={{ height: 60 }} />
+                {/* Extra padding so Samsung navbar never covers content */}
+            </ScrollView>
+        </SafeAreaView>
+    );
+}
+
+function Section({ title, children }: any) {
+    return (
+        <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{title}</Text>
+            {children}
+        </View>
+    );
+}
+
+/* ---------------- STYLES ---------------- */
+
+const styles = StyleSheet.create({
+    screen: { flex: 1, backgroundColor: "#F7FBFF" },
+    center: { flex: 1, justifyContent: "center", alignItems: "center" },
+
+    container: {
+        padding: 16,
+        paddingBottom: 40, // For Samsung navbar safety
+    },
+
+    intro: { fontSize: 14, color: "#475569", marginBottom: 20 },
+
+    section: { marginBottom: 22 },
+    sectionTitle: { fontSize: 15, fontWeight: "700", color: "#0f172a", marginBottom: 6 },
+    label: { fontSize: 12, fontWeight: "600", color: "#64748b", marginBottom: 4 },
+
+    input: {
+        borderWidth: 1,
+        borderColor: "#e5e7eb",
+        borderRadius: 10,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        backgroundColor: "#fff",
+        fontSize: 14,
+    },
+    disabledInput: { opacity: 0.5 },
+
+    dropdownBox: { justifyContent: "center" },
+    dropdownText: { fontSize: 14, color: "#0f172a" },
+
+    note: { marginTop: 6, fontSize: 12, color: "#64748b" },
+
+    saveButton: {
+        marginTop: 10,
+        backgroundColor: "#2563eb",
+        paddingVertical: 14,
+        borderRadius: 999,
+        alignItems: "center",
+    },
+    saveButtonText: {
+        color: "white",
+        fontWeight: "700",
+        fontSize: 15,
+    },
+    disabled: { opacity: 0.5 },
+
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.3)",
+        justifyContent: "flex-end",
+    },
+    modalSheet: {
+        backgroundColor: "#fff",
+        paddingVertical: 20,
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+    },
+    modalOption: { paddingVertical: 14, paddingHorizontal: 20 },
+    modalOptionText: { fontSize: 16, color: "#0f172a" },
+});
