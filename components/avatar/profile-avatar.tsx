@@ -1,6 +1,7 @@
 // components/avatar/profile-avatar.tsx
 import * as ImagePicker from 'expo-image-picker'
 import React, { useEffect, useState } from 'react'
+import { Image } from 'react-native'
 
 import type { AvatarSize } from '@/components/avatar/avatar'
 import { Avatar } from '@/components/avatar/avatar'
@@ -23,10 +24,13 @@ export function ProfileAvatar({
   const supabase = getSupabase()
 
   const [uri, setUri] = useState<string | null>(null)
+  const [loadedUri, setLoadedUri] = useState<string | null>(null)
 
+  // --- Load remote avatar + prevent flicker ---
   useEffect(() => {
     if (!profile?.avatar_url) {
       setUri(null)
+      setLoadedUri(null)
       return
     }
 
@@ -34,9 +38,17 @@ export function ProfileAvatar({
       .from('profile-photos')
       .getPublicUrl(profile.avatar_url)
 
-    setUri(pub.publicUrl ?? null)
+    const url = pub.publicUrl ?? null
+    setUri(url)
+
+    if (url) {
+      Image.prefetch(url).then(() => {
+        setLoadedUri(url)
+      })
+    }
   }, [profile?.avatar_url, supabase])
 
+  // --- User selects a new avatar ---
   const handlePress = async () => {
     if (!isUpdatable) return
 
@@ -52,25 +64,27 @@ export function ProfileAvatar({
     const localUri = result.assets[0].uri
     const previousUri = uri
 
-    // optimistic preview
+    // Optimistic preview
+    setLoadedUri(localUri)
     setUri(localUri)
 
     try {
       await updateProfile.mutateAsync({
         profileId,
         avatarFileUri: localUri,
-        updates: {}, // only avatar
+        updates: {},
       })
-
     } catch (_err) {
-      setUri(previousUri ?? null)
+      // rollback
+      setLoadedUri(previousUri)
+      setUri(previousUri)
     }
   }
 
   return (
     <Avatar
       type="profile"
-      uri={uri ?? undefined}
+      uri={loadedUri ?? undefined}
       size={size}
       onPress={isUpdatable ? handlePress : undefined}
     />

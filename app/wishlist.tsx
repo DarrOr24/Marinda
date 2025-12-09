@@ -25,6 +25,7 @@ import { useSubscribeTableByFamily } from "@/lib/families/families.realtime";
 import type { Role } from "@/lib/families/families.types";
 import type { WishlistItem } from "@/lib/wishlist/wishlist.types";
 
+import { useFamilyWishlistSettings } from "@/lib/wishlist/wishlist-settings.hooks";
 import {
     useAddWishlistItem,
     useDeleteWishlistItem,
@@ -32,15 +33,22 @@ import {
     useUpdateWishlistItem,
     useWishlist,
 } from "@/lib/wishlist/wishlist.hooks";
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 import { Image, Linking } from 'react-native';
 
-const POINTS_PER_DOLLAR = 10;
+
 
 export default function WishList() {
     const { activeFamilyId, member } = useAuthContext() as any;
     const currentRole = (member?.role as Role) ?? "TEEN";
     const isParent = currentRole === "MOM" || currentRole === "DAD";
+    const { data: wishlistSettings } = useFamilyWishlistSettings(activeFamilyId);
+    const POINTS_PER_CURRENCY = wishlistSettings?.points_per_currency ?? 10;
+    const FAMILY_CURRENCY = wishlistSettings?.currency ?? "CAD";
+
+    const router = useRouter();
 
     const { members } = useFamily(activeFamilyId || undefined);
 
@@ -89,14 +97,14 @@ export default function WishList() {
     const calcPoints = useMemo(() => {
         const cad = parseFloat(calcCad);
         if (!calcCad.trim() || Number.isNaN(cad)) return 0;
-        return Math.round(cad * POINTS_PER_DOLLAR);
+        return Math.round(cad * POINTS_PER_CURRENCY);
     }, [calcCad]);
 
     // Points → CAD
     const calcCadFromPoints = useMemo(() => {
         const pts = parseFloat(calcPointsStr);
         if (!calcPointsStr.trim() || Number.isNaN(pts)) return "";
-        return (pts / POINTS_PER_DOLLAR).toFixed(2);
+        return (pts / POINTS_PER_CURRENCY).toFixed(2);
     }, [calcPointsStr]);
 
     // Sync when editing CAD
@@ -138,7 +146,7 @@ export default function WishList() {
     const previewPoints = useMemo(() => {
         const val = parseFloat(newPrice);
         if (!newPrice.trim() || Number.isNaN(val)) return 0;
-        return Math.round(val * POINTS_PER_DOLLAR);
+        return Math.round(val * POINTS_PER_CURRENCY);
     }, [newPrice]);
 
     const canAdd =
@@ -225,49 +233,72 @@ export default function WishList() {
             >
                 {/* Top row */}
                 <View style={styles.topRow}>
+                    {/* LEFT — TITLE */}
                     <Text style={styles.title}>
                         {isParent
                             ? `${viewingMember?.profile?.first_name || "Child"}'s Wish List`
                             : "My Wish List"}
                     </Text>
 
-                    {isParent && kids.length > 0 && (
-                        <View style={{ position: "relative" }}>
-                            <TouchableOpacity
-                                style={styles.switcher}
-                                onPress={() => setShowKidMenu((prev) => !prev)}
-                            >
-                                <MaterialCommunityIcons
-                                    name="account-switch"
-                                    size={18}
-                                    color="#334155"
-                                />
-                                <Text style={styles.switcherText}>
-                                    {viewingMember?.profile?.first_name || "Select"}
-                                </Text>
-                            </TouchableOpacity>
+                    {/* RIGHT — SWITCHER + ICONS */}
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
 
-                            {showKidMenu && (
-                                <View style={styles.switcherMenu}>
-                                    {kids.map((kid: any) => (
-                                        <Pressable
-                                            key={kid.id}
-                                            style={styles.switcherOption}
-                                            onPress={() => {
-                                                setSelectedKidId(kid.id);
-                                                setShowKidMenu(false);
-                                            }}
-                                        >
-                                            <Text style={styles.switcherOptionText}>
-                                                {kid.profile?.first_name}
-                                            </Text>
-                                        </Pressable>
-                                    ))}
-                                </View>
-                            )}
-                        </View>
-                    )}
+                        {/* KID SWITCHER (parents only) */}
+                        {isParent && kids.length > 0 && (
+                            <View style={{ position: "relative" }}>
+                                <TouchableOpacity
+                                    style={styles.switcher}
+                                    onPress={() => setShowKidMenu((prev) => !prev)}
+                                >
+                                    <MaterialCommunityIcons
+                                        name="account-switch"
+                                        size={18}
+                                        color="#334155"
+                                    />
+                                    <Text style={styles.switcherText}>
+                                        {viewingMember?.profile?.first_name || "Select"}
+                                    </Text>
+                                </TouchableOpacity>
+
+                                {showKidMenu && (
+                                    <View style={styles.switcherMenu}>
+                                        {kids.map((kid: any) => (
+                                            <Pressable
+                                                key={kid.id}
+                                                style={styles.switcherOption}
+                                                onPress={() => {
+                                                    setSelectedKidId(kid.id);
+                                                    setShowKidMenu(false);
+                                                }}
+                                            >
+                                                <Text style={styles.switcherOptionText}>
+                                                    {kid.profile?.first_name}
+                                                </Text>
+                                            </Pressable>
+                                        ))}
+                                    </View>
+                                )}
+                            </View>
+                        )}
+
+                        {/* INFO ICON */}
+                        <Pressable onPress={() => console.log("Wishlist info pressed")}>
+                            <Ionicons
+                                name="information-circle-outline"
+                                size={24}
+                                color="#334155"
+                            />
+                        </Pressable>
+
+                        {/* SETTINGS ICON */}
+                        <Pressable onPress={() => router.push("/wishlist-settings")}>
+                            <Ionicons name="settings-outline" size={24} color="#334155" />
+                        </Pressable>
+
+                    </View>
                 </View>
+
+
 
 
                 {/* =======================
@@ -276,7 +307,7 @@ export default function WishList() {
                 <View style={{ gap: 6 }}>
                     <View style={styles.calcRow}>
                         <View style={{ flex: 1 }}>
-                            <Text style={styles.calcLabel}>CAD</Text>
+                            <Text style={styles.calcLabel}>{FAMILY_CURRENCY}</Text>
                             <TextInput
                                 placeholder="0"
                                 keyboardType="numeric"
@@ -309,8 +340,9 @@ export default function WishList() {
                     </View>
 
                     <Text style={styles.rateText}>
-                        {POINTS_PER_DOLLAR} points = $1 CAD
+                        {POINTS_PER_CURRENCY} points = $1 {FAMILY_CURRENCY}
                     </Text>
+
                 </View>
 
 
@@ -345,7 +377,7 @@ export default function WishList() {
                 {(tab === "wishes" ? wishes : fulfilled).map((item) => {
                     const pts =
                         item.price != null
-                            ? Math.round(item.price * POINTS_PER_DOLLAR)
+                            ? Math.round(item.price * POINTS_PER_CURRENCY)
                             : null;
 
                     return (
@@ -364,7 +396,7 @@ export default function WishList() {
 
                                 {item.price != null && (
                                     <Text style={styles.cardSubtitle}>
-                                        ${item.price.toFixed(2)} · {Math.round(item.price * POINTS_PER_DOLLAR)} pts
+                                        ${item.price.toFixed(2)} · {Math.round(item.price * POINTS_PER_CURRENCY)} pts
                                     </Text>
                                 )}
 
@@ -495,14 +527,14 @@ export default function WishList() {
                                 style={styles.input}
                             />
                             <TextInput
-                                placeholder="Price (CAD)"
+                                placeholder={`Price (${FAMILY_CURRENCY})`}
                                 keyboardType="numeric"
                                 value={newPrice}
                                 onChangeText={setNewPrice}
                                 style={styles.input}
                             />
                             <Text style={styles.previewText}>
-                                ≈ {previewPoints} points ({POINTS_PER_DOLLAR} pts = $1)
+                                ≈ {previewPoints} points ({POINTS_PER_CURRENCY} pts = $1)
                             </Text>
                             <TextInput
                                 placeholder="Note (optional)"
