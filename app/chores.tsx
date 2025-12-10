@@ -919,6 +919,16 @@ export default function Chores() {
                   </Text>
                 )}
 
+                {/* DONE BY (for pending or approved) */}
+                {(item.status === 'pending' || item.status === 'approved') &&
+                  item.doneByIds &&
+                  item.doneByIds.length > 0 && (
+                    <Text style={styles.assignedText}>
+                      Done by: {item.doneByIds.map(id => nameForId(id)).join(', ')}
+                    </Text>
+                  )}
+
+
                 {item.status === 'open' && item.expiresAt && (
                   <Text style={styles.dueText}>
                     {isExpired
