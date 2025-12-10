@@ -25,6 +25,7 @@ import { useSubscribeTableByFamily } from "@/lib/families/families.realtime";
 import type { Role } from "@/lib/families/families.types";
 import type { WishlistItem } from "@/lib/wishlist/wishlist.types";
 
+import { KidSwitcher } from "@/components/kid-switcher";
 import { useFamilyWishlistSettings } from "@/lib/wishlist/wishlist-settings.hooks";
 import {
     useAddWishlistItem,
@@ -37,8 +38,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Image, Linking } from 'react-native';
-
-
 
 export default function WishList() {
     const { activeFamilyId, member } = useAuthContext() as any;
@@ -231,72 +230,50 @@ export default function WishList() {
                 contentContainerStyle={styles.container}
                 keyboardShouldPersistTaps="handled"
             >
-                {/* Top row */}
+                {/* TOP ROW: Title + switcher + icons */}
                 <View style={styles.topRow}>
-                    {/* LEFT — TITLE */}
-                    <Text style={styles.title}>
-                        {isParent
-                            ? `${viewingMember?.profile?.first_name || "Child"}'s Wish List`
-                            : "My Wish List"}
-                    </Text>
+                    {/* LEFT: title + switcher */}
+                    <View style={styles.leftTitleRow}>
+                        <Text style={styles.title}>
+                            {isParent
+                                ? `${viewingMember?.profile?.first_name || "Child"}'s Wish List`
+                                : "My Wish List"}
+                        </Text>
 
-                    {/* RIGHT — SWITCHER + ICONS */}
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-
-                        {/* KID SWITCHER (parents only) */}
-                        {isParent && kids.length > 0 && (
-                            <View style={{ position: "relative" }}>
-                                <TouchableOpacity
-                                    style={styles.switcher}
-                                    onPress={() => setShowKidMenu((prev) => !prev)}
-                                >
-                                    <MaterialCommunityIcons
-                                        name="account-switch"
-                                        size={18}
-                                        color="#334155"
-                                    />
-                                    <Text style={styles.switcherText}>
-                                        {viewingMember?.profile?.first_name || "Select"}
-                                    </Text>
-                                </TouchableOpacity>
-
-                                {showKidMenu && (
-                                    <View style={styles.switcherMenu}>
-                                        {kids.map((kid: any) => (
-                                            <Pressable
-                                                key={kid.id}
-                                                style={styles.switcherOption}
-                                                onPress={() => {
-                                                    setSelectedKidId(kid.id);
-                                                    setShowKidMenu(false);
-                                                }}
-                                            >
-                                                <Text style={styles.switcherOptionText}>
-                                                    {kid.profile?.first_name}
-                                                </Text>
-                                            </Pressable>
-                                        ))}
-                                    </View>
-                                )}
-                            </View>
+                        {isParent && (
+                            <KidSwitcher
+                                kids={kids}
+                                selectedKidId={selectedKidId}
+                                onSelectKid={setSelectedKidId}
+                            />
                         )}
+                    </View>
 
-                        {/* INFO ICON */}
+                    {/* RIGHT: info + settings */}
+                    <View style={styles.topRight}>
                         <Pressable onPress={() => console.log("Wishlist info pressed")}>
                             <Ionicons
                                 name="information-circle-outline"
-                                size={24}
+                                size={22}
                                 color="#334155"
                             />
                         </Pressable>
 
-                        {/* SETTINGS ICON */}
                         <Pressable onPress={() => router.push("/wishlist-settings")}>
-                            <Ionicons name="settings-outline" size={24} color="#334155" />
+                            <Ionicons name="settings-outline" size={22} color="#334155" />
                         </Pressable>
-
                     </View>
                 </View>
+
+
+                {/* Points line below */}
+                {isParent && (
+                    <Text style={styles.pointsLine}>
+                        {viewingMember?.points ?? 0} points
+                    </Text>
+                )}
+
+
 
 
 
@@ -647,50 +624,22 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "space-between",
     },
+    topRight: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+    },
+    leftTitleRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        flexShrink: 1, // prevents overflow when names are long
+    },
     title: {
         fontSize: 20,
         fontWeight: "700",
         color: "#0f172a",
     },
-
-    switcher: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 999,
-        backgroundColor: "#e5edff",
-        gap: 4,
-    },
-    switcherText: {
-        fontSize: 13,
-        color: "#334155",
-        fontWeight: "500",
-    },
-    switcherMenu: {
-        position: "absolute",
-        top: 36,
-        right: 0,
-        backgroundColor: "#ffffff",
-        borderRadius: 10,
-        paddingVertical: 4,
-        minWidth: 120,
-        zIndex: 9999,
-        elevation: 10,
-        shadowColor: "#000",
-        shadowOpacity: 0.15,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 4 },
-    },
-    switcherOption: {
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-    },
-    switcherOptionText: {
-        fontSize: 14,
-        color: "#111827",
-    },
-
     calcBox: {
         padding: 12,
         borderRadius: 12,
@@ -943,5 +892,17 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         fontSize: 13,
     },
-
+    pointsLine: {
+        marginTop: -6,
+        marginBottom: 6,
+        fontSize: 15,
+        fontWeight: "700",
+        color: "#1e3a8a",
+    },
+    actionsRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        marginBottom: 8,
+    },
 });

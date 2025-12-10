@@ -1,15 +1,13 @@
 // components/member-sidebar.tsx
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { usePathname, useRouter } from 'expo-router'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import { ProfileAvatar } from '@/components/avatar/profile-avatar'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useFamily } from '@/lib/families/families.hooks'
 import { useSubscribeTableByFamily } from '@/lib/families/families.realtime'
 import type { Member } from '@/lib/families/families.types'
-import { useState } from 'react'
-
 
 const SIDEBAR_WIDTH = 92
 const AVATAR_SIZE = 48
@@ -22,8 +20,6 @@ export default function MemberSidebar() {
   const { members } = useFamily(activeFamilyId || undefined)
 
   const { member: currentUser } = useAuthContext()
-
-  const [showKidSwitcher, setShowKidSwitcher] = useState(false);
 
   // Realtime updates for this family
   useSubscribeTableByFamily('family_members', activeFamilyId || undefined, ['family-members', activeFamilyId])
@@ -58,47 +54,31 @@ export default function MemberSidebar() {
   }
 
   // Raw list
-  let membersData: Member[] = members.data ?? [];
+  let membersData: Member[] = members.data ?? []
   if (!membersData.length) {
     return (
       <View style={styles.wrapper}>
         <Text style={styles.muted}>No members yet</Text>
       </View>
-    );
+    )
   }
 
-  // ─────────────────────────────
   // FILTER LOGIC
-  // ─────────────────────────────
-
-  // 1) If kid/teen → show ONLY themselves
   if (currentUser && (currentUser.role === 'CHILD' || currentUser.role === 'TEEN')) {
-    membersData = membersData.filter(m => m.id === currentUser.id);
+    membersData = membersData.filter(m => m.id === currentUser.id)
   }
 
-  // 2) If parent → show ONLY kids (no parents)
   if (currentUser && (currentUser.role === 'MOM' || currentUser.role === 'DAD')) {
     membersData = membersData.filter(
       m => m.role === 'CHILD' || m.role === 'TEEN'
-    );
+    )
   }
 
-
-  // 🔥 Correct: check for CHILD role
-  // Kids (CHILD or TEEN) can only see themselves
-  if (currentUser && (currentUser.role === 'CHILD' || currentUser.role === 'TEEN')) {
-    membersData = membersData.filter(m => m.id === currentUser.id);
-  }
-
-  // Active route checks
-  const isHomeActive = pathname === '/' || pathname === '/index'
+  // Active member id from /profile/[id]
   const activeMemberId = pathname.match(/^\/profile\/(.+)$/)?.[1]
 
-  // Main sidebar UI (formerly Sidebar.tsx)
   return (
     <View style={styles.container}>
-
-      {/* MAIN SCROLL AREA */}
       <ScrollView
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
@@ -106,13 +86,12 @@ export default function MemberSidebar() {
 
         {/* CHILD / TEEN → only their own avatar */}
         {(currentUser?.role === 'CHILD' || currentUser?.role === 'TEEN') &&
-          membersData.map((m, idx) => {
-            const isActive = activeMemberId === m.id;
+          membersData.map(m => {
+            const isActive = activeMemberId === m.id
             return (
               <TouchableOpacity
                 key={m.id}
                 style={styles.item}
-                accessibilityRole="button"
                 onPress={() =>
                   router.push({ pathname: '/profile/[id]', params: { id: m.id } })
                 }
@@ -124,38 +103,36 @@ export default function MemberSidebar() {
                   {m.profile?.first_name}
                 </Text>
               </TouchableOpacity>
-            );
+            )
           })
         }
 
-        {/* PARENT → show active kid avatar only */}
-        {(currentUser?.role === 'MOM' || currentUser?.role === 'DAD') && (
-          (() => {
-            const activeKid =
-              membersData.find(m => m.id === activeMemberId) || membersData[0];
+        {/* PARENT → show CURRENT kid avatar only */}
+        {(currentUser?.role === 'MOM' || currentUser?.role === 'DAD') && (() => {
+          const activeKid =
+            membersData.find(m => m.id === activeMemberId) || membersData[0]
 
-            return (
-              <TouchableOpacity
-                key={activeKid.id}
-                style={styles.item}
-                onPress={() => setShowKidSwitcher(prev => !prev)}
-              >
-                <View
-                  style={[
-                    styles.avatarBox,
-                    activeMemberId === activeKid.id && styles.avatarBoxActive,
-                  ]}
-                >
-                  <ProfileAvatar profileId={activeKid.profile_id} size="sm" />
-                </View>
+          if (!activeKid) return null
 
-                <Text numberOfLines={1} style={styles.name}>
-                  {activeKid.profile?.first_name} {activeKid.profile?.last_name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })()
-        )}
+          const isActive = activeMemberId === activeKid.id
+
+          return (
+            <TouchableOpacity
+              key={activeKid.id}
+              style={styles.item}
+              onPress={() =>
+                router.push({ pathname: '/profile/[id]', params: { id: activeKid.id } })
+              }
+            >
+              <View style={[styles.avatarBox, isActive && styles.avatarBoxActive]}>
+                <ProfileAvatar profileId={activeKid.profile_id} size="sm" />
+              </View>
+              <Text numberOfLines={1} style={styles.name}>
+                {activeKid.profile?.first_name}
+              </Text>
+            </TouchableOpacity>
+          )
+        })()}
 
         {/* NAVIGATION ITEMS */}
         <TouchableOpacity onPress={() => router.push('/chores')} style={styles.item}>
@@ -192,44 +169,12 @@ export default function MemberSidebar() {
           </View>
           <Text numberOfLines={1} style={styles.name}>Activities</Text>
         </TouchableOpacity>
-
       </ScrollView>
-
-      {/* DROPDOWN OUTSIDE THE SCROLLVIEW → NO MORE CLIPPING */}
-      {(currentUser?.role === 'MOM' || currentUser?.role === 'DAD') && showKidSwitcher && (
-        <View style={styles.switcherBox}>
-          {membersData.map(m => (
-            <Pressable
-              key={m.id}
-              onPress={() => {
-                setShowKidSwitcher(false);
-                router.push({ pathname: '/profile/[id]', params: { id: m.id } });
-              }}
-              style={({ pressed }) => [
-                styles.switcherItem,
-                pressed && styles.switcherItemPressed
-              ]}
-            >
-              <View style={styles.switcherRow}>
-                <ProfileAvatar profileId={m.profile_id} size="sm" />
-                <Text style={styles.switcherText}>
-                  {m.profile?.first_name}
-                </Text>
-              </View>
-            </Pressable>
-          ))}
-
-        </View>
-      )}
-
-
     </View>
-  );
-
+  )
 }
 
 const styles = StyleSheet.create({
-  // Loading/empty/error wrapper (kept narrow so layout doesn’t jump)
   wrapper: {
     width: SIDEBAR_WIDTH,
     paddingHorizontal: 12,
@@ -240,7 +185,6 @@ const styles = StyleSheet.create({
   muted: { color: '#64748b', fontSize: 12, textAlign: 'center' },
   error: { color: '#dc2626', fontSize: 12, textAlign: 'center' },
 
-  // Main sidebar container
   container: {
     width: SIDEBAR_WIDTH,
     alignSelf: 'stretch',
@@ -270,8 +214,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff',
-    borderWidth: AVATAR_BORDER,   // fixed border width to keep size constant
-    borderColor: 'transparent',   // becomes blue when active
+    borderWidth: AVATAR_BORDER,
+    borderColor: 'transparent',
   },
   avatarBoxActive: {
     borderColor: '#2563eb',
@@ -283,41 +227,5 @@ const styles = StyleSheet.create({
     maxWidth: 72,
     textAlign: 'center',
     fontWeight: '500',
-  },
-  switcherBox: {
-    position: 'absolute',
-    left: SIDEBAR_WIDTH - 6,   // move the list a bit RIGHT of the sidebar
-    top: 6,
-    zIndex: 9999,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    paddingVertical: 0,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  switcherItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-  },
-
-  switcherItemPressed: {
-    backgroundColor: '#f1f5f9',  // light slate highlight
-  },
-
-  switcherText: {
-    textAlign: 'left',
-    fontSize: 14,
-    color: '#334155',
-    fontWeight: '600',
-    flexShrink: 1,
-    lineHeight: 16,
-  },
-  switcherRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
 })

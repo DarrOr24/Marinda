@@ -1,5 +1,6 @@
 // app/profile/[id].tsx
 import CheckerboardBackground from '@/components/checkerboard-background';
+import { KidSwitcher } from '@/components/kid-switcher';
 import MemberSidebar from '@/components/members-sidebar';
 import WeeklyPointsChart from '@/components/weekly-points-chart';
 import { useAuthContext } from '@/hooks/use-auth-context';
@@ -224,6 +225,19 @@ export default function MemberProfile() {
             contentContainerStyle={styles.center}
             keyboardShouldPersistTaps="handled"
           >
+
+            {isParent && (
+              <View style={{ alignSelf: 'flex-start', marginBottom: 12 }}>
+                <KidSwitcher
+                  kids={memberList.filter(m => m.role === 'CHILD' || m.role === 'TEEN')}
+                  selectedKidId={id}
+                  onSelectKid={(kidId) =>
+                    router.push({ pathname: '/profile/[id]', params: { id: kidId } })
+                  }
+                />
+              </View>
+            )}
+
 
             {/* Points card – everyone sees current points */}
             <View style={styles.pointsCard}>

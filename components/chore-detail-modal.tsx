@@ -1,4 +1,5 @@
 // components/chore-detail-modal.tsx
+import { ChipSelector } from '@/components/chip-selector';
 import { ChoreView, Proof } from '@/lib/chores/chores.types';
 import { Role } from '@/lib/families/families.types';
 import { Audio, ResizeMode, Video } from 'expo-av';
@@ -18,6 +19,8 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 type MemberOption = {
     id: string;
@@ -63,6 +66,8 @@ export default function ChoreDetailModal({
     doneByOptions,
     defaultDoneById,
 }: Props) {
+
+    const insets = useSafeAreaInsets();
     const isParent = currentRole === 'MOM' || currentRole === 'DAD';
 
     // 🔹 Normalize assignees: use arrays if present
@@ -347,12 +352,34 @@ export default function ChoreDetailModal({
 
     const approvedByName = nameForId(chore.approvedById);
 
+    function requestClose() {
+        const hasUnsaved =
+            beforeProof ||
+            afterProof ||
+            (proofNote && proofNote.trim().length > 0);
+
+        if (!hasUnsaved) {
+            onClose();
+            return;
+        }
+
+        Alert.alert(
+            "Discard changes?",
+            "You added photos or notes. If you close now, these will be lost.",
+            [
+                { text: "Keep Editing", style: "cancel" },
+                { text: "Discard", style: "destructive", onPress: onClose }
+            ]
+        );
+    }
+
+
     return (
         <Modal visible={visible} animationType="slide" transparent>
             <KeyboardAvoidingView
-                style={s.overlay}
+                style={[s.overlay, { paddingBottom: Platform.OS === 'android' ? insets.bottom : 0 }]}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={40}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
             >
                 <View style={s.modal}>
                     <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
@@ -411,31 +438,20 @@ export default function ChoreDetailModal({
                                 {doneByOptions.length > 0 && (
                                     <>
                                         <Text style={[s.text, { marginTop: 12 }]}>Who did this?</Text>
-                                        <View style={s.chipsRow}>
-                                            {(isAssigned
+                                        <ChipSelector
+                                            multiple
+                                            options={(isAssigned
                                                 ? doneByOptions.filter((opt) => assignedIds.includes(opt.id))
                                                 : doneByOptions
-                                            ).map((opt) => {
-                                                const isSelected = selectedDoneByIds.includes(opt.id);
-                                                return (
-                                                    <Pressable
-                                                        key={opt.id}
-                                                        onPress={() =>
-                                                            setSelectedDoneByIds((prev) =>
-                                                                prev.includes(opt.id)
-                                                                    ? prev.filter((id) => id !== opt.id)
-                                                                    : [...prev, opt.id]
-                                                            )
-                                                        }
-                                                        style={[s.chip, isSelected && s.chipSelected]}
-                                                    >
-                                                        <Text style={[s.chipTxt, isSelected && s.chipTxtSelected]}>
-                                                            {opt.name}
-                                                        </Text>
-                                                    </Pressable>
-                                                );
-                                            })}
-                                        </View>
+                                            ).map(opt => ({
+                                                label: opt.name,
+                                                value: opt.id,
+                                            }))}
+                                            values={selectedDoneByIds}
+                                            onChange={setSelectedDoneByIds}
+                                            style={{ marginTop: 8 }}
+                                        />
+
                                     </>
                                 )}
 
@@ -446,14 +462,18 @@ export default function ChoreDetailModal({
 
                                 <View style={s.row}>
                                     <Pressable style={[s.btn, s.secondary]} onPress={takeBeforePhoto}>
-                                        <Text style={s.btnTxt}>Take photo</Text>
+                                        <Text style={s.btnTxt}>
+                                            {beforeProof?.uri ? "Change photo" : "Take photo"}
+                                        </Text>
                                     </Pressable>
                                     <Pressable style={[s.btn, s.secondary]} onPress={recordBeforeVideo}>
-                                        <Text style={s.btnTxt}>Record video</Text>
+                                        <Text style={s.btnTxt}>
+                                            {beforeProof?.uri ? "Change video" : "Record video"}
+                                        </Text>
                                     </Pressable>
                                 </View>
 
-                                {beforeProof && (
+                                {beforeProof?.uri && (
                                     <View style={s.proof}>
                                         {beforeProof.kind === "image" ? (
                                             <Image source={{ uri: beforeProof.uri }} style={s.media} />
@@ -479,14 +499,19 @@ export default function ChoreDetailModal({
 
                                 <View style={s.row}>
                                     <Pressable style={[s.btn, s.secondary]} onPress={takeAfterPhoto}>
-                                        <Text style={s.btnTxt}>Take photo</Text>
+                                        <Text style={s.btnTxt}>
+                                            {afterProof?.uri ? "Change photo" : "Take photo"}
+                                        </Text>
+
                                     </Pressable>
                                     <Pressable style={[s.btn, s.secondary]} onPress={recordAfterVideo}>
-                                        <Text style={s.btnTxt}>Record video</Text>
+                                        <Text style={s.btnTxt}>
+                                            {afterProof?.uri ? "Change video" : "Record video"}
+                                        </Text>
                                     </Pressable>
                                 </View>
 
-                                {afterProof && (
+                                {afterProof?.uri && (
                                     <View style={s.proof}>
                                         {afterProof.kind === "image" ? (
                                             <Image source={{ uri: afterProof.uri }} style={s.media} />
@@ -524,7 +549,8 @@ export default function ChoreDetailModal({
                                     <Pressable style={[s.btn, s.primary]} onPress={markCompleted}>
                                         <Text style={[s.btnTxt, s.primaryTxt]}>Mark as completed</Text>
                                     </Pressable>
-                                    <Pressable style={[s.btn, s.cancel]} onPress={onClose}>
+                                    <Pressable style={[s.btn, s.cancel]} onPress={requestClose}>
+
                                         <Text style={[s.btnTxt, s.cancelTxt]}>Cancel</Text>
                                     </Pressable>
                                 </View>
@@ -535,7 +561,7 @@ export default function ChoreDetailModal({
                         {chore.status === "pending" && (
                             <>
                                 {/* BEFORE */}
-                                {beforeProof && (
+                                {beforeProof?.uri && (
                                     <View style={s.proof}>
                                         {beforeProof.kind === "image" ? (
                                             <Image source={{ uri: beforeProof.uri }} style={s.media} />
@@ -552,7 +578,7 @@ export default function ChoreDetailModal({
                                 )}
 
                                 {/* AFTER */}
-                                {afterProof && (
+                                {afterProof?.uri && (
                                     <View style={s.proof}>
                                         {afterProof.kind === "image" ? (
                                             <Image source={{ uri: afterProof.uri }} style={s.media} />
@@ -633,11 +659,11 @@ export default function ChoreDetailModal({
                                         </Pressable>
                                     </View>
                                 )}
-
                                 <Pressable
                                     style={[s.btn, s.secondary, { marginTop: 12 }]}
-                                    onPress={onClose}
+                                    onPress={requestClose}
                                 >
+
                                     <Text style={s.btnTxt}>Cancel</Text>
                                 </Pressable>
                             </>
@@ -647,7 +673,7 @@ export default function ChoreDetailModal({
                         {chore.status === "approved" && (
                             <>
                                 {/* BEFORE */}
-                                {beforeProof && (
+                                {beforeProof?.uri && (
                                     <View style={s.proof}>
                                         {beforeProof.kind === "image" ? (
                                             <Image source={{ uri: beforeProof.uri }} style={s.media} />
@@ -664,7 +690,7 @@ export default function ChoreDetailModal({
                                 )}
 
                                 {/* AFTER */}
-                                {afterProof && (
+                                {afterProof?.uri && (
                                     <View style={s.proof}>
                                         {afterProof.kind === "image" ? (
                                             <Image source={{ uri: afterProof.uri }} style={s.media} />
@@ -728,7 +754,7 @@ export default function ChoreDetailModal({
 
                                 <Pressable
                                     style={[s.btn, s.secondary, { marginTop: 12 }]}
-                                    onPress={onClose}
+                                    onPress={requestClose}
                                 >
                                     <Text style={s.btnTxt}>Close</Text>
                                 </Pressable>
@@ -794,33 +820,5 @@ const s = StyleSheet.create({
         minHeight: 44,
         textAlignVertical: 'top',
         backgroundColor: '#fff',
-    },
-
-    // “done by” chips
-    chipsRow: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-        marginTop: 8,
-    },
-    chip: {
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 999,
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-        backgroundColor: '#f9fafb',
-    },
-    chipSelected: {
-        backgroundColor: '#2563eb15',
-        borderColor: '#2563eb',
-    },
-    chipTxt: {
-        fontSize: 12,
-        color: '#475569',
-        fontWeight: '600',
-    },
-    chipTxtSelected: {
-        color: '#1d4ed8',
     },
 });
