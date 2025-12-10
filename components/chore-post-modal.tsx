@@ -1,4 +1,5 @@
 // components/chore-post-modal.tsx
+import { ChipSelector } from '@/components/chip-selector';
 import { Audio } from 'expo-av';
 import React from 'react';
 import {
@@ -15,6 +16,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+
 
 type AssigneeOption = {
     id: string;
@@ -173,12 +175,6 @@ export default function ChorePostModal({
             Alert.alert('Error', 'Could not play audio.');
         }
     }
-
-    const toggleAssignee = (id: string) => {
-        setAssignedToIds((prev) =>
-            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-        );
-    };
 
     return (
         <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
@@ -372,38 +368,26 @@ export default function ChorePostModal({
                             )}
                         </View>
 
-                        {/* Assign to (optional) – multi-select */}
+                        {/* Assign to (optional) */}
                         {assigneeOptions && assigneeOptions.length > 0 && (
                             <>
                                 <Text style={[styles.label, { marginTop: 8 }]}>
                                     Assign to (optional)
                                 </Text>
-                                <View style={styles.assigneeRow}>
-                                    {assigneeOptions.map((opt) => {
-                                        const isSelected = assignedToIds.includes(opt.id);
-                                        return (
-                                            <Pressable
-                                                key={opt.id}
-                                                onPress={() => toggleAssignee(opt.id)}
-                                                style={[
-                                                    styles.assigneeChip,
-                                                    isSelected && styles.assigneeChipSelected,
-                                                ]}
-                                            >
-                                                <Text
-                                                    style={[
-                                                        styles.assigneeChipTxt,
-                                                        isSelected && styles.assigneeChipTxtSelected,
-                                                    ]}
-                                                >
-                                                    {opt.name}
-                                                </Text>
-                                            </Pressable>
-                                        );
-                                    })}
-                                </View>
+
+                                <ChipSelector
+                                    multiple
+                                    options={assigneeOptions.map(opt => ({
+                                        label: opt.name,
+                                        value: opt.id,
+                                    }))}
+                                    values={assignedToIds}
+                                    onChange={setAssignedToIds}
+                                    style={{ marginTop: 6 }}
+                                />
                             </>
                         )}
+
 
                         {/* Save as routine – still only on create */}
                         {!initial && (
@@ -584,34 +568,6 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#6b7280',
         marginLeft: 8,
-    },
-
-    // assignee chips
-    assigneeRow: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-        marginTop: 6,
-    },
-    assigneeChip: {
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 999,
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-        backgroundColor: '#f9fafb',
-    },
-    assigneeChipSelected: {
-        backgroundColor: '#2563eb15',
-        borderColor: '#2563eb',
-    },
-    assigneeChipTxt: {
-        fontSize: 12,
-        color: '#475569',
-        fontWeight: '600',
-    },
-    assigneeChipTxtSelected: {
-        color: '#1d4ed8',
     },
     smallBtn: {
         paddingHorizontal: 10,
