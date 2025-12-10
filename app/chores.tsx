@@ -791,24 +791,25 @@ export default function Chores() {
   return (
     <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
       <View style={styles.header}>
-        {/* left side: info + settings */}
-        <View style={styles.headerLeft}>
-          {/* info icon – everyone can see */}
+
+        {/* LEFT: Post Chore */}
+        <Pressable onPress={() => setShowPost(true)} style={styles.postBtn}>
+          <Ionicons name="add" size={20} color="#fff" />
+          <Text style={styles.postTxt}>Post Chore</Text>
+        </Pressable>
+
+        {/* RIGHT: info + settings */}
+        <View style={styles.headerRight}>
           <Pressable
             onPress={() => router.push('/chores-info')}
             style={styles.iconCircle}
             hitSlop={8}
           >
-            <Ionicons
-              name="information-circle-outline"
-              size={18}
-              color="#1e3a8a"
-            />
+            <Ionicons name="information-circle-outline" size={18} color="#1e3a8a" />
           </Pressable>
 
-          {/* settings icon – visible to all, parents-only actions */}
           <Pressable
-            onPress={() => { router.push('/chores-settings'); }}
+            onPress={() => router.push('/chores-settings')}
             style={styles.iconCircle}
             hitSlop={8}
           >
@@ -816,12 +817,8 @@ export default function Chores() {
           </Pressable>
         </View>
 
-        {/* right side: Post Chore button */}
-        <Pressable onPress={() => setShowPost(true)} style={styles.postBtn}>
-          <Ionicons name="add" size={20} color="#fff" />
-          <Text style={styles.postTxt}>Post Chore</Text>
-        </Pressable>
       </View>
+
 
 
       {/* tabs */}
@@ -1072,7 +1069,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
 
-  headerLeft: {
+  headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
