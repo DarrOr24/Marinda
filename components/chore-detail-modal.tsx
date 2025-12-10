@@ -459,10 +459,14 @@ export default function ChoreDetailModal({
 
                                 <View style={s.row}>
                                     <Pressable style={[s.btn, s.secondary]} onPress={takeBeforePhoto}>
-                                        <Text style={s.btnTxt}>Take photo</Text>
+                                        <Text style={s.btnTxt}>
+                                            {beforeProof?.uri ? "Change photo" : "Take photo"}
+                                        </Text>
                                     </Pressable>
                                     <Pressable style={[s.btn, s.secondary]} onPress={recordBeforeVideo}>
-                                        <Text style={s.btnTxt}>Record video</Text>
+                                        <Text style={s.btnTxt}>
+                                            {beforeProof?.uri ? "Change video" : "Record video"}
+                                        </Text>
                                     </Pressable>
                                 </View>
 
@@ -492,10 +496,15 @@ export default function ChoreDetailModal({
 
                                 <View style={s.row}>
                                     <Pressable style={[s.btn, s.secondary]} onPress={takeAfterPhoto}>
-                                        <Text style={s.btnTxt}>Take photo</Text>
+                                        <Text style={s.btnTxt}>
+                                            {afterProof?.uri ? "Change photo" : "Take photo"}
+                                        </Text>
+
                                     </Pressable>
                                     <Pressable style={[s.btn, s.secondary]} onPress={recordAfterVideo}>
-                                        <Text style={s.btnTxt}>Record video</Text>
+                                        <Text style={s.btnTxt}>
+                                            {afterProof?.uri ? "Change video" : "Record video"}
+                                        </Text>
                                     </Pressable>
                                 </View>
 
