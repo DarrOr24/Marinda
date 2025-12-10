@@ -466,7 +466,7 @@ export default function ChoreDetailModal({
                                     </Pressable>
                                 </View>
 
-                                {beforeProof && (
+                                {beforeProof?.uri && (
                                     <View style={s.proof}>
                                         {beforeProof.kind === "image" ? (
                                             <Image source={{ uri: beforeProof.uri }} style={s.media} />
@@ -499,7 +499,7 @@ export default function ChoreDetailModal({
                                     </Pressable>
                                 </View>
 
-                                {afterProof && (
+                                {afterProof?.uri && (
                                     <View style={s.proof}>
                                         {afterProof.kind === "image" ? (
                                             <Image source={{ uri: afterProof.uri }} style={s.media} />
@@ -549,7 +549,7 @@ export default function ChoreDetailModal({
                         {chore.status === "pending" && (
                             <>
                                 {/* BEFORE */}
-                                {beforeProof && (
+                                {beforeProof?.uri && (
                                     <View style={s.proof}>
                                         {beforeProof.kind === "image" ? (
                                             <Image source={{ uri: beforeProof.uri }} style={s.media} />
@@ -566,7 +566,7 @@ export default function ChoreDetailModal({
                                 )}
 
                                 {/* AFTER */}
-                                {afterProof && (
+                                {afterProof?.uri && (
                                     <View style={s.proof}>
                                         {afterProof.kind === "image" ? (
                                             <Image source={{ uri: afterProof.uri }} style={s.media} />
@@ -661,7 +661,7 @@ export default function ChoreDetailModal({
                         {chore.status === "approved" && (
                             <>
                                 {/* BEFORE */}
-                                {beforeProof && (
+                                {beforeProof?.uri && (
                                     <View style={s.proof}>
                                         {beforeProof.kind === "image" ? (
                                             <Image source={{ uri: beforeProof.uri }} style={s.media} />
@@ -678,7 +678,7 @@ export default function ChoreDetailModal({
                                 )}
 
                                 {/* AFTER */}
-                                {afterProof && (
+                                {afterProof?.uri && (
                                     <View style={s.proof}>
                                         {afterProof.kind === "image" ? (
                                             <Image source={{ uri: afterProof.uri }} style={s.media} />
