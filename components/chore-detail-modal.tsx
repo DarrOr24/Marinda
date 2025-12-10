@@ -349,6 +349,28 @@ export default function ChoreDetailModal({
 
     const approvedByName = nameForId(chore.approvedById);
 
+    function requestClose() {
+        const hasUnsaved =
+            beforeProof ||
+            afterProof ||
+            (proofNote && proofNote.trim().length > 0);
+
+        if (!hasUnsaved) {
+            onClose();
+            return;
+        }
+
+        Alert.alert(
+            "Discard changes?",
+            "You added photos or notes. If you close now, these will be lost.",
+            [
+                { text: "Keep Editing", style: "cancel" },
+                { text: "Discard", style: "destructive", onPress: onClose }
+            ]
+        );
+    }
+
+
     return (
         <Modal visible={visible} animationType="slide" transparent>
             <KeyboardAvoidingView
@@ -515,7 +537,8 @@ export default function ChoreDetailModal({
                                     <Pressable style={[s.btn, s.primary]} onPress={markCompleted}>
                                         <Text style={[s.btnTxt, s.primaryTxt]}>Mark as completed</Text>
                                     </Pressable>
-                                    <Pressable style={[s.btn, s.cancel]} onPress={onClose}>
+                                    <Pressable style={[s.btn, s.cancel]} onPress={requestClose}>
+
                                         <Text style={[s.btnTxt, s.cancelTxt]}>Cancel</Text>
                                     </Pressable>
                                 </View>
@@ -624,11 +647,11 @@ export default function ChoreDetailModal({
                                         </Pressable>
                                     </View>
                                 )}
-
                                 <Pressable
                                     style={[s.btn, s.secondary, { marginTop: 12 }]}
-                                    onPress={onClose}
+                                    onPress={requestClose}
                                 >
+
                                     <Text style={s.btnTxt}>Cancel</Text>
                                 </Pressable>
                             </>
@@ -719,7 +742,7 @@ export default function ChoreDetailModal({
 
                                 <Pressable
                                     style={[s.btn, s.secondary, { marginTop: 12 }]}
-                                    onPress={onClose}
+                                    onPress={requestClose}
                                 >
                                     <Text style={s.btnTxt}>Close</Text>
                                 </Pressable>
