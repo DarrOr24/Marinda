@@ -101,12 +101,25 @@ export default function MemberProfile() {
   const handleAdjustPoints = async () => {
     if (!activeFamilyId || !id) return;
 
-    const deltaNum = Number(adjustDelta);
+    const raw = adjustDelta.trim();
 
-    if (!adjustDelta.trim() || Number.isNaN(deltaNum) || deltaNum === 0) {
+    // ❗ Accept ONLY whole integers (optional minus sign + digits)
+    const integerPattern = /^-?\d+$/;
+
+    if (!integerPattern.test(raw)) {
+      Alert.alert(
+        'Invalid number',
+        'Points must be a whole number (e.g., 10 or -5). Decimal values are not allowed.'
+      );
+      return;
+    }
+
+    const deltaNum = Number(raw);
+
+    if (deltaNum === 0) {
       Alert.alert(
         'Check points',
-        'Enter a positive or negative number, for example 10 or -5.'
+        'Enter a positive or negative whole number, for example 10 or -5.'
       );
       return;
     }
@@ -128,16 +141,13 @@ export default function MemberProfile() {
         approverMemberId: adminMemberId ?? null,
       });
 
-      // Clear form
       setAdjustDelta('');
       setAdjustReason('');
 
-      // Refresh points + history
-      if (members?.refetch) {
-        members.refetch();
-      }
+      if (members?.refetch) members.refetch();
       const rows = await fetchMemberPointsHistory(activeFamilyId, id);
       setHistory(rows);
+
     } catch (e) {
       console.error('adjustMemberPoints failed', e);
       Alert.alert('Error', 'Could not adjust points. Please try again.');
@@ -145,6 +155,7 @@ export default function MemberProfile() {
       setAdjustSaving(false);
     }
   };
+
 
   // Redirect parent away from their own profile page
   useEffect(() => {
@@ -269,11 +280,11 @@ export default function MemberProfile() {
                 <TextInput
                   value={adjustReason}
                   onChangeText={setAdjustReason}
-                  placeholder="e.g. Bonus for extra help with dinner"
-                  style={[styles.adjustInput, styles.adjustReasonInput]}
-                  multiline
+                  placeholder="Reason for adjustment"
+                  style={[styles.adjustInput]}
+                  returnKeyType="done"
+                  onSubmitEditing={() => Keyboard.dismiss()}
                 />
-
                 <View style={styles.adjustButtonsRow}>
                   <Pressable
                     style={[styles.adjustBtn, styles.adjustSecondaryBtn]}
