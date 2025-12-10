@@ -19,6 +19,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 type MemberOption = {
@@ -65,6 +66,8 @@ export default function ChoreDetailModal({
     doneByOptions,
     defaultDoneById,
 }: Props) {
+
+    const insets = useSafeAreaInsets();
     const isParent = currentRole === 'MOM' || currentRole === 'DAD';
 
     // 🔹 Normalize assignees: use arrays if present
@@ -374,9 +377,9 @@ export default function ChoreDetailModal({
     return (
         <Modal visible={visible} animationType="slide" transparent>
             <KeyboardAvoidingView
-                style={s.overlay}
+                style={[s.overlay, { paddingBottom: Platform.OS === 'android' ? insets.bottom : 0 }]}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={40}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
             >
                 <View style={s.modal}>
                     <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
