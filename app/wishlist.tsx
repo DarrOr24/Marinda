@@ -25,6 +25,7 @@ import { useSubscribeTableByFamily } from "@/lib/families/families.realtime";
 import type { Role } from "@/lib/families/families.types";
 import type { WishlistItem } from "@/lib/wishlist/wishlist.types";
 
+import { KidSwitcher } from "@/components/kid-switcher";
 import { useFamilyWishlistSettings } from "@/lib/wishlist/wishlist-settings.hooks";
 import {
     useAddWishlistItem,
@@ -37,8 +38,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Image, Linking } from 'react-native';
-
-
 
 export default function WishList() {
     const { activeFamilyId, member } = useAuthContext() as any;
@@ -244,42 +243,14 @@ export default function WishList() {
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
 
                         {/* KID SWITCHER (parents only) */}
-                        {isParent && kids.length > 0 && (
-                            <View style={{ position: "relative" }}>
-                                <TouchableOpacity
-                                    style={styles.switcher}
-                                    onPress={() => setShowKidMenu((prev) => !prev)}
-                                >
-                                    <MaterialCommunityIcons
-                                        name="account-switch"
-                                        size={18}
-                                        color="#334155"
-                                    />
-                                    <Text style={styles.switcherText}>
-                                        {viewingMember?.profile?.first_name || "Select"}
-                                    </Text>
-                                </TouchableOpacity>
-
-                                {showKidMenu && (
-                                    <View style={styles.switcherMenu}>
-                                        {kids.map((kid: any) => (
-                                            <Pressable
-                                                key={kid.id}
-                                                style={styles.switcherOption}
-                                                onPress={() => {
-                                                    setSelectedKidId(kid.id);
-                                                    setShowKidMenu(false);
-                                                }}
-                                            >
-                                                <Text style={styles.switcherOptionText}>
-                                                    {kid.profile?.first_name}
-                                                </Text>
-                                            </Pressable>
-                                        ))}
-                                    </View>
-                                )}
-                            </View>
+                        {isParent && (
+                            <KidSwitcher
+                                kids={kids}
+                                selectedKidId={selectedKidId}
+                                onSelectKid={setSelectedKidId}
+                            />
                         )}
+
 
                         {/* INFO ICON */}
                         <Pressable onPress={() => console.log("Wishlist info pressed")}>
