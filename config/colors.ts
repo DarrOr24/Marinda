@@ -14,8 +14,18 @@ export const Colors = {
     // Buttons
     primaryBackground: '#3b5bdb',
     primaryText: '#fff',
+
     secondaryBackground: '#eef2ff',
     secondaryText: '#11181C',
+
+    ghostBackground: 'transparent',
+    ghostText: tintColorLight,
+
+    outlineBorder: '#3b5bdb',
+    outlineText: '#3b5bdb',
+
+    dangerBackground: '#dc2626',
+    dangerText: '#fff',
 
     tabIconDefault: '#687076',
     tabIconSelected: tintColorLight,
@@ -29,8 +39,18 @@ export const Colors = {
     // Buttons
     primaryBackground: '#dbe4ff',
     primaryText: '#000',
+
     secondaryBackground: '#0a7ea4',
     secondaryText: '#fff',
+
+    ghostBackground: 'transparent',
+    ghostText: tintColorDark,
+
+    outlineBorder: '#3b5bdb',
+    outlineText: '#3b5bdb',
+
+    dangerBackground: '#dc2626',
+    dangerText: '#fff',
 
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
