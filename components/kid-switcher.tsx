@@ -12,7 +12,7 @@ import { ProfileAvatar } from "@/components/avatar/profile-avatar";
 import type { Member } from "@/lib/families/families.types";
 
 type KidSwitcherProps = {
-    kids: Member[];
+    kids: Member[];              // full family list, includes adults → we will filter inside
     selectedKidId: string | null;
     onSelectKid: (kidId: string) => void;
 };
@@ -20,51 +20,69 @@ type KidSwitcherProps = {
 export function KidSwitcher({ kids, selectedKidId, onSelectKid }: KidSwitcherProps) {
     const [open, setOpen] = useState(false);
 
-    const activeKid =
-        kids.find((k) => k.id === selectedKidId) || kids[0] || null;
+    // ✅ FILTER ONLY TEENS + KIDS
+    const onlyKids = kids.filter(
+        (m) => m.role === "CHILD" || m.role === "TEEN"
+    );
+
+    // If selected kid exists, use it. Otherwise none.
+    const activeKid = onlyKids.find((k) => k.id === selectedKidId) || null;
 
     return (
-        <View
-            style={{
-                position: "relative",
-                overflow: "visible",
-            }}
-        >
-            {/* SWITCH BUTTON */}
+        <View style={{ position: "relative" }}>
+            {/* BUTTON */}
             <Pressable style={styles.button} onPress={() => setOpen((p) => !p)}>
                 <MaterialCommunityIcons
                     name="account-switch"
                     size={18}
                     color="#334155"
                 />
+                {/* 🆕 GENERIC TEXT */}
                 <Text style={styles.buttonText}>
-                    {activeKid?.profile?.first_name || "Select"}
+                    Switch Kid/Teen
                 </Text>
             </Pressable>
 
-            {/* FLOATING DROPDOWN — EXACTLY LIKE BEFORE */}
+            {/* 🆕 CLICK OUTSIDE TO CLOSE */}
+            {open && (
+                <Pressable
+                    style={styles.overlay}
+                    onPress={() => setOpen(false)}
+                />
+            )}
+
+            {/* DROPDOWN */}
             {open && (
                 <View style={styles.dropdown}>
-                    {kids.map((kid) => (
-                        <Pressable
-                            key={kid.id}
-                            style={({ pressed }) => [
-                                styles.option,
-                                pressed && styles.optionPressed,
-                            ]}
-                            onPress={() => {
-                                onSelectKid(kid.id);
-                                setOpen(false);
-                            }}
-                        >
-                            <View style={styles.row}>
-                                <ProfileAvatar profileId={kid.profile_id} size="sm" />
-                                <Text style={styles.optionText}>
-                                    {kid.profile?.first_name}
-                                </Text>
-                            </View>
-                        </Pressable>
-                    ))}
+
+                    {/* 🆕 NO KIDS → SHOW MESSAGE */}
+                    {onlyKids.length === 0 ? (
+                        <View style={styles.emptyState}>
+                            <Text style={styles.emptyText}>No kids/teens yet</Text>
+                        </View>
+                    ) : (
+                        onlyKids.map((kid) => (
+                            <Pressable
+                                key={kid.id}
+                                style={({ pressed }) => [
+                                    styles.option,
+                                    pressed && styles.optionPressed,
+                                ]}
+                                onPress={() => {
+                                    onSelectKid(kid.id);
+                                    setOpen(false);
+                                }}
+                            >
+                                <View style={styles.row}>
+                                    <ProfileAvatar profileId={kid.profile_id} size="sm" />
+                                    <Text style={styles.optionText}>
+                                        {kid.profile?.first_name}
+                                    </Text>
+                                </View>
+                            </Pressable>
+                        ))
+                    )}
+
                 </View>
             )}
         </View>
@@ -87,21 +105,26 @@ const styles = StyleSheet.create({
         fontWeight: "500",
     },
 
-    /* ↓↓↓ THE MAGIC PART ↓↓↓ */
+    /* OVERLAY BEHIND DROPDOWN */
+    overlay: {
+        position: "absolute",
+        top: -2000,   // full screen catch
+        left: -2000,
+        width: 5000,
+        height: 5000,
+        zIndex: 10,
+    },
+
     dropdown: {
         position: "absolute",
-        top: 38, // PERFECT spacing below the button
+        top: 38,
         left: 0,
-
         backgroundColor: "#ffffff",
         borderRadius: 12,
         paddingVertical: 4,
-
         minWidth: 160,
-
         zIndex: 9999,
         elevation: 10,
-
         shadowColor: "#000",
         shadowOpacity: 0.12,
         shadowRadius: 8,
@@ -121,10 +144,22 @@ const styles = StyleSheet.create({
         color: "#111827",
         fontWeight: "500",
     },
-
     row: {
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
+    },
+
+    /* NO KIDS STATE */
+    emptyState: {
+        paddingVertical: 14,
+        paddingHorizontal: 12,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    emptyText: {
+        fontSize: 14,
+        color: "#64748b",
+        fontStyle: "italic",
     },
 });

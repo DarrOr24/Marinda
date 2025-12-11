@@ -230,53 +230,54 @@ export default function WishList() {
                 contentContainerStyle={styles.container}
                 keyboardShouldPersistTaps="handled"
             >
-                {/* TOP ROW: Title + switcher + icons */}
-                <View style={styles.topRow}>
-                    {/* LEFT: title + switcher */}
-                    <View style={styles.leftTitleRow}>
+                {/* ===== TOP SECTION (2 ROWS) ===== */}
+                <View style={styles.headerBlock}>
+
+                    {/* ROW 1 — Title + Icons */}
+                    <View style={styles.row1}>
                         <Text style={styles.title}>
                             {isParent
                                 ? `${viewingMember?.profile?.first_name || "Child"}'s Wish List`
                                 : "My Wish List"}
                         </Text>
 
-                        {isParent && (
-                            <KidSwitcher
-                                kids={kids}
-                                selectedKidId={selectedKidId}
-                                onSelectKid={setSelectedKidId}
-                            />
-                        )}
+                        <View style={styles.iconsRow}>
+                            <Pressable onPress={() => console.log("Wishlist info")}>
+                                <Ionicons
+                                    name="information-circle-outline"
+                                    size={22}
+                                    color="#334155"
+                                />
+                            </Pressable>
+
+                            <Pressable onPress={() => router.push("/wishlist-settings")}>
+                                <Ionicons
+                                    name="settings-outline"
+                                    size={22}
+                                    color="#334155"
+                                />
+                            </Pressable>
+                        </View>
                     </View>
 
-                    {/* RIGHT: info + settings */}
-                    <View style={styles.topRight}>
-                        <Pressable onPress={() => console.log("Wishlist info pressed")}>
-                            <Ionicons
-                                name="information-circle-outline"
-                                size={22}
-                                color="#334155"
-                            />
-                        </Pressable>
+                    {/* ROW 2 — Points + Switcher (LEFT only) */}
+                    <View style={styles.row2}>
+                        <View style={styles.pointsAndSwitcher}>
+                            <Text style={styles.pointsValue}>
+                                {isParent ? `${viewingMember?.points ?? 0} pts` : ""}
+                            </Text>
 
-                        <Pressable onPress={() => router.push("/wishlist-settings")}>
-                            <Ionicons name="settings-outline" size={22} color="#334155" />
-                        </Pressable>
+                            {isParent && (
+                                <KidSwitcher
+                                    kids={kids}
+                                    selectedKidId={selectedKidId}
+                                    onSelectKid={setSelectedKidId}
+                                />
+                            )}
+                        </View>
                     </View>
+
                 </View>
-
-
-                {/* Points line below */}
-                {isParent && (
-                    <Text style={styles.pointsLine}>
-                        {viewingMember?.points ?? 0} points
-                    </Text>
-                )}
-
-
-
-
-
 
                 {/* =======================
                      BIDIRECTIONAL CALCULATOR
@@ -618,34 +619,45 @@ const styles = StyleSheet.create({
         paddingBottom: 24,
         gap: 16,
     },
+    pointsAndSwitcher: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+    },
 
-    topRow: {
+    headerBlock: {
+        gap: 4,
+    },
+
+    row1: {
         flexDirection: "row",
-        alignItems: "center",
         justifyContent: "space-between",
+        alignItems: "center",
     },
-    topRight: {
+
+    row2: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginTop: 2,
+    },
+
+    pointsValue: {
+        fontSize: 15,
+        fontWeight: "700",
+        color: "#1e3a8a",
+    },
+
+    iconsRow: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 10,
+        gap: 12,
     },
-    leftTitleRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 10,
-        flexShrink: 1, // prevents overflow when names are long
-    },
+
     title: {
         fontSize: 20,
         fontWeight: "700",
         color: "#0f172a",
-    },
-    calcBox: {
-        padding: 12,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: "#e2e8f0",
-        backgroundColor: "#f8fafc",
     },
     calcRow: {
         flexDirection: "row",
@@ -671,16 +683,6 @@ const styles = StyleSheet.create({
     arrow: {
         fontSize: 18,
         color: "#475569",
-    },
-    pointsChip: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 999,
-        backgroundColor: "#e0ecff",
-    },
-    pointsChipText: {
-        fontWeight: "700",
-        color: "#1d4ed8",
     },
     rateText: {
         marginTop: 6,
@@ -892,17 +894,5 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         fontSize: 13,
     },
-    pointsLine: {
-        marginTop: -6,
-        marginBottom: 6,
-        fontSize: 15,
-        fontWeight: "700",
-        color: "#1e3a8a",
-    },
-    actionsRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        marginBottom: 8,
-    },
+
 });

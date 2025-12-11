@@ -24,45 +24,42 @@ import {
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Prefer first name from the profile; fall back gracefully.
-const getDisplayName = (m?: any) =>
-    m?.profile?.first_name ||
-    [m?.profile?.first_name, m?.profile?.last_name].filter(Boolean).join(" ").trim() ||
-    m?.profile?.email ||
-    "Someone";
-
-// ── Types ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────────────────────
 type GroceryItem = {
     id: string;
     family_id: string;
     name: string;
-    category: string | undefined; // DB will store null later
+    category: string | undefined;
     added_by_member_id: string;
     is_checked: boolean;
-    checked_at?: string | null; // ISO string when checked
-    created_at: string; // ISO string
+    checked_at?: string | null;
+    created_at: string;
     amount?: string;
 };
 
+// Updated Instacart-style categories
 const DEFAULT_CATEGORIES = [
     "Produce",
-    "Dairy",
+    "Dairy & Eggs",
     "Bakery",
     "Pantry",
-    "Meat",
+    "Meat & Seafood",
     "Frozen",
-    "Drinks",
+    "Beverages",
     "Household",
+    "Personal Care",
     "Other",
 ];
 
-const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 8)}` : "—");
+// helper
+const shortId = (id?: string) =>
+    id ? `ID ${String(id).slice(0, 8)}` : "—";
 
 export default function Grocery() {
-    // same shape as in Chores
     const { activeFamilyId, member, family, members } = useAuthContext() as any;
 
-    // hydrate family + members via React Query
     const { members: membersQuery } = useFamily(activeFamilyId || undefined);
     useSubscribeTableByFamily(
         "family_members",
@@ -70,13 +67,15 @@ export default function Grocery() {
         ["family-members", activeFamilyId]
     );
 
-    // family_member_id -> display name (same logic as chores)
+    // memberId → first name
     const nameForId = useMemo(() => {
         const list = (membersQuery?.data ?? members?.data ?? members ?? family?.members ?? []) as any[];
         const map: Record<string, string> = {};
+
         for (const m of list) {
             const id = m?.id ?? m?.member_id;
             if (!id) continue;
+
             const name =
                 m?.nickname ||
                 m?.profile?.first_name ||
@@ -84,12 +83,19 @@ export default function Grocery() {
                 m?.profile?.name ||
                 m?.name ||
                 "";
+
             map[id] = name || shortId(id);
         }
+
         return (id?: string) => (id ? map[id] || shortId(id) : "—");
     }, [membersQuery?.data, members, family]);
 
+    // ───────────────────────────────────────────────────────
+    // STATE
+    // ───────────────────────────────────────────────────────
     const [items, setItems] = useState<GroceryItem[]>([]);
+    const [viewMode, setViewMode] = useState<"category" | "all">("category");
+    const [viewMenuOpen, setViewMenuOpen] = useState(false);
 
     // Add/edit modal state
     const [addOpen, setAddOpen] = useState(false);
@@ -100,6 +106,9 @@ export default function Grocery() {
     const [category, setCategory] = useState<string | undefined>(undefined);
     const [amount, setAmount] = useState("");
 
+    // ───────────────────────────────────────────────────────
+    // LOAD ITEMS
+    // ───────────────────────────────────────────────────────
     useEffect(() => {
         if (!activeFamilyId) return;
         let cancelled = false;
@@ -133,7 +142,9 @@ export default function Grocery() {
         };
     }, [activeFamilyId]);
 
-    // Group by category and sort: unchecked first, then A→Z
+    // ───────────────────────────────────────────────────────
+    // GROUPED MODE
+    // ───────────────────────────────────────────────────────
     const grouped = useMemo(() => {
         const map = new Map<string, GroceryItem[]>();
         const catOr = (c?: string) => (c?.trim() ? c.trim() : "Uncategorized");
@@ -145,15 +156,24 @@ export default function Grocery() {
         }
 
         for (const [, arr] of map) {
-            arr.sort((a, b) => {
-                if (a.is_checked !== b.is_checked) return a.is_checked ? 1 : -1;
-                return a.name.localeCompare(b.name);
-            });
+            arr.sort((a, b) => a.name.localeCompare(b.name));
         }
 
-        return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+        return Array.from(map.entries()).sort(([a], [b]) =>
+            a.localeCompare(b)
+        );
     }, [items]);
 
+    // ───────────────────────────────────────────────────────
+    // FLAT LIST MODE (A → Z)
+    // ───────────────────────────────────────────────────────
+    const allSorted = useMemo(() => {
+        return [...items].sort((a, b) => a.name.localeCompare(b.name));
+    }, [items]);
+
+    // ───────────────────────────────────────────────────────
+    // FORM HELPERS
+    // ───────────────────────────────────────────────────────
     function resetAddForm() {
         setName("");
         setCategory(undefined);
@@ -162,6 +182,7 @@ export default function Grocery() {
         setEditingItem(null);
     }
 
+    // save or edit item
     async function saveItem() {
         const trimmed = name.trim();
         if (!trimmed) {
@@ -177,7 +198,7 @@ export default function Grocery() {
         const familyId = activeFamilyId;
         const whoId = member?.id ?? member?.profile_id ?? "guest";
 
-        // EDIT existing item
+        // EDIT
         if (editingItem) {
             try {
                 const row = await updateGroceryItem(editingItem.id, {
@@ -198,8 +219,8 @@ export default function Grocery() {
                     amount: row.amount ?? undefined,
                 };
 
-                setItems((prev) =>
-                    prev.map((it) => (it.id === updated.id ? updated : it))
+                setItems(prev =>
+                    prev.map(it => (it.id === updated.id ? updated : it))
                 );
 
                 setAddOpen(false);
@@ -211,7 +232,7 @@ export default function Grocery() {
             return;
         }
 
-        // ADD new item
+        // ADD
         try {
             const row = await addGroceryItem({
                 familyId,
@@ -233,7 +254,7 @@ export default function Grocery() {
                 amount: row.amount ?? undefined,
             };
 
-            setItems((prev) => [newItem, ...prev]);
+            setItems(prev => [newItem, ...prev]);
             setAddOpen(false);
             resetAddForm();
         } catch (e) {
@@ -257,7 +278,7 @@ export default function Grocery() {
     }
 
     async function toggleChecked(id: string) {
-        const target = items.find((i) => i.id === id);
+        const target = items.find(i => i.id === id);
         if (!target) return;
 
         const next = !target.is_checked;
@@ -265,14 +286,10 @@ export default function Grocery() {
         try {
             const row = await updateGroceryPurchased(id, next);
 
-            setItems((prev) =>
-                prev.map((it) =>
+            setItems(prev =>
+                prev.map(it =>
                     it.id === id
-                        ? {
-                            ...it,
-                            is_checked: row.purchased,
-                            checked_at: row.purchased_at,
-                        }
+                        ? { ...it, is_checked: row.purchased, checked_at: row.purchased_at }
                         : it
                 )
             );
@@ -283,7 +300,7 @@ export default function Grocery() {
     }
 
     function deleteChecked() {
-        const checkedIds = items.filter((i) => i.is_checked).map((i) => i.id);
+        const checkedIds = items.filter(i => i.is_checked).map(i => i.id);
         if (!checkedIds.length) {
             Alert.alert("Nothing selected", "Check items to delete first.");
             return;
@@ -297,7 +314,7 @@ export default function Grocery() {
                 onPress: async () => {
                     try {
                         await deleteGroceryItems(checkedIds);
-                        setItems((prev) => prev.filter((it) => !it.is_checked));
+                        setItems(prev => prev.filter(it => !it.is_checked));
                     } catch (e) {
                         console.error("deleteGroceryItems failed", e);
                         Alert.alert("Error", "Could not delete items.");
@@ -310,16 +327,23 @@ export default function Grocery() {
     function showItemInfo(it: GroceryItem) {
         const when = new Date(it.created_at).toLocaleString();
         const addedBy = nameForId(it.added_by_member_id);
+
         Alert.alert(
             it.name,
-            `Added by: ${addedBy}\nWhen: ${when}\nCategory: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}` : ""
+            `Added by: ${addedBy}
+When: ${when}
+Category: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}` : ""
             }`
         );
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // RENDER
+    // ─────────────────────────────────────────────────────────────
     return (
         <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
-            {/* Header row (actions) */}
+
+            {/* HEADER BUTTONS */}
             <View style={styles.actions}>
                 <TouchableOpacity style={styles.btn} onPress={startAdd}>
                     <MaterialCommunityIcons name="plus" size={18} />
@@ -330,90 +354,211 @@ export default function Grocery() {
                     <MaterialCommunityIcons name="trash-can-outline" size={18} />
                     <Text style={[styles.btnTxt, styles.btnDangerTxt]}>Delete Checked</Text>
                 </TouchableOpacity>
+
+                {/* VIEW DROPDOWN */}
+                <View style={{ position: "relative" }}>
+                    <TouchableOpacity
+                        style={styles.btn}
+                        onPress={() => setViewMenuOpen(v => !v)}
+                    >
+                        <Text style={styles.btnTxt}>View</Text>
+                        <MaterialCommunityIcons name="menu-down" size={18} />
+                    </TouchableOpacity>
+
+                    {viewMenuOpen && (
+                        <View style={styles.viewMenu}>
+                            <Pressable
+                                style={styles.viewOption}
+                                onPress={() => {
+                                    setViewMode("category");
+                                    setViewMenuOpen(false);
+                                }}
+                            >
+                                <Text style={styles.viewOptionText}>By Category</Text>
+                            </Pressable>
+
+                            <Pressable
+                                style={styles.viewOption}
+                                onPress={() => {
+                                    setViewMode("all");
+                                    setViewMenuOpen(false);
+                                }}
+                            >
+                                <Text style={styles.viewOptionText}>All Items (A → Z)</Text>
+                            </Pressable>
+                        </View>
+                    )}
+                </View>
             </View>
 
-            {/* List grouped by category */}
-            <FlatList
-                data={grouped}
-                keyExtractor={([cat]) => cat}
-                contentContainerStyle={styles.listContent}
-                renderItem={({ item: [cat, arr] }) => (
-                    <View style={styles.group}>
-                        <Text style={styles.groupTitle}>{cat}</Text>
+            {/* LIST — SWITCHES BASED ON viewMode */}
+            {viewMode === "category" ? (
+                <FlatList
+                    data={grouped}
+                    keyExtractor={([cat]) => cat}
+                    contentContainerStyle={styles.listContent}
+                    renderItem={({ item: [cat, arr] }) => (
+                        <View style={styles.group}>
+                            <Text style={styles.groupTitle}>{cat}</Text>
 
-                        {arr.map((it) => (
-                            <Pressable
-                                key={it.id}
-                                onLongPress={() => showItemInfo(it)}
-                                onPress={() => toggleChecked(it.id)}
-                                style={[styles.row, it.is_checked && styles.rowChecked]}
-                            >
-                                <TouchableOpacity
-                                    onPress={(e) => {
-                                        e.stopPropagation();
-                                        toggleChecked(it.id);
-                                    }}
+                            {arr.map(it => (
+                                <Pressable
+                                    key={it.id}
+                                    onLongPress={() => showItemInfo(it)}
+                                    onPress={() => toggleChecked(it.id)}
+                                    style={[styles.row, it.is_checked && styles.rowChecked]}
                                 >
-                                    <MaterialCommunityIcons
-                                        name={it.is_checked ? "checkbox-marked" : "checkbox-blank-outline"}
-                                        size={22}
-                                        color={it.is_checked ? "#2563eb" : "#64748b"}
-                                    />
-                                </TouchableOpacity>
-
-                                <View style={styles.rowLine}>
-                                    <Text
-                                        numberOfLines={1}
-                                        style={[styles.rowText, it.is_checked && styles.rowTextDone]}
+                                    <TouchableOpacity
+                                        onPress={e => {
+                                            e.stopPropagation();
+                                            toggleChecked(it.id);
+                                        }}
                                     >
-                                        {it.name}
-                                    </Text>
+                                        <MaterialCommunityIcons
+                                            name={
+                                                it.is_checked
+                                                    ? "checkbox-marked"
+                                                    : "checkbox-blank-outline"
+                                            }
+                                            size={22}
+                                            color={it.is_checked ? "#2563eb" : "#64748b"}
+                                        />
+                                    </TouchableOpacity>
 
-                                    {it.amount && (
-                                        <View style={styles.amountPill}>
-                                            <Text style={styles.amountPillText}>{it.amount}</Text>
-                                        </View>
-                                    )}
-                                </View>
+                                    <View style={styles.rowLine}>
+                                        <Text
+                                            numberOfLines={1}
+                                            style={[
+                                                styles.rowText,
+                                                it.is_checked && styles.rowTextDone,
+                                            ]}
+                                        >
+                                            {it.name}
+                                        </Text>
 
-                                {/* edit icon */}
-                                <TouchableOpacity
-                                    onPress={(e) => {
-                                        e.stopPropagation();
-                                        startEdit(it);
-                                    }}
-                                    style={styles.infoBtn}
+                                        {it.amount && (
+                                            <View style={styles.amountPill}>
+                                                <Text style={styles.amountPillText}>
+                                                    {it.amount}
+                                                </Text>
+                                            </View>
+                                        )}
+                                    </View>
+
+                                    {/* edit */}
+                                    <TouchableOpacity
+                                        onPress={e => {
+                                            e.stopPropagation();
+                                            startEdit(it);
+                                        }}
+                                        style={styles.infoBtn}
+                                    >
+                                        <MaterialCommunityIcons
+                                            name="pencil-outline"
+                                            size={20}
+                                            color="#0f172a"
+                                        />
+                                    </TouchableOpacity>
+
+                                    {/* info */}
+                                    <TouchableOpacity
+                                        onPress={e => {
+                                            e.stopPropagation();
+                                            showItemInfo(it);
+                                        }}
+                                        style={styles.infoBtn}
+                                    >
+                                        <MaterialCommunityIcons
+                                            name="information-outline"
+                                            size={20}
+                                            color="#475569"
+                                        />
+                                    </TouchableOpacity>
+                                </Pressable>
+                            ))}
+                        </View>
+                    )}
+                />
+            ) : (
+                // FLAT LIST MODE
+                <FlatList
+                    data={allSorted}
+                    keyExtractor={it => it.id}
+                    contentContainerStyle={styles.listContent}
+                    renderItem={({ item: it }) => (
+                        <Pressable
+                            onLongPress={() => showItemInfo(it)}
+                            onPress={() => toggleChecked(it.id)}
+                            style={[styles.row, it.is_checked && styles.rowChecked]}
+                        >
+                            <TouchableOpacity
+                                onPress={e => {
+                                    e.stopPropagation();
+                                    toggleChecked(it.id);
+                                }}
+                            >
+                                <MaterialCommunityIcons
+                                    name={
+                                        it.is_checked
+                                            ? "checkbox-marked"
+                                            : "checkbox-blank-outline"
+                                    }
+                                    size={22}
+                                    color={it.is_checked ? "#2563eb" : "#64748b"}
+                                />
+                            </TouchableOpacity>
+
+                            <View style={styles.rowLine}>
+                                <Text
+                                    numberOfLines={1}
+                                    style={[
+                                        styles.rowText,
+                                        it.is_checked && styles.rowTextDone,
+                                    ]}
                                 >
-                                    <MaterialCommunityIcons
-                                        name="pencil-outline"
-                                        size={20}
-                                        color="#0f172a"
-                                    />
-                                </TouchableOpacity>
+                                    {it.name}
+                                </Text>
 
-                                {/* info icon */}
-                                <TouchableOpacity
-                                    onPress={(e) => {
-                                        e.stopPropagation();
-                                        showItemInfo(it);
-                                    }}
-                                    style={styles.infoBtn}
-                                >
-                                    <MaterialCommunityIcons
-                                        name="information-outline"
-                                        size={20}
-                                        color="#475569"
-                                    />
-                                </TouchableOpacity>
+                                {it.amount && (
+                                    <View style={styles.amountPill}>
+                                        <Text style={styles.amountPillText}>{it.amount}</Text>
+                                    </View>
+                                )}
+                            </View>
 
+                            <TouchableOpacity
+                                onPress={e => {
+                                    e.stopPropagation();
+                                    startEdit(it);
+                                }}
+                                style={styles.infoBtn}
+                            >
+                                <MaterialCommunityIcons
+                                    name="pencil-outline"
+                                    size={20}
+                                    color="#0f172a"
+                                />
+                            </TouchableOpacity>
 
-                            </Pressable>
-                        ))}
-                    </View>
-                )}
-            />
+                            <TouchableOpacity
+                                onPress={e => {
+                                    e.stopPropagation();
+                                    showItemInfo(it);
+                                }}
+                                style={styles.infoBtn}
+                            >
+                                <MaterialCommunityIcons
+                                    name="information-outline"
+                                    size={20}
+                                    color="#475569"
+                                />
+                            </TouchableOpacity>
+                        </Pressable>
+                    )}
+                />
+            )}
 
-            {/* Add / Edit item modal */}
+            {/* ADD / EDIT MODAL */}
             <Modal
                 visible={addOpen}
                 animationType="fade"
@@ -438,14 +583,20 @@ export default function Grocery() {
                             autoFocus
                         />
 
-                        <Text style={styles.label}>Category (optional)</Text>
+                        <Text style={styles.label}>Category</Text>
                         <TouchableOpacity
-                            onPress={() => setCategoryOpen((v) => !v)}
+                            onPress={() => setCategoryOpen(v => !v)}
                             style={styles.select}
                             activeOpacity={0.8}
                         >
-                            <Text style={styles.selectText}>{category ?? "Select a category"}</Text>
-                            <MaterialCommunityIcons name="menu-down" size={22} color="#334155" />
+                            <Text style={styles.selectText}>
+                                {category ?? "Select a category"}
+                            </Text>
+                            <MaterialCommunityIcons
+                                name="menu-down"
+                                size={22}
+                                color="#334155"
+                            />
                         </TouchableOpacity>
 
                         {categoryOpen && (
@@ -459,7 +610,8 @@ export default function Grocery() {
                                 >
                                     <Text style={styles.menuItemTxt}>— None —</Text>
                                 </Pressable>
-                                {DEFAULT_CATEGORIES.map((c) => (
+
+                                {DEFAULT_CATEGORIES.map(c => (
                                     <Pressable
                                         key={c}
                                         onPress={() => {
@@ -492,7 +644,11 @@ export default function Grocery() {
                             >
                                 <Text style={styles.btnTxt}>Cancel</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={saveItem} style={[styles.btn, styles.btnPrimary]}>
+
+                            <TouchableOpacity
+                                onPress={saveItem}
+                                style={[styles.btn, styles.btnPrimary]}
+                            >
                                 <Text style={[styles.btnTxt, styles.btnPrimaryTxt]}>
                                     {editingItem ? "Save" : "Add"}
                                 </Text>
@@ -505,10 +661,14 @@ export default function Grocery() {
     );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// STYLES
+// ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: "#F6FAFF", padding: 12, gap: 12 },
-    actions: { flexDirection: "row", gap: 10 },
+
+    actions: { flexDirection: "row", gap: 10, alignItems: "center" },
+
     btn: {
         flexDirection: "row",
         gap: 6,
@@ -526,7 +686,9 @@ const styles = StyleSheet.create({
     btnGhost: { backgroundColor: "#fff" },
     btnPrimary: { backgroundColor: "#2563eb", borderColor: "#1d4ed8" },
     btnPrimaryTxt: { color: "#fff", fontWeight: "700" },
+
     listContent: { paddingBottom: 40 },
+
     group: {
         backgroundColor: "#ffffff",
         borderWidth: 1,
@@ -535,6 +697,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         overflow: "hidden",
     },
+
     groupTitle: {
         fontSize: 13,
         fontWeight: "700",
@@ -545,18 +708,24 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: "#e5e7eb",
     },
-    row: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 10 },
+
+    row: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
     rowChecked: { backgroundColor: "#f5faff" },
     rowText: { fontSize: 16, color: "#0f172a" },
     rowTextDone: { color: "#64748b", textDecorationLine: "line-through" },
+
     rowLine: {
         flex: 1,
         flexDirection: "row",
         alignItems: "center",
     },
-    amount: {
-        marginLeft: 12,
-    },
+
     amountPill: {
         marginLeft: 8,
         paddingHorizontal: 8,
@@ -571,7 +740,33 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: "#0f172a",
     },
+
     infoBtn: { padding: 6 },
+
+    // View dropdown
+    viewMenu: {
+        position: "absolute",
+        top: 44,
+        right: 0,
+        backgroundColor: "#fff",
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#e5e7eb",
+        paddingVertical: 4,
+        width: 180,
+        zIndex: 99,
+        elevation: 12,
+    },
+    viewOption: {
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    viewOptionText: {
+        fontSize: 15,
+        color: "#0f172a",
+    },
+
+    // Modal
     modalBackdrop: {
         flex: 1,
         backgroundColor: "rgba(15, 23, 42, 0.45)",
@@ -589,7 +784,9 @@ const styles = StyleSheet.create({
         borderColor: "#e5e7eb",
     },
     modalTitle: { fontSize: 18, fontWeight: "800", color: "#0f172a", marginBottom: 12 },
+
     label: { fontSize: 12, color: "#475569", marginTop: 8, marginBottom: 4 },
+
     input: {
         borderWidth: 1,
         borderColor: "#e5e7eb",
@@ -600,6 +797,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: "#0f172a",
     },
+
     select: {
         borderWidth: 1,
         borderColor: "#e5e7eb",
@@ -612,6 +810,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     selectText: { color: "#0f172a", fontSize: 16 },
+
     menu: {
         marginTop: 6,
         borderWidth: 1,
@@ -622,5 +821,11 @@ const styles = StyleSheet.create({
     },
     menuItem: { paddingHorizontal: 12, paddingVertical: 10 },
     menuItemTxt: { color: "#0f172a", fontSize: 16 },
-    modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 10, marginTop: 16 },
+
+    modalActions: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        gap: 10,
+        marginTop: 16,
+    },
 });
