@@ -80,10 +80,6 @@ export default function WishList() {
         : (member as any)?.id;
 
     const viewingMember = memberList.find((m: any) => m.id === effectiveMemberId);
-    // -------- parent kid-switcher --------
-    const [showKidMenu, setShowKidMenu] = useState(false);
-
-
     // =============================
     // ⚡ BIDIRECTIONAL CALCULATOR
     // =============================
@@ -264,7 +260,7 @@ export default function WishList() {
                     <View style={styles.row2}>
                         <View style={styles.pointsAndSwitcher}>
                             <Text style={styles.pointsValue}>
-                                {isParent ? `${viewingMember?.points ?? 0} pts` : ""}
+                                {viewingMember ? `${viewingMember.points} pts` : ""}
                             </Text>
 
                             {isParent && (
