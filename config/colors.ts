@@ -1,3 +1,4 @@
+// config/colors.ts
 import { Platform } from 'react-native';
 
 const tintColorLight = '#0a7ea4';
@@ -9,8 +10,13 @@ export const Colors = {
     background: '#fff',
     tint: tintColorLight,
     icon: '#687076',
+
+    // Buttons
     primaryBackground: '#3b5bdb',
     primaryText: '#fff',
+    secondaryBackground: '#eef2ff',
+    secondaryText: '#11181C',
+
     tabIconDefault: '#687076',
     tabIconSelected: tintColorLight,
   },
@@ -19,9 +25,13 @@ export const Colors = {
     background: '#151718',
     tint: tintColorDark,
     icon: '#9BA1A6',
+
+    // Buttons
     primaryBackground: '#dbe4ff',
     primaryText: '#000',
-    secondary: '#0a7ea4',
+    secondaryBackground: '#0a7ea4',
+    secondaryText: '#fff',
+
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
   },
@@ -31,11 +41,8 @@ export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {

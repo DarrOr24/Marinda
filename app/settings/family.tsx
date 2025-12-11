@@ -20,6 +20,8 @@ import {
   useUpdateMemberRole,
 } from '@/lib/families/families.hooks'
 import type { Member, Role } from '@/lib/families/families.types'
+import { isParentRole } from '@/utils/validation.utils'
+
 
 // Derive ROLE_OPTIONS from Role type - ensures all roles are included
 const ALL_ROLES: readonly Role[] = ['MOM', 'DAD', 'ADULT', 'TEEN', 'CHILD'] as const
@@ -42,7 +44,7 @@ export default function FamilySettingsScreen() {
   const familyId = member?.family_id
   const myRole = member?.role as Role | undefined
   const myProfileId = member?.profile_id as string | undefined
-  const isParent = myRole === 'MOM' || myRole === 'DAD'
+  const isParent = isParentRole(myRole)
 
   const { family, members } = useFamily(familyId)
 

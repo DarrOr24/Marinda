@@ -1,7 +1,24 @@
 // app/profile/[id].tsx
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import CheckerboardBackground from '@/components/checkerboard-background';
 import { KidSwitcher } from '@/components/kid-switcher';
 import MemberSidebar from '@/components/members-sidebar';
+import { Button } from '@/components/ui/button';
 import WeeklyPointsChart from '@/components/weekly-points-chart';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useFamily } from '@/lib/families/families.hooks';
@@ -12,30 +29,13 @@ import {
   fetchMemberPointsHistory,
   type PointsEntry,
 } from '@/lib/points/points.api';
-import { router, useLocalSearchParams, useNavigation } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
+import { isKidRole, isParentRole } from '@/utils/validation.utils';
 
 
 export default function MemberProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { activeFamilyId, member } = useAuthContext() as any;
-  const { members, family } = useFamily(activeFamilyId || undefined);
-  const navigation = useNavigation();
+  const { members } = useFamily(activeFamilyId || undefined);
 
   const [history, setHistory] = useState<PointsEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -46,8 +46,8 @@ export default function MemberProfile() {
   const [adjustReason, setAdjustReason] = useState('');
   const [adjustSaving, setAdjustSaving] = useState(false);
 
-  const currentRole = (member?.role as Role) ?? 'TEEN';
-  const isParent = currentRole === 'MOM' || currentRole === 'DAD';
+  const currentRole = (member?.role as Role | undefined) ?? 'TEEN';
+  const isParent = isParentRole(currentRole);
   const adminMemberId: string | undefined = (member as any)?.id;
 
   const memberList = members.data ?? [];
@@ -238,17 +238,30 @@ export default function MemberProfile() {
           >
 
             {isParent && (
-              <View style={{ alignSelf: 'flex-start', marginBottom: 12 }}>
-                <KidSwitcher
-                  kids={memberList.filter(m => m.role === 'CHILD' || m.role === 'TEEN')}
-                  selectedKidId={id}
-                  onSelectKid={(kidId) =>
-                    router.push({ pathname: '/profile/[id]', params: { id: kidId } })
-                  }
-                />
-              </View>
-            )}
+              <>
+                {/* Kid switcher */}
+                <View style={{ alignSelf: 'flex-start', marginBottom: 8 }}>
+                  <KidSwitcher
+                    kids={memberList.filter(m => isKidRole(m.role))}
+                    selectedKidId={id}
+                    onSelectKid={(kidId) =>
+                      router.push({ pathname: '/profile/[id]', params: { id: kidId } })
+                    }
+                  />
+                </View>
 
+                {/* Manage family button */}
+                <View style={{ alignSelf: 'flex-start', marginBottom: 12 }}>
+                  <Button
+                    title="Manage my family"
+                    type="primary"
+                    size="md"
+                    showShadow
+                    onPress={() => router.push('/settings/family')}
+                  />
+                </View>
+              </>
+            )}
 
             {/* Points card – everyone sees current points */}
             <View style={styles.pointsCard}>
@@ -286,29 +299,27 @@ export default function MemberProfile() {
                   onSubmitEditing={() => Keyboard.dismiss()}
                 />
                 <View style={styles.adjustButtonsRow}>
-                  <Pressable
-                    style={[styles.adjustBtn, styles.adjustSecondaryBtn]}
+                  <Button
+                    title="Clear"
+                    type="secondary"
+                    size="md"
+                    fullWidth
                     onPress={() => {
                       setAdjustDelta('');
                       setAdjustReason('');
                     }}
                     disabled={adjustSaving}
-                  >
-                    <Text style={styles.adjustBtnText}>Clear</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.adjustBtn,
-                      styles.adjustPrimaryBtn,
-                      adjustSaving && styles.adjustDisabledBtn,
-                    ]}
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    title={adjustSaving ? 'Saving…' : 'Save change'}
+                    type="primary"
+                    size="md"
+                    fullWidth
                     onPress={handleAdjustPoints}
                     disabled={adjustSaving}
-                  >
-                    <Text style={[styles.adjustBtnText, { color: '#fff' }]}>
-                      {adjustSaving ? 'Saving…' : 'Save change'}
-                    </Text>
-                  </Pressable>
+                    style={{ flex: 1 }}
+                  />
                 </View>
               </View>
             )}
@@ -477,27 +488,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginTop: 12,
-  },
-  adjustBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  adjustPrimaryBtn: {
-    backgroundColor: '#2563eb',
-  },
-  adjustSecondaryBtn: {
-    backgroundColor: '#eef2ff',
-  },
-  adjustDisabledBtn: {
-    opacity: 0.5,
-  },
-  adjustBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#111827',
   },
 
   /* History styles */
