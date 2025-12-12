@@ -9,7 +9,10 @@ import type {
 const supabase = getSupabase()
 
 function mapOut(a: any): Activity {
-  return { ...a, activity_date: dbFormats.parseDbDateLocal(a.activity_date) } as Activity
+  return {
+    ...a,
+    created_by: Array.isArray(a.created_by) ? a.created_by[0] : a.created_by,
+  } as Activity
 }
 
 export async function rpcCreateActivity(
@@ -18,10 +21,7 @@ export async function rpcCreateActivity(
   includeCreator = true
 ): Promise<Activity> {
   const { data, error } = await supabase.rpc('create_activity_with_participants', {
-    p_activity: {
-      ...activity,
-      activity_date: dbFormats.toDbDate(activity.activity_date),
-    },
+    p_activity: activity,
     p_participants: participants ?? [],
     p_include_creator: includeCreator,
   })
@@ -36,14 +36,9 @@ export async function rpcUpdateActivity(
   participants?: ActivityParticipantUpsert[] | null,
   replaceParticipants = false
 ): Promise<Activity> {
-  const payload =
-    patch.activity_date
-      ? { ...patch, activity_date: dbFormats.toDbDate(patch.activity_date as Date) }
-      : patch
-
   const { error } = await supabase.rpc('update_activity_with_participants', {
     p_activity_id: id,
-    p_patch: payload,
+    p_patch: patch,
     p_participants: participants ?? null,
     p_replace_participants: replaceParticipants,
   })
@@ -73,7 +68,6 @@ export async function fetchFamilyActivities(
   const { data, error } = await q
   if (error) throw new Error(error.message)
 
-  console.log('[fetchFamilyActivities] data', data)
   return (data ?? []).map(mapOut)
 }
 

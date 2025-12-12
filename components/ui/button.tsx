@@ -25,6 +25,7 @@ type ButtonProps = {
   type?: ButtonType;
   size?: ButtonSize;
   onPress?: () => void;
+  uppercase?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
   showShadow?: boolean;
@@ -36,6 +37,7 @@ export function Button({
   type = 'primary',
   size = 'md',
   onPress,
+  uppercase = false,
   disabled = false,
   fullWidth = false,
   showShadow = false,
@@ -69,7 +71,7 @@ export function Button({
         style,
       ]}
     >
-      <Text style={[styles.text, typeStyles.text]}>
+      <Text style={[styles.text, typeStyles.text, uppercase && styles.uppercase]}>
         {title}
       </Text>
     </Pressable>
@@ -133,9 +135,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  sizeSm: { paddingHorizontal: 10, paddingVertical: 6 },
-  sizeMd: { paddingHorizontal: 14, paddingVertical: 8 },
-  sizeLg: { paddingHorizontal: 18, paddingVertical: 10 },
+  sizeSm: { paddingHorizontal: 10, paddingVertical: 6, fontSize: 12 },
+  sizeMd: { paddingHorizontal: 14, paddingVertical: 8, fontSize: 13 },
+  sizeLg: { paddingHorizontal: 18, paddingVertical: 10, fontSize: 16 },
 
   fullWidth: { alignSelf: 'stretch' },
 
@@ -148,7 +150,10 @@ const styles = StyleSheet.create({
   },
 
   text: {
-    fontSize: 13,
     fontWeight: '700',
+  },
+
+  uppercase: {
+    textTransform: 'uppercase',
   },
 });
