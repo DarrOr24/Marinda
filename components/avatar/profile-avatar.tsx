@@ -6,7 +6,6 @@ import { Image } from 'react-native'
 import type { AvatarSize } from '@/components/avatar/avatar'
 import { Avatar } from '@/components/avatar/avatar'
 import { useProfile, useUpdateProfile } from '@/lib/profiles/profiles.hooks'
-import { getSupabase } from '@/lib/supabase'
 
 type ProfileAvatarProps = {
   profileId: string
@@ -21,32 +20,40 @@ export function ProfileAvatar({
 }: ProfileAvatarProps) {
   const { data: profile } = useProfile(profileId)
   const updateProfile = useUpdateProfile()
-  const supabase = getSupabase()
 
   const [uri, setUri] = useState<string | null>(null)
   const [loadedUri, setLoadedUri] = useState<string | null>(null)
 
+  // pull cache-buster value (we inject this in useUpdateProfile.onSuccess)
+  const avatarCacheBuster = (profile as any)?.avatarCacheBuster
+
   // --- Load remote avatar + prevent flicker ---
   useEffect(() => {
-    if (!profile?.avatar_url) {
+    const baseUrl = profile?.public_avatar_url || null
+
+    if (!baseUrl) {
       setUri(null)
       setLoadedUri(null)
       return
     }
 
-    const { data: pub } = supabase.storage
-      .from('profile-photos')
-      .getPublicUrl(profile.avatar_url)
+    // same base URL for everyone + optional cache-buster
+    const url =
+      avatarCacheBuster != null
+        ? `${baseUrl}?v=${avatarCacheBuster}`
+        : baseUrl
 
-    const url = pub.publicUrl ?? null
     setUri(url)
 
-    if (url) {
-      Image.prefetch(url).then(() => {
+    Image.prefetch(url)
+      .then(() => {
         setLoadedUri(url)
       })
-    }
-  }, [profile?.avatar_url, supabase])
+      .catch(() => {
+        // even if prefetch fails, fall back to showing the URL
+        setLoadedUri(url)
+      })
+  }, [profile?.public_avatar_url, avatarCacheBuster])
 
   // --- User selects a new avatar ---
   const handlePress = async () => {
@@ -64,7 +71,7 @@ export function ProfileAvatar({
     const localUri = result.assets[0].uri
     const previousUri = uri
 
-    // Optimistic preview
+    // Optimistic preview on this component
     setLoadedUri(localUri)
     setUri(localUri)
 
@@ -74,6 +81,8 @@ export function ProfileAvatar({
         avatarFileUri: localUri,
         updates: {},
       })
+      // after this, useUpdateProfile.onSuccess will bump avatarCacheBuster,
+      // which triggers the effect above in *all* ProfileAvatar instances.
     } catch (_err) {
       // rollback
       setLoadedUri(previousUri)

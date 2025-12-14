@@ -33,21 +33,30 @@ export function useUpdateProfile() {
             updates?: Record<string, any>
             avatarFileUri?: string | null
         }) => {
-            // 1️⃣ handle avatar upload first (if any)
             if (avatarFileUri) {
                 await uploadAvatar(profileId, avatarFileUri)
             }
 
-            // 2️⃣ then handle normal profile fields
             if (updates && Object.keys(updates).length > 0) {
                 await updateProfile(profileId, updates)
             }
         },
 
         onSuccess: (_, { profileId }) => {
-            // Re-fetch the updated profile
+            // 1️⃣ refetch profile + family
             qc.invalidateQueries({ queryKey: ['profile', profileId] })
             qc.invalidateQueries({ queryKey: ['family-members'] })
+
+            // 2️⃣ bump a cache-buster on the profile query so all ProfileAvatar instances update
+            qc.setQueryData(['profile', profileId], (old: any) =>
+                old
+                    ? {
+                        ...old,
+                        avatarCacheBuster: Date.now(),
+                    }
+                    : old
+            )
         },
     })
 }
+
