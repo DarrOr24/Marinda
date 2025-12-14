@@ -1,11 +1,4 @@
-import AddActivityModal, { type NewActivityForm } from "@/components/add-activity-modal";
-import CheckerboardBackground from "@/components/checkerboard-background";
-import { members as FAMILY_MEMBERS } from "@/data/members";
-import { useAuthContext } from "@/hooks/use-auth-context";
-import { useCreateActivity, useFamilyActivities, useUpdateActivity } from "@/lib/activities/activities.hooks";
-import type { Activity, ActivityInsert, ActivityParticipantUpsert, ActivityStatus } from "@/lib/activities/activities.types";
-import { useFamily } from "@/lib/families/families.hooks";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+// app/boards/activity.tsx
 import { useMemo, useState } from "react";
 import {
   Alert,
@@ -16,6 +9,15 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+import AddActivityModal, { type NewActivityForm } from "@/components/add-activity-modal";
+import CheckerboardBackground from "@/components/checkerboard-background";
+import { useAuthContext } from "@/hooks/use-auth-context";
+import { useCreateActivity, useFamilyActivities, useUpdateActivity } from "@/lib/activities/activities.hooks";
+import type { Activity, ActivityInsert, ActivityParticipantUpsert, ActivityStatus } from "@/lib/activities/activities.types";
+import { useFamily } from "@/lib/families/families.hooks";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const MIN_PAST_WEEKS = -4;
@@ -57,7 +59,6 @@ export default function ActivityBoard() {
 
   const [weekOffset, setWeekOffset] = useState<number>(0);
   const [addOpen, setAddOpen] = useState(false);
-  const [defaultDayIndex, setDefaultDayIndex] = useState(0);
 
   const [editOpen, setEditOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -79,15 +80,13 @@ export default function ActivityBoard() {
 
   // Fast lookup for members (for dots and names)
   const memberById = useMemo(() => {
-    const list = (familyMembers.data ?? []).length ? (familyMembers.data as any) : FAMILY_MEMBERS; // fallback mock
+    const list = (familyMembers.data ?? []).length ? (familyMembers.data as any) : [];
     const map = new Map<string, any>();
     for (const m of list) map.set(m.id, m);
     return map;
   }, [familyMembers.data]);
 
   function openAddModal() {
-    const idx = visibleWeekDays.findIndex((d) => sameDay(d, today));
-    setDefaultDayIndex(idx >= 0 ? idx : 0);
     setAddOpen(true);
   }
 
@@ -132,9 +131,7 @@ export default function ActivityBoard() {
         a.status === "NOT_APPROVED" ? "❌ Not approved" :
           "⏳ Pending approval";
 
-    const dateStr = a.activity_date instanceof Date
-      ? a.activity_date.toISOString().slice(0, 10)
-      : String(a.activity_date);
+    const dateStr = String(a.activity_date);
 
     const lines = [
       `🏷️ ${a.title}`,
@@ -176,8 +173,6 @@ export default function ActivityBoard() {
       buttons.unshift({
         text: "EDIT ✏️",
         onPress: () => {
-          const idx = visibleWeekDays.findIndex((d) => sameDay(d, new Date(a.activity_date)));
-          setDefaultDayIndex(idx >= 0 ? idx : 0);
           setEditingId(a.id);
           setEditOpen(true);
         },
@@ -201,11 +196,11 @@ export default function ActivityBoard() {
   function handleSaveActivity(form: NewActivityForm) {
     if (!activeFamilyId || !member?.id) return;
 
-    const targetDate = visibleWeekDays[form.day_index] ?? visibleWeekDays[0];
+    const targetDate = new Date(form.date);
     const activity: ActivityInsert = {
       family_id: activeFamilyId,
       title: form.title,
-      activity_date: targetDate,
+      activity_date: targetDate.toISOString().split('T')[0],
       time: form.time,
       location: form.location ?? null,
       money: form.money ?? null,
@@ -225,11 +220,10 @@ export default function ActivityBoard() {
   // Edit (patch+participants)
   function handleUpdateActivity(form: NewActivityForm) {
     if (!editingId) return;
-    const targetDate = visibleWeekDays[form.day_index] ?? visibleWeekDays[0];
 
     const patch = {
       title: form.title,
-      activity_date: targetDate,
+      activity_date: form.date,
       time: form.time,
       location: form.location ?? null,
       money: form.money ?? null,
@@ -370,43 +364,44 @@ export default function ActivityBoard() {
         visible={addOpen}
         onClose={() => setAddOpen(false)}
         onSave={handleSaveActivity}
-        default_day_index={defaultDayIndex}
-        week_days={visibleWeekDays}
+        initialDateStr={today.toISOString().split('T')[0]}
         mode="create"
         submitLabel="Save"
       />
 
       {/* Edit Activity */}
-      {editingId && (
-        <AddActivityModal
-          visible={editOpen}
-          onClose={() => {
-            setEditOpen(false)
-            setEditingId(null)
-          }}
-          onSave={handleUpdateActivity}
-          default_day_index={defaultDayIndex}
-          week_days={visibleWeekDays}
-          mode="edit"
-          submitLabel="Update"
-          initial={(() => {
-            const a = activities.find(x => x.id === editingId)
-            if (!a) return {}
-            return {
-              title: a.title,
-              day_index: defaultDayIndex,
-              time: a.time,
-              location: a.location ?? undefined,
-              money: a.money ?? undefined,
-              ride_needed: !!a.ride_needed,
-              present_needed: !!a.present_needed,
-              babysitter_needed: !!a.babysitter_needed,
-              notes: a.notes ?? undefined,
-              participants_member_ids: (a.participants ?? []).map(p => p.member_id),
-            }
-          })()}
-        />
-      )}
+      {editingId && (() => {
+        const activity = activities.find(x => x.id === editingId)
+        if (!activity) return null
+
+        const activityDate = String(activity.activity_date)
+
+        return (
+          <AddActivityModal
+            visible={editOpen}
+            onClose={() => {
+              setEditOpen(false)
+              setEditingId(null)
+            }}
+            onSave={handleUpdateActivity}
+            initialDateStr={activityDate}
+            mode="edit"
+            submitLabel="Update"
+            initial={{
+              title: activity.title,
+              date: activityDate,
+              time: activity.time,
+              location: activity.location ?? undefined,
+              money: activity.money ?? undefined,
+              ride_needed: !!activity.ride_needed,
+              present_needed: !!activity.present_needed,
+              babysitter_needed: !!activity.babysitter_needed,
+              participants_member_ids: activity.participants?.map(p => p.member_id) ?? [],
+              notes: activity.notes ?? undefined,
+            }}
+          />
+        )
+      })()}
     </View>
   );
 }

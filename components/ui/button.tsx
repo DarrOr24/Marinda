@@ -11,8 +11,13 @@ import {
 
 import { Colors } from '@/config/colors';
 
+export type ButtonType =
+  | 'primary'
+  | 'secondary'
+  | 'ghost'
+  | 'outline'
+  | 'danger';
 
-export type ButtonType = 'primary' | 'secondary';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 type ButtonProps = {
@@ -20,6 +25,7 @@ type ButtonProps = {
   type?: ButtonType;
   size?: ButtonSize;
   onPress?: () => void;
+  uppercase?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
   showShadow?: boolean;
@@ -31,6 +37,7 @@ export function Button({
   type = 'primary',
   size = 'md',
   onPress,
+  uppercase = false,
   disabled = false,
   fullWidth = false,
   showShadow = false,
@@ -39,15 +46,7 @@ export function Button({
   const scheme = useColorScheme();
   const theme = scheme === 'dark' ? Colors.dark : Colors.light;
 
-  const isPrimary = type === 'primary';
-
-  const backgroundColor = isPrimary
-    ? theme.primaryBackground
-    : theme.secondaryBackground;
-
-  const textColor = isPrimary
-    ? theme.primaryText
-    : theme.secondaryText;
+  const typeStyles = getTypeStyles(type, theme);
 
   const sizeStyle =
     size === 'sm'
@@ -63,18 +62,70 @@ export function Button({
       style={({ pressed }) => [
         styles.base,
         sizeStyle,
-        {
-          backgroundColor,
-          opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
-        },
+        typeStyles.button,
         fullWidth && styles.fullWidth,
         showShadow && styles.shadow,
+        {
+          opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
+        },
         style,
       ]}
     >
-      <Text style={[styles.text, { color: textColor }]}>{title}</Text>
+      <Text style={[styles.text, typeStyles.text, uppercase && styles.uppercase]}>
+        {title}
+      </Text>
     </Pressable>
   );
+}
+
+function getTypeStyles(type: ButtonType, theme: any) {
+  switch (type) {
+    case 'primary':
+      return {
+        button: { backgroundColor: theme.primaryBackground },
+        text: { color: theme.primaryText },
+      };
+
+    case 'secondary':
+      return {
+        button: { backgroundColor: theme.secondaryBackground },
+        text: { color: theme.secondaryText },
+      };
+
+    case 'ghost':
+      return {
+        button: {
+          backgroundColor: 'transparent',
+        },
+        text: {
+          color: theme.ghostText ?? theme.primaryBackground,
+        },
+      };
+
+    case 'outline':
+      return {
+        button: {
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          borderColor: theme.outlineBorder ?? theme.primaryBackground,
+        },
+        text: {
+          color: theme.outlineText ?? theme.primaryBackground,
+        },
+      };
+
+    case 'danger':
+      return {
+        button: { backgroundColor: theme.dangerBackground },
+        text: { color: theme.dangerText },
+      };
+
+    default:
+      return {
+        button: { backgroundColor: theme.primaryBackground },
+        text: { color: theme.primaryText },
+      };
+  }
 }
 
 const styles = StyleSheet.create({
@@ -84,22 +135,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  sizeSm: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  sizeMd: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  sizeLg: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-  },
+  sizeSm: { paddingHorizontal: 10, paddingVertical: 6, fontSize: 12 },
+  sizeMd: { paddingHorizontal: 14, paddingVertical: 8, fontSize: 13 },
+  sizeLg: { paddingHorizontal: 18, paddingVertical: 10, fontSize: 16 },
 
-  fullWidth: {
-    alignSelf: 'stretch',
-  },
+  fullWidth: { alignSelf: 'stretch' },
 
   shadow: {
     shadowColor: '#000',
@@ -110,7 +150,10 @@ const styles = StyleSheet.create({
   },
 
   text: {
-    fontSize: 13,
     fontWeight: '700',
+  },
+
+  uppercase: {
+    textTransform: 'uppercase',
   },
 });

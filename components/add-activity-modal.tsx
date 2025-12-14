@@ -1,8 +1,6 @@
 // components/add-activity-modal.tsx
-import { useAuthContext } from "@/hooks/use-auth-context";
-import { useFamily } from "@/lib/families/families.hooks";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Easing,
@@ -13,59 +11,64 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  useWindowDimensions,
   View,
+  useWindowDimensions,
 } from "react-native";
+
+import { useAuthContext } from "@/hooks/use-auth-context";
+import { useFamily } from "@/lib/families/families.hooks";
+import { getShortMonthFromDateString, getWeekDayFromDateString } from "@/utils/format.utils";
+import { DateTimeWheelPicker } from "./date-time-wheel-picker";
+
 
 // ── Types used by parent ───────────────────────────────────────────────
 export type NewActivityForm = {
   title: string
-  day_index: number             // 0..6 within the visible week
-  time: string                  // "18:00"  (REQUIRED)
-  location?: string
-  money?: number
-  ride_needed?: boolean
-  present_needed?: boolean
-  babysitter_needed?: boolean
-  participants_member_ids?: string[]
-  notes?: string
-}
-
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const
+  date: string;          // "YYYY-MM-DD"
+  time: string;          // "HH:MM"
+  location?: string;
+  money?: number;
+  ride_needed?: boolean;
+  present_needed?: boolean;
+  babysitter_needed?: boolean;
+  participants_member_ids?: string[];
+  notes?: string;
+};
 
 type Props = {
-  visible: boolean
-  onClose: () => void
-  onSave: (form: NewActivityForm) => void
-  default_day_index?: number
-  week_days: Date[]
-  mode?: "create" | "edit"
-  submitLabel?: string
-  initial?: Partial<NewActivityForm>
-}
+  visible: boolean;
+  onClose: () => void;
+  onSave: (form: NewActivityForm) => void;
+
+  initialDateStr: string;
+  initialTime?: string;
+  mode?: "create" | "edit";
+  submitLabel?: string;
+  initial?: Partial<NewActivityForm>;
+};
+
 
 export default function AddActivityModal({
   visible,
   onClose,
   onSave,
-  default_day_index = 0,
-  week_days,
+  initialDateStr,
+  initialTime,
   mode = "create",
   submitLabel,
   initial,
 }: Props) {
-  const { activeFamilyId } = useAuthContext() as any
-  const { members } = useFamily(activeFamilyId)
-  const { height } = useWindowDimensions()
+  const { height } = useWindowDimensions();
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(40)).current;
 
-  // animations
-  const opacity = useRef(new Animated.Value(0)).current
-  const translateY = useRef(new Animated.Value(40)).current
+  const { activeFamilyId } = useAuthContext() as any;
+  const { members } = useFamily(activeFamilyId);
 
   // form state
-  const [dayIndex, setDayIndex] = useState(default_day_index)
   const [title, setTitle] = useState("")
-  const [time, setTime] = useState("")
+  const [dateStr, setDateStr] = useState(initialDateStr);
+  const [time, setTime] = useState(initialTime ?? "");
   const [location, setLocation] = useState("")
   const [money, setMoney] = useState("")
   const [rideNeeded, setRideNeeded] = useState(false)
@@ -74,10 +77,12 @@ export default function AddActivityModal({
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [notes, setNotes] = useState("")
 
+  const [dateTimeOpen, setDateTimeOpen] = useState(false)
+
   // keep default in sync when modal opens with a different week / edit mode
   useEffect(() => {
     if (!visible) return
-    setDayIndex(initial?.day_index ?? default_day_index)
+    setDateStr(initial?.date ?? initialDateStr)
     setTitle(initial?.title ?? "")
     setTime(initial?.time ?? "")
     setLocation(initial?.location ?? "")
@@ -89,7 +94,7 @@ export default function AddActivityModal({
     setBabysitterNeeded(!!initial?.babysitter_needed)
     setSelectedIds(initial?.participants_member_ids ?? [])
     setNotes(initial?.notes ?? "")
-  }, [visible, default_day_index, initial])
+  }, [visible, initialDateStr, initialTime, initial])
 
   // animate in/out
   useEffect(() => {
@@ -128,7 +133,7 @@ export default function AddActivityModal({
     if (!canSave) return
     const payload: NewActivityForm = {
       title: title.trim(),
-      day_index: dayIndex,
+      date: dateStr,
       time: time.trim(),
       location: location.trim() || undefined,
       money: money ? Number(money) : undefined,
@@ -143,18 +148,7 @@ export default function AddActivityModal({
     if (mode === "create") reset()
   }
 
-  const dayChips = useMemo(() => {
-    return week_days.map((d, idx) => {
-      const label = `${DAY_NAMES[d.getDay()]} ${d.getDate()}`
-      return { idx, label, date: d }
-    })
-  }, [week_days])
-
-  const today0 = useMemo(() => {
-    const t = new Date()
-    t.setHours(0, 0, 0, 0)
-    return t
-  }, [])
+  const whenLabel = `${getWeekDayFromDateString(dateStr)} ${getShortMonthFromDateString(dateStr)} · ${time || "—:—"}`
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
@@ -172,34 +166,22 @@ export default function AddActivityModal({
 
         <ScrollView contentContainerStyle={{ paddingBottom: 12 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {/* Day selector */}
-          <Text style={styles.label}>📅 Date</Text>
-          <View style={styles.wrapChipsRow}>
-            {dayChips.map(({ idx, label, date }) => {
-              const isPast = date.getTime() < today0.getTime()
-              return (
-                <TouchableOpacity
-                  key={idx}
-                  disabled={isPast}
-                  style={[styles.chip, idx === dayIndex && styles.chipActive, isPast && { opacity: 0.4 }]}
-                  onPress={() => !isPast && setDayIndex(idx)}
-                >
-                  <Text style={[styles.chipTxt, idx === dayIndex && styles.chipTxtActive, isPast && { textDecorationLine: "line-through" }]}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              )
-            })}
-          </View>
+          <Text style={styles.label}>📅 When *</Text>
+          <TouchableOpacity
+            onPress={() => setDateTimeOpen(true)}
+            style={styles.whenRow}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons name="calendar-clock" size={20} color="#0f172a" />
+            <View style={{ marginLeft: 10 }}>
+              <Text style={styles.whenMain}>{whenLabel}</Text>
+              <Text style={styles.whenSub}>Tap to change</Text>
+            </View>
+          </TouchableOpacity>
 
           {/* Required fields */}
           <Text style={styles.label}>🏷️ Title *</Text>
           <TextInput placeholder="e.g., Soccer practice ⚽️" value={title} onChangeText={setTitle} style={styles.input} autoCapitalize="words" />
-
-          <Text style={styles.label}>🕒 Time *</Text>
-          <View style={styles.fieldRow}>
-            <MaterialCommunityIcons name="clock-outline" size={18} color="#475569" />
-            <TextInput placeholder="e.g., 18:00" value={time} onChangeText={setTime} style={styles.input} />
-          </View>
 
           {/* Optional fields */}
           <Text style={styles.label}>📍 Place</Text>
@@ -260,6 +242,18 @@ export default function AddActivityModal({
             </Text>
           </TouchableOpacity>
         </View>
+
+        <DateTimeWheelPicker
+          visible={dateTimeOpen}
+          initialDateStr={dateStr}
+          initialTime={time}
+          onCancel={() => setDateTimeOpen(false)}
+          onConfirm={({ dateStr, time }) => {
+            setDateStr(dateStr)
+            setTime(time)
+            setDateTimeOpen(false)
+          }}
+        />
       </Animated.View>
     </Modal>
   )
@@ -302,4 +296,7 @@ const styles = StyleSheet.create({
   btnPrimaryTxt: { color: "#fff", fontWeight: "800", fontSize: 16 },
   btnDisabled: { backgroundColor: "#e5e7eb" },
   btnDisabledTxt: { color: "#64748b", fontWeight: "800", fontSize: 16 },
+  whenRow: { flexDirection: "row", alignItems: "center", borderRadius: 12, borderWidth: 1, borderColor: "#e5e7eb", paddingHorizontal: 12, paddingVertical: 12, backgroundColor: "#f9fafb", marginBottom: 10 },
+  whenMain: { fontSize: 16, fontWeight: "700", color: "#0f172a" },
+  whenSub: { fontSize: 12, color: "#64748b", marginTop: 2 },
 })

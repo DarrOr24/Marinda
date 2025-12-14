@@ -19,7 +19,7 @@ export interface Activity {
   id: string
   family_id: string
   title: string
-  activity_date: Date
+  activity_date: string
   time: string
   location: string | null
   money: number | null
@@ -36,7 +36,7 @@ export interface Activity {
 export type ActivityInsert = {
   family_id: string
   title: string
-  activity_date: Date
+  activity_date: string
   time: string
   location?: string | null
   money?: number | null
