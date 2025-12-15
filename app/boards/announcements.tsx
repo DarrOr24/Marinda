@@ -617,36 +617,43 @@ export default function AnnouncementsBoard() {
                     {/* SORT MENU */}
                     {/* ---------------------------------------------- */}
                     {showSortMenu && (
-                        <View style={styles.modalOverlay}>
-                            <View style={styles.simpleMenu}>
+                        <Pressable
+                            style={styles.modalOverlay}
+                            onPress={() => setShowSortMenu(false)}
+                        >
+                            <Pressable style={styles.simpleMenu}>
                                 {['newest', 'oldest', 'edited'].map(option => (
                                     <Pressable
                                         key={option}
                                         style={styles.menuItem}
                                         onPress={() => {
-                                            setSortBy(option as any);
-                                            setShowSortMenu(false);
+                                            setSortBy(option as any)
+                                            setShowSortMenu(false)
                                         }}
                                     >
                                         <Text style={styles.menuItemText}>{option}</Text>
                                     </Pressable>
                                 ))}
-                            </View>
-                        </View>
+                            </Pressable>
+                        </Pressable>
                     )}
+
 
 
                     {/* ---------------------------------------------- */}
                     {/* AUTHOR MENU */}
                     {/* ---------------------------------------------- */}
                     {showAuthorMenu && (
-                        <View style={styles.modalOverlay}>
-                            <View style={styles.simpleMenu}>
+                        <Pressable
+                            style={styles.modalOverlay}
+                            onPress={() => setShowAuthorMenu(false)}
+                        >
+                            <Pressable style={styles.simpleMenu}>
                                 <Pressable
                                     style={styles.menuItem}
                                     onPress={() => {
-                                        setFilterAuthor('all');
-                                        setShowAuthorMenu(false);
+                                        setFilterAuthor('all')
+                                        setShowAuthorMenu(false)
                                     }}
                                 >
                                     <Text style={styles.menuItemText}>All</Text>
@@ -657,24 +664,25 @@ export default function AnnouncementsBoard() {
                                         m?.nickname ||
                                         m?.profile?.first_name ||
                                         m?.name ||
-                                        shortId(m.id);
+                                        shortId(m.id)
 
                                     return (
                                         <Pressable
                                             key={m.id}
                                             style={styles.menuItem}
                                             onPress={() => {
-                                                setFilterAuthor(name);
-                                                setShowAuthorMenu(false);
+                                                setFilterAuthor(name)
+                                                setShowAuthorMenu(false)
                                             }}
                                         >
                                             <Text style={styles.menuItemText}>{name}</Text>
                                         </Pressable>
-                                    );
+                                    )
                                 })}
-                            </View>
-                        </View>
+                            </Pressable>
+                        </Pressable>
                     )}
+
 
                 </KeyboardAvoidingView>
             </SafeAreaView>
