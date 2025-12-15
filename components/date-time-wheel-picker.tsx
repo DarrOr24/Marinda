@@ -10,6 +10,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { Button } from "@/components/ui/button";
+import { padNumber2 } from "@/utils/format.utils";
 
 
 const DAYS_OFFSET = 30;
@@ -19,16 +20,14 @@ const MIDDLE_CYCLE = 3;
 
 type Props = {
   visible: boolean;
-  initialDateStr: string;
-  initialTime?: string; // "HH:MM"
+  initialAt?: string;
   onCancel: () => void;
-  onConfirm: (value: { dateStr: string; time: string }) => void;
+  onConfirm: (iso: string) => void;
 };
 
 export function DateTimeWheelPicker({
   visible,
-  initialDateStr,
-  initialTime,
+  initialAt,
   onCancel,
   onConfirm,
 }: Props) {
@@ -89,14 +88,19 @@ export function DateTimeWheelPicker({
 
   // --------- DATE/TIME DATA ----------
 
+  const baseDate = useMemo(() => {
+    const d = initialAt ? new Date(initialAt) : new Date();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }, [initialAt]);
+
   const days = useMemo(
     () =>
       Array.from({ length: DAYS_OFFSET * 2 + 1 }, (_, i) => {
-        const date = new Date(initialDateStr + "T00:00:00");
+        const date = new Date(baseDate);
         date.setDate(date.getDate() + (i + 1 - DAYS_OFFSET));
         return date.toISOString().split("T")[0];
       }),
-    [initialDateStr]
+    [baseDate]
   );
 
   const baseHours = useMemo(
@@ -142,7 +146,17 @@ export function DateTimeWheelPicker({
     return `${base}|${cycle}`;
   }
 
-  const [initialHour, initialMinute] = parseInitialTime(initialTime);
+  const initialTimeStr = useMemo(() => {
+    if (!initialAt) return undefined;
+    const d = new Date(initialAt);
+    const hh = padNumber2(d.getHours());
+    const rawMinutes = d.getMinutes();
+    const rounded = Math.round(rawMinutes / 5) * 5;
+    const safe = rounded >= 60 ? 55 : rounded;
+    return `${hh}:${padNumber2(safe)}`;
+  }, [initialAt]);
+
+  const [initialHour, initialMinute] = parseInitialTime(initialTimeStr);
 
   const [dayIndex, setDayIndex] = useState(DAYS_OFFSET);
   const [hourValue, setHourValue] = useState(() => {
@@ -157,19 +171,30 @@ export function DateTimeWheelPicker({
   // re-sync while closed, so opening is instant with no wheel animation
   useEffect(() => {
     if (!visible) {
-      const [hh, mm] = parseInitialTime(initialTime);
-      const safeHour = baseHours.includes(hh) ? hh : baseHours[0];
-      const safeMinute = baseMinutes.includes(mm) ? mm : baseMinutes[0];
+      const d = initialAt ? new Date(initialAt) : new Date();
+      const hh = padNumber2(d.getHours());
+      const rawMinutes = d.getMinutes();
+      const rounded = Math.round(rawMinutes / 5) * 5;
+      const safe = rounded >= 60 ? 55 : rounded;
+      const [hhSafe, mmSafe] = parseInitialTime(`${hh}:${padNumber2(safe)}`);
+
+      const safeHour = baseHours.includes(hhSafe) ? hhSafe : baseHours[0];
+      const safeMinute = baseMinutes.includes(mmSafe) ? mmSafe : baseMinutes[0];
 
       setDayIndex(DAYS_OFFSET);
       setHourValue(makeHourValue(safeHour));
       setMinuteValue(makeMinuteValue(safeMinute));
     }
-  }, [visible, initialDateStr, initialTime, baseHours, baseMinutes]);
+  }, [visible, initialAt, baseHours, baseMinutes]);
 
   const selectedDay = days[dayIndex];
   const selectedHour = hourValue.split("|")[0];
   const selectedMinute = minuteValue.split("|")[0];
+
+  // build final Date in local time from selected day+time
+  function buildSelectedDate(): Date {
+    return new Date(`${selectedDay}T${selectedHour}:${selectedMinute}:00`);
+  }
 
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -254,10 +279,8 @@ export function DateTimeWheelPicker({
               uppercase
               onPress={() => {
                 mutedRef.current = true;
-                onConfirm({
-                  dateStr: selectedDay,
-                  time: `${selectedHour}:${selectedMinute}`,
-                });
+                const selectedDate = buildSelectedDate();
+                onConfirm(selectedDate.toISOString());
               }}
             />
           </View>

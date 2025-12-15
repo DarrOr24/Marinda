@@ -1,9 +1,11 @@
 // lib/activities/activities.api.ts
-import { dbFormats } from '../db-formats'
 import { MEMBER_WITH_PROFILE_SELECT } from '../members/members.select'
 import { getSupabase } from '../supabase'
 import type {
-  Activity, ActivityInsert, ActivityParticipantUpsert, ActivityStatus
+  Activity,
+  ActivityInsert,
+  ActivityParticipantUpsert,
+  ActivityStatus,
 } from './activities.types'
 
 const supabase = getSupabase()
@@ -51,19 +53,35 @@ export async function fetchFamilyActivities(
   familyId: string,
   params?: { from?: Date; to?: Date }
 ): Promise<Activity[]> {
-  let q = supabase.from('activities')
+  let q = supabase
+    .from('activities')
     .select(`
-      id, family_id, title, activity_date, time, location, money,
-      ride_needed, present_needed, babysitter_needed, notes, status, created_at,
+      id,
+      family_id,
+      title,
+      start_at,
+      end_at,
+      location,
+      money,
+      ride_needed,
+      present_needed,
+      babysitter_needed,
+      notes,
+      status,
+      created_at,
       created_by:family_members!activities_created_by_fkey (${MEMBER_WITH_PROFILE_SELECT}),
       participants:activity_participants (*)
     `)
     .eq('family_id', familyId)
-    .order('activity_date', { ascending: true })
-    .order('time', { ascending: true })
+    .order('start_at', { ascending: true })
 
-  if (params?.from) q = q.gte('activity_date', dbFormats.toDbDate(params.from))
-  if (params?.to) q = q.lte('activity_date', dbFormats.toDbDate(params.to))
+  if (params?.from) {
+    q = q.gte('start_at', params.from.toISOString())
+  }
+
+  if (params?.to) {
+    q = q.lte('start_at', params.to.toISOString())
+  }
 
   const { data, error } = await q
   if (error) throw new Error(error.message)
@@ -75,13 +93,25 @@ export async function fetchActivityById(id: string): Promise<Activity> {
   const { data, error } = await supabase
     .from('activities')
     .select(`
-      id, family_id, title, activity_date, time, location, money,
-      ride_needed, present_needed, babysitter_needed, notes, status, created_at,
+      id,
+      family_id,
+      title,
+      start_at,
+      end_at,
+      location,
+      money,
+      ride_needed,
+      present_needed,
+      babysitter_needed,
+      notes,
+      status,
+      created_at,
       created_by:family_members!activities_created_by_fkey (${MEMBER_WITH_PROFILE_SELECT}),
       participants:activity_participants (*)
     `)
     .eq('id', id)
     .single()
+
   if (error) throw new Error(error.message)
   return mapOut(data)
 }

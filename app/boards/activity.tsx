@@ -13,11 +13,19 @@ import {
 import AddActivityModal, { type NewActivityForm } from "@/components/add-activity-modal";
 import CheckerboardBackground from "@/components/checkerboard-background";
 import { useAuthContext } from "@/hooks/use-auth-context";
-import { useCreateActivity, useFamilyActivities, useUpdateActivity } from "@/lib/activities/activities.hooks";
-import type { Activity, ActivityInsert, ActivityParticipantUpsert, ActivityStatus } from "@/lib/activities/activities.types";
+import {
+  useCreateActivity,
+  useFamilyActivities,
+  useUpdateActivity,
+} from "@/lib/activities/activities.hooks";
+import type {
+  Activity,
+  ActivityInsert,
+  ActivityParticipantUpsert,
+  ActivityStatus,
+} from "@/lib/activities/activities.types";
 import { useFamily } from "@/lib/families/families.hooks";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const MIN_PAST_WEEKS = -4;
@@ -38,18 +46,34 @@ function addWeeks(date: Date, weeks: number) {
   return addDays(date, weeks * 7);
 }
 function sameDay(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
 }
 function formatRangeLabel(start: Date) {
   const end = addDays(start, 6);
-  const fmt = (d: Date) => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const fmt = (d: Date) =>
+    d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const sameMonth = start.getMonth() === end.getMonth();
   return sameMonth
-    ? `${start.toLocaleDateString(undefined, { month: "short" })} ${start.getDate()}–${end.getDate()}`
+    ? `${start.toLocaleDateString(undefined, {
+      month: "short",
+    })} ${start.getDate()}–${end.getDate()}`
     : `${fmt(start)} – ${fmt(end)}`;
 }
 function toDateKey(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
+}
+
+function formatTimeFromIso(iso: string) {
+  const d = new Date(iso);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
 }
 
 export default function ActivityBoard() {
@@ -64,16 +88,22 @@ export default function ActivityBoard() {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const startOfThisWeek = useMemo(() => getStartOfWeek(today), [today]);
-  const visibleWeekStart = useMemo(() => addWeeks(startOfThisWeek, weekOffset), [startOfThisWeek, weekOffset]);
-  const visibleWeekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(visibleWeekStart, i)), [visibleWeekStart]);
+  const visibleWeekStart = useMemo(
+    () => addWeeks(startOfThisWeek, weekOffset),
+    [startOfThisWeek, weekOffset]
+  );
+  const visibleWeekDays = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(visibleWeekStart, i)),
+    [visibleWeekStart]
+  );
   const rangeLabel = formatRangeLabel(visibleWeekStart);
   const pastCapped = weekOffset <= MIN_PAST_WEEKS;
   const isPastWeek = weekOffset < 0;
 
-  const { data: activities = [], isLoading } = useFamilyActivities(
-    activeFamilyId,
-    { from: visibleWeekDays[0], to: visibleWeekDays[6] }
-  );
+  const { data: activities = [], isLoading } = useFamilyActivities(activeFamilyId, {
+    from: visibleWeekDays[0],
+    to: visibleWeekDays[6],
+  });
 
   const createMut = useCreateActivity(activeFamilyId);
   const updateMut = useUpdateActivity(activeFamilyId);
@@ -98,22 +128,21 @@ export default function ActivityBoard() {
   }
 
   function creatorName(a: Activity) {
-    const prof = a.created_by?.profile as any | undefined;
+    const prof = (a.created_by?.profile as any) || undefined;
     if (prof?.first_name || prof?.last_name) {
       return `${prof?.first_name ?? ""} ${prof?.last_name ?? ""}`.trim();
     }
-    // fallback to member record map if needed
     const m = a.created_by?.id ? memberById.get(a.created_by.id) : undefined;
     return m?.name ?? m?.user?.email ?? "Someone";
   }
 
   function creatorColor(a: Activity) {
     const m = a.created_by?.id ? memberById.get(a.created_by.id) : undefined;
-    return (m?.color?.hex ?? m?.color ?? "#2563eb");
+    return m?.color?.hex ?? m?.color ?? "#2563eb";
   }
 
   function showDetails(a: Activity) {
-    const participantIds = a.participants?.map(p => p.member_id) ?? [];
+    const participantIds = a.participants?.map((p) => p.member_id) ?? [];
     const names = participantIds
       .map((id: string) => {
         const m = memberById.get(id);
@@ -127,17 +156,38 @@ export default function ActivityBoard() {
       .join(", ");
 
     const statusLine =
-      a.status === "APPROVED" ? "✅ Approved" :
-        a.status === "NOT_APPROVED" ? "❌ Not approved" :
-          "⏳ Pending approval";
+      a.status === "APPROVED"
+        ? "✅ Approved"
+        : a.status === "NOT_APPROVED"
+          ? "❌ Not approved"
+          : "⏳ Pending approval";
 
-    const dateStr = String(a.activity_date);
+    const start = new Date(a.start_at);
+    const end = new Date(a.end_at);
+    const sameDayRange = sameDay(start, end);
+
+    const startDateLabel = start.toLocaleDateString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+    const endDateLabel = end.toLocaleDateString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+
+    const dateLine = sameDayRange
+      ? `📅 ${startDateLabel}`
+      : `📅 ${startDateLabel} → ${endDateLabel}`;
+
+    const timeLine = `🕒 ${formatTimeFromIso(a.start_at)}–${formatTimeFromIso(a.end_at)}`;
 
     const lines = [
       `🏷️ ${a.title}`,
-      `📅 ${dateStr}`,
+      dateLine,
+      timeLine,
       "",
-      a.time ? `🕒 ${a.time}` : "",
       a.location ? `📍 ${a.location}` : "",
       typeof a.money === "number" ? `💵 $${a.money.toFixed(2)}` : "",
       "",
@@ -149,25 +199,27 @@ export default function ActivityBoard() {
       "",
       statusLine,
       `👤 ${creatorName(a)}`,
-    ].filter(Boolean).join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     const buttons: any[] = [{ text: "CLOSE", style: "cancel" }];
 
-    // Parent-only approve/reject
     const myRole = (member?.role ?? member?.profile?.role ?? "").toUpperCase();
     const isParent = ["DAD", "MOM", "ADULT"].includes(myRole);
     if (isParent) {
       buttons.unshift({
         text: "Reject ❌",
-        onPress: () => updateMut.mutate({ id: a.id, patch: { status: "NOT_APPROVED" } }),
+        onPress: () =>
+          updateMut.mutate({ id: a.id, patch: { status: "NOT_APPROVED" } }),
       });
       buttons.unshift({
         text: "Approve ✅",
-        onPress: () => updateMut.mutate({ id: a.id, patch: { status: "APPROVED" } }),
+        onPress: () =>
+          updateMut.mutate({ id: a.id, patch: { status: "APPROVED" } }),
       });
     }
 
-    // If creator, allow edit
     const isCreator = a.created_by?.id && a.created_by.id === member?.id;
     if (isCreator) {
       buttons.unshift({
@@ -182,11 +234,11 @@ export default function ActivityBoard() {
     Alert.alert("Activity", lines, buttons);
   }
 
-  // Group activities by day
+  // Group activities by start date (local)
   const byDate = useMemo(() => {
     const map: Record<string, Activity[]> = {};
     for (const a of activities) {
-      const key = toDateKey(new Date(a.activity_date));
+      const key = toDateKey(new Date(a.start_at));
       (map[key] ??= []).push(a);
     }
     return map;
@@ -196,12 +248,11 @@ export default function ActivityBoard() {
   function handleSaveActivity(form: NewActivityForm) {
     if (!activeFamilyId || !member?.id) return;
 
-    const targetDate = new Date(form.date);
     const activity: ActivityInsert = {
       family_id: activeFamilyId,
       title: form.title,
-      activity_date: targetDate.toISOString().split('T')[0],
-      time: form.time,
+      start_at: form.start_at,
+      end_at: form.end_at,
       location: form.location ?? null,
       money: form.money ?? null,
       ride_needed: !!form.ride_needed,
@@ -211,8 +262,9 @@ export default function ActivityBoard() {
       created_by: member.id,
     };
 
-    const participants: ActivityParticipantUpsert[] =
-      (form.participants_member_ids ?? []).map((id) => ({ member_id: id, response: 'MAYBE' }));
+    const participants: ActivityParticipantUpsert[] = (
+      form.participants_member_ids ?? []
+    ).map((id) => ({ member_id: id, response: "MAYBE" }));
 
     createMut.mutate({ activity, participants, includeCreator: true });
   }
@@ -221,10 +273,10 @@ export default function ActivityBoard() {
   function handleUpdateActivity(form: NewActivityForm) {
     if (!editingId) return;
 
-    const patch = {
+    const patch: Partial<ActivityInsert> & { status?: ActivityStatus } = {
       title: form.title,
-      activity_date: form.date,
-      time: form.time,
+      start_at: form.start_at,
+      end_at: form.end_at,
       location: form.location ?? null,
       money: form.money ?? null,
       ride_needed: !!form.ride_needed,
@@ -233,8 +285,9 @@ export default function ActivityBoard() {
       notes: form.notes ?? null,
     };
 
-    const participants: ActivityParticipantUpsert[] =
-      (form.participants_member_ids ?? []).map((id) => ({ member_id: id, response: 'MAYBE' }));
+    const participants: ActivityParticipantUpsert[] = (
+      form.participants_member_ids ?? []
+    ).map((id) => ({ member_id: id, response: "MAYBE" }));
 
     updateMut.mutate({
       id: editingId,
@@ -247,6 +300,8 @@ export default function ActivityBoard() {
     setEditOpen(false);
   }
 
+  const todayKey = toDateKey(today);
+
   return (
     <View style={styles.screen}>
       <CheckerboardBackground colorA="#F6FAFF" colorB="#EAF3FF" size={28} />
@@ -255,18 +310,27 @@ export default function ActivityBoard() {
         {/* Header w/ week navigation */}
         <View style={styles.headerRow}>
           <TouchableOpacity
-            onPress={() => !pastCapped && setWeekOffset((o) => Math.max(MIN_PAST_WEEKS, o - 1))}
+            onPress={() =>
+              !pastCapped &&
+              setWeekOffset((o) => Math.max(MIN_PAST_WEEKS, o - 1))
+            }
             style={[styles.navBtn, pastCapped && styles.navBtnDisabled]}
             disabled={pastCapped}
             accessibilityRole="button"
             accessibilityLabel="Previous week"
           >
-            <MaterialCommunityIcons name="chevron-left" size={26} color={pastCapped ? "#94a3b8" : "#0f172a"} />
+            <MaterialCommunityIcons
+              name="chevron-left"
+              size={26}
+              color={pastCapped ? "#94a3b8" : "#0f172a"}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerTitleWrap}>
             <Text style={styles.title}>Activity Board</Text>
-            <Text style={styles.subtitle}>{weekOffset === 0 ? "This week" : rangeLabel}</Text>
+            <Text style={styles.subtitle}>
+              {weekOffset === 0 ? "This week" : rangeLabel}
+            </Text>
           </View>
 
           <TouchableOpacity
@@ -275,22 +339,40 @@ export default function ActivityBoard() {
             accessibilityRole="button"
             accessibilityLabel="Next week"
           >
-            <MaterialCommunityIcons name="chevron-right" size={26} color="#0f172a" />
+            <MaterialCommunityIcons
+              name="chevron-right"
+              size={26}
+              color="#0f172a"
+            />
           </TouchableOpacity>
         </View>
 
         {/* Weekly list */}
-        <ScrollView contentContainerStyle={styles.weekList} style={isPastWeek ? { opacity: 0.6 } : undefined}>
+        <ScrollView
+          contentContainerStyle={styles.weekList}
+          style={isPastWeek ? { opacity: 0.6 } : undefined}
+        >
           {visibleWeekDays.map((d, i) => {
-            const isToday = sameDay(d, today) && weekOffset === 0;
+            const isToday = toDateKey(d) === todayKey && weekOffset === 0;
             const key = toDateKey(d);
             const items = byDate[key] || [];
 
             return (
-              <View key={i} style={[styles.dayRow, isToday && styles.dayRowToday]}>
+              <View
+                key={i}
+                style={[styles.dayRow, isToday && styles.dayRowToday]}
+              >
                 <View style={styles.dayHeader}>
-                  <Text style={[styles.dayName, isToday && styles.dayNameToday]}>{DAY_NAMES[d.getDay()]}</Text>
-                  <Text style={[styles.dayDate, isToday && styles.dayDateToday]}>{d.getDate()}</Text>
+                  <Text
+                    style={[styles.dayName, isToday && styles.dayNameToday]}
+                  >
+                    {DAY_NAMES[d.getDay()]}
+                  </Text>
+                  <Text
+                    style={[styles.dayDate, isToday && styles.dayDateToday]}
+                  >
+                    {d.getDate()}
+                  </Text>
                 </View>
 
                 <View style={styles.dayContent}>
@@ -308,10 +390,12 @@ export default function ActivityBoard() {
                           a.ride_needed ? "🚗" : "",
                           a.present_needed ? "🎁" : "",
                           a.babysitter_needed ? "🍼" : "",
-                        ].filter(Boolean).join(" ");
+                        ]
+                          .filter(Boolean)
+                          .join(" ");
 
                         const goingMembers = (a.participants ?? [])
-                          .map(p => memberById.get(p.member_id))
+                          .map((p) => memberById.get(p.member_id))
                           .filter(Boolean) as any[];
 
                         const top3 = goingMembers.slice(0, 3);
@@ -321,20 +405,51 @@ export default function ActivityBoard() {
                           <Pressable
                             key={a.id}
                             onPress={() => showDetails(a)}
-                            style={[styles.itemRow, base, a.status === "PENDING" && styles.itemPending]}
+                            style={[
+                              styles.itemRow,
+                              base,
+                              a.status === "PENDING" && styles.itemPending,
+                            ]}
                           >
-                            <View style={[styles.colorDot, { backgroundColor: color }]} />
-                            <Text numberOfLines={1} style={styles.itemTitle}>
+                            <View
+                              style={[
+                                styles.colorDot,
+                                { backgroundColor: color },
+                              ]}
+                            />
+                            <Text
+                              numberOfLines={1}
+                              style={styles.itemTitle}
+                            >
                               {a.title}
-                              {a.time ? ` — ${a.time}` : ""}
+                              {a.start_at
+                                ? ` — ${formatTimeFromIso(a.start_at)}`
+                                : ""}
                               {badges ? `  ${badges}` : ""}
                             </Text>
 
-                            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: 4,
+                              }}
+                            >
                               {top3.map((m: any) => (
-                                <View key={m.id} style={[styles.partDot, { backgroundColor: (m as any).color || "#94a3b8" }]} />
+                                <View
+                                  key={m.id}
+                                  style={[
+                                    styles.partDot,
+                                    {
+                                      backgroundColor:
+                                        (m as any).color || "#94a3b8",
+                                    },
+                                  ]}
+                                />
                               ))}
-                              {more > 0 ? <Text style={styles.partMore}>+{more}</Text> : null}
+                              {more > 0 ? (
+                                <Text style={styles.partMore}>+{more}</Text>
+                              ) : null}
                             </View>
                           </Pressable>
                         );
@@ -364,44 +479,47 @@ export default function ActivityBoard() {
         visible={addOpen}
         onClose={() => setAddOpen(false)}
         onSave={handleSaveActivity}
-        initialDateStr={today.toISOString().split('T')[0]}
+        initialDateStr={today.toISOString().split("T")[0]}
         mode="create"
         submitLabel="Save"
       />
 
       {/* Edit Activity */}
-      {editingId && (() => {
-        const activity = activities.find(x => x.id === editingId)
-        if (!activity) return null
+      {editingId &&
+        (() => {
+          const activity = activities.find((x) => x.id === editingId);
+          if (!activity) return null;
 
-        const activityDate = String(activity.activity_date)
+          const start = new Date(activity.start_at);
+          const activityDateStr = toDateKey(start);
 
-        return (
-          <AddActivityModal
-            visible={editOpen}
-            onClose={() => {
-              setEditOpen(false)
-              setEditingId(null)
-            }}
-            onSave={handleUpdateActivity}
-            initialDateStr={activityDate}
-            mode="edit"
-            submitLabel="Update"
-            initial={{
-              title: activity.title,
-              date: activityDate,
-              time: activity.time,
-              location: activity.location ?? undefined,
-              money: activity.money ?? undefined,
-              ride_needed: !!activity.ride_needed,
-              present_needed: !!activity.present_needed,
-              babysitter_needed: !!activity.babysitter_needed,
-              participants_member_ids: activity.participants?.map(p => p.member_id) ?? [],
-              notes: activity.notes ?? undefined,
-            }}
-          />
-        )
-      })()}
+          return (
+            <AddActivityModal
+              visible={editOpen}
+              onClose={() => {
+                setEditOpen(false);
+                setEditingId(null);
+              }}
+              onSave={handleUpdateActivity}
+              initialDateStr={activityDateStr}
+              mode="edit"
+              submitLabel="Update"
+              initial={{
+                title: activity.title,
+                start_at: activity.start_at,
+                end_at: activity.end_at,
+                location: activity.location ?? undefined,
+                money: activity.money ?? undefined,
+                ride_needed: !!activity.ride_needed,
+                present_needed: !!activity.present_needed,
+                babysitter_needed: !!activity.babysitter_needed,
+                participants_member_ids:
+                  activity.participants?.map((p) => p.member_id) ?? [],
+                notes: activity.notes ?? undefined,
+              }}
+            />
+          );
+        })()}
     </View>
   );
 }
@@ -411,10 +529,21 @@ const styles = StyleSheet.create({
   center: { flex: 1, paddingHorizontal: 16, paddingTop: 12, gap: 12 },
 
   headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  headerTitleWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 6 },
+  headerTitleWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 6,
+  },
   navBtn: {
-    width: 42, height: 42, borderRadius: 10, backgroundColor: "#ffffff",
-    borderWidth: 1, borderColor: "#e5e7eb", alignItems: "center", justifyContent: "center",
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    alignItems: "center",
+    justifyContent: "center",
   },
   navBtnDisabled: { backgroundColor: "#f8fafc", borderColor: "#e2e8f0" },
   title: { fontSize: 18, fontWeight: "800", color: "#0f172a" },
@@ -423,13 +552,23 @@ const styles = StyleSheet.create({
   weekList: { gap: 10, paddingBottom: 24 },
 
   dayRow: {
-    flexDirection: "row", backgroundColor: "#fff", borderRadius: 12, borderWidth: 1,
-    borderColor: "#e5e7eb", overflow: "hidden", minHeight: 72,
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    overflow: "hidden",
+    minHeight: 72,
   },
   dayRowToday: { borderColor: "#2563eb", backgroundColor: "#f8fbff" },
   dayHeader: {
-    width: 84, alignItems: "center", justifyContent: "center", backgroundColor: "#f1f5f9",
-    borderRightWidth: 1, borderRightColor: "#e2e8f0", paddingVertical: 10,
+    width: 84,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f1f5f9",
+    borderRightWidth: 1,
+    borderRightColor: "#e2e8f0",
+    paddingVertical: 10,
   },
   dayName: { fontWeight: "700", color: "#334155" },
   dayNameToday: { color: "#2563eb" },
@@ -438,7 +577,16 @@ const styles = StyleSheet.create({
   dayContent: { flex: 1, padding: 10, justifyContent: "center" },
   placeholder: { color: "#94a3b8", fontStyle: "italic" },
 
-  itemRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 2, borderRadius: 10, backgroundColor: "#fff" },
+  itemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 2,
+    borderRadius: 10,
+    backgroundColor: "#fff",
+  },
   itemPending: {},
   colorDot: { width: 8, height: 8, borderRadius: 999 },
   itemTitle: { flex: 1, color: "#0f172a", fontWeight: "700" },
@@ -447,8 +595,19 @@ const styles = StyleSheet.create({
   partMore: { fontSize: 12, color: "#334155", marginLeft: 2 },
 
   fab: {
-    position: "absolute", right: 18, bottom: 18, width: 56, height: 56, borderRadius: 28, backgroundColor: "#2563eb",
-    alignItems: "center", justifyContent: "center",
-    shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 4,
+    position: "absolute",
+    right: 18,
+    bottom: 18,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#2563eb",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
   },
 });
