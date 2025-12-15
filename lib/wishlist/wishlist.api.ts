@@ -136,8 +136,20 @@ export async function updateWishlistItem(
 
     if (error) throw new Error(error.message);
 
-    // If replacing the image
-    if (fields.imageUri) {
+    // IMAGE LOGIC (three cases)
+
+    // 1️⃣ Image removed explicitly
+    if (fields.imageUri === null) {
+        await supabase
+            .from("wishlist_items")
+            .update({ image_url: null })
+            .eq("id", itemId);
+
+        return { ...data, image_url: null };
+    }
+
+    // 2️⃣ Image replaced / added
+    if (typeof fields.imageUri === "string") {
         const url = await uploadWishlistImage(itemId, fields.imageUri);
         await supabase
             .from("wishlist_items")
@@ -147,7 +159,9 @@ export async function updateWishlistItem(
         return { ...data, image_url: url };
     }
 
+    // 3️⃣ Image untouched
     return data;
+
 }
 
 /* --------------------------------------------------------
