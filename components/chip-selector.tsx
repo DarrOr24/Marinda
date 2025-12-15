@@ -1,10 +1,11 @@
 // components/chip-selector.tsx
-import React from 'react'
+import React, { ReactNode } from 'react'
 import {
   Pressable,
   StyleProp,
   StyleSheet,
   Text,
+  TextStyle,
   View,
   ViewStyle,
 } from 'react-native'
@@ -16,31 +17,29 @@ export interface ChipOption {
 
 /** SINGLE SELECT MODE (default) */
 interface SingleSelectProps {
-  options: ChipOption[]
   value: string | null
-  onChange: (value: string) => void
-  style?: StyleProp<ViewStyle>
-
+  onChange: (value: string | null) => void
   multiple?: false
-  values?: never
+  allowDeselect?: boolean
 }
 
 /** MULTI SELECT MODE (optional) */
 interface MultiSelectProps {
-  options: ChipOption[]
   values: string[]
   onChange: (values: string[]) => void
-  style?: StyleProp<ViewStyle>
-
   multiple: true
-  value?: never
 }
 
-type ChipSelectorProps = SingleSelectProps | MultiSelectProps
+type ChipSelectorProps = (SingleSelectProps | MultiSelectProps) & {
+  options: ChipOption[]
+  style?: StyleProp<ViewStyle>
+  renderOption?: (opt: ChipOption, active: boolean) => ReactNode
+  chipStyle?: (active: boolean, opt: ChipOption) => ViewStyle
+  chipTextStyle?: (active: boolean, opt: ChipOption) => TextStyle
+}
 
 export function ChipSelector(props: ChipSelectorProps) {
-  const { options, style } = props
-
+  const { options, style, renderOption, chipStyle, chipTextStyle } = props
   const isMulti = props.multiple === true
 
   return (
@@ -50,27 +49,45 @@ export function ChipSelector(props: ChipSelectorProps) {
           ? props.values.includes(opt.value)
           : props.value === opt.value
 
+        const customChipStyle = chipStyle?.(active, opt) ?? {}
+        const customChipTextStyle = chipTextStyle?.(active, opt) ?? {}
+
         return (
           <Pressable
             key={opt.value}
             onPress={() => {
               if (isMulti) {
                 const already = props.values.includes(opt.value)
-                const next = already
-                  ? props.values.filter((v) => v !== opt.value)
-                  : [...props.values, opt.value]
-                props.onChange(next)
+                props.onChange(
+                  already
+                    ? props.values.filter((v) => v !== opt.value)
+                    : [...props.values, opt.value]
+                )
+              } else if (active && props.allowDeselect) {
+                props.onChange(null)
               } else {
                 props.onChange(opt.value)
               }
             }}
-            style={[styles.chip, active && styles.chipActive]}
+            style={[
+              styles.chip,
+              active && styles.chipActive,
+              customChipStyle
+            ]}
           >
-            <Text
-              style={[styles.chipText, active && styles.chipTextActive]}
-            >
-              {opt.label}
-            </Text>
+            {renderOption ? (
+              renderOption(opt, active)
+            ) : (
+              <Text
+                style={[
+                  styles.chipText,
+                  active && styles.chipTextActive,
+                  customChipTextStyle
+                ]}
+              >
+                {opt.label}
+              </Text>
+            )}
           </Pressable>
         )
       })}

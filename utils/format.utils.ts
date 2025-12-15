@@ -18,3 +18,7 @@ export function getWeekDayFromDateString(dateStr: string) {
   const date = new Date(dateStr + 'T00:00:00');
   return date.toLocaleDateString('en-US', { weekday: 'short' });
 };
+
+export function padNumber2(n: number) {
+  return n.toString().padStart(2, '0');
+}

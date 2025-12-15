@@ -12,18 +12,21 @@ import type {
   ActivityStatus,
 } from './activities.types';
 
-
 const activitiesKey = (
   familyId: string | undefined,
   params?: { from?: Date; to?: Date }
-) => [
-  'activities',
-  familyId ?? null,
-  params?.from ? params.from.toISOString() : null,
-  params?.to ? params.to.toISOString() : null,
-] as const
+) =>
+  [
+    'activities',
+    familyId ?? null,
+    params?.from ? params.from.toISOString() : null,
+    params?.to ? params.to.toISOString() : null,
+  ] as const
 
-const invalidateFamilyActivities = (qc: ReturnType<typeof useQueryClient>, familyId?: string) => {
+const invalidateFamilyActivities = (
+  qc: ReturnType<typeof useQueryClient>,
+  familyId?: string
+) => {
   if (!familyId) return
   qc.invalidateQueries({
     predicate: (q) => {
@@ -51,8 +54,11 @@ export function useCreateActivity(familyId?: string) {
     mutationFn: (args: {
       activity: ActivityInsert
       participants: ActivityParticipantUpsert[]
-      includeCreator?: boolean
-    }) => rpcCreateActivity(args.activity, args.participants, args.includeCreator ?? true),
+    }) =>
+      rpcCreateActivity(
+        args.activity,
+        args.participants,
+      ),
 
     onSuccess: () => {
       invalidateFamilyActivities(qc, familyId)
@@ -72,7 +78,13 @@ export function useUpdateActivity(familyId?: string) {
       patch: Partial<ActivityInsert> & { status?: ActivityStatus }
       participants?: ActivityParticipantUpsert[] | null
       replaceParticipants?: boolean
-    }) => rpcUpdateActivity(args.id, args.patch, args.participants ?? null, !!args.replaceParticipants),
+    }) =>
+      rpcUpdateActivity(
+        args.id,
+        args.patch,
+        args.participants ?? null,
+        !!args.replaceParticipants
+      ),
 
     onSuccess: () => {
       invalidateFamilyActivities(qc, familyId)

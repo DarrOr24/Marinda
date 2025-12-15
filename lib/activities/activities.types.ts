@@ -19,8 +19,8 @@ export interface Activity {
   id: string
   family_id: string
   title: string
-  activity_date: string
-  time: string
+  start_at: string
+  end_at: string
   location: string | null
   money: number | null
   ride_needed: boolean | null
@@ -36,8 +36,8 @@ export interface Activity {
 export type ActivityInsert = {
   family_id: string
   title: string
-  activity_date: string
-  time: string
+  start_at: string
+  end_at: string
   location?: string | null
   money?: number | null
   ride_needed?: boolean
