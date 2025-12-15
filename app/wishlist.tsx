@@ -26,6 +26,7 @@ import type { Role } from "@/lib/families/families.types";
 import type { WishlistItem } from "@/lib/wishlist/wishlist.types";
 
 import { KidSwitcher } from "@/components/kid-switcher";
+import MediaPicker from '@/components/media-picker';
 import { useFamilyWishlistSettings } from "@/lib/wishlist/wishlist-settings.hooks";
 import {
     useAddWishlistItem,
@@ -35,9 +36,9 @@ import {
     useWishlist,
 } from "@/lib/wishlist/wishlist.hooks";
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Image, Linking } from 'react-native';
+
 
 export default function WishList() {
     const { activeFamilyId, member } = useAuthContext() as any;
@@ -528,43 +529,20 @@ export default function WishList() {
                                 style={styles.input}
                             />
 
-                            {/* IMAGE PICKER */}
-                            <TouchableOpacity
-                                style={styles.imagePicker}
-                                onPress={async () => {
-                                    const res = await ImagePicker.launchImageLibraryAsync({
-                                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                                        quality: 0.7,
-                                    });
-
-                                    if (!res.canceled) {
-                                        setNewImageUri(res.assets[0].uri);
-                                    }
+                            <MediaPicker
+                                label="Image"
+                                value={
+                                    newImageUri
+                                        ? { uri: newImageUri, kind: "image" }
+                                        : null
+                                }
+                                onChange={(media) => {
+                                    setNewImageUri(media?.uri ?? null);
                                 }}
-                            >
-                                <Text style={styles.imagePickerText}>
-                                    {newImageUri ? "Change Image" : "Add Image"}
-                                </Text>
-                            </TouchableOpacity>
-
-                            {/* IMAGE PREVIEW */}
-                            {newImageUri && (
-                                <>
-                                    <Image
-                                        source={{ uri: newImageUri }}
-                                        style={styles.imagePreview}
-                                    />
-
-                                    <TouchableOpacity
-                                        onPress={() => setNewImageUri(null)}
-                                        style={styles.removeImageBtn}
-                                    >
-                                        <Text style={styles.removeImageText}>Remove Image</Text>
-                                    </TouchableOpacity>
-                                </>
-                            )}
-
-
+                                allowImage
+                                allowVideo={false}
+                                pickFromLibrary={true}
+                            />
 
                             <View style={styles.modalButtonsRow}>
                                 <TouchableOpacity
@@ -809,31 +787,6 @@ const styles = StyleSheet.create({
         fontWeight: "700",
     },
 
-    imagePicker: {
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        backgroundColor: '#f2f2f2',
-        borderRadius: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 12,
-    },
-
-    imagePickerText: {
-        fontSize: 16,
-        color: '#333',
-        fontWeight: '500',
-    },
-
-    imagePreview: {
-        width: '100%',
-        height: 250,          // taller = fits phone images better
-        borderRadius: 10,
-        marginTop: 10,
-        backgroundColor: '#fff',
-        resizeMode: 'contain',  // <<< prevents cropping
-    },
-
     cardLink: {
         fontSize: 13,
         color: "#2563eb",
@@ -875,20 +828,6 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         marginTop: 6,
         gap: 16,
-    },
-    removeImageBtn: {
-        marginTop: 8,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-        backgroundColor: "#fee2e2", // light red
-        alignItems: "center",
-    },
-
-    removeImageText: {
-        color: "#b91c1c",
-        fontWeight: "600",
-        fontSize: 13,
     },
 
 });
