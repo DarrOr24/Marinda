@@ -13,6 +13,7 @@ import {
     StyleSheet,
     Text,
     TextInput,
+    TouchableWithoutFeedback,
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -292,10 +293,7 @@ export default function AnnouncementsBoard() {
     // MAIN RENDER
     // --------------------------------------------
     return (
-        <Pressable
-            style={{ flex: 1 }}
-            onPress={closeInput}
-        >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
             <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
                 <KeyboardAvoidingView
                     style={styles.container}
@@ -680,7 +678,7 @@ export default function AnnouncementsBoard() {
 
                 </KeyboardAvoidingView>
             </SafeAreaView>
-        </Pressable>
+        </TouchableWithoutFeedback>
     );
 }
 
