@@ -315,6 +315,12 @@ export default function ChoreDetailModal({
     const approvedByName = nameForId(chore.approvedById);
 
     function requestClose() {
+        // Only warn about unsaved changes in OPEN state
+        if (chore.status !== 'open') {
+            onClose();
+            return;
+        }
+
         const hasUnsaved =
             beforeProof ||
             afterProof ||
@@ -334,7 +340,6 @@ export default function ChoreDetailModal({
             ]
         );
     }
-
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
