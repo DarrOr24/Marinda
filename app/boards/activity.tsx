@@ -64,9 +64,10 @@ function formatRangeLabel(start: Date) {
     : `${fmt(start)} – ${fmt(end)}`;
 }
 function toDateKey(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function formatTimeFromIso(iso: string) {
@@ -100,17 +101,22 @@ export default function ActivityBoard() {
   const pastCapped = weekOffset <= MIN_PAST_WEEKS;
   const isPastWeek = weekOffset < 0;
 
-  const { data: activities = [], isLoading } = useFamilyActivities(activeFamilyId, {
-    from: visibleWeekDays[0],
-    to: visibleWeekDays[6],
-  });
+  const { data: activities = [], isLoading } = useFamilyActivities(
+    activeFamilyId,
+    {
+      from: visibleWeekDays[0],
+      to: visibleWeekDays[6],
+    }
+  );
 
   const createMut = useCreateActivity(activeFamilyId);
   const updateMut = useUpdateActivity(activeFamilyId);
 
   // Fast lookup for members (for dots and names)
   const memberById = useMemo(() => {
-    const list = (familyMembers.data ?? []).length ? (familyMembers.data as any) : [];
+    const list = (familyMembers.data ?? []).length
+      ? (familyMembers.data as any)
+      : [];
     const map = new Map<string, any>();
     for (const m of list) map.set(m.id, m);
     return map;
@@ -181,7 +187,9 @@ export default function ActivityBoard() {
       ? `📅 ${startDateLabel}`
       : `📅 ${startDateLabel} → ${endDateLabel}`;
 
-    const timeLine = `🕒 ${formatTimeFromIso(a.start_at)}–${formatTimeFromIso(a.end_at)}`;
+    const timeLine = `🕒 ${formatTimeFromIso(a.start_at)}–${formatTimeFromIso(
+      a.end_at
+    )}`;
 
     const lines = [
       `🏷️ ${a.title}`,
@@ -264,9 +272,13 @@ export default function ActivityBoard() {
 
     const participants: ActivityParticipantUpsert[] = (
       form.participants_member_ids ?? []
-    ).map((id) => ({ member_id: id, response: "MAYBE" }));
+    ).map((id) => ({
+      member_id: id,
+      response: id === member.id ? "YES" : "MAYBE",
+      is_creator: id === member.id,
+    }));
 
-    createMut.mutate({ activity, participants, includeCreator: true });
+    createMut.mutate({ activity, participants });
   }
 
   // Edit (patch+participants)
@@ -285,9 +297,14 @@ export default function ActivityBoard() {
       notes: form.notes ?? null,
     };
 
+    // For updates we let the DB preserve existing `response` & `is_creator`
+    // for existing rows; new rows get default MAYBE.
     const participants: ActivityParticipantUpsert[] = (
       form.participants_member_ids ?? []
-    ).map((id) => ({ member_id: id, response: "MAYBE" }));
+    ).map((id) => ({
+      member_id: id,
+      // no response / is_creator here → handled in SQL via coalesce + join
+    }));
 
     updateMut.mutate({
       id: editingId,
@@ -417,10 +434,7 @@ export default function ActivityBoard() {
                                 { backgroundColor: color },
                               ]}
                             />
-                            <Text
-                              numberOfLines={1}
-                              style={styles.itemTitle}
-                            >
+                            <Text numberOfLines={1} style={styles.itemTitle}>
                               {a.title}
                               {a.start_at
                                 ? ` — ${formatTimeFromIso(a.start_at)}`
@@ -482,6 +496,10 @@ export default function ActivityBoard() {
         initialDateStr={today.toISOString().split("T")[0]}
         mode="create"
         submitLabel="Save"
+        // 🔑 Pre-select creator by default in the UI
+        initial={{
+          participants_member_ids: member?.id ? [member.id] : [],
+        }}
       />
 
       {/* Edit Activity */}

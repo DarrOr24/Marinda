@@ -19,13 +19,11 @@ function mapOut(a: any): Activity {
 
 export async function rpcCreateActivity(
   activity: ActivityInsert,
-  participants: ActivityParticipantUpsert[],
-  includeCreator = true
+  participants: ActivityParticipantUpsert[]
 ): Promise<Activity> {
   const { data, error } = await supabase.rpc('create_activity_with_participants', {
     p_activity: activity,
     p_participants: participants ?? [],
-    p_include_creator: includeCreator,
   })
   if (error) throw new Error(error.message)
 

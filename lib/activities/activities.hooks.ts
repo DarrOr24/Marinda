@@ -54,12 +54,10 @@ export function useCreateActivity(familyId?: string) {
     mutationFn: (args: {
       activity: ActivityInsert
       participants: ActivityParticipantUpsert[]
-      includeCreator?: boolean
     }) =>
       rpcCreateActivity(
         args.activity,
         args.participants,
-        args.includeCreator ?? true
       ),
 
     onSuccess: () => {

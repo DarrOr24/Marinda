@@ -16,20 +16,19 @@ import {
 } from "react-native";
 
 import { DateRangePicker } from "@/components/date-range-picker";
-import { useAuthContext } from "@/hooks/use-auth-context";
-import { useFamily } from "@/lib/families/families.hooks";
+import { MembersSelector } from "./members-selector";
 
 export type NewActivityForm = {
-  title: string
-  start_at: string
-  end_at: string
-  location?: string
-  money?: number
-  ride_needed?: boolean
-  present_needed?: boolean
-  babysitter_needed?: boolean
-  participants_member_ids?: string[]
-  notes?: string
+  title: string;
+  start_at: string;
+  end_at: string;
+  location?: string;
+  money?: number;
+  ride_needed?: boolean;
+  present_needed?: boolean;
+  babysitter_needed?: boolean;
+  participants_member_ids?: string[];
+  notes?: string;
 };
 
 type Props = {
@@ -38,7 +37,6 @@ type Props = {
   onSave: (form: NewActivityForm) => void;
 
   initialDateStr: string;
-  initialTime?: string;
   mode?: "create" | "edit";
   submitLabel?: string;
   initial?: Partial<NewActivityForm>;
@@ -57,41 +55,40 @@ export default function AddActivityModal({
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(40)).current;
 
-  const { activeFamilyId } = useAuthContext() as any;
-  const { members } = useFamily(activeFamilyId);
-
-  const [title, setTitle] = useState("")
-  const [location, setLocation] = useState("")
-  const [money, setMoney] = useState("")
-  const [rideNeeded, setRideNeeded] = useState(false)
-  const [presentNeeded, setPresentNeeded] = useState(false)
-  const [babysitterNeeded, setBabysitterNeeded] = useState(false)
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [notes, setNotes] = useState("")
-  const [range, setRange] = useState<{ start_at: string; end_at: string } | null>(null)
+  const [title, setTitle] = useState("");
+  const [location, setLocation] = useState("");
+  const [money, setMoney] = useState("");
+  const [rideNeeded, setRideNeeded] = useState(false);
+  const [presentNeeded, setPresentNeeded] = useState(false);
+  const [babysitterNeeded, setBabysitterNeeded] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [notes, setNotes] = useState("");
+  const [range, setRange] = useState<{ start_at: string; end_at: string } | null>(
+    null
+  );
 
   // keep defaults in sync when modal opens with different initial / edit
   useEffect(() => {
-    if (!visible) return
+    if (!visible) return;
 
-    setTitle(initial?.title ?? "")
-    setLocation(initial?.location ?? "")
+    setTitle(initial?.title ?? "");
+    setLocation(initial?.location ?? "");
     setMoney(
       initial?.money !== undefined && initial?.money !== null
         ? String(initial?.money)
         : ""
-    )
-    setRideNeeded(!!initial?.ride_needed)
-    setPresentNeeded(!!initial?.present_needed)
-    setBabysitterNeeded(!!initial?.babysitter_needed)
-    setSelectedIds(initial?.participants_member_ids ?? [])
-    setNotes(initial?.notes ?? "")
+    );
+    setRideNeeded(!!initial?.ride_needed);
+    setPresentNeeded(!!initial?.present_needed);
+    setBabysitterNeeded(!!initial?.babysitter_needed);
+    setSelectedIds(initial?.participants_member_ids ?? []);
+    setNotes(initial?.notes ?? "");
     setRange(
       initial?.start_at && initial?.end_at
         ? { start_at: initial.start_at, end_at: initial.end_at }
         : null
-    )
-  }, [visible, initialDateStr, initial])
+    );
+  }, [visible, initialDateStr, initial]);
 
   // animate in/out
   useEffect(() => {
@@ -104,37 +101,39 @@ export default function AddActivityModal({
           useNativeDriver: true,
         }),
         Animated.spring(translateY, { toValue: 0, useNativeDriver: true }),
-      ]).start()
+      ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(opacity, { toValue: 0, duration: 140, useNativeDriver: true }),
-        Animated.timing(translateY, { toValue: 40, duration: 140, useNativeDriver: true }),
-      ]).start()
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 140,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateY, {
+          toValue: 40,
+          duration: 140,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
-  }, [visible])
+  }, [visible]);
 
-  const canSave = title.trim().length > 0 && !!range?.start_at
+  const canSave = title.trim().length > 0 && !!range?.start_at;
 
   function reset() {
-    setTitle("")
-    setLocation("")
-    setMoney("")
-    setRideNeeded(false)
-    setPresentNeeded(false)
-    setBabysitterNeeded(false)
-    setSelectedIds([])
-    setNotes("")
-    setRange(null)
-  }
-
-  function toggleMember(id: string) {
-    setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    )
+    setTitle("");
+    setLocation("");
+    setMoney("");
+    setRideNeeded(false);
+    setPresentNeeded(false);
+    setBabysitterNeeded(false);
+    setSelectedIds([]);
+    setNotes("");
+    setRange(null);
   }
 
   function handleSave() {
-    if (!canSave || !range) return
+    if (!canSave || !range) return;
 
     const payload: NewActivityForm = {
       title: title.trim(),
@@ -147,15 +146,20 @@ export default function AddActivityModal({
       babysitter_needed: babysitterNeeded || undefined,
       participants_member_ids: selectedIds.length ? selectedIds : undefined,
       notes: notes.trim() || undefined,
-    }
+    };
 
-    onSave(payload)
-    onClose()
-    if (mode === "create") reset()
+    onSave(payload);
+    onClose();
+    if (mode === "create") reset();
   }
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={onClose}
+    >
       <Animated.View style={[styles.backdrop, { opacity }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
@@ -201,7 +205,11 @@ export default function AddActivityModal({
           {/* Optional fields */}
           <Text style={styles.label}>📍 Place</Text>
           <View style={styles.fieldRow}>
-            <MaterialCommunityIcons name="map-marker-outline" size={18} color="#475569" />
+            <MaterialCommunityIcons
+              name="map-marker-outline"
+              size={18}
+              color="#475569"
+            />
             <TextInput
               placeholder="e.g., Community Center"
               value={location}
@@ -225,7 +233,7 @@ export default function AddActivityModal({
           {/* Flags */}
           <View className="wrapChipsRow" style={styles.wrapChipsRow}>
             <TouchableOpacity
-              onPress={() => setRideNeeded(v => !v)}
+              onPress={() => setRideNeeded((v) => !v)}
               style={[styles.chip, rideNeeded && styles.chipActive]}
             >
               <Text style={[styles.chipTxt, rideNeeded && styles.chipTxtActive]}>
@@ -234,19 +242,26 @@ export default function AddActivityModal({
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => setPresentNeeded(v => !v)}
+              onPress={() => setPresentNeeded((v) => !v)}
               style={[styles.chip, presentNeeded && styles.chipActive]}
             >
-              <Text style={[styles.chipTxt, presentNeeded && styles.chipTxtActive]}>
+              <Text
+                style={[styles.chipTxt, presentNeeded && styles.chipTxtActive]}
+              >
                 🎁 Present {presentNeeded ? "✅" : "❌"}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => setBabysitterNeeded(v => !v)}
+              onPress={() => setBabysitterNeeded((v) => !v)}
               style={[styles.chip, babysitterNeeded && styles.chipActive]}
             >
-              <Text style={[styles.chipTxt, babysitterNeeded && styles.chipTxtActive]}>
+              <Text
+                style={[
+                  styles.chipTxt,
+                  babysitterNeeded && styles.chipTxtActive,
+                ]}
+              >
                 🍼 Babysitter {babysitterNeeded ? "✅" : "❌"}
               </Text>
             </TouchableOpacity>
@@ -254,28 +269,7 @@ export default function AddActivityModal({
 
           {/* Participants */}
           <Text style={styles.label}>👥 Who’s going?</Text>
-          <View style={styles.memberChips}>
-            {members.data?.map((m) => {
-              const active = selectedIds.includes(m.id)
-              return (
-                <TouchableOpacity
-                  key={m.id}
-                  onPress={() => toggleMember(m.id)}
-                  style={[styles.memberChip, active && styles.memberChipActive]}
-                >
-                  <View
-                    style={[
-                      styles.memberDot,
-                      { backgroundColor: (m as any).color || "#94a3b8" },
-                    ]}
-                  />
-                  <Text style={[styles.memberTxt, active && styles.memberTxtActive]}>
-                    {m.profile?.first_name ?? ""} {m.profile?.last_name ?? ""}
-                  </Text>
-                </TouchableOpacity>
-              )
-            })}
-          </View>
+          <MembersSelector values={selectedIds} onChange={setSelectedIds} />
 
           {/* Notes */}
           <Text style={styles.label}>📝 Notes</Text>
@@ -304,11 +298,14 @@ export default function AddActivityModal({
         </View>
       </Animated.View>
     </Modal>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.35)" },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
   sheet: {
     position: "absolute",
     left: 0,
@@ -337,7 +334,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontWeight: "700",
   },
-  fieldRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
+  fieldRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
   input: {
     flex: 1,
     borderWidth: 1,
@@ -360,22 +362,6 @@ const styles = StyleSheet.create({
   chipTxt: { color: "#0f172a", fontWeight: "800" },
   chipTxtActive: { color: "#1d4ed8" },
   wrapChipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  memberChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  memberChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderWidth: 2,
-    borderColor: "#cbd5e1",
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#fff",
-  },
-  memberChipActive: { borderColor: "#2563eb", backgroundColor: "#eff6ff" },
-  memberDot: { width: 10, height: 10, borderRadius: 999 },
-  memberTxt: { color: "#0f172a", fontWeight: "800" },
-  memberTxtActive: { color: "#1d4ed8" },
   actions: {
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -383,10 +369,14 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   btn: { borderRadius: 14, paddingVertical: 14, paddingHorizontal: 18 },
-  btnGhost: { backgroundColor: "transparent", borderWidth: 1, borderColor: "#e5e7eb" },
+  btnGhost: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
   btnGhostTxt: { color: "#0f172a", fontWeight: "700" },
   btnPrimary: { backgroundColor: "#2563eb" },
   btnPrimaryTxt: { color: "#fff", fontWeight: "800", fontSize: 16 },
   btnDisabled: { backgroundColor: "#e5e7eb" },
   btnDisabledTxt: { color: "#64748b", fontWeight: "800", fontSize: 16 },
-})
+});
