@@ -1,9 +1,9 @@
 // components/chore-detail-modal.tsx
 import { ChipSelector } from '@/components/chip-selector';
+import MediaPicker, { PickedMedia } from '@/components/media-picker';
 import { ChoreView, Proof } from '@/lib/chores/chores.types';
 import { Role } from '@/lib/families/families.types';
 import { Audio, ResizeMode, Video } from 'expo-av';
-import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -20,6 +20,7 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 
 type MemberOption = {
@@ -154,52 +155,6 @@ export default function ChoreDetailModal({
         onAttachProof(chore.id, { uri, kind, type: "AFTER" });
     }
 
-    async function takeBeforePhoto() {
-        if (!(await ensureCameraPermission())) return;
-        const res = await ImagePicker.launchCameraAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            quality: 0.9,
-        });
-        if (!res.canceled && res.assets?.[0]) {
-            addBefore(res.assets[0].uri, "image");
-        }
-    }
-
-    async function takeAfterPhoto() {
-        if (!(await ensureCameraPermission())) return;
-        const res = await ImagePicker.launchCameraAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            quality: 0.9,
-        });
-        if (!res.canceled && res.assets?.[0]) {
-            addAfter(res.assets[0].uri, "image");
-        }
-    }
-
-    async function recordBeforeVideo() {
-        if (!(await ensureCameraPermission())) return;
-        const res = await ImagePicker.launchCameraAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-            quality: 0.9 as any,
-            videoMaxDuration: 30,
-        });
-        if (!res.canceled && res.assets?.[0]) {
-            addBefore(res.assets[0].uri, "video");
-        }
-    }
-
-    async function recordAfterVideo() {
-        if (!(await ensureCameraPermission())) return;
-        const res = await ImagePicker.launchCameraAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-            quality: 0.9 as any,
-            videoMaxDuration: 30,
-        });
-        if (!res.canceled && res.assets?.[0]) {
-            addAfter(res.assets[0].uri, "video");
-        }
-    }
-
     async function playAudioDescription() {
         if (!chore.audioDescriptionUrl) return;
         try {
@@ -242,15 +197,22 @@ export default function ChoreDetailModal({
         );
         return false;
     }
-
-    async function ensureCameraPermission() {
-        const cam = await ImagePicker.requestCameraPermissionsAsync();
-        if (!cam.granted) {
-            Alert.alert('Permission needed', 'Camera permission is required.');
-            return false;
+    function onPickBefore(media: PickedMedia | null) {
+        if (!media) {
+            removeBefore();
+            return;
         }
-        return true;
+        addBefore(media.uri, media.kind);
     }
+
+    function onPickAfter(media: PickedMedia | null) {
+        if (!media) {
+            removeAfter();
+            return;
+        }
+        addAfter(media.uri, media.kind);
+    }
+
 
     function removeBefore() {
         onAttachProof(chore.id, { uri: "", kind: "image", type: "BEFORE" } as any);
@@ -460,75 +422,38 @@ export default function ChoreDetailModal({
                                     Before (optional)
                                 </Text>
 
-                                <View style={s.row}>
-                                    <Pressable style={[s.btn, s.secondary]} onPress={takeBeforePhoto}>
-                                        <Text style={s.btnTxt}>
-                                            {beforeProof?.uri ? "Change photo" : "Take photo"}
-                                        </Text>
-                                    </Pressable>
-                                    <Pressable style={[s.btn, s.secondary]} onPress={recordBeforeVideo}>
-                                        <Text style={s.btnTxt}>
-                                            {beforeProof?.uri ? "Change video" : "Record video"}
-                                        </Text>
-                                    </Pressable>
-                                </View>
+                                <MediaPicker
+                                    label=""
+                                    value={
+                                        beforeProof?.uri
+                                            ? { uri: beforeProof.uri, kind: beforeProof.kind }
+                                            : null
+                                    }
+                                    onChange={onPickBefore}
+                                    allowImage={true}
+                                    allowVideo={true}
+                                    /* disable gallery options */
+                                    pickFromLibrary={false}
+                                />
 
-                                {beforeProof?.uri && (
-                                    <View style={s.proof}>
-                                        {beforeProof.kind === "image" ? (
-                                            <Image source={{ uri: beforeProof.uri }} style={s.media} />
-                                        ) : (
-                                            <Video
-                                                source={{ uri: beforeProof.uri }}
-                                                style={s.media}
-                                                useNativeControls
-                                                resizeMode={ResizeMode.CONTAIN}
-                                            />
-                                        )}
-                                        <Text style={s.text}>Before</Text>
-                                        <Pressable style={s.removeProof} onPress={removeBefore}>
-                                            <Text style={s.removeProofTxt}>✕</Text>
-                                        </Pressable>
-                                    </View>
-                                )}
 
                                 {/* AFTER */}
                                 <Text style={[s.text, { marginTop: 16 }]}>
                                     After (required)
                                 </Text>
 
-                                <View style={s.row}>
-                                    <Pressable style={[s.btn, s.secondary]} onPress={takeAfterPhoto}>
-                                        <Text style={s.btnTxt}>
-                                            {afterProof?.uri ? "Change photo" : "Take photo"}
-                                        </Text>
-
-                                    </Pressable>
-                                    <Pressable style={[s.btn, s.secondary]} onPress={recordAfterVideo}>
-                                        <Text style={s.btnTxt}>
-                                            {afterProof?.uri ? "Change video" : "Record video"}
-                                        </Text>
-                                    </Pressable>
-                                </View>
-
-                                {afterProof?.uri && (
-                                    <View style={s.proof}>
-                                        {afterProof.kind === "image" ? (
-                                            <Image source={{ uri: afterProof.uri }} style={s.media} />
-                                        ) : (
-                                            <Video
-                                                source={{ uri: afterProof.uri }}
-                                                style={s.media}
-                                                useNativeControls
-                                                resizeMode={ResizeMode.CONTAIN}
-                                            />
-                                        )}
-                                        <Text style={s.text}>After</Text>
-                                        <Pressable style={s.removeProof} onPress={removeAfter}>
-                                            <Text style={s.removeProofTxt}>✕</Text>
-                                        </Pressable>
-                                    </View>
-                                )}
+                                <MediaPicker
+                                    label=""
+                                    value={
+                                        afterProof?.uri
+                                            ? { uri: afterProof.uri, kind: afterProof.kind }
+                                            : null
+                                    }
+                                    onChange={onPickAfter}
+                                    allowImage={true}
+                                    allowVideo={true}
+                                    pickFromLibrary={false}
+                                />
 
                                 {/* NOTE */}
                                 <Text style={[s.text, { marginTop: 10 }]}>
