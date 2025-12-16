@@ -341,7 +341,7 @@ Category: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}
     // RENDER
     // ─────────────────────────────────────────────────────────────
     return (
-        <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
+        <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
 
             {/* HEADER BUTTONS */}
             <View style={styles.actions}>
