@@ -1,17 +1,19 @@
 // app/_layout.tsx
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { Platform } from 'react-native';
 import 'react-native-reanimated';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import HeaderProfileButton from '@/components/header-profile-button';
 import { SplashScreenController } from '@/components/splash-screen-controller';
 import { useAuthContext } from '@/hooks/use-auth-context';
-
 import Providers from '@/providers';
+
 
 function RootNavigator() {
   const { isLoggedIn, member } = useAuthContext();
+  const insets = useSafeAreaInsets();
 
   const firstName =
     member?.profile?.first_name ||
@@ -28,6 +30,7 @@ function RootNavigator() {
         headerStyle: { backgroundColor: '#fff' },
         headerTitleAlign: 'center',
         headerShadowVisible: false,
+        contentStyle: { paddingBottom: Platform.OS === 'android' ? insets.bottom : 0 },
       }}
     >
       <Stack.Protected guard={isLoggedIn}>
