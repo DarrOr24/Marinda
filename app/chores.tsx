@@ -231,9 +231,8 @@ export default function Chores() {
         }
 
         // Assigned members
-        const assignedIds: string[] | undefined =
-          (r.assignee_member_ids as string[] | null | undefined) ??
-          (r.assignee_member_id ? [r.assignee_member_id] : undefined);
+        const assignedIds: string[] =
+          (r.assignee_member_ids as string[] | null) ?? [];
 
         const assignedNames =
           assignedIds && assignedIds.length
@@ -583,7 +582,6 @@ export default function Chores() {
             ? {
               ...c,
               status: "pending",
-              doneById: doneByIds[0],
               doneByIds,
               doneAt: when,
               proofs: theChore.proofs ?? [],
@@ -705,7 +703,6 @@ export default function Chores() {
               ...c,
               status: 'open',
               notes: row.notes ?? notes,
-              doneById: undefined,
               doneByIds: [],
               doneAt: undefined,
               approvedById: undefined,
@@ -757,10 +754,7 @@ export default function Chores() {
 
               // --- ASSIGNEES (PLURAL ONLY) ---
               const assignedToIds: string[] =
-                (row as any).assignee_member_ids ??
-                ((row as any).assignee_member_id
-                  ? [(row as any).assignee_member_id]
-                  : []);
+                (row as any).assignee_member_ids ?? [];
 
               const assignedToNames =
                 assignedToIds.length > 0

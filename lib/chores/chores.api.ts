@@ -1,9 +1,7 @@
 import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system/legacy';
-import type { ProofPayload } from './chores.types';
-
-
 import { getSupabase } from '../supabase';
+import type { ProofPayload } from './chores.types';
 
 export type ChoreStatus = 'OPEN' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
 
@@ -62,7 +60,6 @@ async function uploadProofForChore(
 
   return publicUrl;
 }
-
 
 // 🔹 AUDIO: upload helper for audio descriptions
 export async function uploadChoreAudioDescription(
@@ -173,10 +170,7 @@ export async function addChore(
       title: chore.title,
       description: chore.description ?? null,
       points: chore.points,
-      assignee_member_id: chore.assigned_to ?? null,
-      assignee_member_ids:
-        chore.assigned_to_ids ??
-        (chore.assigned_to ? [chore.assigned_to] : null),
+      assignee_member_ids: chore.assigned_to_ids ?? [],
       created_by: user?.id ?? null,
       status: 'OPEN',
 
@@ -223,11 +217,9 @@ export async function submitChore(
     .from("chores")
     .update({
       status: "SUBMITTED",
-      done_by_member_id: main,
       done_by_member_ids: memberIds,
       done_at: new Date().toISOString(),
       proof_note: proofNote ?? null,
-      // ❌ removed: before_proof_uri, before_proof_kind, after_proof_uri, after_proof_kind
     })
     .eq("id", choreId)
     .select()
@@ -264,11 +256,11 @@ export async function rejectChore(choreId: string, notes?: string) {
     .update({
       status: 'OPEN',
       notes: notes ?? null,
-      done_by_member_id: null,
+      done_by_member_ids: [],
       done_at: null,
       approved_by_member_id: null,
       approved_at: null,
-      proof_note: null, // <-- keep this
+      proof_note: null,
     })
     .eq('id', choreId)
     .select()
@@ -277,7 +269,6 @@ export async function rejectChore(choreId: string, notes?: string) {
   if (error) throw new Error(error.message);
   return data;
 }
-
 
 export async function deleteChore(choreId: string) {
   const { error } = await supabase.from('chores').delete().eq('id', choreId);
@@ -302,10 +293,7 @@ export async function duplicateChore(choreId: string) {
       family_id: src.family_id,
       title: src.title,
       points: src.points,
-      assignee_member_id: src.assignee_member_id ?? null,
-      assignee_member_ids:
-        src.assignee_member_ids ??
-        (src.assignee_member_id ? [src.assignee_member_id] : null),
+      assignee_member_ids: src.assignee_member_ids ?? [],
       status: 'OPEN',
       created_by: user?.id ?? null,
       // proof_* intentionally not copied; new chore starts fresh
@@ -323,7 +311,6 @@ export async function updateChore(
     title?: string;
     description?: string | null;
     points?: number;
-    assigned_to?: string | null;
     assigned_to_ids?: string[] | null;
 
     audioDescriptionUrl?: string | null;
@@ -333,24 +320,14 @@ export async function updateChore(
   }
 ) {
   const patch: any = {};
+
   if (fields.title !== undefined) patch.title = fields.title;
   if (fields.description !== undefined)
     patch.description = fields.description ?? null;
   if (fields.points !== undefined) patch.points = fields.points;
-  if (fields.assigned_to !== undefined) {
-    patch.assignee_member_id = fields.assigned_to ?? null;
-
-    // if only a single assignee is passed and no explicit array, keep them in sync
-    if (fields.assigned_to && fields.assigned_to_ids === undefined) {
-      patch.assignee_member_ids = [fields.assigned_to];
-    }
-    if (fields.assigned_to === null && fields.assigned_to_ids === undefined) {
-      patch.assignee_member_ids = null;
-    }
-  }
 
   if (fields.assigned_to_ids !== undefined) {
-    patch.assignee_member_ids = fields.assigned_to_ids ?? null;
+    patch.assignee_member_ids = fields.assigned_to_ids ?? [];
   }
 
   if (fields.audioDescriptionUrl !== undefined) {
@@ -360,7 +337,7 @@ export async function updateChore(
     patch.audio_description_duration = fields.audioDescriptionDuration;
   }
   if (fields.expiresAt !== undefined) {
-    patch.expires_at = fields.expiresAt; // can be null to clear deadline
+    patch.expires_at = fields.expiresAt;
   }
 
   const { data, error } = await supabase
@@ -373,6 +350,7 @@ export async function updateChore(
   if (error) throw new Error(error.message);
   return data;
 }
+
 
 // NEW: log a points event into points_ledger for an approved chore
 export async function logChorePointsEvent(params: {
