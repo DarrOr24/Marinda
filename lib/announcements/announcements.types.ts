@@ -36,34 +36,10 @@ export type AnnouncementItem = {
 
 export const DEFAULT_ANNOUNCEMENT_TABS = [
     {
-        id: 'reminder',
-        label: 'Reminders',
-        emptyText: 'No reminders yet. Add one below.',
-        placeholder: 'Add a new reminder (tests, shows, appointments...)',
-    },
-    {
-        id: 'sentence',
-        label: 'Sentence',
-        emptyText: 'No sentence yet. Add the sentence of the week.',
-        placeholder: 'Write the sentence of the week...',
-    },
-    {
-        id: 'good',
-        label: 'Something good',
-        emptyText: 'No “good things” yet. Add something that went well.',
-        placeholder: 'Something good that happened...',
-    },
-    {
-        id: 'kind',
-        label: 'Something kind',
-        emptyText: 'No kindness notes yet. Add something kind you did.',
-        placeholder: 'Something kind I did...',
-    },
-    {
-        id: 'free',
+        id: 'notes',
         label: 'Notes',
-        emptyText: 'No notes yet. Add one below.',
-        placeholder: 'Write a new note...',
+        emptyText: 'No notes yet.',
+        placeholder: 'Write a note...',
     },
     {
         id: 'requests',
@@ -71,7 +47,14 @@ export const DEFAULT_ANNOUNCEMENT_TABS = [
         emptyText: 'No requests yet.',
         placeholder: 'Write a new request...',
     },
+    {
+        id: 'reminders',
+        label: 'Reminders',
+        emptyText: 'No reminders yet.',
+        placeholder: 'Add a reminder (tests, shows, appointments...)',
+    },
 ] as const;
+
 
 export type AnnouncementTabId = string;
 
