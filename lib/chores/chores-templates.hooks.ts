@@ -1,4 +1,3 @@
-// lib/chores/chores-templates.hooks.ts
 import { useEffect, useState } from "react";
 import { getSupabase } from '../supabase';
 import type { ChoreTemplate } from "./chores.types";

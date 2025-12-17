@@ -1,5 +1,3 @@
-// lib/chores/chores.types.ts
-
 export type ChoreStatus = "open" | "pending" | "approved";
 
 export type Proof = {
@@ -28,8 +26,8 @@ export type ChoreView = {
     // optional deadline
     expiresAt?: number; // ms since epoch
 
-    // ✅ DONE BY — plural only
-    doneByIds: string[];          // empty array = not done yet
+    // ✅ DONE BY 
+    doneByIds: string[];
     doneAt?: number;
 
     // ✅ APPROVAL
@@ -41,8 +39,8 @@ export type ChoreView = {
     proofs?: Proof[];
     proofNote?: string;
 
-    // ✅ ASSIGNEES — plural only
-    assignedToIds: string[];      // empty array = unassigned
+    // ✅ ASSIGNEES 
+    assignedToIds: string[];
     assignedToNames?: string[];
 
     // creator
@@ -50,7 +48,6 @@ export type ChoreView = {
     createdByName?: string;
 };
 
-// (optional) for later, templates:
 export type ChoreTemplate = {
     id: string;
     familyId: string;

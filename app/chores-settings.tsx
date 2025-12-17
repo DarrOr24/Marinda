@@ -1,4 +1,3 @@
-// app/chores-settings.tsx
 import React from 'react';
 import {
     Alert,
