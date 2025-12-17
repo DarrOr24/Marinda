@@ -1,7 +1,6 @@
 // lib/announcements/announcements.api.ts
 import { getSupabase } from '../supabase';
 import type {
-    AnnouncementCategory,
     AnnouncementItem,
     AnnouncementKind,
 } from './announcements.types';
@@ -19,7 +18,6 @@ function mapRow(row: any): AnnouncementItem {
         family_id: row.family_id,
         created_by_member_id: row.created_by_member_id,
         kind: row.kind,
-        category: row.category,
         text: row.text,
         week_start: row.week_start,
         completed: row.completed,
@@ -62,12 +60,11 @@ export async function addAnnouncement(params: {
     createdByMemberId: string;
 
     kind: AnnouncementKind;
-    category?: AnnouncementCategory;
 
     text: string;
     weekStart?: string | null;
 }) {
-    const { familyId, createdByMemberId, kind, category, text, weekStart } = params;
+    const { familyId, createdByMemberId, kind, text, weekStart } = params;
 
     const { data, error } = await supabase
         .from('announcement_items')
@@ -75,7 +72,6 @@ export async function addAnnouncement(params: {
             family_id: familyId,
             created_by_member_id: createdByMemberId,
             kind,
-            category: category ?? null,
             text,
             week_start: weekStart ?? null,
         })
@@ -91,13 +87,11 @@ export async function updateAnnouncement(
     id: string,
     updates: {
         text?: string;
-        category?: AnnouncementCategory;
         weekStart?: string | null;
     }
 ) {
     const patch: any = {};
     if (updates.text !== undefined) patch.text = updates.text;
-    if (updates.category !== undefined) patch.category = updates.category;
     if (updates.weekStart !== undefined) patch.week_start = updates.weekStart;
 
     const { data, error } = await supabase

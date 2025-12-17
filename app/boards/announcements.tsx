@@ -220,7 +220,6 @@ export default function AnnouncementsBoard() {
                 familyId,
                 createdByMemberId: myFamilyMemberId,
                 kind: activeKind,
-                category: null,
                 text: trimmed,
                 weekStart: null,
             },

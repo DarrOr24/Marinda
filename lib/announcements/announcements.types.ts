@@ -2,13 +2,6 @@
 
 export type AnnouncementKind = string;
 
-export type AnnouncementCategory =
-    | 'competitions'
-    | 'shows'
-    | 'tests'
-    | 'sign'
-    | 'general'
-    | null;
 
 export type AnnouncementItem = {
     id: string;
@@ -16,7 +9,6 @@ export type AnnouncementItem = {
     created_by_member_id: string;
 
     kind: AnnouncementKind;
-    category: AnnouncementCategory;
 
     text: string;
 
