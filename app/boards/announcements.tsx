@@ -38,6 +38,8 @@ import {
     type AnnouncementItem,
     type AnnouncementTab,
 } from '@/lib/announcements/announcements.types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 
 
@@ -57,6 +59,9 @@ const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 6)}` : '—');
 // --------------------------------------------
 export default function AnnouncementsBoard() {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
+    const INPUT_BAR_HEIGHT = 78;
+
     const { activeFamilyId, member, family, members } = useAuthContext() as any;
     const familyId = activeFamilyId ?? undefined;
 
@@ -409,7 +414,7 @@ export default function AnnouncementsBoard() {
                         keyboardShouldPersistTaps="handled"
                         contentContainerStyle={[
                             filteredAnnouncements.length === 0 ? styles.emptyList : undefined,
-                            { paddingBottom: 120 } // ⭐ Prevent Samsung nav bar + room for input
+                            { paddingBottom: INPUT_BAR_HEIGHT + insets.bottom + 16, } // ⭐ Prevent Samsung nav bar + room for input
                         ]}
                         renderItem={({ item }) => (
                             <View style={styles.itemRow}>
