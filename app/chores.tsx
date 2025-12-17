@@ -9,22 +9,26 @@ import { useRouter } from 'expo-router';
 import ChorePostModal from '@/components/chore-post-modal';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import {
-  addChore as apiAddChore,
-  deleteChore as apiDeleteChore,
-  duplicateChore as apiDuplicateChore,
-  approveChore,
-  fetchChores,
   logChorePointsEvent,
-  rejectChore,
-  submitChore,
   updateChore,
-  uploadChoreAudioDescription,
+  uploadChoreAudioDescription
 } from '@/lib/chores/chores.api';
 import { awardMemberPoints } from '@/lib/families/families.api';
 import { useFamily } from '@/lib/families/families.hooks';
 import { useSubscribeTableByFamily } from '@/lib/families/families.realtime';
 import type { Role } from '@/lib/families/families.types';
 
+
+import {
+  useAddChore,
+  useApproveChore,
+  useDeleteChore,
+  useDuplicateChore,
+  useFamilyChores,
+  useRejectChore,
+  useSubmitChore,
+  useUpdateChore,
+} from '@/lib/chores/chores.hooks';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -36,6 +40,9 @@ import {
   Text,
   View,
 } from 'react-native';
+
+
+
 
 type DbStatus = 'OPEN' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
 const dbToUiStatus = (s: DbStatus): ChoreView['status'] =>
@@ -92,6 +99,17 @@ export default function Chores() {
     'family-members',
     activeFamilyId,
   ]);
+
+  const { data: choresRows } = useFamilyChores(activeFamilyId)
+
+  const addChoreMutation = useAddChore(activeFamilyId)
+  const updateChoreMutation = useUpdateChore(activeFamilyId)
+  const deleteChoreMutation = useDeleteChore(activeFamilyId)
+  const duplicateChoreMutation = useDuplicateChore(activeFamilyId)
+  const submitChoreMutation = useSubmitChore(activeFamilyId)
+  const approveChoreMutation = useApproveChore(activeFamilyId)
+  const rejectChoreMutation = useRejectChore(activeFamilyId)
+
 
   // Unified raw members list
   const rawMembers: any[] = useMemo(
@@ -173,118 +191,105 @@ export default function Chores() {
     return d.getTime();
   }, []);
 
-  // Load chores
+  // Load chores (via hook)
   useEffect(() => {
-    if (!activeFamilyId) return;
-    let cancelled = false;
+    if (!choresRows) return;
 
-    (async () => {
-      try {
-        const rows = await fetchChores(activeFamilyId);
-        if (cancelled) return;
+    try {
+      const mapped: ChoreView[] = (choresRows ?? []).map((r: any) => {
+        const doneFromDb = r.done_at
+          ? new Date(r.done_at).getTime()
+          : undefined;
 
-        const mapped: ChoreView[] = (rows ?? []).map((r: any) => {
-          const doneFromDb = r.done_at
-            ? new Date(r.done_at).getTime()
-            : undefined;
+        const doneAt =
+          doneFromDb ??
+          (r.status === "OPEN" && r.created_at
+            ? new Date(r.created_at).getTime()
+            : undefined);
 
-          const doneAt =
-            doneFromDb ??
-            (r.status === "OPEN" && r.created_at
-              ? new Date(r.created_at).getTime()
-              : undefined);
+        const expiresAt = r.expires_at
+          ? new Date(r.expires_at).getTime()
+          : undefined;
 
-          const expiresAt = r.expires_at
-            ? new Date(r.expires_at).getTime()
-            : undefined;
+        // Created by
+        let createdByMemberId: string | undefined;
+        let createdByName: string | undefined;
 
-          // Created by
-          let createdByMemberId: string | undefined;
-          let createdByName: string | undefined;
-
-          if (r.created_by) {
-            const creator = rawMembers.find(
-              (m: any) =>
-                m?.user_id === r.created_by ||
-                m?.profile?.id === r.created_by ||
-                m?.profile_id === r.created_by
-            );
-            if (creator) {
-              createdByMemberId = creator.id ?? creator.member_id;
-              if (createdByMemberId) {
-                createdByName = nameForId(createdByMemberId);
-              }
+        if (r.created_by) {
+          const creator = rawMembers.find(
+            (m: any) =>
+              m?.user_id === r.created_by ||
+              m?.profile?.id === r.created_by ||
+              m?.profile_id === r.created_by
+          );
+          if (creator) {
+            createdByMemberId = creator.id ?? creator.member_id;
+            if (createdByMemberId) {
+              createdByName = nameForId(createdByMemberId);
             }
           }
-
-          // Assigned members
-          const assignedIds: string[] | undefined =
-            (r.assignee_member_ids as string[] | null | undefined) ??
-            (r.assignee_member_id ? [r.assignee_member_id] : undefined);
-
-          const assignedNames =
-            assignedIds && assignedIds.length
-              ? assignedIds.map((id: string) => nameForId(id))
-              : undefined;
-
-          // ⭐ NEW: proofs from fetchChores()
-          const proofs: Proof[] = Array.isArray(r.proofs)
-            ? r.proofs.map((p: any) => ({
-              uri: p.uri,
-              kind: p.kind,
-              type: p.type,
-            }))
-            : [];
-
-          return {
-            id: r.id,
-            title: r.title,
-            description: r.description ?? undefined,
-            points: r.points ?? 0,
-            status: dbToUiStatus(r.status as DbStatus),
-
-            assignedToId: assignedIds?.[0],
-            assignedToName: assignedNames?.[0],
-            assignedToIds: assignedIds,
-            assignedToNames: assignedNames,
-
-            doneById: r.done_by_member_id ?? undefined,
-            doneByIds: r.done_by_member_ids ?? [],
-            doneAt,
-            approvedById: r.approved_by_member_id ?? undefined,
-            approvedAt: r.approved_at
-              ? new Date(r.approved_at).getTime()
-              : undefined,
-
-            notes: r.notes ?? undefined,
-
-            proofs, // ← USE NEW ARRAY
-
-            audioDescriptionUrl: r.audio_description_url ?? undefined,
-            audioDescriptionDuration:
-              r.audio_description_duration ?? undefined,
-
-            createdByName,
-            createdByMemberId,
-
-            proofNote: r.proof_note ?? undefined,
-            expiresAt,
-          };
-        });
-
-        if (!cancelled) setList(mapped);
-      } catch (e) {
-        console.error("fetchChores failed", e);
-        if (!cancelled) {
-          Alert.alert("Error", "Could not load chores.");
         }
-      }
-    })();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [activeFamilyId, nameForId, rawMembers]);
+        // Assigned members
+        const assignedIds: string[] | undefined =
+          (r.assignee_member_ids as string[] | null | undefined) ??
+          (r.assignee_member_id ? [r.assignee_member_id] : undefined);
+
+        const assignedNames =
+          assignedIds && assignedIds.length
+            ? assignedIds.map((id: string) => nameForId(id))
+            : undefined;
+
+        // proofs from fetchChores()
+        const proofs: Proof[] = Array.isArray(r.proofs)
+          ? r.proofs.map((p: any) => ({
+            uri: p.uri,
+            kind: p.kind,
+            type: p.type,
+          }))
+          : [];
+
+        return {
+          id: r.id,
+          title: r.title,
+          description: r.description ?? undefined,
+          points: r.points ?? 0,
+          status: dbToUiStatus(r.status as DbStatus),
+
+          assignedToId: assignedIds?.[0],
+          assignedToName: assignedNames?.[0],
+          assignedToIds: assignedIds,
+          assignedToNames: assignedNames,
+
+          doneById: r.done_by_member_id ?? undefined,
+          doneByIds: r.done_by_member_ids ?? [],
+          doneAt,
+
+          approvedById: r.approved_by_member_id ?? undefined,
+          approvedAt: r.approved_at
+            ? new Date(r.approved_at).getTime()
+            : undefined,
+
+          notes: r.notes ?? undefined,
+          proofs,
+
+          audioDescriptionUrl: r.audio_description_url ?? undefined,
+          audioDescriptionDuration: r.audio_description_duration ?? undefined,
+
+          createdByName,
+          createdByMemberId,
+
+          proofNote: r.proof_note ?? undefined,
+          expiresAt,
+        };
+      });
+
+      setList(mapped);
+    } catch (e) {
+      console.error("map chores failed", e);
+      Alert.alert("Error", "Could not load chores.");
+    }
+  }, [choresRows, nameForId, rawMembers]);
 
 
   // ---- derived lists for each tab ----
@@ -384,19 +389,23 @@ export default function Chores() {
         assignedToIds && assignedToIds.length > 0 ? assignedToIds : undefined;
 
       // 2) create the actual chore
-      const row = await apiAddChore(activeFamilyId, {
-        title,
-        description,
-        points,
-        assigned_to:
-          normalizedAssignedIds && normalizedAssignedIds.length === 1
-            ? normalizedAssignedIds[0]
-            : undefined,
-        assigned_to_ids: normalizedAssignedIds,
-        audioDescriptionUrl: audioUrl,
-        audioDescriptionDuration: audioDuration,
-        expiresAt: expiresAt ?? null,
-      });
+      const row = await addChoreMutation.mutateAsync({
+        familyId: activeFamilyId,
+        chore: {
+          title,
+          description,
+          points,
+          assigned_to:
+            normalizedAssignedIds && normalizedAssignedIds.length === 1
+              ? normalizedAssignedIds[0]
+              : undefined,
+          assigned_to_ids: normalizedAssignedIds,
+          audioDescriptionUrl: audioUrl,
+          audioDescriptionDuration: audioDuration,
+          expiresAt: expiresAt ?? null,
+        },
+      })
+
 
       const dbAssignedIds: string[] | undefined =
         (row as any).assignee_member_ids ??
@@ -466,17 +475,21 @@ export default function Chores() {
           ? updates.assignedToIds
           : undefined;
 
-      const row = await updateChore(id, {
-        title: updates.title,
-        description: updates.description ?? null,
-        points: updates.points,
-        assigned_to:
-          normalizedAssignedIds && normalizedAssignedIds.length === 1
-            ? normalizedAssignedIds[0]
-            : null,
-        assigned_to_ids: normalizedAssignedIds ?? null,
-        expiresAt: updates.expiresAt ?? null,
+      const row = await updateChoreMutation.mutateAsync({
+        choreId: id,
+        fields: {
+          title: updates.title,
+          description: updates.description ?? null,
+          points: updates.points,
+          assigned_to:
+            normalizedAssignedIds && normalizedAssignedIds.length === 1
+              ? normalizedAssignedIds[0]
+              : null,
+          assigned_to_ids: normalizedAssignedIds ?? null,
+          expiresAt: updates.expiresAt ?? null,
+        },
       });
+
 
       const dbAssignedIds: string[] | undefined =
         (row as any).assignee_member_ids ??
@@ -563,8 +576,13 @@ export default function Chores() {
       // Build the correct payload
       const proofsPayload = { before, after };
 
-      // SEND to backend (finally the right shape!)
-      const row = await submitChore(id, doneByIds, proofsPayload, proofNote);
+      // SEND to backend 
+      const row = await submitChoreMutation.mutateAsync({
+        choreId: id,
+        memberIds: doneByIds,
+        proofs: proofsPayload,
+        proofNote,
+      });
 
       const when = row.done_at
         ? new Date(row.done_at).getTime()
@@ -603,7 +621,11 @@ export default function Chores() {
         await updateChore(id, { points: updatedPoints });
       }
 
-      const row = await approveChore(id, myFamilyMemberId, notes);
+      const row = await approveChoreMutation.mutateAsync({
+        choreId: id,
+        parentMemberId: myFamilyMemberId!,
+        notes,
+      });
       const approverId = row.approved_by_member_id ?? myFamilyMemberId;
       const when = row.approved_at ? new Date(row.approved_at).getTime() : Date.now();
 
@@ -668,7 +690,10 @@ export default function Chores() {
   // Parent declines -> OPEN
   const onDecline = async (id: string, notes?: string) => {
     try {
-      const row = await rejectChore(id, notes);
+      const row = await rejectChoreMutation.mutateAsync({
+        choreId: id,
+        notes,
+      });
       setList((prev) =>
         prev.map((c) =>
           c.id === id
@@ -701,7 +726,7 @@ export default function Chores() {
         style: 'destructive',
         onPress: async () => {
           try {
-            await apiDeleteChore(id);
+            await deleteChoreMutation.mutateAsync(id);
             setList((prev) => prev.filter((c) => c.id !== id));
             setSelectedId(null);
           } catch (e) {
@@ -721,7 +746,7 @@ export default function Chores() {
         text: 'Duplicate',
         onPress: async () => {
           try {
-            const row = await apiDuplicateChore(id);
+            const row = await duplicateChoreMutation.mutateAsync(id);
 
             const assignedIds: string[] | undefined =
               (row as any).assignee_member_ids ??
