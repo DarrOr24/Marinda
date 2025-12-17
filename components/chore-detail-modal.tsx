@@ -71,20 +71,13 @@ export default function ChoreDetailModal({
     const insets = useSafeAreaInsets();
     const isParent = currentRole === 'MOM' || currentRole === 'DAD';
 
-    // 🔹 Normalize assignees: use arrays if present
-    const assignedIds: string[] =
-        (chore.assignedToIds && chore.assignedToIds.length > 0
-            ? chore.assignedToIds
-            : chore.assignedToId
-                ? [chore.assignedToId]
-                : []) ?? [];
+    // 🔹 Normalize assignees: plural-only
+    const assignedIds: string[] = (chore.assignedToIds ?? []).filter(Boolean);
 
     const assignedNames: string[] =
-        (chore.assignedToNames && chore.assignedToNames.length > 0
+        (chore.assignedToNames && chore.assignedToNames.length > 0)
             ? chore.assignedToNames
-            : assignedIds.length > 0
-                ? assignedIds.map((id) => nameForId(id))
-                : []) ?? [];
+            : assignedIds.map((id) => nameForId(id));
 
     const assignedLabel =
         assignedNames && assignedNames.length > 0
@@ -110,22 +103,17 @@ export default function ChoreDetailModal({
 
     // 🔹 initial doneBy selection (respect existing, then assignment, then default)
     const computeInitialDoneByIds = (): string[] => {
-        // If we already have doneByIds, keep them
         if (chore.doneByIds && chore.doneByIds.length > 0) {
             return [...chore.doneByIds];
         }
 
-        // If the chore is assigned to specific members,
-        // default: everyone assigned is considered to have done it.
         if (assignedIds.length > 0) {
             return [...assignedIds];
         }
 
-        // Fallbacks
-        if (chore.doneById) return [chore.doneById];
-        if (defaultDoneById) return [defaultDoneById];
-        return [];
+        return defaultDoneById ? [defaultDoneById] : [];
     };
+
 
 
     const [selectedDoneByIds, setSelectedDoneByIds] = useState<string[]>(
@@ -137,9 +125,7 @@ export default function ChoreDetailModal({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         chore.id,
-        chore.doneById,
         chore.doneByIds,
-        chore.assignedToId,
         chore.assignedToIds,
         defaultDoneById,
     ]);
@@ -310,7 +296,7 @@ export default function ChoreDetailModal({
     const doneByName =
         chore.doneByIds && chore.doneByIds.length > 0
             ? chore.doneByIds.map((id) => nameForId(id)).join(', ')
-            : nameForId(chore.doneById);
+            : '—';
 
     const approvedByName = nameForId(chore.approvedById);
 

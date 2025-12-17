@@ -256,14 +256,12 @@ export default function Chores() {
           points: r.points ?? 0,
           status: dbToUiStatus(r.status as DbStatus),
 
-          assignedToId: assignedIds?.[0],
-          assignedToName: assignedNames?.[0],
-          assignedToIds: assignedIds,
+          assignedToIds: assignedIds ?? [],
           assignedToNames: assignedNames,
 
-          doneById: r.done_by_member_id ?? undefined,
-          doneByIds: r.done_by_member_ids ?? [],
+          doneByIds: (r.done_by_member_ids as string[] | null) ?? [],
           doneAt,
+
 
           approvedById: r.approved_by_member_id ?? undefined,
           approvedAt: r.approved_at
@@ -367,6 +365,7 @@ export default function Chores() {
     expiresAt?: string | null;
   }) => {
     if (!activeFamilyId) return;
+
     try {
       // 1) upload audio (optional)
       let audioUrl: string | null = null;
@@ -386,34 +385,28 @@ export default function Chores() {
       }
 
       const normalizedAssignedIds =
-        assignedToIds && assignedToIds.length > 0 ? assignedToIds : undefined;
+        assignedToIds && assignedToIds.length > 0 ? assignedToIds : [];
 
-      // 2) create the actual chore
+      // 2) create chore (PLURAL ONLY)
       const row = await addChoreMutation.mutateAsync({
         familyId: activeFamilyId,
         chore: {
           title,
           description,
           points,
-          assigned_to:
-            normalizedAssignedIds && normalizedAssignedIds.length === 1
-              ? normalizedAssignedIds[0]
-              : undefined,
           assigned_to_ids: normalizedAssignedIds,
           audioDescriptionUrl: audioUrl,
           audioDescriptionDuration: audioDuration,
           expiresAt: expiresAt ?? null,
         },
-      })
+      });
 
+      const assignedIds: string[] =
+        (row as any).assignee_member_ids ?? normalizedAssignedIds;
 
-      const dbAssignedIds: string[] | undefined =
-        (row as any).assignee_member_ids ??
-        ((row as any).assignee_member_id ? [(row as any).assignee_member_id] : undefined) ??
-        normalizedAssignedIds;
-      const dbAssignedNames =
-        dbAssignedIds && dbAssignedIds.length
-          ? dbAssignedIds.map((id: string) => nameForId(id))
+      const assignedNames =
+        assignedIds.length > 0
+          ? assignedIds.map((memberId) => nameForId(memberId))
           : undefined;
 
       const created: ChoreView = {
@@ -422,16 +415,16 @@ export default function Chores() {
         description: row.description ?? description,
         points: row.points ?? points,
         status: dbToUiStatus(row.status as DbStatus),
+
         proofs: [],
+        doneByIds: [],
 
         expiresAt: row.expires_at
           ? new Date(row.expires_at).getTime()
           : undefined,
 
-        assignedToId: dbAssignedIds?.[0],
-        assignedToName: dbAssignedNames?.[0],
-        assignedToIds: dbAssignedIds,
-        assignedToNames: dbAssignedNames,
+        assignedToIds: assignedIds,
+        assignedToNames: assignedNames,
 
         audioDescriptionUrl: row.audio_description_url ?? audioUrl ?? undefined,
         audioDescriptionDuration:
@@ -440,9 +433,9 @@ export default function Chores() {
         createdByMemberId: myFamilyMemberId,
         createdByName: myFamilyMemberId ? nameForId(myFamilyMemberId) : 'You',
       };
+
       setList((prev) => [created, ...prev]);
 
-      // optionally also save as routine template
       if (saveAsTemplate) {
         await createTemplate({
           title,
@@ -457,6 +450,7 @@ export default function Chores() {
       Alert.alert('Error', 'Could not post the chore.');
     }
   };
+
 
   // Edit (creator or parent, open)
   const onEdit = async (
@@ -473,7 +467,7 @@ export default function Chores() {
       const normalizedAssignedIds =
         updates.assignedToIds && updates.assignedToIds.length > 0
           ? updates.assignedToIds
-          : undefined;
+          : [];
 
       const row = await updateChoreMutation.mutateAsync({
         choreId: id,
@@ -481,23 +475,18 @@ export default function Chores() {
           title: updates.title,
           description: updates.description ?? null,
           points: updates.points,
-          assigned_to:
-            normalizedAssignedIds && normalizedAssignedIds.length === 1
-              ? normalizedAssignedIds[0]
-              : null,
-          assigned_to_ids: normalizedAssignedIds ?? null,
+          assigned_to_ids: normalizedAssignedIds,
           expiresAt: updates.expiresAt ?? null,
         },
       });
 
-
-      const dbAssignedIds: string[] | undefined =
+      const assignedIds: string[] =
         (row as any).assignee_member_ids ??
-        ((row as any).assignee_member_id ? [(row as any).assignee_member_id] : undefined) ??
         normalizedAssignedIds;
-      const dbAssignedNames =
-        dbAssignedIds && dbAssignedIds.length
-          ? dbAssignedIds.map((id: string) => nameForId(id))
+
+      const assignedNames =
+        assignedIds.length > 0
+          ? assignedIds.map((memberId) => nameForId(memberId))
           : undefined;
 
       setList((prev) =>
@@ -508,10 +497,8 @@ export default function Chores() {
               title: row.title,
               description: row.description ?? updates.description,
               points: row.points ?? updates.points,
-              assignedToId: dbAssignedIds?.[0],
-              assignedToName: dbAssignedNames?.[0],
-              assignedToIds: dbAssignedIds,
-              assignedToNames: dbAssignedNames,
+              assignedToIds: assignedIds,
+              assignedToNames: assignedNames,
               expiresAt: row.expires_at
                 ? new Date(row.expires_at).getTime()
                 : undefined,
@@ -526,6 +513,7 @@ export default function Chores() {
       Alert.alert('Error', 'Could not save changes.');
     }
   };
+
 
   // Local proofs
   const onAttachProof = (id: string, proof: Proof | null) => {
@@ -612,38 +600,49 @@ export default function Chores() {
 
 
   // Parent approves (APPROVED) + split points evenly between all members who did it
-  const onApprove = async (id: string, notes?: string, updatedPoints?: number) => {
+  const onApprove = async (
+    id: string,
+    notes?: string,
+    updatedPoints?: number
+  ) => {
     try {
-      if (!myFamilyMemberId) throw new Error('Missing family member id');
+      if (!myFamilyMemberId) {
+        throw new Error('Missing family member id');
+      }
 
-      // 👉 if parent changed points in the modal, save that first
+      // 1️⃣ If parent edited points, persist first
       if (typeof updatedPoints === 'number' && !Number.isNaN(updatedPoints)) {
         await updateChore(id, { points: updatedPoints });
       }
 
+      // 2️⃣ Approve chore
       const row = await approveChoreMutation.mutateAsync({
         choreId: id,
-        parentMemberId: myFamilyMemberId!,
+        parentMemberId: myFamilyMemberId,
         notes,
       });
-      const approverId = row.approved_by_member_id ?? myFamilyMemberId;
-      const when = row.approved_at ? new Date(row.approved_at).getTime() : Date.now();
+
+      const approverId =
+        row.approved_by_member_id ?? myFamilyMemberId;
+
+      const approvedAt =
+        row.approved_at
+          ? new Date(row.approved_at).getTime()
+          : Date.now();
 
       const local = list.find((c) => c.id === id);
 
-      const totalPoints: number =
-        (row.points as number | undefined) ?? (local?.points ?? 0);
+      const totalPoints =
+        (row.points as number | undefined) ??
+        (local?.points ?? 0);
 
-      const idsFromRow =
-        (row.done_by_member_ids as string[] | null | undefined) ?? [];
-      const idsFromLocal = (local?.doneByIds && local.doneByIds.length > 0
-        ? local.doneByIds
-        : local?.doneById
-          ? [local.doneById]
-          : []) as string[];
+      // ✅ PLURAL ONLY — backend is source of truth
+      const doneByIds: string[] =
+        (row.done_by_member_ids as string[] | null | undefined) ??
+        local?.doneByIds ??
+        [];
 
-      const memberIds = (idsFromRow.length ? idsFromRow : idsFromLocal).filter(Boolean);
-
+      // 3️⃣ Update local UI state
       setList((prev) =>
         prev.map((c) =>
           c.id === id
@@ -652,20 +651,24 @@ export default function Chores() {
               status: 'approved',
               notes: row.notes ?? notes,
               approvedById: approverId,
-              approvedAt: when,
+              approvedAt,
+              doneByIds, // 🔒 keep invariant
             }
             : c
         )
       );
 
-      if (memberIds.length > 0 && totalPoints > 0) {
-        const perMember = Math.ceil(totalPoints / memberIds.length);
+      // 4️⃣ Split & award points
+      if (doneByIds.length > 0 && totalPoints > 0) {
+        const perMember = Math.ceil(totalPoints / doneByIds.length);
         const familyIdForLedger = activeFamilyId;
+
         await Promise.all(
-          memberIds.map(async (memberId) => {
+          doneByIds.map(async (memberId) => {
             if (familyIdForLedger) {
-              const reason =
-                local?.title ? `Completed chore: ${local.title}` : 'Chore approved';
+              const reason = local?.title
+                ? `Completed chore: ${local.title}`
+                : 'Chore approved';
 
               await logChorePointsEvent({
                 familyId: familyIdForLedger,
@@ -686,6 +689,7 @@ export default function Chores() {
       Alert.alert('Error', 'Could not approve the chore.');
     }
   };
+
 
   // Parent declines -> OPEN
   const onDecline = async (id: string, notes?: string) => {
@@ -740,46 +744,66 @@ export default function Chores() {
 
   // Duplicate (anyone, open) with confirm
   const onDuplicate = (id: string) => {
-    Alert.alert('Duplicate Chore', 'Do you want to create a duplicate of this chore?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Duplicate',
-        onPress: async () => {
-          try {
-            const row = await duplicateChoreMutation.mutateAsync(id);
+    Alert.alert(
+      'Duplicate Chore',
+      'Do you want to create a duplicate of this chore?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Duplicate',
+          onPress: async () => {
+            try {
+              const row = await duplicateChoreMutation.mutateAsync(id);
 
-            const assignedIds: string[] | undefined =
-              (row as any).assignee_member_ids ??
-              ((row as any).assignee_member_id
-                ? [(row as any).assignee_member_id]
-                : undefined);
-            const assignedNames =
-              assignedIds && assignedIds.length
-                ? assignedIds.map((memberId: string) => nameForId(memberId))
-                : undefined;
+              // --- ASSIGNEES (PLURAL ONLY) ---
+              const assignedToIds: string[] =
+                (row as any).assignee_member_ids ??
+                ((row as any).assignee_member_id
+                  ? [(row as any).assignee_member_id]
+                  : []);
 
-            const created: ChoreView = {
-              id: row.id,
-              title: row.title,
-              description: row.description ?? undefined,
-              points: row.points ?? 0,
-              status: dbToUiStatus(row.status as DbStatus),
-              proofs: [],
-              assignedToId: assignedIds?.[0],
-              assignedToName: assignedNames?.[0],
-              assignedToIds: assignedIds,
-              assignedToNames: assignedNames,
-              createdByMemberId: myFamilyMemberId,
-              createdByName: myFamilyMemberId ? nameForId(myFamilyMemberId) : 'You',
-            };
-            setList((prev) => [created, ...prev]);
-          } catch (e) {
-            console.error('duplicateChore failed', e);
-            Alert.alert('Error', 'Could not duplicate the chore.');
-          }
+              const assignedToNames =
+                assignedToIds.length > 0
+                  ? assignedToIds.map((memberId: string) => nameForId(memberId))
+                  : [];
+
+              const created: ChoreView = {
+                id: row.id,
+                title: row.title,
+                description: row.description ?? undefined,
+                points: row.points ?? 0,
+                status: dbToUiStatus(row.status as DbStatus),
+
+                // ✅ REQUIRED ARRAYS
+                proofs: [],
+                assignedToIds,
+                assignedToNames,
+                doneByIds: [],
+
+                expiresAt: row.expires_at
+                  ? new Date(row.expires_at).getTime()
+                  : undefined,
+
+                audioDescriptionUrl:
+                  row.audio_description_url ?? undefined,
+                audioDescriptionDuration:
+                  row.audio_description_duration ?? undefined,
+
+                createdByMemberId: myFamilyMemberId,
+                createdByName: myFamilyMemberId
+                  ? nameForId(myFamilyMemberId)
+                  : 'You',
+              };
+
+              setList((prev) => [created, ...prev]);
+            } catch (e) {
+              console.error('duplicateChore failed', e);
+              Alert.alert('Error', 'Could not duplicate the chore.');
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   function handleOpen(item: ChoreView) {
@@ -903,9 +927,10 @@ export default function Chores() {
 
 
           const assignedLabel =
-            item.assignedToNames && item.assignedToNames.length
+            item.assignedToNames && item.assignedToNames.length > 0
               ? item.assignedToNames.join(', ')
-              : item.assignedToName;
+              : null;
+
 
           return (
             <Pressable onPress={() => handleOpen(item)} style={styles.card}>
@@ -1046,12 +1071,10 @@ export default function Chores() {
             title: editing.title,
             description: editing.description ?? '',
             points: editing.points,
-            assignedToIds:
-              editing.assignedToIds && editing.assignedToIds.length
-                ? editing.assignedToIds
-                : editing.assignedToId
-                  ? [editing.assignedToId]
-                  : [],
+
+            // ✅ PLURAL ONLY
+            assignedToIds: editing.assignedToIds ?? [],
+
             expiresAt: editing.expiresAt ?? null,
           }}
           titleText="Edit Chore"

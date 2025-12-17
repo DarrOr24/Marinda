@@ -5,7 +5,7 @@ export type ChoreStatus = "open" | "pending" | "approved";
 export type Proof = {
     uri: string;
     kind: "image" | "video";
-    type: "BEFORE" | "AFTER";   // ⭐ NEW
+    type: "BEFORE" | "AFTER";
 };
 
 export type ProofPayload = {
@@ -18,38 +18,36 @@ export type ChoreView = {
     title: string;
     points: number;
     description: string;
-    audioDescriptionUrl?: string | null;
-    audioDescriptionDuration?: number | null; // in seconds
+
     status: ChoreStatus;
 
-    // deadline (optional)
-    expiresAt?: number; // ms since epoch, from expires_at
+    // optional audio
+    audioDescriptionUrl?: string | null;
+    audioDescriptionDuration?: number | null; // seconds
 
-    // who did the chore
-    doneById?: string;
-    doneByIds?: string[];
-    doneByName?: string;
+    // optional deadline
+    expiresAt?: number; // ms since epoch
+
+    // ✅ DONE BY — plural only
+    doneByIds: string[];          // empty array = not done yet
     doneAt?: number;
 
-    // who approved + when
+    // ✅ APPROVAL
     approvedById?: string;
-    approvedByName?: string;
     approvedAt?: number;
 
-    // extra
+    // extra / meta
     notes?: string;
     proofs?: Proof[];
+    proofNote?: string;
 
-    assignedToId?: string;
-    assignedToName?: string;
-
-    assignedToIds?: string[];
+    // ✅ ASSIGNEES — plural only
+    assignedToIds: string[];      // empty array = unassigned
     assignedToNames?: string[];
 
-    createdByName?: string;
+    // creator
     createdByMemberId?: string;
-
-    proofNote?: string;
+    createdByName?: string;
 };
 
 // (optional) for later, templates:
