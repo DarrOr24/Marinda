@@ -127,8 +127,8 @@ export default function WishList() {
         (w) => w.member_id === effectiveMemberId
     );
 
-    const wishes = itemsForMember.filter((w) => !w.purchased);
-    const fulfilled = itemsForMember.filter((w) => w.purchased);
+    const wishes = itemsForMember.filter((w) => w.status === "open");
+    const fulfilled = itemsForMember.filter((w) => w.status === "fulfilled");
 
     // -------- add/edit modal --------
     const [showAddModal, setShowAddModal] = useState(false);
@@ -439,7 +439,7 @@ export default function WishList() {
                                         <Text style={styles.actionDanger}>Delete</Text>
                                     </TouchableOpacity>
 
-                                    {isParent && !item.purchased && (
+                                    {isParent && item.status === "open" && (
                                         <TouchableOpacity onPress={() => markPurchased.mutate(item.id)}>
                                             <Text style={styles.actionPrimary}>Mark fulfilled</Text>
                                         </TouchableOpacity>

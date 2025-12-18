@@ -1,4 +1,3 @@
-// lib/wishlist/wishlist.api.ts
 import { decode } from "base64-arraybuffer";
 import * as FileSystem from "expo-file-system/legacy";
 
@@ -85,7 +84,7 @@ export async function addWishlistItem(params: {
             price: price ?? null,
             link: link ?? null,
             note: note ?? null,
-            purchased: false,
+            status: "open",
         })
         .select()
         .single();
@@ -183,7 +182,7 @@ export async function deleteWishlistItem(itemId: string) {
 export async function markWishlistPurchased(itemId: string) {
     const { data, error } = await supabase
         .from("wishlist_items")
-        .update({ purchased: true })
+        .update({ status: "fulfilled" })
         .eq("id", itemId)
         .select()
         .single();

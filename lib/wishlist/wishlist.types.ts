@@ -1,5 +1,3 @@
-// lib/wishlist/wishlist.types.ts
-
 export type WishlistItem = {
     id: string;
     family_id: string;
@@ -12,7 +10,7 @@ export type WishlistItem = {
 
     image_url: string | null;
 
-    purchased: boolean;
+    status: "open" | "fulfilled";
 
     created_at: string;
     updated_at: string;
