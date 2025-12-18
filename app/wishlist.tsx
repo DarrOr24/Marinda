@@ -239,7 +239,7 @@ export default function WishList() {
                         </Text>
 
                         <View style={styles.iconsRow}>
-                            <Pressable onPress={() => console.log("Wishlist info")}>
+                            <Pressable onPress={() => router.push('/wishlist-info')}>
                                 <Ionicons
                                     name="information-circle-outline"
                                     size={22}

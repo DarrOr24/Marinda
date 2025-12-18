@@ -63,6 +63,11 @@ function RootNavigator() {
           name="wishlist-settings"
           options={{ headerTitle: 'Wishlist Settings ⚙️' }}
         />
+        <Stack.Screen
+          name="wishlist-info"
+          options={{ headerTitle: 'How Wishlist Works 💫' }}
+        />
+
 
         <Stack.Screen name="boards/activity" options={{ headerTitle: 'Activities 📆' }} />
 
