@@ -71,10 +71,21 @@ export async function addWishlistItem(params: {
     link?: string | null;
     note?: string | null;
     imageUri?: string | null;
+    fulfillmentMode?: "parents" | "self";
+    paymentMethod?: string | null;
 }) {
-    const { familyId, memberId, title, price, link, note, imageUri } = params;
+    const {
+        familyId,
+        memberId,
+        title,
+        price,
+        link,
+        note,
+        imageUri,
+        fulfillmentMode = "parents",
+        paymentMethod = null,
+    } = params;
 
-    // Create DB row first
     const { data, error } = await supabase
         .from("wishlist_items")
         .insert({
@@ -85,6 +96,8 @@ export async function addWishlistItem(params: {
             link: link ?? null,
             note: note ?? null,
             status: "open",
+            fulfillment_mode: fulfillmentMode,
+            payment_method: fulfillmentMode === "self" ? paymentMethod : null,
         })
         .select()
         .single();
@@ -95,7 +108,6 @@ export async function addWishlistItem(params: {
 
     if (imageUri) {
         imageUrl = await uploadWishlistImage(data.id, imageUri);
-
         await supabase
             .from("wishlist_items")
             .update({ image_url: imageUrl })
@@ -116,6 +128,9 @@ export async function updateWishlistItem(
         link: string | null;
         note: string | null;
         imageUri: string | null;
+
+        fulfillment_mode: "parents" | "self";
+        payment_method: string | null;
     }>
 ) {
     const patch: any = {};
@@ -125,7 +140,14 @@ export async function updateWishlistItem(
     if (fields.link !== undefined) patch.link = fields.link ?? null;
     if (fields.note !== undefined) patch.note = fields.note ?? null;
 
-    // Update basic fields first
+    if (fields.fulfillment_mode !== undefined) {
+        patch.fulfillment_mode = fields.fulfillment_mode;
+        patch.payment_method =
+            fields.fulfillment_mode === "self"
+                ? fields.payment_method ?? null
+                : null;
+    }
+
     const { data, error } = await supabase
         .from("wishlist_items")
         .update(patch)
@@ -135,9 +157,7 @@ export async function updateWishlistItem(
 
     if (error) throw new Error(error.message);
 
-    // IMAGE LOGIC (three cases)
-
-    // 1️⃣ Image removed explicitly
+    // IMAGE HANDLING
     if (fields.imageUri === null) {
         await supabase
             .from("wishlist_items")
@@ -147,7 +167,6 @@ export async function updateWishlistItem(
         return { ...data, image_url: null };
     }
 
-    // 2️⃣ Image replaced / added
     if (typeof fields.imageUri === "string") {
         const url = await uploadWishlistImage(itemId, fields.imageUri);
         await supabase
@@ -158,9 +177,7 @@ export async function updateWishlistItem(
         return { ...data, image_url: url };
     }
 
-    // 3️⃣ Image untouched
     return data;
-
 }
 
 /* --------------------------------------------------------
@@ -180,9 +197,15 @@ export async function deleteWishlistItem(itemId: string) {
    Mark as purchased
 -------------------------------------------------------- */
 export async function markWishlistPurchased(itemId: string) {
+    const user = await supabase.auth.getUser();
+
     const { data, error } = await supabase
         .from("wishlist_items")
-        .update({ status: "fulfilled" })
+        .update({
+            status: "fulfilled",
+            fulfilled_by: user.data.user?.id ?? null,
+            fulfilled_at: new Date().toISOString(),
+        })
         .eq("id", itemId)
         .select()
         .single();
@@ -190,3 +213,4 @@ export async function markWishlistPurchased(itemId: string) {
     if (error) throw new Error(error.message);
     return data;
 }
+

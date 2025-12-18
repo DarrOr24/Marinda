@@ -87,7 +87,12 @@ export default function WishList() {
 
     const [calcCad, setCalcCad] = useState(""); // already existed
     const [calcPointsStr, setCalcPointsStr] = useState(""); // NEW
-    const [calcLock, setCalcLock] = useState<"cad" | "points" | null>(null); // NEW
+    const [calcLock, setCalcLock] = useState<"cad" | "points" | null>(null);
+
+    // fulfillment intent (NEW)
+    const [canFulfillSelf, setCanFulfillSelf] = useState(false)
+    const [paymentMethod, setPaymentMethod] = useState("")
+
 
     // CAD → Points
     const calcPoints = useMemo(() => {
@@ -162,6 +167,8 @@ export default function WishList() {
                         note: newNote.trim() || null,
                         link: newLink.trim() || null,
                         imageUri: newImageUri || null,
+                        fulfillment_mode: canFulfillSelf ? "self" : "parents",
+                        payment_method: canFulfillSelf ? paymentMethod.trim() || null : null,
                     },
                 },
                 { onSuccess: () => setEditingItem(null) }
@@ -175,13 +182,15 @@ export default function WishList() {
                 link: newLink.trim() || null,
                 note: newNote.trim() || null,
                 imageUri: newImageUri || null,
+
+                fulfillmentMode: canFulfillSelf ? "self" : "parents",
+                paymentMethod: canFulfillSelf ? paymentMethod.trim() || null : null,
             });
+
         }
 
         setShowAddModal(false);
-        setNewTitle("");
-        setNewPrice("");
-        setNewNote("");
+        resetForm();
     };
 
     // -------- loading/error --------
@@ -218,6 +227,8 @@ export default function WishList() {
         setNewLink("");
         setNewImageUri(null);
         setEditingItem(null);
+        setCanFulfillSelf(false)
+        setPaymentMethod("")
     }
 
     return (
@@ -320,7 +331,6 @@ export default function WishList() {
 
                 </View>
 
-
                 {/* Tabs */}
                 <View style={styles.tabsRow}>
                     <Pressable
@@ -354,6 +364,10 @@ export default function WishList() {
                         item.price != null
                             ? Math.round(item.price * POINTS_PER_CURRENCY)
                             : null;
+
+                    const canFulfill =
+                        item.status === "open" &&
+                        (isParent || item.fulfillment_mode === "self");
 
                     return (
                         <View key={item.id} style={styles.cardRow}>
@@ -439,7 +453,7 @@ export default function WishList() {
                                         <Text style={styles.actionDanger}>Delete</Text>
                                     </TouchableOpacity>
 
-                                    {isParent && item.status === "open" && (
+                                    {canFulfill && (
                                         <TouchableOpacity onPress={() => markPurchased.mutate(item.id)}>
                                             <Text style={styles.actionPrimary}>Mark fulfilled</Text>
                                         </TouchableOpacity>
@@ -511,6 +525,29 @@ export default function WishList() {
                             <Text style={styles.previewText}>
                                 ≈ {previewPoints} points ({POINTS_PER_CURRENCY} pts = $1)
                             </Text>
+
+                            <Pressable
+                                style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}
+                                onPress={() => setCanFulfillSelf(v => !v)}
+                            >
+                                <MaterialCommunityIcons
+                                    name={canFulfillSelf ? "checkbox-marked" : "checkbox-blank-outline"}
+                                    size={22}
+                                    color="#2563eb"
+                                />
+                                <Text style={{ marginLeft: 8 }}>
+                                    I can get this myself
+                                </Text>
+                            </Pressable>
+                            {canFulfillSelf && (
+                                <TextInput
+                                    placeholder="How will I pay? (optional)"
+                                    value={paymentMethod}
+                                    onChangeText={setPaymentMethod}
+                                    style={styles.input}
+                                />
+                            )}
+
                             <TextInput
                                 placeholder="Note (optional)"
                                 value={newNote}
