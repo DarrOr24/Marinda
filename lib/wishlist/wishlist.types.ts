@@ -12,6 +12,11 @@ export type WishlistItem = {
 
     status: "open" | "fulfilled";
 
+    fulfillment_mode: "parents" | "self";
+    fulfilled_by: string | null;
+    fulfilled_at: string | null;
+    payment_method: string | null;
+
     created_at: string;
     updated_at: string;
 };
