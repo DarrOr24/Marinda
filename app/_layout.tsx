@@ -1,7 +1,6 @@
 // app/_layout.tsx
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Platform } from 'react-native';
 import 'react-native-reanimated';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -30,7 +29,6 @@ function RootNavigator() {
         headerStyle: { backgroundColor: '#fff' },
         headerTitleAlign: 'center',
         headerShadowVisible: false,
-        contentStyle: { paddingBottom: Platform.OS === 'android' ? insets.bottom : 0 },
       }}
     >
       <Stack.Protected guard={isLoggedIn}>
