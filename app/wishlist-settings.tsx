@@ -39,11 +39,17 @@ export default function WishlistSettingsScreen() {
     const [currency, setCurrency] = useState("CAD");
     const [pointsRate, setPointsRate] = useState("10");
     const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+    const [selfFulfillMaxPrice, setSelfFulfillMaxPrice] = useState("");
 
     useEffect(() => {
         if (settings) {
             setCurrency(settings.currency);
             setPointsRate(String(settings.points_per_currency));
+            setSelfFulfillMaxPrice(
+                settings.self_fulfill_max_price != null
+                    ? String(settings.self_fulfill_max_price)
+                    : ""
+            );
         }
     }, [settings]);
 
@@ -65,14 +71,43 @@ export default function WishlistSettingsScreen() {
             return;
         }
 
-        updateSettings.mutate(
-            { currency, points_per_currency: num },
-            {
-                onSuccess: () => Alert.alert("Saved!", "Settings updated successfully."),
-                onError: () => Alert.alert("Error", "Could not update settings."),
+        // 👇 build payload SAFELY
+        const payload: {
+            currency: string;
+            points_per_currency: number;
+            self_fulfill_max_price?: number | null;
+        } = {
+            currency,
+            points_per_currency: num,
+        };
+
+        const trimmed = selfFulfillMaxPrice.trim();
+
+        if (trimmed === "") {
+            // explicit clear
+            payload.self_fulfill_max_price = null;
+        } else {
+            const parsed = Number(trimmed);
+            if (Number.isNaN(parsed) || parsed < 0) {
+                Alert.alert(
+                    "Invalid value",
+                    "Max price must be a number (0 or higher)."
+                );
+                return;
             }
-        );
+            payload.self_fulfill_max_price = parsed;
+        }
+
+        updateSettings.mutate(payload, {
+            onSuccess: () =>
+                Alert.alert("Saved!", "Settings updated successfully."),
+            onError: (err) => {
+                console.log("Wishlist settings update error:", err);
+                Alert.alert("Error", "Could not update settings.");
+            },
+        });
     };
+
 
     const onChangeRate = (txt: string) => {
         // Remove everything that isn't a digit
@@ -173,7 +208,8 @@ export default function WishlistSettingsScreen() {
                     >
                         <TextInput
                             value={pointsRate}
-                            onChangeText={setPointsRate}
+                            // onChangeText={setPointsRate}
+                            onChangeText={onChangeRate}
                             editable={isParent}
                             keyboardType="numeric"
                             style={[styles.input, !isParent && styles.disabledInput]}
@@ -185,6 +221,43 @@ export default function WishlistSettingsScreen() {
 
                     <Text style={styles.note}>
                         Whole numbers only — must be 1 or higher.
+                    </Text>
+                </Section>
+
+                {/* Self-fulfill limit (UI only for now — we will wire saving in Patch 4) */}
+                <Section title="Self-Fulfilled Wishes">
+                    <Text style={styles.label}>
+                        Max price a child can fulfill on their own
+                    </Text>
+
+                    <Pressable
+                        onPress={() => {
+                            if (!isParent) {
+                                Alert.alert("Parents only", "Only parents can change wishlist settings.");
+                            }
+                        }}
+                    >
+                        <TextInput
+                            value={selfFulfillMaxPrice}
+                            onChangeText={(txt) => {
+                                // allow empty or digits + one dot
+                                let cleaned = txt.replace(/[^0-9.]/g, "");
+                                const parts = cleaned.split(".");
+                                if (parts.length > 2) {
+                                    cleaned = parts[0] + "." + parts.slice(1).join("");
+                                }
+                                setSelfFulfillMaxPrice(cleaned);
+                            }}
+                            editable={isParent}
+                            keyboardType="numeric"
+                            placeholder="e.g. 60 (leave empty for no limit)"
+                            style={[styles.input, !isParent && styles.disabledInput]}
+                            pointerEvents={isParent ? "auto" : "none"}
+                        />
+                    </Pressable>
+
+                    <Text style={styles.note}>
+                        This controls when kids can use “I can get this myself”.
                     </Text>
                 </Section>
 

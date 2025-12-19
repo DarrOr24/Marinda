@@ -74,6 +74,12 @@ export default function WishlistInfoScreen() {
                     <Bullet>
                         Fulfilled wishes stay visible for reference and learning.
                     </Bullet>
+                    <Bullet>
+                        Some wishes may be fulfilled directly by the child, encouraging independence and trust.
+                    </Bullet>
+                    <Bullet>
+                        Parents control this by setting a maximum price for self-fulfilled wishes in Wishlist Settings.
+                    </Bullet>
                 </Section>
 
                 {/* 5. Learning & responsibility */}
