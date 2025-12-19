@@ -78,9 +78,11 @@ export function useMarkWishlistPurchased(familyId?: string) {
     const qc = useQueryClient();
 
     return useMutation({
-        mutationFn: markWishlistPurchased,
+        mutationFn: (itemId: string) => markWishlistPurchased(itemId),
         onSuccess: () => {
-            qc.invalidateQueries({ queryKey: wishlistKey(familyId) });
+            qc.invalidateQueries({ queryKey: ['wishlist', familyId] });
+            qc.invalidateQueries({ queryKey: ['family-members', familyId] });
         },
     });
 }
+

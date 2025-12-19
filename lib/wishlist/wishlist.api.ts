@@ -1,8 +1,10 @@
 import { decode } from "base64-arraybuffer";
 import * as FileSystem from "expo-file-system/legacy";
 
+import { awardMemberPoints } from "@/lib/families/families.api";
 import { getSupabase } from "../supabase";
 import type { WishlistItem } from "./wishlist.types";
+
 
 const supabase = getSupabase();
 const BUCKET = "wishlist-images";
@@ -199,6 +201,7 @@ export async function deleteWishlistItem(itemId: string) {
 export async function markWishlistPurchased(itemId: string) {
     const user = await supabase.auth.getUser();
 
+    // 1️⃣ Mark wishlist item as fulfilled
     const { data, error } = await supabase
         .from("wishlist_items")
         .update({
@@ -211,6 +214,38 @@ export async function markWishlistPurchased(itemId: string) {
         .single();
 
     if (error) throw new Error(error.message);
+
+    // 2️⃣ Deduct points (if price exists)
+    if (data.price && data.price > 0) {
+        const { data: settings, error: settingsErr } = await supabase
+            .from("wishlist_settings")
+            .select("points_per_currency")
+            .eq("family_id", data.family_id)
+            .single();
+
+        if (settingsErr) throw new Error(settingsErr.message);
+
+        const points = Math.round(
+            data.price * (settings?.points_per_currency ?? 10)
+        );
+
+        if (points > 0) {
+            // Ledger entry (optional but recommended – same as chores)
+            await supabase.from("points_ledger").insert({
+                family_id: data.family_id,
+                member_id: data.member_id,
+                delta: -points,
+                source: "wishlist",
+                source_id: data.id,
+                reason: `Fulfilled wish: ${data.title}`,
+            });
+
+            // Apply balance change
+            await awardMemberPoints(data.member_id, -points);
+        }
+    }
+
     return data;
 }
+
 
