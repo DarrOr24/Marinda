@@ -75,6 +75,20 @@ export default function WishList() {
         (m: any) => m.role === "CHILD" || m.role === "TEEN"
     );
 
+    const nameForMemberId = (id?: string | null) => {
+        if (!id) return "Unknown";
+
+        const m = memberList.find(
+            (m: any) =>
+                m.id === id ||
+                m.user_id === id ||
+                m.profile?.id === id ||
+                m.profile_id === id
+        );
+
+        return m?.profile?.first_name || "Unknown";
+    };
+
     const [selectedKidId, setSelectedKidId] = useState<string | null>(null);
 
     const effectiveMemberId: string | undefined = isParent
@@ -420,6 +434,20 @@ export default function WishList() {
                                         {item.note}
                                     </Text>
                                 )}
+
+                                {item.status === "fulfilled" && item.fulfilled_at && (
+                                    <Text style={styles.cardDate}>
+                                        {item.fulfillment_mode === "self"
+                                            ? "Self-fulfilled"
+                                            : item.fulfilled_by
+                                                ? `Fulfilled by ${nameForMemberId(item.fulfilled_by)}`
+                                                : "Fulfilled"}
+                                        {" · "}
+                                        {new Date(item.fulfilled_at).toLocaleDateString()}
+                                    </Text>
+                                )}
+
+
 
                                 {/* ADDED DATE */}
                                 {item.created_at && (
