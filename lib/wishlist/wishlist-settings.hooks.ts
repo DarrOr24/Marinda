@@ -31,6 +31,7 @@ export function useUpdateWishlistSettings(familyId?: string) {
         mutationFn: (fields: {
             currency?: string;
             points_per_currency?: number;
+            self_fulfill_max_price?: number | null;
         }) => updateWishlistSettings(familyId!, fields),
 
         onSuccess: () => {

@@ -29,6 +29,7 @@ export async function fetchWishlistSettings(familyId: string) {
         family_id: familyId,
         currency: "CAD",
         points_per_currency: 10,
+        self_fulfill_max_price: null,
     };
 
     const { data: inserted, error: insertErr } = await supabase
@@ -51,6 +52,7 @@ export async function updateWishlistSettings(
     fields: Partial<{
         currency: string;
         points_per_currency: number;
+        self_fulfill_max_price: number | null;
     }>
 ) {
     if (!familyId) throw new Error("familyId is required");
@@ -60,6 +62,8 @@ export async function updateWishlistSettings(
     if (fields.currency !== undefined) patch.currency = fields.currency;
     if (fields.points_per_currency !== undefined)
         patch.points_per_currency = fields.points_per_currency;
+    if (fields.self_fulfill_max_price !== undefined)
+        patch.self_fulfill_max_price = fields.self_fulfill_max_price;
 
     patch.updated_at = new Date().toISOString();
 
