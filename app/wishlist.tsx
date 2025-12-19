@@ -47,6 +47,7 @@ export default function WishList() {
     const { data: wishlistSettings } = useFamilyWishlistSettings(activeFamilyId);
     const POINTS_PER_CURRENCY = wishlistSettings?.points_per_currency ?? 10;
     const FAMILY_CURRENCY = wishlistSettings?.currency ?? "CAD";
+    const SELF_FULFILL_MAX_PRICE = wishlistSettings?.self_fulfill_max_price ?? null;
 
     const router = useRouter();
 
@@ -124,6 +125,9 @@ export default function WishList() {
         }
     }, [calcPointsStr]);
 
+
+
+
     // -------- tabs --------
     const [tab, setTab] = useState<"wishes" | "fulfilled">("wishes");
 
@@ -144,11 +148,33 @@ export default function WishList() {
     const [newLink, setNewLink] = useState("");
     const [newImageUri, setNewImageUri] = useState<string | null>(null);
 
+    useEffect(() => {
+        if (!canFulfillSelf) return;
+        if (!newPrice.trim()) return;
+        if (wishlistSettings?.self_fulfill_max_price == null) return;
+
+        const price = Number(newPrice);
+        if (Number.isNaN(price)) return;
+
+        if (price > wishlistSettings.self_fulfill_max_price) {
+            Alert.alert(
+                "Price too high",
+                `This wish exceeds the self-fulfill limit of ${FAMILY_CURRENCY} ${wishlistSettings.self_fulfill_max_price}.`
+            );
+            setCanFulfillSelf(false);
+        }
+    }, [newPrice]);
+
     const previewPoints = useMemo(() => {
         const val = parseFloat(newPrice);
         if (!newPrice.trim() || Number.isNaN(val)) return 0;
         return Math.round(val * POINTS_PER_CURRENCY);
     }, [newPrice]);
+
+    const exceedsSelfFulfillLimit =
+        SELF_FULFILL_MAX_PRICE != null &&
+        newPrice.trim() !== "" &&
+        Number(newPrice) > SELF_FULFILL_MAX_PRICE;
 
     const canAdd =
         !isParent && !!activeFamilyId && !!effectiveMemberId && !addItem.isPending;
@@ -528,7 +554,32 @@ export default function WishList() {
 
                             <Pressable
                                 style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}
-                                onPress={() => setCanFulfillSelf(v => !v)}
+                                onPress={() => {
+                                    // 1️⃣ Price is required
+                                    if (!newPrice.trim()) {
+                                        Alert.alert(
+                                            "Price required",
+                                            "Please enter a price before choosing to fulfill this wish yourself."
+                                        );
+                                        return;
+                                    }
+
+                                    // 2️⃣ Price exceeds self-fulfill limit
+                                    if (
+                                        !canFulfillSelf &&
+                                        exceedsSelfFulfillLimit
+                                    ) {
+                                        Alert.alert(
+                                            "Price too high",
+                                            `You can only fulfill wishes up to ${FAMILY_CURRENCY} ${SELF_FULFILL_MAX_PRICE} on your own.`
+                                        );
+                                        return;
+                                    }
+
+                                    // 3️⃣ Toggle normally
+                                    setCanFulfillSelf(v => !v);
+                                }}
+
                             >
                                 <MaterialCommunityIcons
                                     name={canFulfillSelf ? "checkbox-marked" : "checkbox-blank-outline"}
@@ -537,7 +588,13 @@ export default function WishList() {
                                 />
                                 <Text style={{ marginLeft: 8 }}>
                                     I can get this myself
+                                    {SELF_FULFILL_MAX_PRICE != null && (
+                                        <Text style={{ color: "#64748b" }}>
+                                            {" "} (up to {FAMILY_CURRENCY} {SELF_FULFILL_MAX_PRICE})
+                                        </Text>
+                                    )}
                                 </Text>
+
                             </Pressable>
                             {canFulfillSelf && (
                                 <TextInput
