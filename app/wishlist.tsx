@@ -446,45 +446,52 @@ export default function WishList() {
 
                                 {/* ACTIONS */}
                                 <View style={styles.cardActionsRow}>
-                                    <TouchableOpacity
-                                        onPress={() => {
-                                            setEditingItem(item);
-                                            setNewTitle(item.title);
-                                            setNewPrice(item.price?.toString() || "");
-                                            setNewNote(item.note || "");
-                                            setNewLink(item.link || "");
-                                            setNewImageUri(item.image_url || null);
-                                            setShowAddModal(true);
-                                        }}
-                                    >
-                                        <Text style={styles.actionPrimary}>Edit</Text>
-                                    </TouchableOpacity>
+                                    {/* Edit & Delete only for open wishes */}
+                                    {item.status === "open" && (
+                                        <>
+                                            <TouchableOpacity
+                                                onPress={() => {
+                                                    setEditingItem(item);
+                                                    setNewTitle(item.title);
+                                                    setNewPrice(item.price?.toString() || "");
+                                                    setNewNote(item.note || "");
+                                                    setNewLink(item.link || "");
+                                                    setNewImageUri(item.image_url || null);
+                                                    setShowAddModal(true);
+                                                }}
+                                            >
+                                                <Text style={styles.actionPrimary}>Edit</Text>
+                                            </TouchableOpacity>
 
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            Alert.alert(
-                                                "Delete wish?",
-                                                "Are you sure you want to delete this wish?",
-                                                [
-                                                    { text: "Cancel", style: "cancel" },
-                                                    {
-                                                        text: "Delete",
-                                                        style: "destructive",
-                                                        onPress: () => deleteItem.mutate(item.id),
-                                                    },
-                                                ]
-                                            )
-                                        }
-                                    >
-                                        <Text style={styles.actionDanger}>Delete</Text>
-                                    </TouchableOpacity>
+                                            <TouchableOpacity
+                                                onPress={() =>
+                                                    Alert.alert(
+                                                        "Delete wish?",
+                                                        "Are you sure you want to delete this wish?",
+                                                        [
+                                                            { text: "Cancel", style: "cancel" },
+                                                            {
+                                                                text: "Delete",
+                                                                style: "destructive",
+                                                                onPress: () => deleteItem.mutate(item.id),
+                                                            },
+                                                        ]
+                                                    )
+                                                }
+                                            >
+                                                <Text style={styles.actionDanger}>Delete</Text>
+                                            </TouchableOpacity>
+                                        </>
+                                    )}
 
+                                    {/* Fulfill action */}
                                     {canFulfill && (
                                         <TouchableOpacity onPress={() => markPurchased.mutate(item.id)}>
                                             <Text style={styles.actionPrimary}>Mark fulfilled</Text>
                                         </TouchableOpacity>
                                     )}
                                 </View>
+
                             </View>
                         </View>
 
