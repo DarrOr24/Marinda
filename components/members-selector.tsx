@@ -275,10 +275,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   loadingContainer: {
-    paddingVertical: 8,
+    marginBlock: 8,
   },
   emptyContainer: {
-    paddingVertical: 8,
+    marginBlock: 8,
   },
   emptyText: {
     color: '#64748b',
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
 
   // single mode wrapper
   singleWrapper: {
-    marginTop: 6,
+    marginBlock: 8,
   },
 
   // multi mode layout
@@ -296,6 +296,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
     alignItems: 'center',
+    marginBlock: 8,
   },
 
   // group chips (Select All / Parents / Children)

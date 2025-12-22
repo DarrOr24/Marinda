@@ -1,5 +1,4 @@
 // components/chore-post-modal.tsx
-import { ChipSelector } from '@/components/chip-selector';
 import { Audio } from 'expo-av';
 import React from 'react';
 import {
@@ -16,6 +15,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import { MembersSelector } from './members-selector';
 
 
 type AssigneeOption = {
@@ -374,17 +374,7 @@ export default function ChorePostModal({
                                 <Text style={[styles.label, { marginTop: 8 }]}>
                                     Assign to (optional)
                                 </Text>
-
-                                <ChipSelector
-                                    multiple
-                                    options={assigneeOptions.map(opt => ({
-                                        label: opt.name,
-                                        value: opt.id,
-                                    }))}
-                                    values={assignedToIds}
-                                    onChange={setAssignedToIds}
-                                    style={{ marginTop: 6 }}
-                                />
+                                <MembersSelector values={assignedToIds} onChange={setAssignedToIds} />
                             </>
                         )}
 
