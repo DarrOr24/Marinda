@@ -24,8 +24,8 @@ export const Colors = {
     outlineBorder: '#3b5bdb',
     outlineText: '#3b5bdb',
 
-    dangerBackground: '#dc2626',
-    dangerText: '#fff',
+    dangerBackground: '#fee2e2',
+    dangerText: '#b91c1c',
 
     tabIconDefault: '#687076',
     tabIconSelected: tintColorLight,
@@ -49,8 +49,8 @@ export const Colors = {
     outlineBorder: '#3b5bdb',
     outlineText: '#3b5bdb',
 
-    dangerBackground: '#dc2626',
-    dangerText: '#fff',
+    dangerBackground: '#fee2e2',
+    dangerText: '#b91c1c',
 
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,

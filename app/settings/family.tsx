@@ -3,7 +3,6 @@ import React from 'react'
 import {
   ActivityIndicator,
   Alert,
-  Pressable,
   StyleSheet,
   Text,
   View
@@ -13,6 +12,7 @@ import { FamilyAvatar } from '@/components/avatar/family-avatar'
 import { ProfileAvatar } from '@/components/avatar/profile-avatar'
 import { ChipSelector } from '@/components/chip-selector'
 import { ShareButton } from '@/components/share-button'
+import { Button } from '@/components/ui/button'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import {
   useFamily,
@@ -178,15 +178,13 @@ export default function FamilySettingsScreen() {
             />
 
             {/* Rotate */}
-            <Pressable
-              style={styles.rotateButton}
+            <Button
+              title={rotateCode.isPending ? 'Rotating…' : 'Rotate'}
+              type="primary"
+              size="sm"
               onPress={handleRotateCode}
               disabled={rotateCode.isPending}
-            >
-              <Text style={styles.rotateButtonText}>
-                {rotateCode.isPending ? 'Rotating…' : 'Rotate'}
-              </Text>
-            </Pressable>
+            />
           </View>
         </View>
 
@@ -257,12 +255,12 @@ export default function FamilySettingsScreen() {
 
                 {/* remove (hidden for self) */}
                 {!isSelf && (
-                  <Pressable
+                  <Button
+                    title="Remove"
+                    type="danger"
+                    size="sm"
                     onPress={() => handleRemoveMember(m)}
-                    style={styles.removeButton}
-                  >
-                    <Text style={styles.removeButtonText}>Remove</Text>
-                  </Pressable>
+                  />
                 )}
               </View>
             )
@@ -320,17 +318,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 4,
     color: '#111827',
-  },
-  rotateButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: '#2563eb',
-  },
-  rotateButtonText: {
-    fontSize: 12,
-    color: '#fff',
-    fontWeight: '600',
   },
   codeHint: {
     fontSize: 11,
@@ -393,17 +380,5 @@ const styles = StyleSheet.create({
 
   roleChipsRow: {
     marginTop: 4,
-  },
-  removeButton: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: '#fee2e2',
-  },
-  removeButtonText: {
-    fontSize: 11,
-    color: '#b91c1c',
-    fontWeight: '600',
   },
 })
