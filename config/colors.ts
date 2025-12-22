@@ -19,7 +19,7 @@ export const Colors = {
     secondaryText: '#11181C',
 
     ghostBackground: 'transparent',
-    ghostText: tintColorLight,
+    ghostText: '#3b5bdb',
 
     outlineBorder: '#3b5bdb',
     outlineText: '#3b5bdb',

@@ -18,13 +18,14 @@ export type ButtonType =
   | 'outline'
   | 'danger';
 
-export type ButtonSize = 'sm' | 'md' | 'lg';
+export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
 
 type ButtonProps = {
   title: string;
   type?: ButtonType;
   size?: ButtonSize;
   onPress?: () => void;
+  bold?: boolean;
   uppercase?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
@@ -37,6 +38,7 @@ export function Button({
   type = 'primary',
   size = 'md',
   onPress,
+  bold = false,
   uppercase = false,
   disabled = false,
   fullWidth = false,
@@ -48,12 +50,23 @@ export function Button({
 
   const typeStyles = getTypeStyles(type, theme);
 
-  const sizeStyle =
+  const sizeButtonStyle =
     size === 'sm'
       ? styles.sizeSm
       : size === 'lg'
         ? styles.sizeLg
-        : styles.sizeMd;
+        : size === 'xl'
+          ? styles.sizeXl
+          : styles.sizeMd;
+
+  const sizeTextStyle =
+    size === 'sm'
+      ? styles.textSm
+      : size === 'lg'
+        ? styles.textLg
+        : size === 'xl'
+          ? styles.textXl
+          : styles.textMd;
 
   return (
     <Pressable
@@ -61,7 +74,7 @@ export function Button({
       disabled={disabled}
       style={({ pressed }) => [
         styles.base,
-        sizeStyle,
+        sizeButtonStyle,
         typeStyles.button,
         fullWidth && styles.fullWidth,
         showShadow && styles.shadow,
@@ -71,7 +84,15 @@ export function Button({
         style,
       ]}
     >
-      <Text style={[styles.text, typeStyles.text, uppercase && styles.uppercase]}>
+      <Text
+        style={[
+          styles.text,
+          sizeTextStyle,
+          typeStyles.text,
+          bold && styles.textBold,
+          uppercase && styles.uppercase,
+        ]}
+      >
         {title}
       </Text>
     </Pressable>
@@ -135,9 +156,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  sizeSm: { paddingHorizontal: 10, paddingVertical: 6, fontSize: 12 },
-  sizeMd: { paddingHorizontal: 14, paddingVertical: 8, fontSize: 13 },
-  sizeLg: { paddingHorizontal: 18, paddingVertical: 10, fontSize: 16 },
+  sizeSm: { paddingHorizontal: 10, paddingVertical: 6 },
+  sizeMd: { paddingHorizontal: 14, paddingVertical: 8 },
+  sizeLg: { paddingHorizontal: 18, paddingVertical: 10 },
+  sizeXl: { paddingHorizontal: 22, paddingVertical: 12 },
 
   fullWidth: { alignSelf: 'stretch' },
 
@@ -149,11 +171,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  text: {
-    fontWeight: '700',
-  },
+  text: { fontWeight: '500' },
+  textBold: { fontWeight: '700' },
+  textSm: { fontSize: 12 },
+  textMd: { fontSize: 13 },
+  textLg: { fontSize: 16 },
+  textXl: { fontSize: 20 },
 
-  uppercase: {
-    textTransform: 'uppercase',
-  },
+  uppercase: { textTransform: 'uppercase' },
 });

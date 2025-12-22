@@ -1,22 +1,36 @@
-// components/date-time-wheel-picker.tsx
+import React, {
+  useEffect,
+  useMemo,
+  useState
+} from "react";
+import {
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+import { Button } from "@/components/ui/button";
+import { WheelPicker } from "./wheel-picker";
+
 import {
   getShortMonthFromDateString,
   getWeekDayFromDateString,
   getYearFromDateString,
+  padNumber2,
 } from "@/utils/format.utils";
-import WheelPicker from "@quidone/react-native-wheel-picker";
-import { Audio } from "expo-av";
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-import { Button } from "@/components/ui/button";
-import { padNumber2 } from "@/utils/format.utils";
+// ───────────────────────────────────────────────────────────────
+// CONFIG
+// ───────────────────────────────────────────────────────────────
 
+const ITEM_HEIGHT = 50;
+const DAY_RANGE = 100;
+const LOOP_CYCLES = 5;
+const MIDDLE_CYCLE = Math.floor(LOOP_CYCLES / 2) + 1;
 
-const DAYS_OFFSET = 30;
-const ITEM_HEIGHT = 60;
-const LOOP_REPEAT = 5;
-const MIDDLE_CYCLE = 3;
+// ───────────────────────────────────────────────────────────────
 
 type Props = {
   visible: boolean;
@@ -31,170 +45,124 @@ export function DateTimeWheelPicker({
   onCancel,
   onConfirm,
 }: Props) {
-  // --------- SOUND SETUP ----------
-  const tickSoundRef = useRef<Audio.Sound | null>(null);
-  const lastTickRef = useRef(0);
-  const mutedRef = useRef(false);
+  // ───────────────────────────────────────────────────────────────
+  // DATE/TIME SOURCES
+  // ───────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    if (visible) {
-      mutedRef.current = false;
-    }
-  }, [visible]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    (async () => {
-      try {
-        const { sound } = await Audio.Sound.createAsync(
-          require("@/assets/sounds/camera-shutter-click.wav"),
-          { volume: 0.7 }
-        );
-        if (!isMounted) {
-          await sound.unloadAsync();
-          return;
-        }
-        tickSoundRef.current = sound;
-      } catch (e) {
-        console.warn("Failed to load wheel tick sound", e);
-      }
-    })();
-
-    return () => {
-      isMounted = false;
-      if (tickSoundRef.current) {
-        tickSoundRef.current.unloadAsync();
-        tickSoundRef.current = null;
-      }
-    };
-  }, []);
-
-  function playTick() {
-    if (mutedRef.current) return;
-
-    const now = Date.now();
-    if (now - lastTickRef.current < 10) return;
-    lastTickRef.current = now;
-
-    const sound = tickSoundRef.current;
-    if (!sound) return;
-
-    sound
-      .setPositionAsync(0)
-      .then(() => sound.playAsync())
-      .catch(() => { });
+  function toLocalDateKey(d: Date): string {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   }
-
-  // --------- DATE/TIME DATA ----------
 
   const baseDate = useMemo(() => {
-    const d = initialAt ? new Date(initialAt) : new Date();
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    return initialAt ? new Date(initialAt) : new Date();
   }, [initialAt]);
 
-  const days = useMemo(
-    () =>
-      Array.from({ length: DAYS_OFFSET * 2 + 1 }, (_, i) => {
-        const date = new Date(baseDate);
-        date.setDate(date.getDate() + (i + 1 - DAYS_OFFSET));
-        return date.toISOString().split("T")[0];
-      }),
-    [baseDate]
-  );
+  const todayKey = toLocalDateKey(new Date());
 
-  const baseHours = useMemo(
-    () => Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")),
-    []
-  );
-  const baseMinutes = useMemo(
-    () => Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, "0")),
-    []
-  );
+  const days = useMemo(() => {
+    const list: { value: string; label: string }[] = [];
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  const hoursData = useMemo(() => {
-    const result: { value: string; label: string }[] = [];
-    for (let cycle = 0; cycle < LOOP_REPEAT; cycle++) {
-      for (const h of baseHours) {
-        result.push({ value: `${h}|${cycle}`, label: h });
+    for (let offset = -DAY_RANGE; offset <= DAY_RANGE; offset++) {
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() + offset);
+
+      const key = toLocalDateKey(d);
+      let label: string;
+
+      if (key === todayKey) {
+        label = "Today";
+      } else {
+        const month = monthNames[d.getMonth()];
+        const dayNum = d.getDate();
+        label = `${month} ${dayNum}`;
+      }
+
+      list.push({ value: key, label });
+    }
+
+    return list;
+  }, [baseDate, todayKey]);
+
+  // find index of initial date
+  const initialDayISO = toLocalDateKey(baseDate);
+  const initialDayIndex = useMemo(() => {
+    return days.findIndex((d) => d.value === initialDayISO);
+  }, [days, initialDayISO]);
+
+  // HOURS: 00–23 repeated LOOP_CYCLES times
+  const hours = useMemo(() => {
+    const list: { value: string; label: string }[] = [];
+    for (let cycle = 0; cycle < LOOP_CYCLES; cycle++) {
+      for (let h = 0; h < 24; h++) {
+        const label = h.toString().padStart(2, "0");
+        list.push({
+          value: `${label}|${cycle}`,
+          label,
+        });
       }
     }
-    return result;
-  }, [baseHours]);
+    return list;
+  }, []);
 
-  const minutesData = useMemo(() => {
-    const result: { value: string; label: string }[] = [];
-    for (let cycle = 0; cycle < LOOP_REPEAT; cycle++) {
-      for (const m of baseMinutes) {
-        result.push({ value: `${m}|${cycle}`, label: m });
+  // MINUTES: 00–55 (in steps of 5) repeated LOOP_CYCLES times
+  const minutes = useMemo(() => {
+    const list: { value: string; label: string }[] = [];
+    for (let cycle = 0; cycle < LOOP_CYCLES; cycle++) {
+      for (let m = 0; m < 60; m += 5) {
+        const mm = m.toString().padStart(2, "0");
+        list.push({
+          value: `${mm}|${cycle}`,
+          label: mm,
+        });
       }
     }
-    return result;
-  }, [baseMinutes]);
+    return list;
+  }, []);
 
-  function parseInitialTime(time?: string): [string, string] {
-    if (!time) return ["12", "00"];
-    const [hh, mm] = time.split(":");
-    return [hh.padStart(2, "0"), mm.padStart(2, "0")];
-  }
+  // Initial hour/minute
+  const initialHour = padNumber2(baseDate.getHours());
+  const roundedMin = Math.round(baseDate.getMinutes() / 5) * 5;
+  const safeMin = roundedMin >= 60 ? 55 : roundedMin;
+  const initialMinute = padNumber2(safeMin);
 
-  function makeHourValue(base: string, cycle = MIDDLE_CYCLE) {
-    return `${base}|${cycle}`;
-  }
+  const initialHourIndex = hours.findIndex((h) => h.label === initialHour && h.value.endsWith(`|${MIDDLE_CYCLE}`));
+  const initialMinuteIndex = minutes.findIndex((m) => m.label === initialMinute && m.value.endsWith(`|${MIDDLE_CYCLE}`));
 
-  function makeMinuteValue(base: string, cycle = MIDDLE_CYCLE) {
-    return `${base}|${cycle}`;
-  }
+  // ───────────────────────────────────────────────────────────────
+  // STATE
+  // ───────────────────────────────────────────────────────────────
+  const [dayIndex, setDayIndex] = useState(initialDayIndex);
+  const [hourIndex, setHourIndex] = useState(initialHourIndex);
+  const [minuteIndex, setMinuteIndex] = useState(initialMinuteIndex);
 
-  const initialTimeStr = useMemo(() => {
-    if (!initialAt) return undefined;
-    const d = new Date(initialAt);
-    const hh = padNumber2(d.getHours());
-    const rawMinutes = d.getMinutes();
-    const rounded = Math.round(rawMinutes / 5) * 5;
-    const safe = rounded >= 60 ? 55 : rounded;
-    return `${hh}:${padNumber2(safe)}`;
-  }, [initialAt]);
-
-  const [initialHour, initialMinute] = parseInitialTime(initialTimeStr);
-
-  const [dayIndex, setDayIndex] = useState(DAYS_OFFSET);
-  const [hourValue, setHourValue] = useState(() => {
-    const base = baseHours.includes(initialHour) ? initialHour : baseHours[0];
-    return makeHourValue(base);
-  });
-  const [minuteValue, setMinuteValue] = useState(() => {
-    const base = baseMinutes.includes(initialMinute) ? initialMinute : baseMinutes[0];
-    return makeMinuteValue(base);
-  });
-
-  // re-sync while closed, so opening is instant with no wheel animation
+  // Resync when modal closes
   useEffect(() => {
     if (!visible) {
-      const d = initialAt ? new Date(initialAt) : new Date();
-      const hh = padNumber2(d.getHours());
-      const rawMinutes = d.getMinutes();
-      const rounded = Math.round(rawMinutes / 5) * 5;
-      const safe = rounded >= 60 ? 55 : rounded;
-      const [hhSafe, mmSafe] = parseInitialTime(`${hh}:${padNumber2(safe)}`);
-
-      const safeHour = baseHours.includes(hhSafe) ? hhSafe : baseHours[0];
-      const safeMinute = baseMinutes.includes(mmSafe) ? mmSafe : baseMinutes[0];
-
-      setDayIndex(DAYS_OFFSET);
-      setHourValue(makeHourValue(safeHour));
-      setMinuteValue(makeMinuteValue(safeMinute));
+      setDayIndex(initialDayIndex);
+      setHourIndex(initialHourIndex);
+      setMinuteIndex(initialMinuteIndex);
     }
-  }, [visible, initialAt, baseHours, baseMinutes]);
+  }, [visible, initialDayIndex, initialHourIndex, initialMinuteIndex]);
 
-  const selectedDay = days[dayIndex];
-  const selectedHour = hourValue.split("|")[0];
-  const selectedMinute = minuteValue.split("|")[0];
+  // ───────────────────────────────────────────────────────────────
+  // BUILD FINAL DATE
+  // ───────────────────────────────────────────────────────────────
 
-  // build final Date in local time from selected day+time
-  function buildSelectedDate(): Date {
-    return new Date(`${selectedDay}T${selectedHour}:${selectedMinute}:00`);
+  const selectedDayISO = days[dayIndex]?.value;
+  const selectedHour = hours[hourIndex]?.label;
+  const selectedMinute = minutes[minuteIndex]?.label;
+
+  function buildSelectedDate() {
+    return new Date(`${selectedDayISO}T${selectedHour}:${selectedMinute}:00`);
   }
+
+  // ───────────────────────────────────────────────────────────────
+  // UI
+  // ───────────────────────────────────────────────────────────────
 
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -202,85 +170,88 @@ export function DateTimeWheelPicker({
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onCancel} />
 
         <View style={styles.sheet}>
+          {/* Header — full date */}
           <Text style={styles.title}>
-            {`${getWeekDayFromDateString(selectedDay)}, `}
-            {`${getShortMonthFromDateString(selectedDay)}, `}
-            {`${getYearFromDateString(selectedDay)}`}
+            {`${getWeekDayFromDateString(selectedDayISO)}, `}
+            {`${getShortMonthFromDateString(selectedDayISO)}, `}
+            {`${getYearFromDateString(selectedDayISO)}`}
           </Text>
 
           <View style={styles.pickersRow}>
-            {/* Day */}
+            {/* DAY */}
             <View style={styles.pickerCol}>
               <WheelPicker
-                data={days.map((d) => ({
-                  value: d,
-                  label: getShortMonthFromDateString(d, true),
-                }))}
-                value={selectedDay}
-                onValueChanging={({ item: { value } }) => {
-                  setDayIndex(days.indexOf(value));
-                  playTick();
-                }}
-                enableScrollByTapOnItem
+                data={days}
+                initialIndex={dayIndex}
                 itemHeight={ITEM_HEIGHT}
-                overlayItemStyle={styles.overlayItemStyle}
-                renderOverlay={() => <OverlayItem />}
+                onChange={(val, index) => {
+                  setDayIndex(index);
+                }}
               />
             </View>
 
-            {/* Hour */}
+            {/* HOUR */}
             <View style={styles.pickerCol}>
               <WheelPicker
-                data={hoursData}
-                value={hourValue}
-                onValueChanging={({ item: { value } }) => {
-                  setHourValue(value);
-                  playTick();
-                }}
-                enableScrollByTapOnItem
+                data={hours}
+                initialIndex={hourIndex}
                 itemHeight={ITEM_HEIGHT}
-                overlayItemStyle={styles.overlayItemStyle}
-                renderOverlay={() => <OverlayItem />}
+                onChange={(_, index) => {
+                  setHourIndex(index);
+                }}
               />
             </View>
 
-            {/* Minute */}
+            {/* MINUTE */}
             <View style={styles.pickerCol}>
               <WheelPicker
-                data={minutesData}
-                value={minuteValue}
-                onValueChanging={({ item: { value } }) => {
-                  setMinuteValue(value);
-                  playTick();
-                }}
-                enableScrollByTapOnItem
+                data={minutes}
+                initialIndex={minuteIndex}
                 itemHeight={ITEM_HEIGHT}
-                overlayItemStyle={styles.overlayItemStyle}
-                renderOverlay={() => <OverlayItem />}
+                onChange={(_, index) => {
+                  setMinuteIndex(index);
+                }}
               />
             </View>
+            {/* Center selection lines */}
+            <View
+              style={{
+                backgroundColor: "#b0b0b0",
+                height: 1,
+                width: "100%",
+                position: "absolute",
+                top: "40%",
+              }}
+            />
+            <View
+              style={{
+                backgroundColor: "#b0b0b0",
+                height: 1,
+                width: "100%",
+                position: "absolute",
+                bottom: "40%",
+              }}
+            />
           </View>
 
           <View style={styles.actionsRow}>
             <Button
               title="Cancel"
               type="ghost"
-              size="md"
+              size="xl"
               uppercase
               onPress={() => {
-                mutedRef.current = true;
                 onCancel();
               }}
             />
+
             <Button
               title="Ok"
               type="ghost"
-              size="md"
+              size="xl"
               uppercase
               onPress={() => {
-                mutedRef.current = true;
-                const selectedDate = buildSelectedDate();
-                onConfirm(selectedDate.toISOString());
+                onConfirm(buildSelectedDate().toISOString());
               }}
             />
           </View>
@@ -290,39 +261,9 @@ export function DateTimeWheelPicker({
   );
 }
 
-function OverlayItem() {
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        backgroundColor: "transparent",
-        height: "100%",
-        width: 120,
-        position: "relative",
-      }}
-    >
-      <View
-        style={{
-          backgroundColor: "#d1d5db",
-          height: 1,
-          width: "100%",
-          position: "absolute",
-          top: "42%",
-        }}
-      />
-      <View
-        style={{
-          backgroundColor: "#d1d5db",
-          height: 1,
-          width: "100%",
-          position: "absolute",
-          bottom: "42%",
-        }}
-      />
-    </View>
-  );
-}
-
+// ───────────────────────────────────────────────────────────────
+// STYLES
+// ───────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
@@ -344,20 +285,16 @@ const styles = StyleSheet.create({
   pickersRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
     marginHorizontal: 8,
-    marginTop: 4,
+    marginTop: 6,
   },
   pickerCol: {
     flex: 1,
     alignItems: "center",
   },
-  overlayItemStyle: {
-    backgroundColor: "transparent",
-  },
   actionsRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "space-around",
     marginTop: 16,
     gap: 8,
   },
