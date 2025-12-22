@@ -24,7 +24,7 @@ function RootNavigator() {
   return (
     <Stack
       screenOptions={{
-        animation: 'none',
+        animation: 'slide_from_right',
         headerRight: () => <HeaderProfileButton />,
         headerStyle: { backgroundColor: '#fff' },
         headerTitleAlign: 'center',
