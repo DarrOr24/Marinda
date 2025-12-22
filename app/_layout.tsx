@@ -36,7 +36,6 @@ function RootNavigator() {
           name="index"
           options={{
             headerBackVisible: false,
-            headerLeft: () => null,
             headerTitle: accountTitle,
             headerShadowVisible: false,
           }}
@@ -46,7 +45,6 @@ function RootNavigator() {
           name="profile/[id]"
           options={{
             headerBackVisible: false,
-            headerLeft: () => null,
             headerTitle: accountTitle,
             headerShadowVisible: false,
           }}
