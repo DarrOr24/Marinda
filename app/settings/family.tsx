@@ -12,6 +12,7 @@ import {
 import { FamilyAvatar } from '@/components/avatar/family-avatar'
 import { ProfileAvatar } from '@/components/avatar/profile-avatar'
 import { ChipSelector } from '@/components/chip-selector'
+import { ShareButton } from '@/components/share-button'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import {
   useFamily,
@@ -166,16 +167,29 @@ export default function FamilySettingsScreen() {
           <Text style={styles.codeValue}>
             {familyData?.code ?? '— — — — — —'}
           </Text>
-          <Pressable
-            style={styles.rotateButton}
-            onPress={handleRotateCode}
-            disabled={rotateCode.isPending}
-          >
-            <Text style={styles.rotateButtonText}>
-              {rotateCode.isPending ? 'Rotating…' : 'Rotate'}
-            </Text>
-          </Pressable>
+
+          <View style={styles.codeActionsRow}>
+            {/* Share */}
+            <ShareButton
+              shareMessage={`Join our family on Marinda! Use this family code: ${familyData?.code}`}
+              shareTitle="Share family code"
+              buttonTitle="Share"
+              disabled={!familyData?.code}
+            />
+
+            {/* Rotate */}
+            <Pressable
+              style={styles.rotateButton}
+              onPress={handleRotateCode}
+              disabled={rotateCode.isPending}
+            >
+              <Text style={styles.rotateButtonText}>
+                {rotateCode.isPending ? 'Rotating…' : 'Rotate'}
+              </Text>
+            </Pressable>
+          </View>
         </View>
+
         <Text style={styles.codeHint}>
           Kids can go to “Join with Code” and enter this code. You can rotate it
           anytime.
@@ -236,7 +250,7 @@ export default function FamilySettingsScreen() {
                   <ChipSelector
                     options={ROLE_OPTIONS}
                     value={m.role}
-                    onChange={(value: string) => handleChangeRole(m, value as Role)}
+                    onChange={(value: string | null) => handleChangeRole(m, value as Role)}
                     style={styles.roleChipsRow}
                   />
                 </View>
@@ -295,6 +309,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  codeActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   codeValue: {
     fontSize: 20,

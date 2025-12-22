@@ -5,6 +5,7 @@ import {
   StyleProp,
   StyleSheet,
   Text,
+  View,
   ViewStyle,
   useColorScheme,
 } from 'react-native';
@@ -31,6 +32,10 @@ type ButtonProps = {
   fullWidth?: boolean;
   showShadow?: boolean;
   style?: StyleProp<ViewStyle>;
+  leftIcon?: React.ReactElement;
+  leftIconColor?: string;
+  rightIcon?: React.ReactElement;
+  rightIconColor?: string;
 };
 
 export function Button({
@@ -44,6 +49,10 @@ export function Button({
   fullWidth = false,
   showShadow = false,
   style,
+  leftIcon,
+  leftIconColor,
+  rightIcon,
+  rightIconColor,
 }: ButtonProps) {
   const scheme = useColorScheme();
   const theme = scheme === 'dark' ? Colors.dark : Colors.light;
@@ -68,6 +77,32 @@ export function Button({
           ? styles.textXl
           : styles.textMd;
 
+  const textColor = (typeStyles.text && typeStyles.text.color) || '#000';
+  const resolvedLeftIconColor = leftIconColor ?? textColor;
+  const resolvedRightIconColor = rightIconColor ?? textColor;
+
+  const renderLeftIcon = () => {
+    if (!leftIcon) return null;
+    return React.cloneElement(leftIcon as any, {
+      color: resolvedLeftIconColor,
+      style: [
+        (leftIcon as any).props?.style,
+        { color: resolvedLeftIconColor },
+      ],
+    });
+  };
+
+  const renderRightIcon = () => {
+    if (!rightIcon) return null;
+    return React.cloneElement(rightIcon as any, {
+      color: resolvedRightIconColor,
+      style: [
+        (rightIcon as any).props?.style,
+        { color: resolvedRightIconColor },
+      ],
+    });
+  };
+
   return (
     <Pressable
       onPress={disabled ? undefined : onPress}
@@ -84,17 +119,23 @@ export function Button({
         style,
       ]}
     >
-      <Text
-        style={[
-          styles.text,
-          sizeTextStyle,
-          typeStyles.text,
-          bold && styles.textBold,
-          uppercase && styles.uppercase,
-        ]}
-      >
-        {title}
-      </Text>
+      <View style={styles.contentRow}>
+        {leftIcon && renderLeftIcon()}
+
+        <Text
+          style={[
+            styles.text,
+            sizeTextStyle,
+            typeStyles.text,
+            bold && styles.textBold,
+            uppercase && styles.uppercase,
+          ]}
+        >
+          {title}
+        </Text>
+
+        {rightIcon && renderRightIcon()}
+      </View>
     </Pressable>
   );
 }
@@ -115,12 +156,8 @@ function getTypeStyles(type: ButtonType, theme: any) {
 
     case 'ghost':
       return {
-        button: {
-          backgroundColor: 'transparent',
-        },
-        text: {
-          color: theme.ghostText ?? theme.primaryBackground,
-        },
+        button: { backgroundColor: 'transparent' },
+        text: { color: theme.ghostText },
       };
 
     case 'outline':
@@ -128,11 +165,9 @@ function getTypeStyles(type: ButtonType, theme: any) {
         button: {
           backgroundColor: 'transparent',
           borderWidth: 1,
-          borderColor: theme.outlineBorder ?? theme.primaryBackground,
+          borderColor: theme.outlineBorder,
         },
-        text: {
-          color: theme.outlineText ?? theme.primaryBackground,
-        },
+        text: { color: theme.outlineText },
       };
 
     case 'danger':
@@ -154,6 +189,13 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  contentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
 
   sizeSm: { paddingHorizontal: 10, paddingVertical: 6 },
