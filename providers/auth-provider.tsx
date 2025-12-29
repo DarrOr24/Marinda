@@ -6,11 +6,10 @@ import { Linking, Platform } from 'react-native'
 
 import { AuthContext, Membership } from '@/hooks/use-auth-context'
 import { appStorage } from '@/lib/app-storage'
+import { IdentifierInfo, parseIdentifier, requestOtp, verifyOtp } from '@/lib/auth/auth.service'
 import { fetchMember } from '@/lib/families/families.api'
 import { Member } from '@/lib/families/families.types'
 import { getSupabase } from '@/lib/supabase'
-import { SignUpDetails } from './signup-flow-provider'
-
 
 const ACTIVE_FAMILY_KEY = 'marinda:activeFamilyId'
 
@@ -32,7 +31,10 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     } catch { }
   }, [])
 
-  // Fetch the session once, and subscribe to auth state changes
+  // NEW: identifier currently in OTP flow
+  const [pendingIdentifier, setPendingIdentifier] = useState<IdentifierInfo | null>(null)
+
+  // Fetch session once and subscribe to auth state changes
   useEffect(() => {
     const init = async () => {
       setIsLoading(true)
@@ -43,11 +45,13 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     }
     init()
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s)
+    })
     return () => sub.subscription.unsubscribe()
   }, [supabase])
 
-  // Native deep linking support
+  // Native deep linking support (for OAuth / magic link; can stay for future Google login)
   useEffect(() => {
     if (Platform.OS === 'web') return
     const handleUrl = async (url: string | null) => {
@@ -79,16 +83,18 @@ export default function AuthProvider({ children }: PropsWithChildren) {
 
       if (error) throw new Error(error.message)
 
-      setMemberships(data.map((m: any) => ({
-        familyId: m.family.id,
-        familyName: m.family.name,
-        familyCode: m.family.code,
-      })) as unknown as Membership[])
+      setMemberships(
+        data.map((m: any) => ({
+          familyId: m.family.id,
+          familyName: m.family.name,
+          familyCode: m.family.code,
+        })) as unknown as Membership[],
+      )
     }
     fetchMemberships()
   }, [session, supabase])
 
-  // Fetch the member when the session changes
+  // Fetch the member when the session or active family changes
   useEffect(() => {
     setIsLoading(true)
 
@@ -144,42 +150,41 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     restoreActiveFamilyOrRoute()
   }, [session, memberships, router])
 
-  const signInWithEmailPassword = useCallback(
-    async (email: string, password: string) => {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      if (error) {
-        console.error('Error logging in:', error)
-        throw error
+  const startAuth = useCallback(
+    async (rawIdentifier: string) => {
+      const identifier = parseIdentifier(rawIdentifier)
+      const res = await requestOtp(identifier)
+      if (!res.ok) {
+        return {
+          ok: false,
+          error: res.error ?? 'Could not start login. Please try again.',
+          needsPhoneInstead: !!res.canCreateWithPhoneInstead,
+        }
       }
 
-      setSession(data.session ?? null)
-      return data.session
+      setPendingIdentifier(identifier)
+      return { ok: true, error: undefined, needsPhoneInstead: false }
     },
-    [supabase]
+    [],
   )
 
-  const signUpWithEmailPassword = useCallback(
-    async (email: string, password: string, details: SignUpDetails) => {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: details ?? {} }
-      })
-      if (error) {
-        console.error('Error signing up:', error)
-        throw error
+  const confirmOtp = useCallback(
+    async (code: string) => {
+      if (!pendingIdentifier) {
+        return { ok: false, error: 'No login in progress' }
       }
 
-      setSession(data.session ?? null)
-      return data.session ?? null
-    },
-    [supabase]
-  )
+      const res = await verifyOtp(pendingIdentifier, code)
+      if (!res.ok) {
+        return { ok: false, error: res.error ?? 'Invalid code' }
+      }
 
+      // Session is now valid; our auth listener will update `session`
+      setPendingIdentifier(null)
+      return { ok: true, error: undefined }
+    },
+    [pendingIdentifier],
+  )
 
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut()
@@ -189,7 +194,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     }
     setSession(null)
     setActiveFamilyId(null)
-  }, [supabase])
+  }, [supabase, setActiveFamilyId])
 
   const value = useMemo(
     () => ({
@@ -198,18 +203,26 @@ export default function AuthProvider({ children }: PropsWithChildren) {
       memberships,
       isLoading,
       isLoggedIn: !!session,
-      signInWithEmailPassword,
-      signUpWithEmailPassword,
+      pendingIdentifier,
+      startAuth,
+      confirmOtp,
       signOut,
       activeFamilyId,
       setActiveFamilyId,
     }),
-    [session, member, memberships, isLoading, activeFamilyId, signInWithEmailPassword, signUpWithEmailPassword, signOut, setActiveFamilyId]
+    [
+      session,
+      member,
+      memberships,
+      isLoading,
+      pendingIdentifier,
+      startAuth,
+      confirmOtp,
+      activeFamilyId,
+      signOut,
+      setActiveFamilyId,
+    ],
   )
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

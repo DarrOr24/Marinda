@@ -1,8 +1,9 @@
+// hooks/use-auth-context.tsx
 import { Session } from '@supabase/supabase-js'
 import { createContext, useContext } from 'react'
 
+import type { IdentifierInfo } from '@/lib/auth/auth.service'
 import { Member } from '@/lib/families/families.types'
-import { SignUpDetails } from '@/providers/signup-flow-provider'
 
 
 export type Membership = {
@@ -17,8 +18,9 @@ export type AuthData = {
   memberships: Membership[] | null
   isLoading: boolean
   isLoggedIn: boolean
-  signInWithEmailPassword: (email: string, password: string) => Promise<Session | null>
-  signUpWithEmailPassword: (email: string, password: string, details: SignUpDetails) => Promise<Session | null>
+  pendingIdentifier: IdentifierInfo | null
+  startAuth: (rawIdentifier: string) => Promise<{ ok: boolean; error?: string; needsPhoneInstead?: boolean }>
+  confirmOtp: (code: string) => Promise<{ ok: boolean; error?: string }>
   signOut: () => Promise<void>
   activeFamilyId: string | null
   setActiveFamilyId: (id: string | null) => Promise<void>
@@ -30,8 +32,9 @@ export const AuthContext = createContext<AuthData>({
   memberships: null,
   isLoading: true,
   isLoggedIn: false,
-  signInWithEmailPassword: async () => null,
-  signUpWithEmailPassword: async () => null,
+  pendingIdentifier: null,
+  startAuth: async () => ({ ok: false, error: 'Not implemented' }),
+  confirmOtp: async () => ({ ok: false, error: 'Not implemented' }),
   signOut: async () => { },
   activeFamilyId: null,
   setActiveFamilyId: async () => { },
