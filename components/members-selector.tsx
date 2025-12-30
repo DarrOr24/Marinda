@@ -43,9 +43,9 @@ export type MembersSelectorProps =
 
 export function MembersSelector(props: MembersSelectorProps) {
   const { activeFamilyId } = useAuthContext() as any
-  const { members } = useFamily(activeFamilyId)
+  const { familyMembers } = useFamily(activeFamilyId)
 
-  const memberList: Member[] = members.data ?? []
+  const memberList: Member[] = familyMembers.data ?? []
 
   const options = useMemo<ChipOption[]>(
     () =>
@@ -67,7 +67,7 @@ export function MembersSelector(props: MembersSelectorProps) {
     return map
   }, [memberList])
 
-  if (members.isLoading || members.isFetching) {
+  if (familyMembers.isLoading || familyMembers.isFetching) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator />

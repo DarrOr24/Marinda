@@ -61,20 +61,20 @@ export function useJoinFamily(defaultRole: Role = 'ADULT') {
   })
 }
 
-export function useFamily(familyId?: string) {
+export function useFamily(familyId: string) {
   const family = useQuery({
     queryKey: ['family', familyId],
-    queryFn: () => fetchFamily(familyId!),
-    enabled: !!familyId,            // ⬅ important!
+    queryFn: () => fetchFamily(familyId),
+    enabled: !!familyId,
   })
 
-  const members = useQuery({
+  const familyMembers = useQuery({
     queryKey: ['family-members', familyId],
-    queryFn: () => fetchFamilyMembers(familyId!),
-    enabled: !!familyId,            // ⬅ important!
+    queryFn: () => fetchFamilyMembers(familyId),
+    enabled: !!familyId,
   })
 
-  return { family, members }
+  return { family, familyMembers }
 }
 
 export function useUpdateMemberRole(familyId: string) {

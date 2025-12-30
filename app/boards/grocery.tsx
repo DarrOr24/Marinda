@@ -60,16 +60,16 @@ const shortId = (id?: string) =>
 export default function Grocery() {
     const { activeFamilyId, member, family, members } = useAuthContext() as any;
 
-    const { members: membersQuery } = useFamily(activeFamilyId || undefined);
+    const { familyMembers } = useFamily(activeFamilyId);
     useSubscribeTableByFamily(
         "family_members",
-        activeFamilyId || undefined,
+        activeFamilyId,
         ["family-members", activeFamilyId]
     );
 
     // memberId → first name
     const nameForId = useMemo(() => {
-        const list = (membersQuery?.data ?? members?.data ?? members ?? family?.members ?? []) as any[];
+        const list = (familyMembers?.data ?? members?.data ?? members ?? family?.members ?? []) as any[];
         const map: Record<string, string> = {};
 
         for (const m of list) {
@@ -88,7 +88,7 @@ export default function Grocery() {
         }
 
         return (id?: string) => (id ? map[id] || shortId(id) : "—");
-    }, [membersQuery?.data, members, family]);
+    }, [familyMembers?.data, family]);
 
     // ───────────────────────────────────────────────────────
     // STATE

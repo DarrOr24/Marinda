@@ -17,12 +17,12 @@ export default function MemberSidebar() {
   const router = useRouter()
   const pathname = usePathname()
   const { activeFamilyId } = useAuthContext()
-  const { members } = useFamily(activeFamilyId || undefined)
+  const { familyMembers } = useFamily(activeFamilyId as string)
 
   const { member: currentUser } = useAuthContext()
 
   // Realtime updates for this family
-  useSubscribeTableByFamily('family_members', activeFamilyId || undefined, ['family-members', activeFamilyId])
+  useSubscribeTableByFamily('family_members', activeFamilyId as string, ['family-members', activeFamilyId])
 
   // Empty state: no family selected
   if (!activeFamilyId) {
@@ -34,7 +34,7 @@ export default function MemberSidebar() {
   }
 
   // Loading state
-  if (members.isLoading) {
+  if (familyMembers.isLoading) {
     return (
       <View style={styles.wrapper}>
         <ActivityIndicator />
@@ -44,8 +44,8 @@ export default function MemberSidebar() {
   }
 
   // Error state
-  if (members.isError) {
-    console.error('Failed to load members', members.error)
+  if (familyMembers.isError) {
+    console.error('Failed to load members', familyMembers.error)
     return (
       <View style={styles.wrapper}>
         <Text style={styles.error}>Failed to load members</Text>
@@ -54,7 +54,7 @@ export default function MemberSidebar() {
   }
 
   // Raw list
-  let membersData: Member[] = members.data ?? []
+  let membersData: Member[] = familyMembers.data ?? []
   if (!membersData.length) {
     return (
       <View style={styles.wrapper}>

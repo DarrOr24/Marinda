@@ -35,7 +35,7 @@ import { isKidRole, isParentRole } from '@/utils/validation.utils';
 export default function MemberProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { activeFamilyId, member } = useAuthContext() as any;
-  const { members } = useFamily(activeFamilyId || undefined);
+  const { familyMembers } = useFamily(activeFamilyId);
 
   const [history, setHistory] = useState<PointsEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -50,19 +50,19 @@ export default function MemberProfile() {
   const isParent = isParentRole(currentRole);
   const adminMemberId: string | undefined = (member as any)?.id;
 
-  const memberList = members.data ?? [];
+  const memberList = familyMembers.data ?? [];
   const current = memberList.find((m) => m.id === id);
   const points = (current as any)?.points ?? 0;
 
-  useSubscribeTableByFamily('family_members', activeFamilyId ?? undefined, [
+  useSubscribeTableByFamily('family_members', activeFamilyId, [
     'family-members',
     activeFamilyId,
   ]);
 
   // 🔄 Always refetch members when entering this screen or switching profile
   useEffect(() => {
-    if (activeFamilyId && members?.refetch) {
-      members.refetch();
+    if (activeFamilyId && familyMembers?.refetch) {
+      familyMembers.refetch();
     }
   }, [activeFamilyId, id]);
 
@@ -144,7 +144,7 @@ export default function MemberProfile() {
       setAdjustDelta('');
       setAdjustReason('');
 
-      if (members?.refetch) members.refetch();
+      if (familyMembers?.refetch) familyMembers.refetch();
       const rows = await fetchMemberPointsHistory(activeFamilyId, id);
       setHistory(rows);
 
@@ -181,7 +181,7 @@ export default function MemberProfile() {
     );
   }
 
-  if (members.isLoading) {
+  if (familyMembers.isLoading) {
     return (
       <View style={[styles.screen, styles.centerOnly]}>
         <ActivityIndicator />
@@ -190,7 +190,7 @@ export default function MemberProfile() {
     );
   }
 
-  if (members.isError) {
+  if (familyMembers.isError) {
     return (
       <View style={[styles.screen, styles.centerOnly]}>
         <Text style={styles.subtitle}>Failed to load members</Text>

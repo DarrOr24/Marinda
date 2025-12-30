@@ -51,9 +51,9 @@ export default function WishList() {
 
     const router = useRouter();
 
-    const { members } = useFamily(activeFamilyId || undefined);
+    const { familyMembers } = useFamily(activeFamilyId);
 
-    useSubscribeTableByFamily("wishlist_items", activeFamilyId || undefined, [
+    useSubscribeTableByFamily("wishlist_items", activeFamilyId, [
         "wishlist",
         activeFamilyId,
     ]);
@@ -62,15 +62,15 @@ export default function WishList() {
         data: wishlist = [],
         isLoading: wishlistLoading,
         isError: wishlistError,
-    } = useWishlist(activeFamilyId || undefined);
+    } = useWishlist(activeFamilyId);
 
-    const addItem = useAddWishlistItem(activeFamilyId || undefined);
-    const deleteItem = useDeleteWishlistItem(activeFamilyId || undefined);
-    const markPurchased = useMarkWishlistPurchased(activeFamilyId || undefined);
-    const updateWishlistItem = useUpdateWishlistItem(activeFamilyId || undefined);
+    const addItem = useAddWishlistItem(activeFamilyId);
+    const deleteItem = useDeleteWishlistItem(activeFamilyId);
+    const markPurchased = useMarkWishlistPurchased(activeFamilyId);
+    const updateWishlistItem = useUpdateWishlistItem(activeFamilyId);
 
     // -------- member selection logic (for parents) --------
-    const memberList = members.data ?? [];
+    const memberList = familyMembers.data ?? [];
     const kids = memberList.filter(
         (m: any) => m.role === "CHILD" || m.role === "TEEN"
     );
@@ -242,7 +242,7 @@ export default function WishList() {
         );
     }
 
-    if (members.isLoading || wishlistLoading) {
+    if (familyMembers.isLoading || wishlistLoading) {
         return (
             <SafeAreaView style={styles.centerScreen}>
                 <ActivityIndicator />
@@ -251,7 +251,7 @@ export default function WishList() {
         );
     }
 
-    if (members.isError || wishlistError) {
+    if (familyMembers.isError || wishlistError) {
         return (
             <SafeAreaView style={styles.centerScreen}>
                 <Text style={styles.muted}>Failed to load wish list.</Text>

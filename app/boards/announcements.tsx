@@ -75,17 +75,17 @@ export default function AnnouncementsBoard() {
     // --------------------------------------------
     // Load Members
     // --------------------------------------------
-    const { members: membersQuery } = useFamily(familyId);
+    const { familyMembers } = useFamily(familyId);
     useSubscribeTableByFamily('family_members', familyId, ['family-members', familyId]);
 
     const rawMembers: any[] = useMemo(
         () =>
-            (membersQuery?.data ??
+            (familyMembers?.data ??
                 members?.data ??
                 members ??
                 family?.members ??
                 []) as any[],
-        [membersQuery?.data, members, family]
+        [familyMembers?.data, members, family]
     );
 
     const nameForId = useMemo(() => {

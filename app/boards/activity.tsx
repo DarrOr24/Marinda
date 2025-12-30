@@ -80,7 +80,7 @@ function formatTimeFromIso(iso: string) {
 export default function ActivityBoard() {
   const today = new Date();
   const { member, activeFamilyId } = useAuthContext() as any;
-  const { members: familyMembers } = useFamily(activeFamilyId);
+  const { familyMembers } = useFamily(activeFamilyId);
 
   const [weekOffset, setWeekOffset] = useState<number>(0);
   const [addOpen, setAddOpen] = useState(false);

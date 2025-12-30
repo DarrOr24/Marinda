@@ -94,7 +94,7 @@ export default function Chores() {
   const currentRole = (member?.role as Role) ?? 'TEEN';
 
   // hydrate family + members via React Query
-  const { members: membersQuery } = useFamily(activeFamilyId || undefined);
+  const { familyMembers } = useFamily(activeFamilyId || undefined);
   useSubscribeTableByFamily('family_members', activeFamilyId || undefined, [
     'family-members',
     activeFamilyId,
@@ -114,8 +114,8 @@ export default function Chores() {
   // Unified raw members list
   const rawMembers: any[] = useMemo(
     () =>
-      (membersQuery?.data ?? members?.data ?? members ?? family?.members ?? []) as any[],
-    [membersQuery?.data, members, family]
+      (familyMembers?.data ?? members?.data ?? members ?? family?.members ?? []) as any[],
+    [familyMembers?.data, members, family]
   );
 
   // Build a stable resolver: family_member_id -> display name
