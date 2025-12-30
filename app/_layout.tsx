@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AuthRouter } from '@/components/auth-router';
 import HeaderProfileButton from '@/components/header-profile-button';
 import { SplashScreenController } from '@/components/splash-screen-controller';
 import { useAuthContext } from '@/hooks/use-auth-context';
@@ -97,6 +98,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <Providers>
         <SplashScreenController />
+        <AuthRouter />
         <RootNavigator />
         <StatusBar style="dark" translucent={false} backgroundColor="#fff" />
       </Providers>

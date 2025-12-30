@@ -65,7 +65,16 @@ export async function requestOtp(
   })
 
   if (error) {
-    // Most likely: no user with this email.
+    const msg = (error.message || '').toLowerCase()
+
+    if (msg.includes('signup')) {
+      return {
+        ok: false,
+        error: 'No account found with this email. Try your phone number instead, or create an account with your phone first.',
+        canCreateWithPhoneInstead: true,
+      }
+    }
+
     return {
       ok: false,
       error: error.message,

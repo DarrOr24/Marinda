@@ -1,9 +1,11 @@
 // app/select-family.tsx
 import { useAuthContext } from '@/hooks/use-auth-context'
+import { useRouter } from 'expo-router'
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 export default function SelectFamilyScreen() {
   const { memberships, setActiveFamilyId, isLoading } = useAuthContext()
+  const router = useRouter()
 
   if (isLoading || !memberships) {
     return (
@@ -17,23 +19,31 @@ export default function SelectFamilyScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Choose your family</Text>
+
       <FlatList
         data={memberships}
         keyExtractor={(m) => m.familyId}
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.card}
-            onPress={() => setActiveFamilyId(item.familyId)}
+            onPress={async () => {
+              await setActiveFamilyId(item.familyId)
+              router.replace('/')
+            }}
           >
             <Text style={styles.name}>{item.familyName}</Text>
           </TouchableOpacity>
         )}
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
       />
+
       <View style={{ marginTop: 24 }}>
         <Text style={styles.sub}>Or start/join another family</Text>
         <View style={{ height: 10 }} />
-        <TouchableOpacity style={styles.altBtn} onPress={() => location.assign('/onboarding')}>
+        <TouchableOpacity
+          style={styles.altBtn}
+          onPress={() => router.push('/onboarding')}
+        >
           <Text style={styles.altBtnText}>Create / Join</Text>
         </TouchableOpacity>
       </View>

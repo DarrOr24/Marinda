@@ -22,8 +22,9 @@ export default function AuthProvider({ children }: PropsWithChildren) {
   const [isSessionLoading, setIsSessionLoading] = useState(true)
   const [isMembershipsLoading, setIsMembershipsLoading] = useState(false)
   const [isMemberLoading, setIsMemberLoading] = useState(false)
+  const [isResolvingFamily, setIsResolvingFamily] = useState(false)
 
-  const isLoading = isSessionLoading || isMembershipsLoading || isMemberLoading
+  const isLoading = isSessionLoading || isMembershipsLoading || isMemberLoading || isResolvingFamily
 
   const [activeFamilyId, _setActiveFamilyId] = useState<string | null>(null)
   const setActiveFamilyId = useCallback(async (id: string | null) => {
@@ -119,24 +120,30 @@ export default function AuthProvider({ children }: PropsWithChildren) {
       }
       if (!memberships) return
 
-      if (memberships.length === 0) {
+      setIsResolvingFamily(true)
+      try {
+        if (memberships.length === 0) {
+          _setActiveFamilyId(null)
+          return
+        }
+
+        const stored = await appStorage.getItem(ACTIVE_FAMILY_KEY)
+        const isStillMember = stored ? memberships.some(m => m.familyId === stored) : false
+
+        if (stored && isStillMember) {
+          _setActiveFamilyId(stored)
+          return
+        }
+
+        if (memberships.length === 1) {
+          await setActiveFamilyId(memberships[0].familyId)
+          return
+        }
+
         _setActiveFamilyId(null)
-        return
+      } finally {
+        setIsResolvingFamily(false)
       }
-
-      const stored = await appStorage.getItem(ACTIVE_FAMILY_KEY)
-      const isStillMember = stored ? memberships.some(m => m.familyId === stored) : false
-      if (stored && isStillMember) {
-        _setActiveFamilyId(stored)
-        return
-      }
-
-      if (memberships.length === 1) {
-        await setActiveFamilyId(memberships[0].familyId)
-        return
-      }
-
-      _setActiveFamilyId(null)
     }
 
     restoreActiveFamily()
