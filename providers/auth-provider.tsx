@@ -1,6 +1,5 @@
 // providers/auth-provider.tsx
 import type { Session } from '@supabase/supabase-js'
-import { useRouter } from 'expo-router'
 import { PropsWithChildren, useCallback, useEffect, useMemo, useState } from 'react'
 import { Linking, Platform } from 'react-native'
 
@@ -15,12 +14,16 @@ const ACTIVE_FAMILY_KEY = 'marinda:activeFamilyId'
 
 export default function AuthProvider({ children }: PropsWithChildren) {
   const supabase = getSupabase()
-  const router = useRouter()
 
   const [session, setSession] = useState<Session | null>(null)
   const [member, setMember] = useState<Member | null>(null)
   const [memberships, setMemberships] = useState<Membership[] | null>(null)
-  const [isLoading, setIsLoading] = useState<boolean>(true)
+
+  const [isSessionLoading, setIsSessionLoading] = useState(true)
+  const [isMembershipsLoading, setIsMembershipsLoading] = useState(false)
+  const [isMemberLoading, setIsMemberLoading] = useState(false)
+
+  const isLoading = isSessionLoading || isMembershipsLoading || isMemberLoading
 
   const [activeFamilyId, _setActiveFamilyId] = useState<string | null>(null)
   const setActiveFamilyId = useCallback(async (id: string | null) => {
@@ -31,17 +34,19 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     } catch { }
   }, [])
 
-  // NEW: identifier currently in OTP flow
   const [pendingIdentifier, setPendingIdentifier] = useState<IdentifierInfo | null>(null)
 
   // Fetch session once and subscribe to auth state changes
   useEffect(() => {
     const init = async () => {
-      setIsLoading(true)
-      const { data, error } = await supabase.auth.getSession()
-      if (error) console.error('Error fetching session:', error)
-      setSession(data.session ?? null)
-      setIsLoading(false)
+      setIsSessionLoading(true)
+      try {
+        const { data, error } = await supabase.auth.getSession()
+        if (error) console.error('Error fetching session:', error)
+        setSession(data.session ?? null)
+      } finally {
+        setIsSessionLoading(false)
+      }
     }
     init()
 
@@ -51,7 +56,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     return () => sub.subscription.unsubscribe()
   }, [supabase])
 
-  // Native deep linking support (for OAuth / magic link; can stay for future Google login)
+  // Native deep linking support (for OAuth / magic link)
   useEffect(() => {
     if (Platform.OS === 'web') return
     const handleUrl = async (url: string | null) => {
@@ -72,128 +77,125 @@ export default function AuthProvider({ children }: PropsWithChildren) {
         setMemberships(null)
         return
       }
-      const { data, error } = await supabase
-        .from('family_members')
-        .select(`
-          family_id,
-          family:families( id, name, code )
-        `)
-        .eq('profile_id', session.user.id)
-        .order('joined_at', { ascending: true })
 
-      if (error) throw new Error(error.message)
+      setIsMembershipsLoading(true)
+      try {
+        const { data, error } = await supabase
+          .from('family_members')
+          .select(`
+            family_id,
+            family:families( id, name, code )
+          `)
+          .eq('profile_id', session.user.id)
+          .order('joined_at', { ascending: true })
 
-      setMemberships(
-        data.map((m: any) => ({
-          familyId: m.family.id,
-          familyName: m.family.name,
-          familyCode: m.family.code,
-        })) as unknown as Membership[],
-      )
+        if (error) throw new Error(error.message)
+
+        setMemberships(
+          (data ?? []).map((m: any) => ({
+            familyId: m.family.id,
+            familyName: m.family.name,
+            familyCode: m.family.code,
+          })) as Membership[],
+        )
+      } catch (e) {
+        console.error('Error fetching memberships:', e)
+        setMemberships([]) // optional: treat as none, or keep null
+      } finally {
+        setIsMembershipsLoading(false)
+      }
     }
+
     fetchMemberships()
   }, [session, supabase])
 
-  // Fetch the member when the session or active family changes
-  useEffect(() => {
-    setIsLoading(true)
-
-    const fetchCurrMember = async () => {
-      if (session && activeFamilyId) {
-        const member = await fetchMember(activeFamilyId, session.user.id)
-        setMember(member)
-      } else {
-        setMember(null)
-      }
-      setIsLoading(false)
-    }
-
-    fetchCurrMember()
-  }, [session, activeFamilyId, supabase])
-
   // Restore or auto-pick active family on login
   useEffect(() => {
-    const restoreActiveFamilyOrRoute = async () => {
+    const restoreActiveFamily = async () => {
       if (!session?.user) {
         _setActiveFamilyId(null)
         await appStorage.removeItem(ACTIVE_FAMILY_KEY)
         return
       }
-
       if (!memberships) return
 
-      // 1) No memberships found, route to onboarding
       if (memberships.length === 0) {
         _setActiveFamilyId(null)
-        router.replace('/onboarding')
         return
       }
 
-      // 2) Try to restore active family from storage
       const stored = await appStorage.getItem(ACTIVE_FAMILY_KEY)
-      if (stored) {
+      const isStillMember = stored ? memberships.some(m => m.familyId === stored) : false
+      if (stored && isStillMember) {
         _setActiveFamilyId(stored)
         return
       }
 
-      // 3) If there's only one membership, set it as active
       if (memberships.length === 1) {
-        const only = memberships[0].familyId
-        await setActiveFamilyId(only)
+        await setActiveFamilyId(memberships[0].familyId)
         return
       }
 
       _setActiveFamilyId(null)
-      router.replace('/select-family')
     }
 
-    restoreActiveFamilyOrRoute()
-  }, [session, memberships, router])
+    restoreActiveFamily()
+  }, [session, memberships, setActiveFamilyId])
 
-  const startAuth = useCallback(
-    async (rawIdentifier: string) => {
-      const identifier = parseIdentifier(rawIdentifier)
-      const res = await requestOtp(identifier)
-      if (!res.ok) {
-        return {
-          ok: false,
-          error: res.error ?? 'Could not start login. Please try again.',
-          needsPhoneInstead: !!res.canCreateWithPhoneInstead,
-        }
+  // Fetch the member when the session or active family changes
+  useEffect(() => {
+    const fetchCurrMember = async () => {
+      if (!session?.user || !activeFamilyId) {
+        setMember(null)
+        return
       }
 
-      setPendingIdentifier(identifier)
-      return { ok: true, error: undefined, needsPhoneInstead: false }
-    },
-    [],
-  )
-
-  const confirmOtp = useCallback(
-    async (code: string) => {
-      if (!pendingIdentifier) {
-        return { ok: false, error: 'No login in progress' }
+      setIsMemberLoading(true)
+      try {
+        const m = await fetchMember(activeFamilyId, session.user.id)
+        setMember(m)
+      } catch (e) {
+        console.error('Error fetching member:', e)
+        setMember(null)
+      } finally {
+        setIsMemberLoading(false)
       }
+    }
 
-      const res = await verifyOtp(pendingIdentifier, code)
-      if (!res.ok) {
-        return { ok: false, error: res.error ?? 'Invalid code' }
+    fetchCurrMember()
+  }, [session, activeFamilyId])
+
+  const startAuth = useCallback(async (rawIdentifier: string) => {
+    const identifier = parseIdentifier(rawIdentifier)
+    const res = await requestOtp(identifier)
+    if (!res.ok) {
+      return {
+        ok: false,
+        error: res.error ?? 'Could not start login. Please try again.',
+        needsPhoneInstead: !!res.canCreateWithPhoneInstead,
       }
+    }
 
-      // Session is now valid; our auth listener will update `session`
-      setPendingIdentifier(null)
-      return { ok: true, error: undefined }
-    },
-    [pendingIdentifier],
-  )
+    setPendingIdentifier(identifier)
+    return { ok: true, error: undefined, needsPhoneInstead: false }
+  }, [])
+
+  const confirmOtp = useCallback(async (code: string) => {
+    if (!pendingIdentifier) return { ok: false, error: 'No login in progress' }
+
+    const res = await verifyOtp(pendingIdentifier, code)
+    if (!res.ok) return { ok: false, error: res.error ?? 'Invalid code' }
+
+    setPendingIdentifier(null)
+    return { ok: true, error: undefined }
+  }, [pendingIdentifier])
 
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut()
-    if (error) {
-      console.error('Error signing out:', error)
-      throw error
-    }
-    setSession(null)
-    setActiveFamilyId(null)
+    if (error) throw error
+    await setActiveFamilyId(null)
+    setMember(null)
+    setMemberships(null)
   }, [supabase, setActiveFamilyId])
 
   const value = useMemo(
@@ -218,8 +220,8 @@ export default function AuthProvider({ children }: PropsWithChildren) {
       pendingIdentifier,
       startAuth,
       confirmOtp,
-      activeFamilyId,
       signOut,
+      activeFamilyId,
       setActiveFamilyId,
     ],
   )

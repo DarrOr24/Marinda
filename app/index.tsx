@@ -1,26 +1,53 @@
 // app/index.tsx
-import { useAuthContext } from '@/hooks/use-auth-context';
-import { Redirect } from 'expo-router';
+import { useAuthContext } from '@/hooks/use-auth-context'
+import { useFamily } from '@/lib/families/families.hooks'
+import { Member } from '@/lib/families/families.types'
+import { isKidRole } from '@/utils/validation.utils'
+import { Redirect } from 'expo-router'
+import { ActivityIndicator, View } from 'react-native'
 
-export default function Index() {
-    const { member, familyMembers } = useAuthContext() as any;
 
-    // Still loading?
-    if (!member) return null;
+function CenterLoader() {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <ActivityIndicator />
+    </View>
+  )
+}
 
-    const isChild = member.role === 'child' || member.role === 'teen';
+export default function AppIndexGateway() {
+  const {
+    isLoggedIn,
+    isLoading,
+    memberships,
+    activeFamilyId,
+    member,
+  } = useAuthContext()
 
-    // Kids go directly to THEIR profile
-    if (isChild) {
-        return <Redirect href={`/profile/${member.id}`} />;
-    }
+  // Not logged in → go to login
+  if (!isLoggedIn) return <Redirect href="/login" />
 
-    // Parents → find first child profile
-    const firstKid = familyMembers?.find(
-        (m: any) => m.role === 'child' || m.role === 'teen'
-    );
+  // Wait for auth provider to finish fetching session/memberships
+  if (isLoading || !memberships) return <CenterLoader />
 
-    const targetId = firstKid?.id || member.id;
+  // No families → onboarding
+  if (memberships.length === 0) return <Redirect href="/onboarding" />
 
-    return <Redirect href={`/profile/${targetId}`} />;
+  // Has families but none selected → select-family
+  if (!activeFamilyId) return <Redirect href="/select-family" />
+
+  // We have a family selected; wait for member
+  if (!member) return <CenterLoader />
+
+  // Now decide the true "home" screen
+  if (isKidRole(member.role)) return <Redirect href={`/profile/${member.id}`} />
+
+  // Parent → first kid if exists
+  const { familyMembers } = useFamily(activeFamilyId)
+  const firstKid = familyMembers.data?.find(
+    (m: Member) => isKidRole(m.role),
+  )
+
+  const targetId = firstKid?.id || member.id
+  return <Redirect href={`/profile/${targetId}`} />
 }
