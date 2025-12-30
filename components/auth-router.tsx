@@ -9,6 +9,8 @@ import { Member } from '@/lib/families/families.types'
 import { isKidRole } from '@/utils/validation.utils'
 
 
+const ENTRY_ROUTES = ['/', '/login', '/onboarding', '/select-family']
+
 function CenterLoader() {
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -29,21 +31,20 @@ export function AuthRouter() {
     member,
   } = useAuthContext()
 
-  const { familyMembers } = useFamily(activeFamilyId as string)
+  const { familyMembers } = useFamily(activeFamilyId ?? undefined)
+
+  const isEntryRoute = ENTRY_ROUTES.includes(pathname)
 
   const shouldBlock =
     isLoading ||
     (isLoggedIn && !memberships) ||
-    (isLoggedIn && memberships && memberships.length > 0 && !activeFamilyId) ||
+    (isLoggedIn && memberships && memberships.length > 1 && !activeFamilyId) ||
     (isLoggedIn && activeFamilyId && !member) ||
     (activeFamilyId && familyMembers.isLoading)
 
   useEffect(() => {
     if (isLoading) return
-
-    // logged out: let your Stack.Protected show /login
     if (!isLoggedIn) return
-
     if (!memberships) return
 
     // No families -> onboarding
@@ -54,6 +55,7 @@ export function AuthRouter() {
 
     // Has families but no active -> select family
     if (!activeFamilyId) {
+      if (memberships.length === 1) return
       router.replace('/select-family')
       return
     }
@@ -61,12 +63,21 @@ export function AuthRouter() {
     // Active family set but member not loaded yet -> wait
     if (!member) return
 
+    // If the pathname is not an entry route don't redirect
+    if (!isEntryRoute) return
+
     // Parent → first kid if exists
-    const firstKid = familyMembers.data?.find(
-      (m: Member) => isKidRole(m.role),
-    )
-    const targetId = firstKid?.id || member.id
-    router.replace(`/profile/${targetId}`)
+    const isKid = isKidRole(member.role)
+
+    if (isKid) {
+      const firstKid = familyMembers.data?.find(
+        (m: Member) => isKidRole(m.role),
+      )
+      const targetId = firstKid ? firstKid.id : member.id
+      router.replace(`/profile/${targetId}`)
+    } else {
+      router.replace(`/profile/${member.id}`)
+    }
   }, [isLoading, isLoggedIn, memberships, activeFamilyId, member, pathname, router])
 
   return shouldBlock ? <CenterLoader /> : null

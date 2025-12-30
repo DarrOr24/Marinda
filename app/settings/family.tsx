@@ -47,15 +47,14 @@ export default function FamilySettingsScreen() {
   const myProfileId = member?.profile_id as string | undefined
   const isParent = isParentRole(myRole)
 
-  const { family, members } = useFamily(familyId)
+  const { family, familyMembers } = useFamily(familyId as string)
 
   const updateMemberRole = useUpdateMemberRole(familyId)
   const rotateCode = useRotateFamilyCode(familyId)
   const removeMember = useRemoveMember(familyId)
 
   const familyData = family.data
-  const familyMembers: Member[] = members.data ?? []
-  const isLoadingMembers = members.isLoading
+  const isLoadingMembers = familyMembers.isLoading
   const isLoadingFamily = family.isLoading
 
   if (!isParent) {
@@ -204,7 +203,7 @@ export default function FamilySettingsScreen() {
         )}
 
         {!isLoadingMembers &&
-          familyMembers.map(m => {
+          familyMembers.data?.map((m: Member) => {
             const name =
               m.profile?.first_name ||
               m.nickname ||
