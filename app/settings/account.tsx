@@ -12,6 +12,7 @@ import {
 import { FamilyAvatar } from '@/components/avatar/family-avatar'
 import { ProfileAvatar } from '@/components/avatar/profile-avatar'
 import { ChipSelector } from '@/components/chip-selector'
+import { DatePicker } from '@/components/date-picker'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useMyFamilies } from '@/lib/families/families.hooks'
 import { useProfile, useUpdateProfile } from '@/lib/profiles/profiles.hooks'
@@ -36,7 +37,7 @@ export default function AccountSettingsScreen() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [gender, setGender] = useState<string | null>(null)
-  const [birthDate, setBirthDate] = useState('')
+  const [birthDate, setBirthDate] = useState<string>('')
 
   useEffect(() => {
     if (!data) return
@@ -163,11 +164,13 @@ export default function AccountSettingsScreen() {
 
       {/* Birth date */}
       <Text style={styles.label}>Birth Date</Text>
-      <TextInput
+      <DatePicker
         value={birthDate}
-        onChangeText={setBirthDate}
-        style={styles.input}
-        placeholder="YYYY-MM-DD"
+        onChange={setBirthDate}
+        title="Pick your birth date"
+        disabled={updateProfile.isPending}
+        enableYearPicker
+        yearPickerRange={{ past: 120, future: 0 }}
       />
 
       {/* Save */}
