@@ -27,3 +27,9 @@ export interface MyFamily {
   avatar_url: string | null
   role: Role
 }
+
+export type Membership = {
+  familyId: string
+  familyName: string
+  familyCode: string
+}

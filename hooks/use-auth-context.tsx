@@ -3,20 +3,15 @@ import { Session } from '@supabase/supabase-js'
 import { createContext, useContext } from 'react'
 
 import type { IdentifierInfo } from '@/lib/auth/auth.service'
-import { Member } from '@/lib/families/families.types'
+import { Member, Membership } from '@/lib/families/families.types'
 
-
-export type Membership = {
-  familyId: string
-  familyName: string
-  familyCode: string
-}
 
 export type AuthData = {
   session: Session | null
   profileId: string | null
   member: Member | null
   memberships: Membership[] | null
+  refreshMemberships: () => Promise<void>
   isLoading: boolean
   isLoggedIn: boolean
   pendingIdentifier: IdentifierInfo | null
@@ -32,6 +27,7 @@ export const AuthContext = createContext<AuthData>({
   profileId: null,
   member: null,
   memberships: null,
+  refreshMemberships: async () => { },
   isLoading: true,
   isLoggedIn: false,
   pendingIdentifier: null,

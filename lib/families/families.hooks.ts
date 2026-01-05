@@ -19,7 +19,7 @@ import { Member, MyFamily, Role } from '@/lib/families/families.types'
 
 export function useCreateFamily() {
   const qc = useQueryClient()
-  const { setActiveFamilyId } = useAuthContext()
+  const { setActiveFamilyId, refreshMemberships } = useAuthContext()
 
   return useMutation({
     mutationFn: (name: string) => rpcCreateFamily(name),
@@ -31,8 +31,9 @@ export function useCreateFamily() {
       return { previous }
     },
 
-    onSuccess: (familyId: string) => {
-      setActiveFamilyId(familyId)
+    onSuccess: async (familyId: string) => {
+      await setActiveFamilyId(familyId)
+      await refreshMemberships()
       qc.invalidateQueries({ queryKey: ['families'] })
       qc.invalidateQueries({ queryKey: ['family', familyId] })
       qc.invalidateQueries({ queryKey: ['family-members', familyId] })
@@ -46,13 +47,15 @@ export function useCreateFamily() {
 
 export function useJoinFamily(defaultRole: Role = 'ADULT') {
   const qc = useQueryClient()
-  const { setActiveFamilyId } = useAuthContext()
+  const { setActiveFamilyId, refreshMemberships } = useAuthContext()
 
   return useMutation({
     mutationFn: ({ code, role }: { code: string; role?: Role }) =>
       rpcJoinFamily(code, role ?? defaultRole),
+
     onSuccess: async (familyId: string) => {
       await setActiveFamilyId(familyId)
+      await refreshMemberships()
       qc.invalidateQueries({ queryKey: ['families'] })
       qc.invalidateQueries({ queryKey: ['family', familyId] })
       qc.invalidateQueries({ queryKey: ['family-members', familyId] })
