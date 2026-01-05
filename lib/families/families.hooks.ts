@@ -22,9 +22,10 @@ export function useCreateFamily() {
   const { setActiveFamilyId, refreshMemberships } = useAuthContext()
 
   return useMutation({
-    mutationFn: (name: string) => rpcCreateFamily(name),
+    mutationFn: ({ name, nickname }: { name: string; nickname?: string | null }) =>
+      rpcCreateFamily(name, nickname ?? null),
 
-    onMutate: async (name) => {
+    onMutate: async ({ name }) => {
       await qc.cancelQueries({ queryKey: ['families'] })
       const previous = qc.getQueryData(['families'])
       qc.setQueryData(['families'], (old: any) => ([...(old ?? []), { id: 'temp', name }]))
@@ -45,13 +46,20 @@ export function useCreateFamily() {
   })
 }
 
-export function useJoinFamily(defaultRole: Role = 'ADULT') {
+export function useJoinFamily(defaultRole: Role = 'TEEN') {
   const qc = useQueryClient()
   const { setActiveFamilyId, refreshMemberships } = useAuthContext()
 
   return useMutation({
-    mutationFn: ({ code, role }: { code: string; role?: Role }) =>
-      rpcJoinFamily(code, role ?? defaultRole),
+    mutationFn: ({
+      code,
+      role,
+      nickname,
+    }: {
+      code: string
+      role?: Role
+      nickname?: string | null
+    }) => rpcJoinFamily(code, role ?? defaultRole, nickname ?? null),
 
     onSuccess: async (familyId: string) => {
       await setActiveFamilyId(familyId)

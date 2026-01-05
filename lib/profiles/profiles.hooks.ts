@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchProfile, getAvatarPublicUrl, updateProfile, uploadAvatar } from './profiles.api';
 
-export function useProfile(profileId: string | undefined) {
+export function useProfile(profileId: string | null) {
     return useQuery({
         queryKey: ['profile', profileId],
         enabled: !!profileId,

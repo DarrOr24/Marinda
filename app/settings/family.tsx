@@ -21,6 +21,7 @@ import {
   useUpdateMemberRole,
 } from '@/lib/families/families.hooks'
 import type { Member, Role } from '@/lib/families/families.types'
+import { memberDisplayName } from '@/utils/format.utils'
 import { isParentRole } from '@/utils/validation.utils'
 
 
@@ -204,11 +205,7 @@ export default function FamilySettingsScreen() {
 
         {!isLoadingMembers &&
           familyMembers.data?.map((m: Member) => {
-            const name =
-              m.profile?.first_name ||
-              m.nickname ||
-              m.profile?.last_name ||
-              'No name yet'
+            const name = memberDisplayName(m, { official: true })
             const isSelf = myProfileId && m.profile_id === myProfileId
 
             return (

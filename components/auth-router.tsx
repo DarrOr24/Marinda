@@ -44,7 +44,7 @@ export function AuthRouter() {
     member,
   } = useAuthContext()
 
-  const profile = useProfile(profileId ?? undefined)
+  const profile = useProfile(profileId)
   const { familyMembers } = useFamily(activeFamilyId ?? undefined)
 
   const isEntryRoute = ENTRY_ROUTES.includes(pathname)

@@ -21,7 +21,7 @@ function isValidDate(s: string) {
 
 export default function OnboardingDetails() {
   const { profileId } = useAuthContext()
-  const profile = useProfile(profileId ?? undefined)
+  const profile = useProfile(profileId)
   const updateProfile = useUpdateProfile()
 
   const [firstName, setFirstName] = useState('')

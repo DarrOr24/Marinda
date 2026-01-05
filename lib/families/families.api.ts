@@ -5,14 +5,25 @@ import { Member, MyFamily, Role } from './families.types'
 
 const supabase = getSupabase()
 
-export async function rpcCreateFamily(name: string): Promise<string> {
-  const { data, error } = await supabase.rpc('create_family', { p_name: name })
+export async function rpcCreateFamily(name: string, nickname: string | null): Promise<string> {
+  const { data, error } = await supabase.rpc('create_family', {
+    p_name: name,
+    p_nickname: nickname,
+  })
   if (error) throw new Error(error.message)
   return data as string
 }
 
-export async function rpcJoinFamily(code: string, role: Role = 'TEEN'): Promise<string> {
-  const { data, error } = await supabase.rpc('join_family_by_code', { p_code: code, p_role: role })
+export async function rpcJoinFamily(
+  code: string,
+  role: Role = 'TEEN',
+  nickname: string | null
+): Promise<string> {
+  const { data, error } = await supabase.rpc('join_family_by_code', {
+    p_code: code,
+    p_role: role,
+    p_nickname: nickname,
+  })
   if (error) throw new Error(error.message)
   return data as string
 }
