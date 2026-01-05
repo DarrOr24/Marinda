@@ -1,16 +1,8 @@
 // lib/families/families.types.ts
+import { type Profile } from "@/lib/profiles/profiles.types"
+
+
 export type Role = 'MOM' | 'DAD' | 'ADULT' | 'TEEN' | 'CHILD'
-
-export type Gender = 'MALE' | 'FEMALE'
-
-export interface Profile {
-  id: string
-  first_name: string | null
-  last_name: string | null
-  gender: Gender
-  avatar_url: string | null
-  birth_date: Date | null
-}
 
 export interface Color {
   name: string

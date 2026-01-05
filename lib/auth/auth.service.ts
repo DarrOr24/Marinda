@@ -6,57 +6,25 @@ import { User } from '@supabase/supabase-js'
 const supabase = getSupabase()
 
 export type IdentifierType = 'phone' | 'email'
-
 export interface IdentifierInfo {
   type: IdentifierType
   value: string
 }
 
-/** Decide if input is email or phone */
-export function parseIdentifier(input: string): IdentifierInfo {
-  const trimmed = input.trim()
-  if (!trimmed) throw new Error('Please enter phone or email')
-
-  if (trimmed.includes('@')) {
-    return { type: 'email', value: trimmed.toLowerCase() }
-  }
-
-  if (!/^\+\d{8,15}$/.test(trimmed)) {
-    throw new Error('Please enter a valid phone number (include country code)')
-  }
-
-  return { type: 'phone', value: trimmed }
-}
-
-/**
- * Request an OTP for a given identifier.
- * - phone: allow create-or-login (signup allowed)
- * - email: login-only (no signup by email)
- */
 export async function requestOtp(
   identifier: IdentifierInfo,
-): Promise<{
-  ok: boolean
-  error?: string
-  canCreateWithPhoneInstead?: boolean
-}> {
+): Promise<{ ok: boolean; error?: string }> {
   if (identifier.type === 'phone') {
     const { error } = await supabase.auth.signInWithOtp({
       phone: identifier.value,
       options: {
         channel: 'sms',
-        shouldCreateUser: true,
+        shouldCreateUser: true, // signup allowed
       },
     })
-
-    if (error) {
-      return { ok: false, error: error.message }
-    }
-
-    return { ok: true }
+    return error ? { ok: false, error: error.message } : { ok: true }
   }
 
-  // EMAIL: login-only. If user doesn't exist, Supabase will error.
   const { error } = await supabase.auth.signInWithOtp({
     email: identifier.value,
     options: {
@@ -65,32 +33,12 @@ export async function requestOtp(
   })
 
   if (error) {
-    const msg = (error.message || '').toLowerCase()
-
-    if (msg.includes('signup')) {
-      return {
-        ok: false,
-        error: 'No account found with this email. Try your phone number instead, or create an account with your phone first.',
-        canCreateWithPhoneInstead: true,
-      }
-    }
-
-    return {
-      ok: false,
-      error: error.message,
-      canCreateWithPhoneInstead: true,
-    }
+    return { ok: false, error: 'Could not sign in with email. Try phone or check the email address.' }
   }
 
   return { ok: true }
 }
 
-/**
- * Verify OTP code and return logged-in user (session is set globally).
- * `type` must match how we sent it:
- * - phone -> 'sms'
- * - email -> 'email'
- */
 export async function verifyOtp(
   identifier: IdentifierInfo,
   token: string,
@@ -104,10 +52,7 @@ export async function verifyOtp(
       : { email: identifier.value, token: code, type: 'email' as const }
 
   const { data, error } = await supabase.auth.verifyOtp(payload)
-
-  if (error) {
-    return { ok: false, error: error.message }
-  }
+  if (error) return { ok: false, error: error.message }
 
   return { ok: true, user: data.user }
 }

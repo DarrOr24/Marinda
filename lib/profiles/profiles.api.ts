@@ -1,11 +1,13 @@
 // lib/profiles/profiles.api.ts
 import { decode } from "base64-arraybuffer";
-import * as FileSystem from "expo-file-system/legacy"; // << FULL FIX
+import * as FileSystem from "expo-file-system/legacy";
 import { getSupabase } from "../supabase";
+
+import { type Profile } from "./profiles.types";
 
 const supabase = getSupabase();
 
-export async function fetchProfile(profileId: string) {
+export async function fetchProfile(profileId: string): Promise<Profile> {
     const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -16,7 +18,7 @@ export async function fetchProfile(profileId: string) {
     return data;
 }
 
-export async function updateProfile(profileId: string, updates: any) {
+export async function updateProfile(profileId: string, updates: Partial<Profile>) {
     const { data, error } = await supabase
         .from("profiles")
         .update(updates)

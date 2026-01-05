@@ -5,7 +5,7 @@ import { Linking, Platform } from 'react-native'
 
 import { AuthContext, Membership } from '@/hooks/use-auth-context'
 import { appStorage } from '@/lib/app-storage'
-import { IdentifierInfo, parseIdentifier, requestOtp, verifyOtp } from '@/lib/auth/auth.service'
+import { type IdentifierInfo, requestOtp, verifyOtp } from '@/lib/auth/auth.service'
 import { fetchMember } from '@/lib/families/families.api'
 import { Member } from '@/lib/families/families.types'
 import { getSupabase } from '@/lib/supabase'
@@ -172,19 +172,14 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     fetchCurrMember()
   }, [session, activeFamilyId])
 
-  const startAuth = useCallback(async (rawIdentifier: string) => {
-    const identifier = parseIdentifier(rawIdentifier)
+  const startAuth = useCallback(async (identifier: IdentifierInfo) => {
     const res = await requestOtp(identifier)
     if (!res.ok) {
-      return {
-        ok: false,
-        error: res.error ?? 'Could not start login. Please try again.',
-        needsPhoneInstead: !!res.canCreateWithPhoneInstead,
-      }
+      return { ok: false, error: res.error ?? 'Could not start login. Please try again.' }
     }
 
     setPendingIdentifier(identifier)
-    return { ok: true, error: undefined, needsPhoneInstead: false }
+    return { ok: true, error: undefined }
   }, [])
 
   const confirmOtp = useCallback(async (code: string) => {
@@ -200,7 +195,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut()
     if (error) throw error
-    await setActiveFamilyId(null)
+    setActiveFamilyId(null)
     setMember(null)
     setMemberships(null)
   }, [supabase, setActiveFamilyId])
@@ -208,6 +203,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
   const value = useMemo(
     () => ({
       session,
+      profileId: session?.user?.id ?? null,
       member,
       memberships,
       isLoading,

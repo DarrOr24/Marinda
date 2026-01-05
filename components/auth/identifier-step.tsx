@@ -1,3 +1,4 @@
+// components/auth/identifier-step.tsx
 import React, { useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
@@ -16,24 +17,25 @@ export type AuthMode = 'phone' | 'email'
 
 type Props = {
   loading: boolean
+  mode: AuthMode
   defaultCountry?: string // 'IL'
   onContinue: (identifier: string, mode: AuthMode) => Promise<void> | void
 }
 
 export function IdentifierStep({
   loading,
+  mode,
   defaultCountry = 'IL',
   onContinue,
 }: Props) {
   const phoneRef = useRef<PhoneInput>(null)
 
-  const [mode, setMode] = useState<AuthMode>('phone')
   const [email, setEmail] = useState('')
   const [phoneRaw, setPhoneRaw] = useState('')
   const [phoneE164, setPhoneE164] = useState('')
 
   const canContinue = useMemo(() => {
-    if (mode === 'email') return email.trim().includes('@')
+    if (mode === 'email') return /^\S+@\S+\.\S+$/.test(email.trim())
     return !!phoneE164 && /^\+\d{8,15}$/.test(phoneE164)
   }, [mode, email, phoneE164])
 
@@ -41,7 +43,7 @@ export function IdentifierStep({
     try {
       const identifier =
         mode === 'email'
-          ? email.trim()
+          ? email.trim().toLowerCase()
           : toE164(phoneE164 || phoneRaw, defaultCountry)
 
       if (mode === 'phone') {
@@ -60,29 +62,6 @@ export function IdentifierStep({
 
   return (
     <>
-      {/* Mode toggle */}
-      <View style={styles.toggleRow}>
-        <TouchableOpacity
-          style={[styles.toggleBtn, mode === 'phone' && styles.toggleBtnActive]}
-          onPress={() => setMode('phone')}
-          disabled={loading}
-        >
-          <Text style={[styles.toggleText, mode === 'phone' && styles.toggleTextActive]}>
-            Phone
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.toggleBtn, mode === 'email' && styles.toggleBtnActive]}
-          onPress={() => setMode('email')}
-          disabled={loading}
-        >
-          <Text style={[styles.toggleText, mode === 'email' && styles.toggleTextActive]}>
-            Email
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       {mode === 'phone' ? (
         <View style={styles.field}>
           <Text style={styles.label}>Phone number</Text>
@@ -100,10 +79,8 @@ export function IdentifierStep({
                 setPhoneE164('')
               }
             }}
-            // flag not showing? see section 2 below + these props:
             withDarkTheme={false}
             withShadow={false}
-            // styling
             containerStyle={styles.phoneContainer}
             textContainerStyle={styles.phoneTextContainer}
             textInputStyle={styles.phoneTextInput}
@@ -125,6 +102,9 @@ export function IdentifierStep({
             placeholder="you@example.com"
             returnKeyType="done"
           />
+          <Text style={styles.helperText}>
+            Email sign-in is for existing accounts (recovery) only.
+          </Text>
         </View>
       )}
 
@@ -144,23 +124,6 @@ export function IdentifierStep({
 }
 
 const styles = StyleSheet.create({
-  toggleRow: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  toggleBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-  },
-  toggleBtnActive: { backgroundColor: '#2563eb' },
-  toggleText: { fontWeight: '700', color: '#2563eb' },
-  toggleTextActive: { color: '#fff' },
-
   field: { gap: 6 },
   label: { fontSize: 14, fontWeight: '500', color: '#374151' },
 

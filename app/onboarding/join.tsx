@@ -1,8 +1,9 @@
 // app/onboarding/join.tsx
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Alert, StyleSheet, Text, TextInput, View } from 'react-native'
 
+import { Button } from '@/components/ui/button'
 import { useJoinFamily } from '@/lib/families/families.hooks'
 import type { Role } from '@/lib/families/families.types'
 
@@ -32,9 +33,21 @@ export default function JoinFamilyScreen() {
         placeholder="Enter family code"
         style={styles.input}
       />
-      <TouchableOpacity style={styles.btn} onPress={onJoin} disabled={isPending || !code.trim()}>
-        <Text style={styles.btnText}>{isPending ? 'Joining…' : 'Join'}</Text>
-      </TouchableOpacity>
+      <Button
+        title={isPending ? 'Joining…' : 'Join'}
+        onPress={onJoin}
+        disabled={isPending || !code.trim()}
+        fullWidth
+        bold
+      />
+
+      <Button
+        title="Back"
+        type="ghost"
+        onPress={() => router.replace('/onboarding/create-or-join')}
+        fullWidth
+        bold
+      />
     </View>
   )
 }

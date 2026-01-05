@@ -1,8 +1,9 @@
 // app/onboarding/create.tsx
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Alert, StyleSheet, Text, TextInput, View } from 'react-native'
 
+import { Button } from '@/components/ui/button'
 import { useCreateFamily } from '@/lib/families/families.hooks'
 
 
@@ -24,9 +25,21 @@ export default function CreateFamilyScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Create Family</Text>
       <TextInput value={name} onChangeText={setName} placeholder="Family name" style={styles.input} />
-      <TouchableOpacity style={styles.btn} onPress={onCreate} disabled={isPending || !name.trim()}>
-        <Text style={styles.btnText}>{isPending ? 'Creating…' : 'Create'}</Text>
-      </TouchableOpacity>
+      <Button
+        title={isPending ? 'Creating…' : 'Create'}
+        onPress={onCreate}
+        disabled={isPending || !name.trim()}
+        fullWidth
+        bold
+      />
+
+      <Button
+        title="Back"
+        type="ghost"
+        onPress={() => router.replace('/onboarding/create-or-join')}
+        fullWidth
+        bold
+      />
     </View>
   )
 }
@@ -35,6 +48,4 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 24, gap: 12, backgroundColor: '#fff' },
   title: { fontSize: 22, fontWeight: '700' },
   input: { borderWidth: 1, borderColor: '#e5e7eb', padding: 12, borderRadius: 10, backgroundColor: '#fafafa' },
-  btn: { backgroundColor: '#2563eb', paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 8 },
-  btnText: { color: '#fff', fontWeight: '700' },
 })

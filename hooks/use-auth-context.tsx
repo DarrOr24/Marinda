@@ -14,12 +14,13 @@ export type Membership = {
 
 export type AuthData = {
   session: Session | null
+  profileId: string | null
   member: Member | null
   memberships: Membership[] | null
   isLoading: boolean
   isLoggedIn: boolean
   pendingIdentifier: IdentifierInfo | null
-  startAuth: (rawIdentifier: string) => Promise<{ ok: boolean; error?: string; needsPhoneInstead?: boolean }>
+  startAuth: (identifier: IdentifierInfo) => Promise<{ ok: boolean; error?: string }>
   confirmOtp: (code: string) => Promise<{ ok: boolean; error?: string }>
   signOut: () => Promise<void>
   activeFamilyId: string | null
@@ -28,6 +29,7 @@ export type AuthData = {
 
 export const AuthContext = createContext<AuthData>({
   session: null,
+  profileId: null,
   member: null,
   memberships: null,
   isLoading: true,
