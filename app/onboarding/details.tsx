@@ -109,6 +109,7 @@ export default function OnboardingDetails() {
 
       <Button
         title={updateProfile.isPending ? 'Saving…' : 'Continue'}
+        size="lg"
         onPress={onContinue}
         disabled={!canContinue}
         fullWidth

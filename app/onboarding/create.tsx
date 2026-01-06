@@ -48,6 +48,7 @@ export default function CreateFamilyScreen() {
 
       <Button
         title={isPending ? 'Creating…' : 'Create'}
+        size="lg"
         onPress={onCreate}
         disabled={isPending || !name.trim()}
         fullWidth
@@ -57,6 +58,7 @@ export default function CreateFamilyScreen() {
       <Button
         title="Back"
         type="ghost"
+        size="lg"
         onPress={() => router.replace('/onboarding/create-or-join')}
         fullWidth
         bold

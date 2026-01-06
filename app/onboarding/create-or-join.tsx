@@ -16,6 +16,7 @@ export default function OnboardingHub() {
 
       <Button
         title="Create Family"
+        size="lg"
         onPress={() => router.push('/onboarding/create')}
         fullWidth
         bold
@@ -24,6 +25,7 @@ export default function OnboardingHub() {
       <Button
         title="Join with Code"
         type="outline"
+        size="lg"
         onPress={() => router.push('/onboarding/join')}
         fullWidth
       />
@@ -32,6 +34,7 @@ export default function OnboardingHub() {
         <Button
           title="Back"
           type="ghost"
+          size="lg"
           onPress={() => router.replace('/onboarding/details')}
           fullWidth
           bold
@@ -39,6 +42,7 @@ export default function OnboardingHub() {
         <Button
           title="Sign out"
           type="ghost"
+          size="lg"
           onPress={() => {
             signOut()
             router.replace('/login')

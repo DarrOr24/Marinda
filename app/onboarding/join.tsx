@@ -51,6 +51,7 @@ export default function JoinFamilyScreen() {
 
       <Button
         title={isPending ? 'Joining…' : 'Join'}
+        size="lg"
         onPress={onJoin}
         disabled={isPending || !code.trim()}
         fullWidth
@@ -60,6 +61,7 @@ export default function JoinFamilyScreen() {
       <Button
         title="Back"
         type="ghost"
+        size="lg"
         onPress={() => router.replace('/onboarding/create-or-join')}
         fullWidth
         bold
