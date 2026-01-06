@@ -1,5 +1,5 @@
 // lib/activities/activities.types.ts
-import type { Member } from '../families/families.types'
+import type { FamilyMember } from '../members/members.types'
 
 export type ActivityResponse = 'YES' | 'NO' | 'MAYBE'
 export type ActivityStatus = 'APPROVED' | 'NOT_APPROVED' | 'PENDING'
@@ -29,7 +29,7 @@ export interface Activity {
   participants: ActivityParticipant[]
   notes: string | null
   status: ActivityStatus
-  created_by: Member
+  created_by: FamilyMember
   created_at: string
 }
 

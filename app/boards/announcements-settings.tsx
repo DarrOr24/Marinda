@@ -19,7 +19,7 @@ import {
     useUpdateAnnouncementTab,
 } from '@/lib/announcements/announcements.hooks';
 
-import type { Role } from '@/lib/families/families.types';
+import type { Role } from '@/lib/members/members.types';
 
 export default function AnnouncementSettingsScreen() {
     const router = useRouter();

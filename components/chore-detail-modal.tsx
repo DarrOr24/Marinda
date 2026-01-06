@@ -2,7 +2,7 @@
 import { ChipSelector } from '@/components/chip-selector';
 import MediaPicker, { PickedMedia } from '@/components/media-picker';
 import { ChoreView, Proof } from '@/lib/chores/chores.types';
-import { Role } from '@/lib/families/families.types';
+import { Role } from '@/lib/members/members.types';
 import { Audio, ResizeMode, Video } from 'expo-av';
 import React, { useState } from 'react';
 import {

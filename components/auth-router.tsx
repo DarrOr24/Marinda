@@ -5,7 +5,7 @@ import { ActivityIndicator, View } from 'react-native'
 
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useFamily } from '@/lib/families/families.hooks'
-import { Member } from '@/lib/families/families.types'
+import { FamilyMember } from '@/lib/members/members.types'
 import { useProfile } from '@/lib/profiles/profiles.hooks'
 import { type Profile } from '@/lib/profiles/profiles.types'
 import { isKidRole } from '@/utils/validation.utils'
@@ -113,7 +113,7 @@ export function AuthRouter() {
     const isKid = isKidRole(member.role)
 
     if (isKid) {
-      const firstKid = familyMembers.data?.find((m: Member) => isKidRole(m.role))
+      const firstKid = familyMembers.data?.find((m: FamilyMember) => isKidRole(m.role))
       const targetId = firstKid ? firstKid.id : member.id
       router.replace(`/profile/${targetId}`)
     } else {

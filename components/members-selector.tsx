@@ -12,7 +12,7 @@ import {
 
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useFamily } from '@/lib/families/families.hooks'
-import type { Member } from '@/lib/families/families.types'
+import type { FamilyMember } from '@/lib/members/members.types'
 import { isKidRole, isParentRole } from '@/utils/validation.utils'
 import { ChipSelector, type ChipOption } from './chip-selector'
 
@@ -45,7 +45,7 @@ export function MembersSelector(props: MembersSelectorProps) {
   const { activeFamilyId } = useAuthContext() as any
   const { familyMembers } = useFamily(activeFamilyId)
 
-  const memberList: Member[] = familyMembers.data ?? []
+  const memberList: FamilyMember[] = familyMembers.data ?? []
 
   const options = useMemo<ChipOption[]>(
     () =>
@@ -60,7 +60,7 @@ export function MembersSelector(props: MembersSelectorProps) {
   )
 
   const membersById = useMemo(() => {
-    const map: Record<string, Member> = {}
+    const map: Record<string, FamilyMember> = {}
     memberList.forEach((m) => {
       map[m.id] = m
     })

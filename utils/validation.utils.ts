@@ -1,5 +1,5 @@
 // utils/validation.utils.ts
-import type { Role } from '@/lib/families/families.types'
+import type { Role } from '@/lib/members/members.types'
 
 
 export function isParentRole(role?: Role | null): boolean {

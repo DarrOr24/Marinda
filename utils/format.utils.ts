@@ -1,5 +1,5 @@
 // utils/format.utils.ts
-import { Member } from '@/lib/families/families.types';
+import { FamilyMember } from '@/lib/members/members.types';
 
 
 export function getYearFromDateString(dateStr: string) {
@@ -30,7 +30,7 @@ export function trimOrNull(s: string) {
   return s.trim() ?? null
 }
 
-export function memberDisplayName(m: Member, options: { official?: boolean } = {}) {
+export function memberDisplayName(m: FamilyMember, options: { official?: boolean } = {}) {
   const { official } = options
   if (official) {
     return `${m.profile?.first_name} (${m.nickname})`

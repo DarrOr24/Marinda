@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuthContext } from "@/hooks/use-auth-context";
-import type { Role } from "@/lib/families/families.types";
+import type { Role } from "@/lib/members/members.types";
 import {
     useFamilyWishlistSettings,
     useUpdateWishlistSettings,

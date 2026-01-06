@@ -22,7 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
 import { useSubscribeTableByFamily } from "@/lib/families/families.realtime";
-import type { Role } from "@/lib/families/families.types";
+import type { Role } from "@/lib/members/members.types";
 import type { WishlistItem } from "@/lib/wishlist/wishlist.types";
 
 import { KidSwitcher } from "@/components/kid-switcher";

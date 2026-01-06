@@ -7,7 +7,7 @@ import { ProfileAvatar } from '@/components/avatar/profile-avatar'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useFamily } from '@/lib/families/families.hooks'
 import { useSubscribeTableByFamily } from '@/lib/families/families.realtime'
-import type { Member } from '@/lib/families/families.types'
+import type { FamilyMember } from '@/lib/members/members.types'
 
 const SIDEBAR_WIDTH = 92
 const AVATAR_SIZE = 48
@@ -54,7 +54,7 @@ export default function MemberSidebar() {
   }
 
   // Raw list
-  let membersData: Member[] = familyMembers.data ?? []
+  let membersData: FamilyMember[] = familyMembers.data ?? []
   if (!membersData.length) {
     return (
       <View style={styles.wrapper}>

@@ -5,7 +5,7 @@ import { Alert, StyleSheet, Text, TextInput, View } from 'react-native'
 
 import { Button } from '@/components/ui/button'
 import { useJoinFamily } from '@/lib/families/families.hooks'
-import type { Role } from '@/lib/families/families.types'
+import type { Role } from '@/lib/members/members.types'
 import { trimOrNull } from '@/utils/format.utils'
 
 

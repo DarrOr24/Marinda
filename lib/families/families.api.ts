@@ -1,7 +1,8 @@
 // lib/families/families.api.ts
 import { MEMBER_WITH_PROFILE_SELECT } from '../members/members.select'
+import { FamilyMember, Role } from '../members/members.types'
 import { getSupabase } from '../supabase'
-import { Member, MyFamily, Role } from './families.types'
+import { MyFamily } from './families.types'
 
 const supabase = getSupabase()
 
@@ -38,7 +39,7 @@ export async function fetchFamily(familyId: string) {
   return data
 }
 
-export async function fetchMember(familyId: string, profileId: string): Promise<Member> {
+export async function fetchMember(familyId: string, profileId: string): Promise<FamilyMember> {
   const { data, error } = await supabase
     .from('family_members')
     .select(MEMBER_WITH_PROFILE_SELECT)
@@ -47,10 +48,10 @@ export async function fetchMember(familyId: string, profileId: string): Promise<
     .single()
 
   if (error) throw new Error(error.message)
-  return data as unknown as Member
+  return data as unknown as FamilyMember
 }
 
-export async function fetchMemberById(id: string): Promise<Member> {
+export async function fetchMemberById(id: string): Promise<FamilyMember> {
   const { data, error } = await supabase
     .from('family_members')
     .select(MEMBER_WITH_PROFILE_SELECT)
@@ -58,10 +59,10 @@ export async function fetchMemberById(id: string): Promise<Member> {
     .single()
 
   if (error) throw new Error(error.message)
-  return data as unknown as Member
+  return data as unknown as FamilyMember
 }
 
-export async function fetchFamilyMembers(familyId: string): Promise<Member[]> {
+export async function fetchFamilyMembers(familyId: string): Promise<FamilyMember[]> {
   const { data, error } = await supabase
     .from('family_members')
     .select(`
@@ -74,7 +75,7 @@ export async function fetchFamilyMembers(familyId: string): Promise<Member[]> {
 
   if (error) throw new Error(error.message)
 
-  const members = (data ?? []) as unknown as Member[]
+  const members = (data ?? []) as unknown as FamilyMember[]
 
   const roleOrder: Role[] = ['DAD', 'MOM', 'ADULT', 'TEEN', 'CHILD']
   members.sort(
@@ -144,7 +145,7 @@ export async function removeFamilyMember(
 export async function updateMemberRole(
   memberId: string,
   role: Role,
-): Promise<Pick<Member, 'id' | 'role'>> {
+): Promise<Pick<FamilyMember, 'id' | 'role'>> {
   const { data, error } = await supabase
     .from('family_members')
     .update({ role })
@@ -153,7 +154,7 @@ export async function updateMemberRole(
     .single()
 
   if (error) throw new Error(error.message)
-  return data as Pick<Member, 'id' | 'role'>
+  return data as Pick<FamilyMember, 'id' | 'role'>
 }
 
 export async function fetchMyFamilies(profileId: string): Promise<MyFamily[]> {

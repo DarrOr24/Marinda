@@ -21,7 +21,7 @@ import {
   useRotateFamilyCode,
   useUpdateMemberRole,
 } from '@/lib/families/families.hooks'
-import type { Member, Role } from '@/lib/families/families.types'
+import type { FamilyMember, Role } from '@/lib/members/members.types'
 import { memberDisplayName } from '@/utils/format.utils'
 import { isParentRole } from '@/utils/validation.utils'
 
@@ -97,7 +97,7 @@ export default function FamilySettingsScreen() {
     )
   }
 
-  const handleChangeRole = (m: Member, newRole: Role) => {
+  const handleChangeRole = (m: FamilyMember, newRole: Role) => {
     if (newRole === m.role) return
     updateMemberRole.mutate({ memberId: m.id, role: newRole })
   }
@@ -110,7 +110,7 @@ export default function FamilySettingsScreen() {
     })
   }
 
-  const handleRemoveMember = (m: Member) => {
+  const handleRemoveMember = (m: FamilyMember) => {
     const displayName = m.profile?.first_name || m.nickname || 'this member'
     Alert.alert(
       'Remove member',
@@ -205,7 +205,7 @@ export default function FamilySettingsScreen() {
         )}
 
         {!isLoadingMembers &&
-          familyMembers.data?.map((m: Member) => {
+          familyMembers.data?.map((m: FamilyMember) => {
             const name = memberDisplayName(m, { official: true })
             const isSelf = myProfileId && m.profile_id === myProfileId
 

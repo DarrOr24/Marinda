@@ -1,4 +1,4 @@
-import type { Member } from '@/lib/families/families.types';
+import type { FamilyMember } from '@/lib/members/members.types';
 import { getAvatarPublicUrl } from '@/lib/profiles/profiles.api';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
@@ -8,7 +8,7 @@ export default function MemberAvatar({
   member,
   index = 0,
 }: {
-  member: Member
+  member: FamilyMember
   index?: number
 }) {
   // 1️⃣ Check for profile avatar
@@ -38,7 +38,7 @@ export default function MemberAvatar({
   );
 }
 
-function getStyleForMember(m: Member, index: number) {
+function getStyleForMember(m: FamilyMember, index: number) {
   const colorHex = m.color?.hex ?? '#2563eb'
   const iconColor = colorHex
   const bgColor = withAlpha(colorHex, 0.18)

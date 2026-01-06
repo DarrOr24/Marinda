@@ -9,10 +9,10 @@ import {
 } from "react-native";
 
 import { ProfileAvatar } from "@/components/avatar/profile-avatar";
-import type { Member } from "@/lib/families/families.types";
+import type { FamilyMember } from "@/lib/members/members.types";
 
 type KidSwitcherProps = {
-  kids: Member[];              // full family list, includes adults → we will filter inside
+  kids: FamilyMember[];              // full family list, includes adults → we will filter inside
   selectedKidId: string | null;
   onSelectKid: (kidId: string) => void;
 };

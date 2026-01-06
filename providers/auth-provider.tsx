@@ -7,7 +7,8 @@ import { AuthContext } from '@/hooks/use-auth-context'
 import { appStorage } from '@/lib/app-storage'
 import { type IdentifierInfo, requestOtp, verifyOtp } from '@/lib/auth/auth.service'
 import { fetchMember } from '@/lib/families/families.api'
-import { Member, Membership } from '@/lib/families/families.types'
+import { Membership } from '@/lib/families/families.types'
+import { FamilyMember } from '@/lib/members/members.types'
 import { getSupabase } from '@/lib/supabase'
 
 const ACTIVE_FAMILY_KEY = 'marinda:activeFamilyId'
@@ -16,7 +17,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
   const supabase = getSupabase()
 
   const [session, setSession] = useState<Session | null>(null)
-  const [member, setMember] = useState<Member | null>(null)
+  const [member, setMember] = useState<FamilyMember | null>(null)
   const [memberships, setMemberships] = useState<Membership[] | null>(null)
 
   const [isSessionLoading, setIsSessionLoading] = useState(true)

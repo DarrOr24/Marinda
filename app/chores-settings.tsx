@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useChoreTemplates } from '@/lib/chores/chores-templates.hooks';
-import type { Role } from '@/lib/families/families.types';
+import type { Role } from '@/lib/members/members.types';
 
 type LocalEditorState = {
     id?: string;

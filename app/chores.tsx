@@ -16,7 +16,7 @@ import {
 import { awardMemberPoints } from '@/lib/families/families.api';
 import { useFamily } from '@/lib/families/families.hooks';
 import { useSubscribeTableByFamily } from '@/lib/families/families.realtime';
-import type { Role } from '@/lib/families/families.types';
+import type { Role } from '@/lib/members/members.types';
 
 
 import {

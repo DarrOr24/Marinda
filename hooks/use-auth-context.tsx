@@ -3,13 +3,14 @@ import { Session } from '@supabase/supabase-js'
 import { createContext, useContext } from 'react'
 
 import type { IdentifierInfo } from '@/lib/auth/auth.service'
-import { Member, Membership } from '@/lib/families/families.types'
+import { Membership } from '@/lib/families/families.types'
+import { FamilyMember } from '@/lib/members/members.types'
 
 
 export type AuthData = {
   session: Session | null
   profileId: string | null
-  member: Member | null
+  member: FamilyMember | null
   memberships: Membership[] | null
   refreshMemberships: () => Promise<void>
   isLoading: boolean

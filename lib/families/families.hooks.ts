@@ -14,7 +14,8 @@ import {
   updateFamilyAvatar,
   updateMemberRole,
 } from '@/lib/families/families.api'
-import { Member, MyFamily, Role } from '@/lib/families/families.types'
+import { MyFamily } from '@/lib/families/families.types'
+import { FamilyMember, Role } from '@/lib/members/members.types'
 
 
 export function useCreateFamily() {
@@ -100,8 +101,8 @@ export function useUpdateMemberRole(familyId: string) {
     onMutate: async (variables) => {
       const { memberId, role } = variables
       await qc.cancelQueries({ queryKey: ['family-members', familyId] })
-      const previousMembers = qc.getQueryData<Member[]>(['family-members', familyId]) ?? []
-      qc.setQueryData<Member[]>(['family-members', familyId], (old) => {
+      const previousMembers = qc.getQueryData<FamilyMember[]>(['family-members', familyId]) ?? []
+      qc.setQueryData<FamilyMember[]>(['family-members', familyId], (old) => {
         if (!old) return old
         return old.map((m) => m.id === memberId ? { ...m, role } : m)
       })
@@ -111,7 +112,7 @@ export function useUpdateMemberRole(familyId: string) {
 
     onError: (error, _vars, context) => {
       if (context?.previousMembers) {
-        qc.setQueryData<Member[]>(
+        qc.setQueryData<FamilyMember[]>(
           ['family-members', familyId],
           context.previousMembers
         )
