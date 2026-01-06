@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -10,9 +9,10 @@ import {
 } from 'react-native'
 
 import { FamilyAvatar } from '@/components/avatar/family-avatar'
-import { ProfileAvatar } from '@/components/avatar/profile-avatar'
 import { ChipSelector } from '@/components/chip-selector'
 import { DatePicker } from '@/components/date-picker'
+import { Button } from '@/components/ui/button'
+import { Screen } from '@/components/ui/screen'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useMyFamilies } from '@/lib/families/families.hooks'
 import { useProfile, useUpdateProfile } from '@/lib/profiles/profiles.hooks'
@@ -83,20 +83,8 @@ export default function AccountSettingsScreen() {
   }
 
   return (
-    <View style={styles.section}>
+    <Screen>
       <Text style={styles.sectionTitle}>Account Settings</Text>
-
-      {/* Avatar */}
-      <Text style={styles.label}>Profile Photo</Text>
-      <View style={styles.avatarWrapper}>
-        {profileId ? (
-          <ProfileAvatar
-            profileId={profileId}
-            size="xl"
-            isUpdatable={true}
-          />
-        ) : null}
-      </View>
 
       {/* My families */}
       <Text style={styles.label}>My families</Text>
@@ -174,19 +162,16 @@ export default function AccountSettingsScreen() {
       />
 
       {/* Save */}
-      <Pressable
+      <Button
+        title={updateProfile.isPending ? 'Saving…' : 'Save Changes'}
+        type="primary"
+        size="lg"
         onPress={handleSave}
         disabled={updateProfile.isPending || !hasChanges}
-        style={[
-          styles.saveBtn,
-          (updateProfile.isPending || !hasChanges) && styles.saveBtnDisabled,
-        ]}
-      >
-        <Text style={styles.saveBtnText}>
-          {updateProfile.isPending ? 'Saving…' : 'Save Changes'}
-        </Text>
-      </Pressable>
-    </View>
+        fullWidth
+        style={{ marginTop: 12 }}
+      />
+    </Screen>
   )
 }
 
@@ -222,10 +207,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#0f172a',
   },
-  avatarWrapper: {
-    alignSelf: 'flex-start',
-    marginBottom: 12,
-  },
   familiesLoadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -251,20 +232,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6b7280',
     textTransform: 'capitalize',
-  },
-  saveBtn: {
-    marginTop: 12,
-    backgroundColor: '#2563eb',
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  saveBtnDisabled: {
-    backgroundColor: '#93c5fd',
-  },
-  saveBtnText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
   },
 })

@@ -13,6 +13,7 @@ import { ProfileAvatar } from '@/components/avatar/profile-avatar'
 import { ChipSelector } from '@/components/chip-selector'
 import { ShareButton } from '@/components/share-button'
 import { Button } from '@/components/ui/button'
+import { Screen } from '@/components/ui/screen'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import {
   useFamily,
@@ -60,7 +61,7 @@ export default function FamilySettingsScreen() {
 
   if (!isParent) {
     return (
-      <View style={styles.section}>
+      <Screen>
         <Text style={styles.sectionTitle}>Family management</Text>
         <Text style={styles.sectionSubtitle}>
           Only parents (Mom or Dad) can manage family settings.
@@ -70,29 +71,29 @@ export default function FamilySettingsScreen() {
             Ask your parent to share the family code with you to join.
           </Text>
         )}
-      </View>
+      </Screen>
     )
   }
 
   if (!familyId) {
     return (
-      <View style={styles.section}>
+      <Screen>
         <Text style={styles.sectionTitle}>Family management</Text>
         <Text style={styles.sectionSubtitle}>
           You are not attached to a family yet.
         </Text>
-      </View>
+      </Screen>
     )
   }
 
   if (isLoadingFamily && !familyData) {
     return (
-      <View style={styles.section}>
+      <Screen>
         <View style={styles.loadingRow}>
           <ActivityIndicator />
           <Text style={styles.loadingText}>Loading family…</Text>
         </View>
-      </View>
+      </Screen>
     )
   }
 
@@ -138,7 +139,7 @@ export default function FamilySettingsScreen() {
 
 
   return (
-    <View style={styles.section}>
+    <Screen>
 
       {/* Family avatar + name */}
       <View style={styles.familyHeaderRow}>
@@ -262,14 +263,11 @@ export default function FamilySettingsScreen() {
             )
           })}
       </View>
-    </View>
+    </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  section: {
-    gap: 12,
-  },
   familyHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',

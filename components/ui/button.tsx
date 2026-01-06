@@ -21,6 +21,13 @@ export type ButtonType =
 
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
 
+const ROUND_SIZES: Record<ButtonSize, number> = {
+  sm: 32,
+  md: 40,
+  lg: 48,
+  xl: 56,
+};
+
 type ButtonProps = {
   title: string;
   type?: ButtonType;
@@ -31,6 +38,7 @@ type ButtonProps = {
   disabled?: boolean;
   fullWidth?: boolean;
   showShadow?: boolean;
+  round?: boolean;
   style?: StyleProp<ViewStyle>;
   leftIcon?: React.ReactElement;
   leftIconColor?: string;
@@ -48,6 +56,7 @@ export function Button({
   disabled = false,
   fullWidth = false,
   showShadow = false,
+  round = false,
   style,
   leftIcon,
   leftIconColor,
@@ -77,9 +86,17 @@ export function Button({
           ? styles.textXl
           : styles.textMd;
 
+  const roundSize = ROUND_SIZES[size];
+
   const textColor = (typeStyles.text && typeStyles.text.color) || '#000';
   const resolvedLeftIconColor = leftIconColor ?? textColor;
   const resolvedRightIconColor = rightIconColor ?? textColor;
+
+  const hasText = Boolean(title);
+  const hasLeftIcon = Boolean(leftIcon);
+  const hasRightIcon = Boolean(rightIcon);
+  const iconOnly = !hasText && (hasLeftIcon || hasRightIcon);
+
 
   const renderLeftIcon = () => {
     if (!leftIcon) return null;
@@ -109,7 +126,15 @@ export function Button({
       disabled={disabled}
       style={({ pressed }) => [
         styles.base,
-        sizeButtonStyle,
+        round
+          ? {
+            width: roundSize,
+            height: roundSize,
+            borderRadius: roundSize / 2,
+            paddingHorizontal: 0,
+            paddingVertical: 0,
+          }
+          : sizeButtonStyle,
         typeStyles.button,
         fullWidth && styles.fullWidth,
         showShadow && styles.shadow,
@@ -119,20 +144,22 @@ export function Button({
         style,
       ]}
     >
-      <View style={styles.contentRow}>
+      <View style={[styles.contentRow, iconOnly && styles.iconOnly]}>
         {leftIcon && renderLeftIcon()}
 
-        <Text
-          style={[
-            styles.text,
-            sizeTextStyle,
-            typeStyles.text,
-            bold && styles.textBold,
-            uppercase && styles.uppercase,
-          ]}
-        >
-          {title}
-        </Text>
+        {hasText && (
+          <Text
+            style={[
+              styles.text,
+              sizeTextStyle,
+              typeStyles.text,
+              bold && styles.textBold,
+              uppercase && styles.uppercase,
+            ]}
+          >
+            {title}
+          </Text>
+        )}
 
         {rightIcon && renderRightIcon()}
       </View>
@@ -197,6 +224,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
   },
+
+  iconOnly: { justifyContent: 'center' },
 
   sizeSm: { paddingHorizontal: 10, paddingVertical: 6 },
   sizeMd: { paddingHorizontal: 14, paddingVertical: 8 },

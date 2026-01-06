@@ -1,9 +1,12 @@
 // app/settings/billing.tsx
 import { StyleSheet, Text, View } from 'react-native'
 
+import { Screen } from '@/components/ui/screen'
+
+
 export default function BillingSettingsScreen() {
   return (
-    <View style={styles.section}>
+    <Screen>
       <Text style={styles.sectionTitle}>Billing</Text>
       <Text style={styles.sectionSubtitle}>
         In the future this will show your subscription, renewal date and payment
@@ -15,14 +18,11 @@ export default function BillingSettingsScreen() {
           tab.
         </Text>
       </View>
-    </View>
+    </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  section: {
-    gap: 12,
-  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',

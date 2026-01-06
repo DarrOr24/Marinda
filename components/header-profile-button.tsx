@@ -16,7 +16,7 @@ import {
 import { ProfileAvatar } from '@/components/avatar/profile-avatar'
 
 
-export default function HeaderProfileButton() {
+export function HeaderProfileButton() {
   const { isLoggedIn, signOut } = useAuthContext()
   const { member } = useAuthContext() as any
   const profileId = member?.profile_id
