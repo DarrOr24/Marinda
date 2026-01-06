@@ -9,7 +9,7 @@ import {
 } from 'react-native'
 
 import { FamilyAvatar } from '@/components/avatar/family-avatar'
-import { ProfileAvatar } from '@/components/avatar/profile-avatar'
+import { MemberAvatar } from '@/components/avatar/member-avatar'
 import { ChipSelector } from '@/components/chip-selector'
 import { ShareButton } from '@/components/share-button'
 import { Button } from '@/components/ui/button'
@@ -214,8 +214,8 @@ export default function FamilySettingsScreen() {
                 {/* avatar */}
                 <View style={styles.memberAvatarWrapper}>
                   {m.profile_id ? (
-                    <ProfileAvatar
-                      profileId={m.profile_id}
+                    <MemberAvatar
+                      memberId={m.id}
                       size="md"
                       isUpdatable={true}
                     />

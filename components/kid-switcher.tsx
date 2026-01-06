@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 
-import { ProfileAvatar } from "@/components/avatar/profile-avatar";
+import { MemberAvatar } from "@/components/avatar/member-avatar";
 import type { FamilyMember } from "@/lib/members/members.types";
 
 type KidSwitcherProps = {
@@ -78,7 +78,7 @@ export function KidSwitcher({ kids, selectedKidId, onSelectKid }: KidSwitcherPro
               }}
             >
               <View style={styles.row}>
-                <ProfileAvatar profileId={kid.profile_id} size="sm" />
+                <MemberAvatar memberId={kid.id} size="sm" />
                 <Text style={styles.optionText}>
                   {kid.profile?.first_name}
                 </Text>

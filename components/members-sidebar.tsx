@@ -3,7 +3,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { usePathname, useRouter } from 'expo-router'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
-import { ProfileAvatar } from '@/components/avatar/profile-avatar'
+import { MemberAvatar } from '@/components/avatar/member-avatar'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useFamily } from '@/lib/families/families.hooks'
 import { useSubscribeTableByFamily } from '@/lib/families/families.realtime'
@@ -97,7 +97,7 @@ export default function MemberSidebar() {
                 }
               >
                 <View style={[styles.avatarBox, isActive && styles.avatarBoxActive]}>
-                  <ProfileAvatar profileId={m.profile_id} size="sm" />
+                  <MemberAvatar memberId={m.id} size="sm" />
                 </View>
                 <Text numberOfLines={1} style={styles.name}>
                   {m.profile?.first_name}
@@ -125,7 +125,7 @@ export default function MemberSidebar() {
               }
             >
               <View style={[styles.avatarBox, isActive && styles.avatarBoxActive]}>
-                <ProfileAvatar profileId={activeKid.profile_id} size="sm" />
+                <MemberAvatar memberId={activeKid.id} size="sm" />
               </View>
               <Text numberOfLines={1} style={styles.name}>
                 {activeKid.profile?.first_name}

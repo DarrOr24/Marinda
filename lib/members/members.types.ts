@@ -15,9 +15,12 @@ export interface FamilyMember {
   profile_id: string
   role: Role
   nickname: string | null
+  avatar_url: string | null
   joined_at: string | null
   profile: Profile | null
   color: Color | null
   points: number
+  // client-only: injected into React Query cache
+  avatarCacheBuster?: number
+  public_avatar_url?: string | null
 }
-

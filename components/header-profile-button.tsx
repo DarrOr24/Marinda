@@ -13,13 +13,12 @@ import {
   View
 } from 'react-native'
 
-import { ProfileAvatar } from '@/components/avatar/profile-avatar'
+import { MemberAvatar } from '@/components/avatar/member-avatar'
 
 
 export function HeaderProfileButton() {
   const { isLoggedIn, signOut } = useAuthContext()
-  const { member } = useAuthContext() as any
-  const profileId = member?.profile_id
+  const { member } = useAuthContext()
 
   const [open, setOpen] = useState(false)
 
@@ -59,11 +58,13 @@ export function HeaderProfileButton() {
     <>
       {/* HeaderRight icon */}
       <TouchableOpacity onPress={onPressIcon} style={{ marginInlineStart: 2 }}>
-        <ProfileAvatar
-          profileId={profileId}
-          size="sm"
-          isUpdatable={false}
-        />
+        {member?.id && (
+          <MemberAvatar
+            memberId={member.id}
+            size="sm"
+            isUpdatable={false}
+          />
+        )}
       </TouchableOpacity>
 
       {/* Dropdown Modal */}

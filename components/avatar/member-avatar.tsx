@@ -1,61 +1,51 @@
-// components/avatar/profile-avatar.tsx
+// components/avatar/member-avatar.tsx
 import * as ImagePicker from 'expo-image-picker'
 import React, { useEffect, useState } from 'react'
 import { Image } from 'react-native'
 
 import type { AvatarSize } from '@/components/avatar/avatar'
 import { Avatar } from '@/components/avatar/avatar'
-import { useProfile, useUpdateProfile } from '@/lib/profiles/profiles.hooks'
+import { useMember, useUpdateMember } from '@/lib/members/members.hooks'
 
-type ProfileAvatarProps = {
-  profileId: string
+
+type MemberAvatarProps = {
+  memberId: string
   isUpdatable?: boolean
   size?: AvatarSize
 }
 
-export function ProfileAvatar({
-  profileId,
+export function MemberAvatar({
+  memberId,
   isUpdatable = false,
   size = 'md',
-}: ProfileAvatarProps) {
-  const { data: profile } = useProfile(profileId)
-  const updateProfile = useUpdateProfile()
+}: MemberAvatarProps) {
+  const { data: member } = useMember(memberId)
+  const updateMember = useUpdateMember()
 
   const [uri, setUri] = useState<string | null>(null)
   const [loadedUri, setLoadedUri] = useState<string | null>(null)
 
-  // pull cache-buster value (we inject this in useUpdateProfile.onSuccess)
-  const avatarCacheBuster = (profile as any)?.avatarCacheBuster
+  const avatarCacheBuster = member?.avatarCacheBuster
 
-  // --- Load remote avatar + prevent flicker ---
   useEffect(() => {
-    const baseUrl = profile?.public_avatar_url || null
-
+    const baseUrl = member?.public_avatar_url || null
     if (!baseUrl) {
       setUri(null)
       setLoadedUri(null)
       return
     }
 
-    // same base URL for everyone + optional cache-buster
-    const url =
-      avatarCacheBuster != null
-        ? `${baseUrl}?v=${avatarCacheBuster}`
-        : baseUrl
+    const url = avatarCacheBuster != null
+      ? `${baseUrl}?v=${avatarCacheBuster}`
+      : baseUrl
 
     setUri(url)
 
     Image.prefetch(url)
-      .then(() => {
-        setLoadedUri(url)
-      })
-      .catch(() => {
-        // even if prefetch fails, fall back to showing the URL
-        setLoadedUri(url)
-      })
-  }, [profile?.public_avatar_url, avatarCacheBuster])
+      .then(() => setLoadedUri(url))
+      .catch(() => setLoadedUri(url))
+  }, [member?.public_avatar_url, avatarCacheBuster])
 
-  // --- User selects a new avatar ---
   const handlePress = async () => {
     if (!isUpdatable) return
 
@@ -71,20 +61,17 @@ export function ProfileAvatar({
     const localUri = result.assets[0].uri
     const previousUri = uri
 
-    // Optimistic preview on this component
     setLoadedUri(localUri)
     setUri(localUri)
 
     try {
-      await updateProfile.mutateAsync({
-        profileId,
+      await updateMember.mutateAsync({
+        memberId,
         avatarFileUri: localUri,
         updates: {},
       })
-      // after this, useUpdateProfile.onSuccess will bump avatarCacheBuster,
-      // which triggers the effect above in *all* ProfileAvatar instances.
-    } catch (_err) {
-      // rollback
+    } catch (err) {
+      console.error('[MemberAvatar] upload failed:', err)
       setLoadedUri(previousUri)
       setUri(previousUri)
     }

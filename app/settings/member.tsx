@@ -10,7 +10,6 @@ import { useAuthContext } from '@/hooks/use-auth-context'
 
 export default function MyFamilyMemberSettingsScreen() {
   const { member } = useAuthContext() as any
-  const profileId = member?.profile_id as string | undefined
 
   const [nickname, setNickname] = useState('')
   const [themeColor, setThemeColor] = useState<string>('blue') // placeholder
@@ -45,7 +44,7 @@ export default function MyFamilyMemberSettingsScreen() {
   return (
     <Screen>
       <Text style={styles.label}>Nickname (optional)</Text>
-      <TextInput value={nickname} onChangeText={setNickname} style={styles.input} placeholder="e.g. Omri 😄" />
+      <TextInput value={nickname} onChangeText={setNickname} style={styles.input} />
 
       <Text style={styles.label}>Theme color</Text>
       <View style={styles.placeholderBox}>

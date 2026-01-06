@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router'
 import React from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
-import { ProfileAvatar } from '@/components/avatar/profile-avatar'
+import { MemberAvatar } from '@/components/avatar/member-avatar'
 import { Screen } from '@/components/ui/screen'
 
 
@@ -50,14 +50,14 @@ const ITEMS: Item[] = [
 
 export default function SettingsIndex() {
   const router = useRouter()
-  const { profileId, member } = useAuthContext()
+  const { member } = useAuthContext()
 
   return (
     <Screen>
       <View style={styles.avatarWrapper}>
-        {profileId ? (
-          <ProfileAvatar
-            profileId={profileId}
+        {member?.id ? (
+          <MemberAvatar
+            memberId={member.id}
             size="xl"
             isUpdatable={true}
           />
