@@ -5,11 +5,15 @@ import { createContext, useContext } from 'react'
 import type { IdentifierInfo } from '@/lib/auth/auth.service'
 import { Membership } from '@/lib/families/families.types'
 import { FamilyMember } from '@/lib/members/members.types'
+import { Profile } from '@/lib/profiles/profiles.types'
 
 
 export type AuthData = {
   session: Session | null
+  isEmailVerified: boolean
+  email: string | null
   profileId: string | null
+  profile: Profile | null
   member: FamilyMember | null
   memberships: Membership[] | null
   refreshMemberships: () => Promise<void>
@@ -25,7 +29,10 @@ export type AuthData = {
 
 export const AuthContext = createContext<AuthData>({
   session: null,
+  email: null,
+  isEmailVerified: false,
   profileId: null,
+  profile: null,
   member: null,
   memberships: null,
   refreshMemberships: async () => { },

@@ -1,7 +1,7 @@
 // app/settings/index.tsx
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { Ionicons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
+import { Href, useRouter } from 'expo-router'
 import React from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
@@ -14,7 +14,7 @@ type Item = {
   title: string
   description: string
   icon: React.ComponentProps<typeof Ionicons>['name']
-  href: '/settings/account' | '/settings/member' | '/settings/family' | '/settings/billing'
+  href: Href
 }
 
 const ITEMS: Item[] = [
@@ -26,9 +26,16 @@ const ITEMS: Item[] = [
     href: '/settings/account',
   },
   {
+    key: 'email',
+    title: 'Email',
+    description: 'Email settings',
+    icon: 'mail-outline',
+    href: '/settings/email',
+  },
+  {
     key: 'member',
     title: 'My family member',
-    description: 'Nickname, theme color, avatar',
+    description: 'Nickname, theme color',
     icon: 'happy-outline',
     href: '/settings/member',
   },

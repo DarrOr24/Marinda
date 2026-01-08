@@ -1,5 +1,5 @@
 // app/settings/account.tsx
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   StyleSheet,
@@ -14,8 +14,10 @@ import { DatePicker } from '@/components/date-picker'
 import { Button } from '@/components/ui/button'
 import { Screen } from '@/components/ui/screen'
 import { useAuthContext } from '@/hooks/use-auth-context'
+import { useHydratedEffect } from '@/hooks/use-hydrated-effect'
 import { useMyFamilies } from '@/lib/families/families.hooks'
 import { useProfile, useUpdateProfile } from '@/lib/profiles/profiles.hooks'
+
 
 const GENDER_OPTIONS = [
   { label: 'Male', value: 'MALE' },
@@ -23,11 +25,11 @@ const GENDER_OPTIONS = [
 ]
 
 export default function AccountSettingsScreen() {
-  const { member } = useAuthContext() as any
+  const { member } = useAuthContext()
   const profileId = member?.profile_id
   const activeFamilyId = member?.family_id ?? null
 
-  const { data, isLoading } = useProfile(profileId)
+  const { data, isLoading } = useProfile(profileId ?? null)
   const updateProfile = useUpdateProfile()
   const {
     data: myFamilies,
@@ -39,7 +41,7 @@ export default function AccountSettingsScreen() {
   const [gender, setGender] = useState<string | null>(null)
   const [birthDate, setBirthDate] = useState<string>('')
 
-  useEffect(() => {
+  useHydratedEffect(() => {
     if (!data) return
 
     setFirstName(data.first_name ?? '')

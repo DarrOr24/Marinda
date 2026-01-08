@@ -29,7 +29,7 @@ const ROUND_SIZES: Record<ButtonSize, number> = {
 };
 
 type ButtonProps = {
-  title: string;
+  title?: string;
   type?: ButtonType;
   size?: ButtonSize;
   onPress?: () => void;
@@ -47,7 +47,7 @@ type ButtonProps = {
 };
 
 export function Button({
-  title,
+  title = '',
   type = 'primary',
   size = 'md',
   onPress,

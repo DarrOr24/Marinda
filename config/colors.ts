@@ -5,6 +5,18 @@ const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';
 
 export const Colors = {
+  common: {
+    // Gray
+    gray100: '#f1f5f9',
+    gray200: '#e2e8f0',
+    gray300: '#cbd5e1',
+    gray400: '#94a3b8',
+    gray500: '#64748b',
+    gray600: '#475569',
+    gray700: '#334155',
+    gray800: '#1e293b',
+    gray900: '#0f172a',
+  },
   light: {
     text: '#11181C',
     background: '#fff',

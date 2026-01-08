@@ -9,6 +9,8 @@ import { type IdentifierInfo, requestOtp, verifyOtp } from '@/lib/auth/auth.serv
 import { fetchMember } from '@/lib/families/families.api'
 import { Membership } from '@/lib/families/families.types'
 import { FamilyMember } from '@/lib/members/members.types'
+import { fetchProfile } from '@/lib/profiles/profiles.api'
+import { Profile } from '@/lib/profiles/profiles.types'
 import { getSupabase } from '@/lib/supabase'
 
 const ACTIVE_FAMILY_KEY = 'marinda:activeFamilyId'
@@ -18,16 +20,21 @@ export default function AuthProvider({ children }: PropsWithChildren) {
 
   const [session, setSession] = useState<Session | null>(null)
   const [member, setMember] = useState<FamilyMember | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [memberships, setMemberships] = useState<Membership[] | null>(null)
 
   const [isSessionLoading, setIsSessionLoading] = useState(true)
   const [isMembershipsLoading, setIsMembershipsLoading] = useState(false)
   const [isMemberLoading, setIsMemberLoading] = useState(false)
+  const [isProfileLoading, setIsProfileLoading] = useState(false)
   const [isResolvingFamily, setIsResolvingFamily] = useState(false)
 
-  const isLoading = isSessionLoading || isMembershipsLoading || isMemberLoading || isResolvingFamily
+  const isLoading = isSessionLoading || isMembershipsLoading || isMemberLoading || isProfileLoading || isResolvingFamily
 
   const userId = session?.user?.id
+
+  const email = session?.user?.email ?? null
+  const isEmailVerified = !!session?.user?.email_confirmed_at
 
   const [activeFamilyId, _setActiveFamilyId] = useState<string | null>(null)
   const setActiveFamilyId = useCallback(async (id: string | null) => {
@@ -41,6 +48,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
   const cleanState = useCallback(async () => {
     setMemberships(null)
     setMember(null)
+    setProfile(null)
     setPendingIdentifier(null)
     await setActiveFamilyId(null)
   }, [setActiveFamilyId])
@@ -101,12 +109,23 @@ export default function AuthProvider({ children }: PropsWithChildren) {
   // Native deep linking support (for OAuth / magic link)
   useEffect(() => {
     if (Platform.OS === 'web') return
+
     const handleUrl = async (url: string | null) => {
-      if (!url || !url.includes('auth-callback')) return
+      if (!url) return
+      if (!url.includes('auth-callback')) return
+
       const { data, error } = await supabase.auth.exchangeCodeForSession(url)
-      if (error) console.error(error)
-      else if (data?.session) setSession(data.session)
+      if (error) {
+        console.error('exchangeCodeForSession error:', error)
+        return
+      }
+
+      if (data?.session) setSession(data.session)
+
+      const refreshed = await supabase.auth.getSession()
+      if (refreshed.data.session) setSession(refreshed.data.session)
     }
+
     const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url))
     Linking.getInitialURL().then(handleUrl)
     return () => sub.remove()
@@ -156,6 +175,29 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     restoreActiveFamily()
   }, [userId, memberships, setActiveFamilyId])
 
+  // Fetch the profile when the session changes
+  useEffect(() => {
+    const fetchCurrProfile = async () => {
+      if (!userId) {
+        setProfile(null)
+        return
+      }
+
+      setIsProfileLoading(true)
+      try {
+        const p = await fetchProfile(userId)
+        setProfile(p)
+      } catch (e) {
+        console.error('Error fetching profile:', e)
+        setProfile(null)
+      } finally {
+        setIsProfileLoading(false)
+      }
+    }
+
+    fetchCurrProfile()
+  }, [userId])
+
   // Fetch the member when the session or active family changes
   useEffect(() => {
     const fetchCurrMember = async () => {
@@ -203,12 +245,15 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     const { error } = await supabase.auth.signOut()
     if (error) throw error
     await cleanState()
-  }, [supabase, setActiveFamilyId])
+  }, [supabase, cleanState])
 
   const value = useMemo(
     () => ({
       session,
+      email,
+      isEmailVerified,
       profileId: userId ?? null,
+      profile,
       member,
       memberships,
       refreshMemberships: fetchMemberships,
@@ -223,6 +268,9 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     }),
     [
       session,
+      email,
+      isEmailVerified,
+      profile,
       member,
       memberships,
       fetchMemberships,

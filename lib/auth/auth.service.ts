@@ -1,6 +1,9 @@
 // lib/auth/auth.service.ts
-import { getSupabase } from '@/lib/supabase'
 import { User } from '@supabase/supabase-js'
+import { makeRedirectUri } from 'expo-auth-session'
+
+import { getSupabase } from '@/lib/supabase'
+import { isValidEmail } from '@/utils/validation.utils'
 
 
 const supabase = getSupabase()
@@ -55,4 +58,34 @@ export async function verifyOtp(
   if (error) return { ok: false, error: error.message }
 
   return { ok: true, user: data.user }
+}
+
+export async function updateEmail(
+  nextEmail: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const email = nextEmail.trim().toLowerCase()
+  if (!isValidEmail(email)) return { ok: false, error: 'Invalid email' }
+
+  const { error } = await supabase.auth.updateUser(
+    { email },
+    { emailRedirectTo: getEmailRedirectTo() },
+  )
+
+  return error ? { ok: false, error: error.message } : { ok: true }
+}
+
+export async function resendEmailChangeVerification(
+  email: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.auth.resend({
+    type: 'email_change',
+    email: email.trim().toLowerCase(),
+    options: { emailRedirectTo: getEmailRedirectTo() },
+  })
+
+  return error ? { ok: false, error: error.message } : { ok: true }
+}
+
+function getEmailRedirectTo() {
+  return makeRedirectUri({ path: 'auth-callback' })
 }

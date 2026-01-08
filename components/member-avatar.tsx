@@ -12,7 +12,7 @@ export default function MemberAvatar({
   index?: number
 }) {
   // 1️⃣ Check for profile avatar
-  const avatarPath = member?.profile?.avatar_url ?? null;
+  const avatarPath = member?.avatar_url ?? null;
   const avatarUrl = avatarPath ? getAvatarPublicUrl(avatarPath) : null;
 
   // 2️⃣ If profile pic exists → show image
