@@ -9,7 +9,7 @@ import { type IdentifierInfo, requestOtp, verifyOtp } from '@/lib/auth/auth.serv
 import { fetchMember } from '@/lib/families/families.api'
 import { Membership } from '@/lib/families/families.types'
 import { FamilyMember } from '@/lib/members/members.types'
-import { fetchProfile } from '@/lib/profiles/profiles.api'
+import { fetchProfileByAuthUserId } from '@/lib/profiles/profiles.api'
 import { Profile } from '@/lib/profiles/profiles.types'
 import { getSupabase } from '@/lib/supabase'
 
@@ -31,7 +31,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const isLoading = isSessionLoading || isMembershipsLoading || isMemberLoading || isProfileLoading || isResolvingFamily
 
-  const userId = session?.user?.id
+  const authUserId = session?.user?.id
 
   const email = session?.user?.email ?? null
   const isEmailVerified = !!session?.user?.email_confirmed_at
@@ -54,17 +54,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [setActiveFamilyId])
 
   const fetchMemberships = useCallback(async () => {
-    if (!userId) {
+    if (!authUserId) {
       await cleanState()
       return
     }
+    if (!profile?.id) return
 
     setIsMembershipsLoading(true)
     try {
       const { data, error } = await supabase
         .from('family_members')
         .select(`family_id, family:families(id, name, code)`)
-        .eq('profile_id', userId)
+        .eq('profile_id', profile.id)
         .order('joined_at', { ascending: true })
 
       if (error) throw error
@@ -82,7 +83,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     } finally {
       setIsMembershipsLoading(false)
     }
-  }, [userId, supabase])
+  }, [authUserId, profile?.id, supabase])
 
   // Fetch session once and subscribe to auth state changes
   useEffect(() => {
@@ -134,12 +135,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
   // fetch memberships whenever session changes
   useEffect(() => {
     fetchMemberships()
-  }, [userId, fetchMemberships])
+  }, [profile?.id, fetchMemberships])
 
   // Restore or auto-pick active family on login
   useEffect(() => {
     const restoreActiveFamily = async () => {
-      if (!userId) {
+      if (!authUserId) {
         _setActiveFamilyId(null)
         await appStorage.removeItem(ACTIVE_FAMILY_KEY)
         return
@@ -173,19 +174,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     restoreActiveFamily()
-  }, [userId, memberships, setActiveFamilyId])
+  }, [authUserId, memberships, setActiveFamilyId])
 
   // Fetch the profile when the session changes
   useEffect(() => {
     const fetchCurrProfile = async () => {
-      if (!userId) {
+      if (!authUserId) {
         setProfile(null)
         return
       }
 
       setIsProfileLoading(true)
       try {
-        const p = await fetchProfile(userId)
+        const p = await fetchProfileByAuthUserId(authUserId)
         setProfile(p)
       } catch (e) {
         console.error('Error fetching profile:', e)
@@ -196,19 +197,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     fetchCurrProfile()
-  }, [userId])
+  }, [authUserId])
 
   // Fetch the member when the session or active family changes
   useEffect(() => {
     const fetchCurrMember = async () => {
-      if (!userId || !activeFamilyId) {
+      if (!profile?.id || !activeFamilyId) {
         setMember(null)
         return
       }
 
       setIsMemberLoading(true)
       try {
-        const m = await fetchMember(activeFamilyId, userId)
+        const m = await fetchMember(activeFamilyId, profile.id)
         setMember(m)
       } catch (e) {
         console.error('Error fetching member:', e)
@@ -219,7 +220,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     fetchCurrMember()
-  }, [userId, activeFamilyId])
+  }, [profile?.id, activeFamilyId])
 
   const startAuth = useCallback(async (identifier: IdentifierInfo) => {
     const res = await requestOtp(identifier)
@@ -250,9 +251,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const value = useMemo(
     () => ({
       session,
+      authUserId: authUserId ?? null,
       email,
       isEmailVerified,
-      profileId: userId ?? null,
+      profileId: profile?.id ?? null,
       profile,
       member,
       memberships,
@@ -268,6 +270,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }),
     [
       session,
+      authUserId,
       email,
       isEmailVerified,
       profile,

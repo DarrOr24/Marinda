@@ -18,6 +18,16 @@ export async function fetchProfile(profileId: string): Promise<Profile> {
     return data;
 }
 
+export async function fetchProfileByAuthUserId(authUserId: string): Promise<Profile> {
+    const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("auth_user_id", authUserId)
+        .single();
+    if (error) throw new Error(error.message);
+    return data;
+}
+
 export async function updateProfile(profileId: string, updates: Partial<Profile>) {
     const { data, error } = await supabase
         .from("profiles")
