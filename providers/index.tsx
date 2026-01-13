@@ -11,8 +11,7 @@ import { PropsWithChildren, useEffect } from 'react'
 import { AppState, Platform, useColorScheme } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 
-import AuthProvider from '@/providers/auth-provider'
-import { SignUpFlowProvider } from '@/providers/signup-flow-provider'
+import { AuthProvider } from '@/providers/auth-provider'
 import { ToastProvider } from '@/providers/toast-provider'
 
 
@@ -53,13 +52,11 @@ export default function Providers({ children }: PropsWithChildren) {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          <SignUpFlowProvider>
-            <AuthProvider>
-              <ToastProvider>
-                {children}
-              </ToastProvider>
-            </AuthProvider>
-          </SignUpFlowProvider>
+          <AuthProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </AuthProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
     </ThemeProvider>

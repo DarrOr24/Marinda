@@ -10,6 +10,7 @@ import { Profile } from '@/lib/profiles/profiles.types'
 
 export type AuthData = {
   session: Session | null
+  authUserId: string | null
   isEmailVerified: boolean
   email: string | null
   profileId: string | null
@@ -29,6 +30,7 @@ export type AuthData = {
 
 export const AuthContext = createContext<AuthData>({
   session: null,
+  authUserId: null,
   email: null,
   isEmailVerified: false,
   profileId: null,

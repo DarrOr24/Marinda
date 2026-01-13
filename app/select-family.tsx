@@ -1,6 +1,6 @@
 // app/select-family.tsx
 import { useAuthContext } from '@/hooks/use-auth-context'
-import { useRouter } from 'expo-router'
+import { Href, useRouter } from 'expo-router'
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 export default function SelectFamilyScreen() {
@@ -42,7 +42,7 @@ export default function SelectFamilyScreen() {
         <View style={{ height: 10 }} />
         <TouchableOpacity
           style={styles.altBtn}
-          onPress={() => router.push('/onboarding')}
+          onPress={() => router.push('/onboarding' as Href)}
         >
           <Text style={styles.altBtnText}>Create / Join</Text>
         </TouchableOpacity>

@@ -23,11 +23,11 @@ export const rootNavigatorScreenOptions: NativeStackNavigationOptions = {
 }
 
 function RootNavigator() {
-  const { isLoggedIn, member } = useAuthContext();
+  const { isLoggedIn, profile } = useAuthContext();
 
   const firstName =
-    member?.profile?.first_name ||
-    member?.nickname ||
+    profile?.first_name ||
+    profile?.last_name ||
     'Account';
 
   const accountTitle = `${firstName}'s Account`;
