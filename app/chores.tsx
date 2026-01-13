@@ -520,11 +520,20 @@ export default function Chores() {
       prev.map((c) => {
         if (c.id !== id) return c;
 
+        const existing = c.proofs ?? [];
+
+        // Clear all proofs
         if (proof === null) {
           return { ...c, proofs: [] };
         }
 
-        const existing = c.proofs ?? [];
+        // ✅ Treat empty uri as "remove this proof type"
+        if (!proof.uri) {
+          return {
+            ...c,
+            proofs: existing.filter((p) => p.type !== proof.type),
+          };
+        }
 
         // Replace the existing proof of the same type ("BEFORE" or "AFTER")
         const filtered = existing.filter((p) => p.type !== proof.type);
@@ -537,6 +546,8 @@ export default function Chores() {
     );
   };
 
+  const isLocalUri = (uri?: string) =>
+    !!uri && (uri.startsWith('file://') || uri.startsWith('content://'));
 
   // Kid submits (SUBMITTED) – multi-member submit
   const onMarkPending = async (
@@ -555,10 +566,20 @@ export default function Chores() {
       const before = theChore.proofs?.find((p) => p.type === "BEFORE") || null;
       const after = theChore.proofs?.find((p) => p.type === "AFTER") || null;
 
-      if (!after) {
+      if (!after?.uri) {
         Alert.alert("Proof required", "Please attach an AFTER photo or video.");
         return;
       }
+
+      // ✅ Critical: block remote URLs from previous submissions
+      if (!isLocalUri(after.uri)) {
+        Alert.alert(
+          "New proof required",
+          "This chore already has an old proof from a previous submission. Please upload a NEW AFTER photo/video before submitting again."
+        );
+        return;
+      }
+
 
       // Build the correct payload
       const proofsPayload = { before, after };
