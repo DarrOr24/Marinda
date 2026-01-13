@@ -15,7 +15,7 @@ import { getSupabase } from '@/lib/supabase'
 
 const ACTIVE_FAMILY_KEY = 'marinda:activeFamilyId'
 
-export default function AuthProvider({ children }: PropsWithChildren) {
+export function AuthProvider({ children }: PropsWithChildren) {
   const supabase = getSupabase()
 
   const [session, setSession] = useState<Session | null>(null)

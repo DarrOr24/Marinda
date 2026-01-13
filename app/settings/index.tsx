@@ -1,5 +1,4 @@
 // app/settings/index.tsx
-import { useAuthContext } from '@/hooks/use-auth-context'
 import { Ionicons } from '@expo/vector-icons'
 import { Href, useRouter } from 'expo-router'
 import React from 'react'
@@ -7,6 +6,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { MemberAvatar } from '@/components/avatar/member-avatar'
 import { Screen } from '@/components/ui/screen'
+import { useAuthContext } from '@/hooks/use-auth-context'
 
 
 type Item = {
