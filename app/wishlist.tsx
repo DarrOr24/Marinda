@@ -191,11 +191,11 @@ export default function WishList() {
         Number(newPrice) > SELF_FULFILL_MAX_PRICE;
 
     const canAdd =
-        !isParent && !!activeFamilyId && !!effectiveMemberId && !addItem.isPending;
+        !!activeFamilyId && !!effectiveMemberId && !addItem.isPending;
 
     const handleSave = () => {
-        const trimmedTitle = newTitle.trim();
-        if (!trimmedTitle) return;
+        const trimmedTitle = newTitle.trim()
+        if (!trimmedTitle) return
 
         if (editingItem) {
             updateWishlistItem.mutate(
@@ -211,10 +211,26 @@ export default function WishList() {
                         payment_method: canFulfillSelf ? paymentMethod.trim() || null : null,
                     },
                 },
-                { onSuccess: () => setEditingItem(null) }
-            );
-        } else {
-            addItem.mutate({
+                {
+                    onSuccess: () => {
+                        console.log("[wishlist] update success")
+                        setShowAddModal(false)
+                        resetForm()
+                    },
+                    onError: (err: any) => {
+                        console.log("[wishlist] update error", err)
+                        Alert.alert(
+                            "Failed to update wish",
+                            err?.message || err?.toString?.() || "Unknown error"
+                        )
+                    },
+                }
+            )
+            return
+        }
+
+        addItem.mutate(
+            {
                 familyId: activeFamilyId!,
                 memberId: effectiveMemberId!,
                 title: trimmedTitle,
@@ -222,16 +238,27 @@ export default function WishList() {
                 link: newLink.trim() || null,
                 note: newNote.trim() || null,
                 imageUri: newImageUri || null,
-
                 fulfillmentMode: canFulfillSelf ? "self" : "parents",
                 paymentMethod: canFulfillSelf ? paymentMethod.trim() || null : null,
-            });
+            },
+            {
+                onSuccess: (data) => {
+                    console.log("[wishlist] add success", data)
+                    setShowAddModal(false)
+                    resetForm()
+                },
+                onError: (err: any) => {
+                    console.log("[wishlist] add error", err)
+                    Alert.alert(
+                        "Failed to add wish",
+                        err?.message || err?.toString?.() || "Unknown error"
+                    )
+                    // keep modal open so you can retry
+                },
+            }
+        )
+    }
 
-        }
-
-        setShowAddModal(false);
-        resetForm();
-    };
 
     // -------- loading/error --------
     if (!activeFamilyId) {
@@ -536,20 +563,21 @@ export default function WishList() {
                 )}
             </ScrollView>
 
-            {/* FAB – kids only */}
-            {!isParent && (
-                <TouchableOpacity
-                    style={[styles.fab, !canAdd && { opacity: 0.5 }]}
-                    onPress={() => {
-                        resetForm();
-                        setShowAddModal(true);
-                    }}
-
-                    disabled={!canAdd}
-                >
-                    <MaterialCommunityIcons name="plus" size={26} color="#fff" />
-                </TouchableOpacity>
-            )}
+            {/* FAB — kids + parents */}
+            <TouchableOpacity
+                style={[styles.fab, !canAdd && { opacity: 0.5 }]}
+                onPress={() => {
+                    if (isParent && !effectiveMemberId) {
+                        Alert.alert("Choose a child", "Select a child first to add a wish.");
+                        return;
+                    }
+                    resetForm();
+                    setShowAddModal(true);
+                }}
+                disabled={!canAdd}
+            >
+                <MaterialCommunityIcons name="plus" size={26} color="#fff" />
+            </TouchableOpacity>
 
             {/* Add/Edit Modal */}
             <Modal visible={showAddModal} transparent animationType="fade">
