@@ -27,6 +27,7 @@ import type { WishlistItem } from "@/lib/wishlist/wishlist.types";
 
 import { KidSwitcher } from "@/components/kid-switcher";
 import MediaPicker from '@/components/media-picker';
+import { Button } from "@/components/ui/button";
 import { useFamilyWishlistSettings } from "@/lib/wishlist/wishlist-settings.hooks";
 import {
     useAddWishlistItem,
@@ -35,7 +36,7 @@ import {
     useUpdateWishlistItem,
     useWishlist,
 } from "@/lib/wishlist/wishlist.hooks";
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from 'expo-router';
 import { Image, Linking } from 'react-native';
 
@@ -317,22 +318,28 @@ export default function WishList() {
                         </Text>
 
                         <View style={styles.iconsRow}>
-                            <Pressable onPress={() => router.push('/wishlist-info')}>
-                                <Ionicons
-                                    name="information-circle-outline"
-                                    size={22}
-                                    color="#334155"
-                                />
-                            </Pressable>
+                            <Button
+                                type="outline"
+                                size="sm"
+                                round
+                                hitSlop={8}
+                                backgroundColor="#eef2ff"
+                                onPress={() => router.push("/wishlist-info")}
+                                leftIcon={<Ionicons name="information-circle-outline" size={20} />}
+                            />
 
-                            <Pressable onPress={() => router.push("/wishlist-settings")}>
-                                <Ionicons
-                                    name="settings-outline"
-                                    size={22}
-                                    color="#334155"
-                                />
-                            </Pressable>
+                            <Button
+                                type="outline"
+                                size="sm"
+                                round
+                                hitSlop={8}
+                                backgroundColor="#eef2ff"
+                                onPress={() => router.push("/wishlist-settings")}
+                                leftIcon={<Ionicons name="settings-outline" size={20} />}
+                            />
+
                         </View>
+
                     </View>
 
                     {/* ROW 2 — Points + Switcher (LEFT only) */}
