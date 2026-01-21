@@ -751,16 +751,6 @@ const styles = StyleSheet.create({
         color: '#1e3a8a',
     },
 
-    iconCircle: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#eff6ff',
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-    },
     iconGroup: {
         flexDirection: 'row',
         alignItems: 'center',
