@@ -33,14 +33,13 @@ import {
 
 import { useAnnouncementsRealtime } from '@/lib/announcements/announcements.realtime';
 
+import { Button } from '@/components/ui/button';
 import {
     DEFAULT_ANNOUNCEMENT_TABS,
     type AnnouncementItem,
     type AnnouncementTab,
 } from '@/lib/announcements/announcements.types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-
 
 
 // --------------------------------------------
@@ -328,20 +327,27 @@ export default function AnnouncementsBoard() {
                         </View>
 
                         <View style={styles.iconGroup}>
-                            <Pressable
+                            <Button
+                                type="outline"
+                                size="sm"
+                                backgroundColor="#eef2ff"
+                                round
+                                hitSlop={8}
                                 onPress={() => router.push('/boards/announcements-info')}
-                                style={styles.iconCircle}
-                            >
-                                <Ionicons name="information-circle-outline" size={20} color="#1e3a8a" />
-                            </Pressable>
+                                leftIcon={<Ionicons name="information-circle-outline" size={20} />}
+                            />
 
-                            <Pressable
+                            <Button
+                                type="outline"
+                                size="sm"
+                                backgroundColor="#eef2ff"
+                                round
+                                hitSlop={8}
                                 onPress={() => router.push('/boards/announcements-settings')}
-                                style={styles.iconCircle}
-                            >
-                                <Ionicons name="settings-outline" size={20} color="#1e3a8a" />
-                            </Pressable>
+                                leftIcon={<Ionicons name="settings-outline" size={20} />}
+                            />
                         </View>
+
 
                     </View>
 
