@@ -353,6 +353,7 @@ export default function AnnouncementsBoard() {
                         <TextInput
                             style={styles.searchInput}
                             placeholder="Search announcements..."
+                            placeholderTextColor="#94a3b8"
                             value={search}
                             onChangeText={setSearch}
                         />
@@ -479,6 +480,7 @@ export default function AnnouncementsBoard() {
                         <TextInput
                             style={styles.input}
                             placeholder={activeTab.placeholder}
+                            placeholderTextColor="#94a3b8"
                             value={newText}
                             onChangeText={setNewText}
                             multiline
@@ -559,6 +561,7 @@ export default function AnnouncementsBoard() {
                                 <TextInput
                                     style={styles.modalInput}
                                     placeholder="Tab name (e.g., Holidays)"
+                                    placeholderTextColor="#94a3b8"
                                     value={newTabLabel}
                                     onChangeText={setNewTabLabel}
                                 />
@@ -571,6 +574,7 @@ export default function AnnouncementsBoard() {
                                             ? buildDefaultPlaceholder(newTabLabel)
                                             : "Placeholder (optional)"
                                     }
+                                    placeholderTextColor="#94a3b8"
                                     value={newTabPlaceholder}
                                     onChangeText={setNewTabPlaceholder}
                                 />

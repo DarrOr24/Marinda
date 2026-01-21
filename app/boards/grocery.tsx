@@ -577,6 +577,7 @@ Category: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}
                         <Text style={styles.label}>Item</Text>
                         <TextInput
                             placeholder="e.g., Bananas"
+                            placeholderTextColor="#94a3b8"
                             value={name}
                             onChangeText={setName}
                             style={styles.input}
@@ -629,6 +630,7 @@ Category: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}
                         <Text style={styles.label}>Amount (optional)</Text>
                         <TextInput
                             placeholder="e.g., 2, 3 packs, 1kg"
+                            placeholderTextColor="#94a3b8"
                             value={amount}
                             onChangeText={setAmount}
                             style={styles.input}

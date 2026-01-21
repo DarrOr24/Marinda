@@ -220,6 +220,7 @@ export default function AnnouncementSettingsScreen() {
                                     )
                                 }
                                 placeholder="Holidays"
+                                placeholderTextColor="#94a3b8"
                             />
 
                             <Text style={[styles.label, { marginTop: 10 }]}>
@@ -238,6 +239,7 @@ export default function AnnouncementSettingsScreen() {
                                         ? `Write a new ${editing.label.toLowerCase()}...`
                                         : 'Write a new announcement...'
                                 }
+                                placeholderTextColor="#94a3b8"
                             />
 
                             <View style={styles.editorButtons}>

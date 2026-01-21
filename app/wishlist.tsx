@@ -363,6 +363,7 @@ export default function WishList() {
                             <Text style={styles.calcLabel}>{FAMILY_CURRENCY}</Text>
                             <TextInput
                                 placeholder="0"
+                                placeholderTextColor="#94a3b8"
                                 keyboardType="numeric"
                                 value={calcCad}
                                 onChangeText={(v) => {
@@ -380,6 +381,7 @@ export default function WishList() {
                             <Text style={styles.calcLabel}>Points</Text>
                             <TextInput
                                 placeholder="0"
+                                placeholderTextColor="#94a3b8"
                                 keyboardType="numeric"
                                 value={calcPointsStr}
                                 onChangeText={(v) => {
@@ -600,12 +602,14 @@ export default function WishList() {
 
                             <TextInput
                                 placeholder="Title"
+                                placeholderTextColor="#94a3b8"
                                 value={newTitle}
                                 onChangeText={setNewTitle}
                                 style={styles.input}
                             />
                             <TextInput
                                 placeholder={`Price (${FAMILY_CURRENCY})`}
+                                placeholderTextColor="#94a3b8"
                                 keyboardType="numeric"
                                 value={newPrice}
                                 onChangeText={setNewPrice}
@@ -662,6 +666,7 @@ export default function WishList() {
                             {canFulfillSelf && (
                                 <TextInput
                                     placeholder="How will I pay? (optional)"
+                                    placeholderTextColor="#94a3b8"
                                     value={paymentMethod}
                                     onChangeText={setPaymentMethod}
                                     style={styles.input}
@@ -670,6 +675,7 @@ export default function WishList() {
 
                             <TextInput
                                 placeholder="Note (optional)"
+                                placeholderTextColor="#94a3b8"
                                 value={newNote}
                                 onChangeText={setNewNote}
                                 style={[styles.input, { minHeight: 60 }]}
@@ -681,6 +687,7 @@ export default function WishList() {
                             {/* LINK INPUT */}
                             <TextInput
                                 placeholder="Link (optional)"
+                                placeholderTextColor="#94a3b8"
                                 value={newLink}
                                 onChangeText={setNewLink}
                                 style={styles.input}

@@ -259,6 +259,7 @@ export default function ChorePostModal({
                             value={title}
                             onChangeText={handleTitleChange}
                             placeholder="e.g. Empty the dishwasher"
+                            placeholderTextColor="#94a3b8"
                             style={styles.input}
                             returnKeyType="done"
                             submitBehavior="submit" onSubmitEditing={() => Keyboard.dismiss()}
@@ -272,6 +273,7 @@ export default function ChorePostModal({
                                     onChangeText={setPoints}
                                     keyboardType="number-pad"
                                     placeholder="e.g. 10"
+                                    placeholderTextColor="#94a3b8"
                                     style={styles.input}
                                     returnKeyType="done"
                                     submitBehavior="submit" onSubmitEditing={() => Keyboard.dismiss()}
@@ -286,6 +288,7 @@ export default function ChorePostModal({
                             value={finishByTime}
                             onChangeText={setFinishByTime}
                             placeholder="e.g. 7:30 pm or 19:30"
+                            placeholderTextColor="#94a3b8"
                             style={styles.input}
                             returnKeyType="done"
                             submitBehavior="submit" onSubmitEditing={() => Keyboard.dismiss()}
@@ -298,6 +301,7 @@ export default function ChorePostModal({
                             value={description}
                             onChangeText={setDescription}
                             placeholder="Add extra details for this chore…"
+                            placeholderTextColor="#94a3b8"
                             style={[styles.input, { minHeight: 60, textAlignVertical: 'top' }]}
                             multiline
                             submitBehavior="submit" onSubmitEditing={() => Keyboard.dismiss()}

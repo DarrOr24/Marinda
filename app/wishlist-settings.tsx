@@ -214,6 +214,7 @@ export default function WishlistSettingsScreen() {
                             keyboardType="numeric"
                             style={[styles.input, !isParent && styles.disabledInput]}
                             placeholder="e.g. 10"
+                            placeholderTextColor="#94a3b8"
                             pointerEvents={isParent ? "auto" : "none"} // prevents typing
                         />
                     </Pressable>
@@ -251,6 +252,7 @@ export default function WishlistSettingsScreen() {
                             editable={isParent}
                             keyboardType="numeric"
                             placeholder="e.g. 60 (leave empty for no limit)"
+                            placeholderTextColor="#94a3b8"
                             style={[styles.input, !isParent && styles.disabledInput]}
                             pointerEvents={isParent ? "auto" : "none"}
                         />

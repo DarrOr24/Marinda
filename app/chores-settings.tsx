@@ -172,6 +172,7 @@ export default function ChoreGameSettingsScreen() {
                                     setEditing((prev) => (prev ? { ...prev, title: txt } : prev))
                                 }
                                 placeholder="e.g. Empty the dishwasher"
+                                placeholderTextColor="#94a3b8"
                                 style={styles.input}
                             />
 
@@ -183,6 +184,7 @@ export default function ChoreGameSettingsScreen() {
                                 }
                                 keyboardType="number-pad"
                                 placeholder="e.g. 10"
+                                placeholderTextColor="#94a3b8"
                                 style={styles.input}
                             />
 

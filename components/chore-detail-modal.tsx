@@ -452,6 +452,7 @@ export default function ChoreDetailModal({
                                 </Text>
                                 <TextInput
                                     placeholder="What did you do here?"
+                                    placeholderTextColor="#94a3b8"
                                     value={proofNote}
                                     onChangeText={setProofNote}
                                     style={[s.input, { marginTop: 6 }]}
@@ -557,6 +558,7 @@ export default function ChoreDetailModal({
                                 <Text style={[s.text, { marginTop: 12 }]}>Notes</Text>
                                 <TextInput
                                     placeholder="Add a note…"
+                                    placeholderTextColor="#94a3b8"
                                     value={notes}
                                     onChangeText={setNotes}
                                     style={s.input}
