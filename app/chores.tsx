@@ -18,6 +18,7 @@ import { useFamily } from '@/lib/families/families.hooks';
 import { useSubscribeTableByFamily } from '@/lib/families/families.realtime';
 import type { Role } from '@/lib/members/members.types';
 
+import { Button } from "@/components/ui/button";
 
 import {
   useAddChore,
@@ -864,22 +865,27 @@ export default function Chores() {
 
         {/* RIGHT: info + settings */}
         <View style={styles.headerRight}>
-          <Pressable
+          <Button
+            type="outline"
+            size="sm"
+            backgroundColor="#eef2ff"
+            round
+            hitSlop={8}
             onPress={() => router.push('/chores-info')}
-            style={styles.iconCircle}
-            hitSlop={8}
-          >
-            <Ionicons name="information-circle-outline" size={18} color="#1e3a8a" />
-          </Pressable>
+            leftIcon={<Ionicons name="information-circle-outline" size={18} />}
+          />
 
-          <Pressable
-            onPress={() => router.push('/chores-settings')}
-            style={styles.iconCircle}
+          <Button
+            type="outline"
+            size="sm"
+            backgroundColor="#eef2ff"
+            round
             hitSlop={8}
-          >
-            <Ionicons name="settings-outline" size={18} color="#1e3a8a" />
-          </Pressable>
+            onPress={() => router.push('/chores-settings')}
+            leftIcon={<Ionicons name="settings-outline" size={18} />}
+          />
         </View>
+
 
       </View>
 
@@ -1136,17 +1142,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-
-  iconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#eff6ff',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
   },
 
   postBtn: {
