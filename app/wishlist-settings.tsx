@@ -298,14 +298,8 @@ function Section({ title, children }: any) {
 /* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
-    screen: { flex: 1, backgroundColor: "#F7FBFF" },
+
     center: { flex: 1, justifyContent: "center", alignItems: "center" },
-
-    container: {
-        padding: 16,
-        paddingBottom: 40, // For Samsung navbar safety
-    },
-
     intro: { fontSize: 14, color: "#475569", marginBottom: 20 },
 
     section: { marginBottom: 22 },
