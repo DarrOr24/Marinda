@@ -8,14 +8,14 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View,
+  View
 } from "react-native";
 
 import { KidSwitcher } from "@/components/kid-switcher";
 import MemberSidebar from "@/components/members-sidebar";
 import { Button } from "@/components/ui/button";
-import { KeyboardScreen } from "@/components/ui/keyboard-screen";
 import { ScreenList } from "@/components/ui/screen-list";
+import { SplitScreen } from "@/components/ui/split-screen";
 import WeeklyPointsChart from "@/components/weekly-points-chart";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
@@ -215,176 +215,160 @@ export default function MemberProfile() {
   };
 
   return (
-    <ScreenList edges={["bottom", "left", "right"]} withBackground>
+    <SplitScreen
+      edges={["bottom", "left", "right"]}
+      withBackground
+      left={<MemberSidebar />}
+      contentPadding={16}
+      gap="md"
+    >
+      {isParent && (
+        <>
+          <View style={{ alignSelf: "flex-start", marginBottom: 8 }}>
+            <KidSwitcher
+              kids={memberList.filter((m) => isKidRole(m.role))}
+              selectedKidId={id}
+              onSelectKid={(kidId) =>
+                router.push({ pathname: "/profile/[id]", params: { id: kidId } })
+              }
+            />
+          </View>
 
-      <View style={styles.row}>
+          <View style={{ alignSelf: "flex-start", marginBottom: 12 }}>
+            <Button
+              title="Manage my family"
+              type="primary"
+              size="md"
+              showShadow
+              onPress={() => router.push("/settings/family")}
+            />
+          </View>
+        </>
+      )}
+
+      {/* Points card – everyone sees current points */}
+      <View style={styles.pointsCard}>
+        <Text style={styles.pointsLabel}>Points</Text>
+        <Text style={styles.pointsValue}>{points}</Text>
+      </View>
+
+      {/* Manual adjust – parents only */}
+      {isParent && (
+        <View style={styles.adjustCard}>
+          <Text style={styles.adjustTitle}>Adjust points manually</Text>
+          <Text style={styles.adjustHelp}>
+            Add or subtract points for this member. Use this for bonuses, corrections,
+            or special rewards.
+          </Text>
+
+          <Text style={styles.adjustLabel}>Points change</Text>
+          <TextInput
+            value={adjustDelta}
+            onChangeText={setAdjustDelta}
+            keyboardType="number-pad"
+            placeholder="e.g. 10 or -5"
+            style={styles.adjustInput}
+            returnKeyType="done"
+            onSubmitEditing={() => Keyboard.dismiss()}
+          />
+
+          <Text style={[styles.adjustLabel, { marginTop: 8 }]}>Reason</Text>
+          <TextInput
+            value={adjustReason}
+            onChangeText={setAdjustReason}
+            placeholder="Reason for adjustment"
+            style={[styles.adjustInput, styles.adjustReasonInput]}
+            multiline
+            textAlignVertical="top"
+            returnKeyType="done"
+            onSubmitEditing={() => Keyboard.dismiss()}
+          />
+
+          <View style={styles.adjustButtonsRow}>
+            <Button
+              title="Clear"
+              type="secondary"
+              size="md"
+              fullWidth
+              onPress={() => {
+                setAdjustDelta("");
+                setAdjustReason("");
+              }}
+              disabled={adjustSaving}
+              style={{ flex: 1 }}
+            />
+            <Button
+              title={adjustSaving ? "Saving…" : "Save change"}
+              type="primary"
+              size="md"
+              fullWidth
+              onPress={handleAdjustPoints}
+              disabled={adjustSaving}
+              style={{ flex: 1 }}
+            />
+          </View>
+        </View>
+      )}
 
 
-        {/* Left sidebar */}
-        <MemberSidebar />
+      {/* Weekly points chart */}
+      <WeeklyPointsChart history={history} />
 
-        {/* Center content */}
-        <View style={{ flex: 1 }}>
-          <KeyboardScreen keyboardOffset={60} contentPadding={16}>
-            {isParent && (
-              <>
-                {/* Kid switcher */}
-                <View style={{ alignSelf: "flex-start", marginBottom: 8 }}>
-                  <KidSwitcher
-                    kids={memberList.filter((m) => isKidRole(m.role))}
-                    selectedKidId={id}
-                    onSelectKid={(kidId) =>
-                      router.push({ pathname: "/profile/[id]", params: { id: kidId } })
-                    }
-                  />
-                </View>
+      {/* Recent points activity */}
+      <View style={styles.card}>
+        <Text style={styles.historyTitle}>Recent points activity</Text>
 
-                {/* Manage family button */}
-                <View style={{ alignSelf: "flex-start", marginBottom: 12 }}>
-                  <Button
-                    title="Manage my family"
-                    type="primary"
-                    size="md"
-                    showShadow
-                    onPress={() => router.push("/settings/family")}
-                  />
-                </View>
-              </>
-            )}
+        {historyLoading && (
+          <View style={styles.historyEmpty}>
+            <ActivityIndicator size="small" />
+            <Text style={styles.historyEmptyText}>Loading points…</Text>
+          </View>
+        )}
 
-            {/* Points card – everyone sees current points */}
-            <View style={styles.pointsCard}>
-              <Text style={styles.pointsLabel}>Points</Text>
-              <Text style={styles.pointsValue}>{points}</Text>
-            </View>
+        {!historyLoading && historyError && (
+          <View style={styles.historyEmpty}>
+            <Text style={styles.historyEmptyText}>{historyError}</Text>
+          </View>
+        )}
 
-            {/* Manual adjust – parents only */}
-            {isParent && (
-              <View style={styles.adjustCard}>
-                <Text style={styles.adjustTitle}>Adjust points manually</Text>
-                <Text style={styles.adjustHelp}>
-                  Add or subtract points for this member. Use this for bonuses, corrections,
-                  or special rewards.
+        {!historyLoading && !historyError && history.length === 0 && (
+          <View style={styles.historyEmpty}>
+            <Text style={styles.historyEmptyText}>
+              No points activity yet for this member.
+            </Text>
+          </View>
+        )}
+
+        {!historyLoading && !historyError && history.length > 0 && (
+          <View style={styles.historyList}>
+            {history.map((entry) => (
+              <View key={entry.id} style={styles.historyRow}>
+                <Text
+                  style={[
+                    styles.historyDelta,
+                    entry.delta > 0 ? styles.historyDeltaPositive : styles.historyDeltaNegative,
+                  ]}
+                >
+                  {entry.delta > 0 ? `+${entry.delta}` : entry.delta}
                 </Text>
-
-                <Text style={styles.adjustLabel}>Points change</Text>
-                <TextInput
-                  value={adjustDelta}
-                  onChangeText={setAdjustDelta}
-                  keyboardType="number-pad"
-                  placeholder="e.g. 10 or -5"
-                  style={styles.adjustInput}
-                  returnKeyType="done"
-                  submitBehavior="submit"
-                  onSubmitEditing={() => Keyboard.dismiss()}
-                />
-
-                <Text style={[styles.adjustLabel, { marginTop: 8 }]}>Reason</Text>
-                <TextInput
-                  value={adjustReason}
-                  onChangeText={setAdjustReason}
-                  placeholder="Reason for adjustment"
-                  style={[styles.adjustInput, styles.adjustReasonInput]}
-                  multiline
-                  textAlignVertical="top"
-                  returnKeyType="done"
-                  submitBehavior="submit"
-                  onSubmitEditing={() => Keyboard.dismiss()}
-                />
-
-                <View style={styles.adjustButtonsRow}>
-                  <Button
-                    title="Clear"
-                    type="secondary"
-                    size="md"
-                    fullWidth
-                    onPress={() => {
-                      setAdjustDelta("");
-                      setAdjustReason("");
-                    }}
-                    disabled={adjustSaving}
-                    style={{ flex: 1 }}
-                  />
-                  <Button
-                    title={adjustSaving ? "Saving…" : "Save change"}
-                    type="primary"
-                    size="md"
-                    fullWidth
-                    onPress={handleAdjustPoints}
-                    disabled={adjustSaving}
-                    style={{ flex: 1 }}
-                  />
-                </View>
-              </View>
-            )}
-
-            {/* Weekly points chart */}
-            <WeeklyPointsChart history={history} />
-
-            {/* Recent points activity */}
-            <View style={styles.card}>
-              <Text style={styles.historyTitle}>Recent points activity</Text>
-
-              {historyLoading && (
-                <View style={styles.historyEmpty}>
-                  <ActivityIndicator size="small" />
-                  <Text style={styles.historyEmptyText}>Loading points…</Text>
-                </View>
-              )}
-
-              {!historyLoading && historyError && (
-                <View style={styles.historyEmpty}>
-                  <Text style={styles.historyEmptyText}>{historyError}</Text>
-                </View>
-              )}
-
-              {!historyLoading && !historyError && history.length === 0 && (
-                <View style={styles.historyEmpty}>
-                  <Text style={styles.historyEmptyText}>
-                    No points activity yet for this member.
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.historyReason}>{entry.reason || "Points update"}</Text>
+                  <Text style={styles.historyMeta}>
+                    {humanKind(entry.kind)} • {formatEntryDate(entry.created_at)}
                   </Text>
                 </View>
-              )}
-
-              {!historyLoading && !historyError && history.length > 0 && (
-                <View style={styles.historyList}>
-                  {history.map((entry) => (
-                    <View key={entry.id} style={styles.historyRow}>
-                      <Text
-                        style={[
-                          styles.historyDelta,
-                          entry.delta > 0
-                            ? styles.historyDeltaPositive
-                            : styles.historyDeltaNegative,
-                        ]}
-                      >
-                        {entry.delta > 0 ? `+${entry.delta}` : entry.delta}
-                      </Text>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.historyReason}>{entry.reason || "Points update"}</Text>
-                        <Text style={styles.historyMeta}>
-                          {humanKind(entry.kind)} • {formatEntryDate(entry.created_at)}
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          </KeyboardScreen>
-        </View>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
-    </ScreenList>
+
+    </SplitScreen>
   );
+
 }
 
 const styles = StyleSheet.create({
-
-  row: {
-    flex: 1,
-    flexDirection: "row",
-  },
-
   centerOnly: {
     alignItems: "center",
     justifyContent: "center",
