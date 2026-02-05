@@ -8,16 +8,24 @@ type Props = {
   children: React.ReactNode
   gap?: 'no' | 'sm' | 'md' | 'lg'
   bottomOffset?: number
+  withBackground?: boolean
 }
 
-export function Screen({ children, gap = 'md', bottomOffset = 0 }: Props) {
+export function Screen({
+  children,
+  gap = 'md',
+  bottomOffset = 0,
+  withBackground = true,
+}: Props) {
   const insets = useSafeAreaInsets()
 
   const gapStyle = gap === 'no' ? 0 : gap === 'sm' ? 8 : gap === 'md' ? 16 : gap === 'lg' ? 24 : 16
   const paddingBottom = 24 + insets.bottom + bottomOffset
   return (
     <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
-      <CheckerboardBackground colorA="#F6FAFF" colorB="#EAF3FF" size={28} />
+      {withBackground && (
+        <CheckerboardBackground colorA="#F6FAFF" colorB="#EAF3FF" size={28} />
+      )}
 
       <ScrollView
         style={styles.scroll}
