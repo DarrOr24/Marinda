@@ -35,11 +35,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
-  GestureResponderEvent,
   Pressable,
   StyleSheet,
   Text,
-  View,
+  View
 } from 'react-native';
 
 
@@ -839,13 +838,6 @@ export default function Chores() {
     setSelectedId(item.id);
   }
 
-  // stop bubbling from the icon buttons into the card press
-  const stop = (fn: () => void) => (e: GestureResponderEvent) => {
-    // @ts-ignore RN supports stopPropagation
-    e.stopPropagation?.();
-    fn();
-  };
-
   const humanTabLabel: Record<TabKey, string> = {
     open: 'To do',
     pending: 'Needs check',
@@ -858,10 +850,16 @@ export default function Chores() {
       <View style={styles.header}>
 
         {/* LEFT: Post Chore */}
-        <Pressable onPress={() => setShowPost(true)} style={styles.postBtn}>
-          <Ionicons name="add" size={20} color="#fff" />
-          <Text style={styles.postTxt}>Post Chore</Text>
-        </Pressable>
+        <Button
+          title="Post Chore"
+          type="primary"
+          size="md"
+          showShadow
+          onPress={() => setShowPost(true)}
+          leftIcon={<Ionicons name="add" size={18} />}
+          style={{ borderRadius: 12 }} // optional if you want the same shape
+        />
+
 
         {/* RIGHT: info + settings */}
         <View style={styles.headerRight}>
@@ -953,6 +951,9 @@ export default function Chores() {
               : null;
 
 
+
+
+
           return (
             <Pressable onPress={() => handleOpen(item)} style={styles.card}>
               <View style={{ flex: 1 }}>
@@ -1037,31 +1038,52 @@ export default function Chores() {
                 {item.status === 'open' && (
                   <View style={styles.actions}>
                     {/* Duplicate – everyone */}
-                    <Pressable
-                      onPress={stop(() => onDuplicate(item.id))}
-                      style={styles.iconBtn}
+                    <Button
+                      type="outline"
+                      size="sm"
+                      round
                       hitSlop={8}
-                    >
-                      <Feather name="copy" size={16} color="#1e3a8a" />
-                    </Pressable>
+                      backgroundColor="#eef2ff"
+                      onPress={(e) => {
+                        e?.stopPropagation?.();
+                        onDuplicate(item.id);
+                      }}
+
+                      leftIcon={<Feather name="copy" size={16} />}
+                    />
+
 
                     {/* Edit + Delete – only creator or parent */}
                     {canModify && (
                       <>
-                        <Pressable
-                          onPress={stop(() => setEditing(item))}
-                          style={styles.iconBtn}
+                        <Button
+                          type="outline"
+                          size="sm"
+                          round
                           hitSlop={8}
-                        >
-                          <Feather name="edit-3" size={16} color="#1e3a8a" />
-                        </Pressable>
-                        <Pressable
-                          onPress={stop(() => onDelete(item.id))}
-                          style={[styles.iconBtn, styles.deleteBtn]}
+                          backgroundColor="#eef2ff"
+                          onPress={(e) => {
+                            e?.stopPropagation?.();
+                            setEditing(item);
+                          }}
+
+                          leftIcon={<Feather name="edit-3" size={16} />}
+                        />
+
+                        <Button
+                          type="outline"
+                          size="sm"
+                          round
                           hitSlop={8}
-                        >
-                          <Feather name="trash-2" size={16} color="#b91c1c" />
-                        </Pressable>
+                          backgroundColor="#fee2e2"
+                          onPress={(e) => {
+                            e?.stopPropagation?.();
+                            onDelete(item.id);
+                          }}
+
+                          leftIcon={<Feather name="trash-2" size={16} />}
+                        />
+
                       </>
                     )}
                   </View>
@@ -1144,17 +1166,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
-  postBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  postTxt: { color: '#fff', fontWeight: '800' },
-
   tabsRow: {
     flexDirection: 'row',
     paddingHorizontal: 12,
@@ -1222,15 +1233,6 @@ const styles = StyleSheet.create({
   },
 
   actions: { flexDirection: 'row', gap: 8, marginRight: 2 },
-  iconBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#eef2ff',
-  },
-  deleteBtn: { backgroundColor: '#fee2e2' },
 
   badge: {
     flexDirection: 'row',
