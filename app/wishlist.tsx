@@ -839,12 +839,6 @@ const styles = StyleSheet.create({
         color: "#94a3b8",
     },
 
-    // ✅ now only the “color” styles; SafeFab handles size/position/safe bottom
-    fab: {
-        backgroundColor: "#2563eb",
-        elevation: 6,
-    },
-
     modalBox: {
         padding: 20,
         borderRadius: 16,
