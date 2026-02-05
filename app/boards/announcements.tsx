@@ -16,7 +16,6 @@ import {
     TouchableWithoutFeedback,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useFamily } from '@/lib/families/families.hooks';
@@ -34,6 +33,7 @@ import {
 import { useAnnouncementsRealtime } from '@/lib/announcements/announcements.realtime';
 
 import { Button } from '@/components/ui/button';
+import { ScreenList } from '@/components/ui/screen-list';
 import {
     DEFAULT_ANNOUNCEMENT_TABS,
     type AnnouncementItem,
@@ -206,10 +206,6 @@ export default function AnnouncementsBoard() {
         );
     }
 
-    function closeInput() {
-        Keyboard.dismiss();
-    }
-
     // --------------------------------------------
     // Add Announcement
     // --------------------------------------------
@@ -297,7 +293,7 @@ export default function AnnouncementsBoard() {
     // --------------------------------------------
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
+            <ScreenList gap="md" >
                 <KeyboardAvoidingView
                     style={styles.container}
                     behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -699,7 +695,7 @@ export default function AnnouncementsBoard() {
 
 
                 </KeyboardAvoidingView>
-            </SafeAreaView>
+            </ScreenList>
         </TouchableWithoutFeedback>
     );
 }
@@ -710,12 +706,6 @@ export default function AnnouncementsBoard() {
 // --------------------------------------------
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 16 },
-
-    screen: {
-        flex: 1,
-        backgroundColor: '#F7FBFF',
-    },
-
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     emptyList: { flexGrow: 1, justifyContent: 'center' },
     infoText: { fontSize: 16, textAlign: 'center', opacity: 0.7 },
