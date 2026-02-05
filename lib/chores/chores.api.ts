@@ -277,10 +277,9 @@ export async function deleteChore(choreId: string) {
 }
 
 export async function duplicateChore(choreId: string) {
-  // get source row (only fields we want to copy)
   const { data: src, error: selErr } = await supabase
     .from('chores')
-    .select('family_id, title, points, assignee_member_id, assignee_member_ids')
+    .select('family_id, title, points, assignee_member_ids')
     .eq('id', choreId)
     .single();
   if (selErr) throw new Error(selErr.message);
@@ -296,7 +295,6 @@ export async function duplicateChore(choreId: string) {
       assignee_member_ids: src.assignee_member_ids ?? [],
       status: 'OPEN',
       created_by: user?.id ?? null,
-      // proof_* intentionally not copied; new chore starts fresh
     })
     .select()
     .single();
@@ -304,6 +302,7 @@ export async function duplicateChore(choreId: string) {
   if (insErr) throw new Error(insErr.message);
   return inserted;
 }
+
 
 export async function updateChore(
   choreId: string,
