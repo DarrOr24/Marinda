@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 
 import { Colors } from '@/config/colors';
-import type { Insets } from 'react-native';
+import type { GestureResponderEvent, Insets } from 'react-native';
 
 export type ButtonType =
   | 'primary'
@@ -33,7 +33,7 @@ type ButtonProps = {
   title?: string;
   type?: ButtonType;
   size?: ButtonSize;
-  onPress?: () => void;
+  onPress?: (e?: GestureResponderEvent) => void;
   bold?: boolean;
   uppercase?: boolean;
   disabled?: boolean;
