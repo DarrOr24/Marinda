@@ -17,7 +17,6 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 
 import { useAuthContext } from "@/hooks/use-auth-context";
@@ -257,26 +256,32 @@ export default function WishList() {
     // -------- loading/error --------
     if (!activeFamilyId) {
         return (
-            <SafeAreaView style={styles.centerScreen}>
-                <Text style={styles.muted}>No family selected yet</Text>
-            </SafeAreaView>
+            <Screen gap="md">
+                <View style={styles.centerScreen}>
+                    <Text style={styles.muted}>No family selected yet</Text>
+                </View>
+            </Screen>
         );
     }
 
     if (familyMembers.isLoading || wishlistLoading) {
         return (
-            <SafeAreaView style={styles.centerScreen}>
-                <ActivityIndicator />
-                <Text style={styles.muted}>Loading wish list…</Text>
-            </SafeAreaView>
+            <Screen gap="md">
+                <View style={styles.centerScreen}>
+                    <ActivityIndicator />
+                    <Text style={styles.muted}>Loading wish list…</Text>
+                </View>
+            </Screen>
         );
     }
 
     if (familyMembers.isError || wishlistError) {
         return (
-            <SafeAreaView style={styles.centerScreen}>
-                <Text style={styles.muted}>Failed to load wish list.</Text>
-            </SafeAreaView>
+            <Screen gap="md">
+                <View style={styles.centerScreen}>
+                    <Text style={styles.muted}>Failed to load wish list.</Text>
+                </View>
+            </Screen>
         );
     }
 
@@ -692,10 +697,6 @@ export default function WishList() {
 /* ----------------- styles ----------------- */
 
 const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: "#ffffff",
-    },
     centerScreen: {
         flex: 1,
         alignItems: "center",
