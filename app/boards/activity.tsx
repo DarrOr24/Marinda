@@ -10,8 +10,12 @@ import {
   View,
 } from "react-native";
 
+import { Button } from "@/components/ui/button";
+import { SafeFab } from "@/components/ui/safe-fab";
+
+
 import AddActivityModal, { type NewActivityForm } from "@/components/add-activity-modal";
-import CheckerboardBackground from "@/components/checkerboard-background";
+import { Screen } from "@/components/ui/screen";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import {
   useCreateActivity,
@@ -320,8 +324,8 @@ export default function ActivityBoard() {
   const todayKey = toDateKey(today);
 
   return (
-    <View style={styles.screen}>
-      <CheckerboardBackground colorA="#F6FAFF" colorB="#EAF3FF" size={28} />
+    <Screen bottomOffset={72} gap="md">
+
 
       <View style={styles.center}>
         {/* Header w/ week navigation */}
@@ -478,15 +482,17 @@ export default function ActivityBoard() {
       </View>
 
       {/* FAB: Add activity */}
-      <TouchableOpacity
-        style={styles.fab}
-        activeOpacity={0.8}
-        onPress={openAddModal}
-        accessibilityRole="button"
-        accessibilityLabel="Add activity"
-      >
-        <MaterialCommunityIcons name="plus" size={26} color="#fff" />
-      </TouchableOpacity>
+      {/* ✅ FAB */}
+      <SafeFab bottomOffset={18} rightOffset={18}>
+        <Button
+          type="primary"
+          size="xl"
+          round
+          onPress={openAddModal}
+          leftIcon={<MaterialCommunityIcons name="plus" size={26} />}
+        />
+      </SafeFab>
+
 
       {/* Create Activity */}
       <AddActivityModal
@@ -538,7 +544,7 @@ export default function ActivityBoard() {
             />
           );
         })()}
-    </View>
+    </Screen>
   );
 }
 
@@ -612,20 +618,4 @@ const styles = StyleSheet.create({
   partDot: { width: 8, height: 8, borderRadius: 999 },
   partMore: { fontSize: 12, color: "#334155", marginLeft: 2 },
 
-  fab: {
-    position: "absolute",
-    right: 18,
-    bottom: 18,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#2563eb",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
-  },
 });
