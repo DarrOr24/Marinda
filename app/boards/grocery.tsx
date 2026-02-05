@@ -1,3 +1,4 @@
+import { ScreenList } from "@/components/ui/screen-list";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
 import { useSubscribeTableByFamily } from "@/lib/families/families.realtime";
@@ -22,7 +23,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -341,7 +342,7 @@ Category: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}
     // RENDER
     // ─────────────────────────────────────────────────────────────
     return (
-        <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
+        <ScreenList style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
 
             {/* HEADER BUTTONS */}
             <View style={styles.actions}>
@@ -659,7 +660,7 @@ Category: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}
                     </View>
                 </View>
             </Modal>
-        </SafeAreaView>
+        </ScreenList>
     );
 }
 

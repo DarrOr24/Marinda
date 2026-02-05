@@ -1,6 +1,6 @@
 // app/chores.tsx
 import ChoreDetailModal from '@/components/chore-detail-modal';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScreenList } from '@/components/ui/screen-list';
 
 import { useChoreTemplates } from '@/lib/chores/chores-templates.hooks';
 import type { ChoreView, Proof } from '@/lib/chores/chores.types';
@@ -854,7 +854,7 @@ export default function Chores() {
   };
 
   return (
-    <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
+    <ScreenList style={styles.screen} edges={['bottom', 'left', 'right']}>
       <View style={styles.header}>
 
         {/* LEFT: Post Chore */}
@@ -1123,7 +1123,7 @@ export default function Chores() {
           defaultDoneById={myFamilyMemberId}
         />
       )}
-    </SafeAreaView>
+    </ScreenList>
   );
 }
 

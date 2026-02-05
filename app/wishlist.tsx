@@ -1,4 +1,5 @@
 // app/wishlist.tsx
+import { Screen } from "@/components/ui/screen";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -16,7 +17,8 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
@@ -43,7 +45,7 @@ import { ModalShell } from "@/components/ui/modal-shell";
 import { SafeFab } from "@/components/ui/safe-fab";
 
 export default function WishList() {
-    const insets = useSafeAreaInsets();
+
     const { activeFamilyId, member } = useAuthContext() as any;
 
     const currentRole = (member?.role as Role) ?? "TEEN";
@@ -279,15 +281,8 @@ export default function WishList() {
     }
 
     return (
-        <SafeAreaView style={styles.screen} edges={["bottom", "left", "right"]}>
-            <ScrollView
-                style={{ flex: 1 }}
-                contentContainerStyle={[
-                    styles.container,
-                    { paddingBottom: 24 + 56 + insets.bottom },
-                ]}
-                keyboardShouldPersistTaps="handled"
-            >
+        <Screen bottomOffset={56} gap="md">
+            <View style={styles.container}>
                 {/* ===== TOP SECTION (2 ROWS) ===== */}
                 <View style={styles.headerBlock}>
                     {/* ROW 1 — Title + Icons */}
@@ -520,27 +515,26 @@ export default function WishList() {
                         {isParent ? "Ask them to add one!" : "Tap + to add your first wish."}
                     </Text>
                 )}
-            </ScrollView>
+            </View>
 
             {/* ✅ FAB — now SafeFab */}
-            <SafeFab
-                bottomOffset={24}
-                disabled={!canAdd}
-                onPress={() => {
-                    if (isParent && !effectiveMemberId) {
-                        Alert.alert("Choose a child", "Select a child first to add a wish.");
-                        return;
-                    }
-                    resetForm();
-                    setShowAddModal(true);
-                }}
-                style={[
-                    styles.fab,
-                    !canAdd && { opacity: 0.5 },
-                ]}
-            >
-                <MaterialCommunityIcons name="plus" size={26} color="#fff" />
+            <SafeFab bottomOffset={24}>
+                <Button
+                    type="primary"
+                    size="xl"
+                    round
+                    onPress={() => {
+                        if (isParent && !effectiveMemberId) {
+                            Alert.alert("Choose a child", "Select a child first to add a wish.");
+                            return;
+                        }
+                        resetForm();
+                        setShowAddModal(true);
+                    }}
+                    leftIcon={<MaterialCommunityIcons name="plus" size={26} />}
+                />
             </SafeFab>
+
 
             {/* ✅ Add/Edit Modal — now ModalShell + ModalCard */}
             <ModalShell
@@ -691,7 +685,7 @@ export default function WishList() {
                     </View>
                 </ModalCard>
             </ModalShell>
-        </SafeAreaView>
+        </Screen>
     );
 }
 
