@@ -1,26 +1,28 @@
+// components/ui/safe-fab.tsx
 import React from "react";
-import { StyleSheet, TouchableOpacity, TouchableOpacityProps } from "react-native";
+import { StyleSheet, View, ViewProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-type Props = TouchableOpacityProps & {
-    bottomOffset?: number; // extra lift above safe area
-    right?: number;
+type Props = ViewProps & {
+    bottomOffset?: number;
+    rightOffset?: number;
 };
 
 export function SafeFab({
     style,
     bottomOffset = 16,
-    right = 20,
+    rightOffset = 20,
     ...props
 }: Props) {
     const insets = useSafeAreaInsets();
 
     return (
-        <TouchableOpacity
+        <View
+            pointerEvents="box-none"
             {...props}
             style={[
-                styles.fab,
-                { right, bottom: bottomOffset + insets.bottom },
+                styles.wrap,
+                { paddingBottom: bottomOffset + insets.bottom, paddingRight: rightOffset },
                 style,
             ]}
         />
@@ -28,13 +30,11 @@ export function SafeFab({
 }
 
 const styles = StyleSheet.create({
-    fab: {
+    wrap: {
         position: "absolute",
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        alignItems: "center",
-        justifyContent: "center",
-        elevation: 6,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        alignItems: "flex-end",
     },
 });
