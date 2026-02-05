@@ -1,15 +1,14 @@
 import React from 'react';
 import {
     Alert,
-    Pressable,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
-    View,
+    View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Button } from '@/components/ui/button';
+import { Screen } from '@/components/ui/screen';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useChoreTemplates } from '@/lib/chores/chores-templates.hooks';
 import type { Role } from '@/lib/members/members.types';
@@ -124,156 +123,147 @@ export default function ChoreGameSettingsScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
-            <ScrollView
-                style={styles.scroll}
-                contentContainerStyle={styles.content}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-            >
-                {/* Intro */}
-                <Text style={styles.intro}>
-                    Set up your family&apos;s routine chores and points rules. These
-                    settings help keep the game fair, motivating, and clear for everyone.
-                </Text>
+        <Screen gap="md" withBackground={false}>
+            {/* Intro */}
+            <Text style={styles.intro}>
+                Set up your family&apos;s routine chores and points rules. These
+                settings help keep the game fair, motivating, and clear for everyone.
+            </Text>
 
-                {/* Routine chores section */}
-                <Section title="Routine chores">
-                    <Bullet>
-                        Here you can add, edit, and delete routine chores like &quot;Empty
-                        dishwasher&quot; or &quot;Tidy toys&quot; with default point
-                        values.
-                    </Bullet>
-                    <Bullet>
-                        Later, the Post Chore screen can reuse these as quick templates so
-                        you don&apos;t have to type the same chores again and again.
-                    </Bullet>
+            {/* Routine chores section */}
+            <Section title="Routine chores">
+                <Bullet>
+                    Here you can add, edit, and delete routine chores like &quot;Empty
+                    dishwasher&quot; or &quot;Tidy toys&quot; with default point
+                    values.
+                </Bullet>
+                <Bullet>
+                    Later, the Post Chore screen can reuse these as quick templates so
+                    you don&apos;t have to type the same chores again and again.
+                </Bullet>
 
-                    {!isParent && (
-                        <View style={{ marginTop: 8 }}>
-                            <Text style={styles.note}>
-                                Only parents can change this list. You can still see the routine
-                                chores, but adding, editing, or deleting them is for parents only.
-                            </Text>
+                {!isParent && (
+                    <View style={{ marginTop: 8 }}>
+                        <Text style={styles.note}>
+                            Only parents can change this list. You can still see the routine
+                            chores, but adding, editing, or deleting them is for parents only.
+                        </Text>
+                    </View>
+                )}
+
+                {/* Editor card (add / edit) */}
+                {editing ? (
+                    <View style={styles.editorCard}>
+                        <Text style={styles.editorTitle}>
+                            {editing.id ? 'Edit routine chore' : 'Add routine chore'}
+                        </Text>
+
+                        <Text style={styles.label}>Title</Text>
+                        <TextInput
+                            value={editing.title}
+                            onChangeText={(txt) =>
+                                setEditing((prev) => (prev ? { ...prev, title: txt } : prev))
+                            }
+                            placeholder="e.g. Empty the dishwasher"
+                            placeholderTextColor="#94a3b8"
+                            style={styles.input}
+                        />
+
+                        <Text style={[styles.label, { marginTop: 8 }]}>Points</Text>
+                        <TextInput
+                            value={editing.points}
+                            onChangeText={(txt) =>
+                                setEditing((prev) => (prev ? { ...prev, points: txt } : prev))
+                            }
+                            keyboardType="number-pad"
+                            placeholder="e.g. 10"
+                            placeholderTextColor="#94a3b8"
+                            style={styles.input}
+                        />
+
+                        <View style={styles.editorButtonsRow}>
+                            <Button
+                                title="Cancel"
+                                type="secondary"
+                                size="md"
+                                onPress={() => setEditing(null)}
+                                disabled={saving}
+                                style={{ flex: 1 }}
+                            />
+                            <Button
+                                title={editing.id ? "Save" : "Add"}
+                                type="primary"
+                                size="md"
+                                onPress={onSaveTemplate}
+                                disabled={saving}
+                                style={{ flex: 1 }}
+                            />
                         </View>
-                    )}
 
-                    {/* Editor card (add / edit) */}
-                    {editing ? (
-                        <View style={styles.editorCard}>
-                            <Text style={styles.editorTitle}>
-                                {editing.id ? 'Edit routine chore' : 'Add routine chore'}
-                            </Text>
+                    </View>
+                ) : (
+                    <Button
+                        title="＋ Add routine chore"
+                        type="outline"
+                        size="md"
+                        onPress={startAdd}
+                        style={{ alignSelf: "flex-start", marginTop: 10 }}
+                    />
 
-                            <Text style={styles.label}>Title</Text>
-                            <TextInput
-                                value={editing.title}
-                                onChangeText={(txt) =>
-                                    setEditing((prev) => (prev ? { ...prev, title: txt } : prev))
-                                }
-                                placeholder="e.g. Empty the dishwasher"
-                                placeholderTextColor="#94a3b8"
-                                style={styles.input}
-                            />
+                )}
 
-                            <Text style={[styles.label, { marginTop: 8 }]}>Points</Text>
-                            <TextInput
-                                value={editing.points}
-                                onChangeText={(txt) =>
-                                    setEditing((prev) => (prev ? { ...prev, points: txt } : prev))
-                                }
-                                keyboardType="number-pad"
-                                placeholder="e.g. 10"
-                                placeholderTextColor="#94a3b8"
-                                style={styles.input}
-                            />
-
-                            <View style={styles.editorButtonsRow}>
-                                <Pressable
-                                    style={[styles.smallBtn, styles.secondaryBtn]}
-                                    onPress={() => setEditing(null)}
-                                    disabled={saving}
-                                >
-                                    <Text style={styles.smallBtnText}>Cancel</Text>
-                                </Pressable>
-                                <Pressable
-                                    style={[
-                                        styles.smallBtn,
-                                        styles.primaryBtn,
-                                        saving && styles.disabledBtn,
-                                    ]}
-                                    onPress={onSaveTemplate}
-                                    disabled={saving}
-                                >
-                                    <Text style={[styles.smallBtnText, { color: '#fff' }]}>
-                                        {editing.id ? 'Save' : 'Add'}
+                {/* Existing templates list - visible to all, actions guarded */}
+                {templates && templates.length > 0 && (
+                    <View style={{ marginTop: 12 }}>
+                        <Text style={styles.label}>Current routine chores</Text>
+                        {templates.map((t) => (
+                            <View key={t.id} style={styles.templateRow}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.templateTitle}>{t.title}</Text>
+                                    <Text style={styles.templateMeta}>
+                                        {t.defaultPoints ?? 0} pts
                                     </Text>
-                                </Pressable>
-                            </View>
-                        </View>
-                    ) : (
-                        <Pressable style={styles.addBtn} onPress={startAdd}>
-                            <Text style={styles.addBtnText}>＋ Add routine chore</Text>
-                        </Pressable>
-                    )}
-
-                    {/* Existing templates list - visible to all, actions guarded */}
-                    {templates && templates.length > 0 && (
-                        <View style={{ marginTop: 12 }}>
-                            <Text style={styles.label}>Current routine chores</Text>
-                            {templates.map((t) => (
-                                <View key={t.id} style={styles.templateRow}>
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={styles.templateTitle}>{t.title}</Text>
-                                        <Text style={styles.templateMeta}>
-                                            {t.defaultPoints ?? 0} pts
-                                        </Text>
-                                    </View>
-
-                                    <View style={styles.templateActions}>
-                                        <Pressable
-                                            style={[styles.chipBtn, styles.secondaryBtn]}
-                                            onPress={() => startEdit(t)}
-                                        >
-                                            <Text style={styles.chipBtnText}>Edit</Text>
-                                        </Pressable>
-                                        <Pressable
-                                            style={[styles.chipBtn, styles.deleteBtn]}
-                                            onPress={() => onDeleteTemplate(t.id, t.title)}
-                                        >
-                                            <Text
-                                                style={[styles.chipBtnText, { color: '#b91c1c' }]}
-                                            >
-                                                Delete
-                                            </Text>
-                                        </Pressable>
-                                    </View>
                                 </View>
-                            ))}
-                        </View>
-                    )}
-                </Section>
 
-                {/* Points rules & bonuses (still informational for now) */}
-                <Section title="Points rules & bonuses">
-                    <Bullet>
-                        Soon you&apos;ll be able to set automatic rules, like:
-                    </Bullet>
-                    <Bullet>
-                        • Every 100 points earned in a week = +10 bonus points
-                    </Bullet>
-                    <Bullet>
-                        • 0 expired chores this week = bonus points for everyone
-                    </Bullet>
-                    <Bullet>
-                        You&apos;ll also be able to give manual bonus points from each
-                        child&apos;s profile page.
-                    </Bullet>
-                </Section>
+                                <View style={styles.templateActions}>
+                                    <Button
+                                        title="Edit"
+                                        type="outline"
+                                        size="sm"
+                                        onPress={() => startEdit(t)}
+                                    />
 
-                <View style={{ height: 32 }} />
-            </ScrollView>
-        </SafeAreaView>
+                                    <Button
+                                        title="Delete"
+                                        type="danger"
+                                        size="sm"
+                                        onPress={() => onDeleteTemplate(t.id, t.title)}
+                                    />
+                                </View>
+
+                            </View>
+                        ))}
+                    </View>
+                )}
+            </Section>
+
+            {/* Points rules & bonuses (still informational for now) */}
+            <Section title="Points rules & bonuses">
+                <Bullet>
+                    Soon you&apos;ll be able to set automatic rules, like:
+                </Bullet>
+                <Bullet>
+                    • Every 100 points earned in a week = +10 bonus points
+                </Bullet>
+                <Bullet>
+                    • 0 expired chores this week = bonus points for everyone
+                </Bullet>
+                <Bullet>
+                    You&apos;ll also be able to give manual bonus points from each
+                    child&apos;s profile page.
+                </Bullet>
+            </Section>
+        </Screen>
     );
 }
 
@@ -303,23 +293,11 @@ function Bullet({ children }: { children: React.ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: '#F7FBFF',
-    },
-    scroll: {
-        flex: 1,
-    },
-    content: {
-        paddingHorizontal: 16,
-        paddingBottom: 16,
-    },
     intro: {
         fontSize: 14,
         color: '#475569',
         marginBottom: 16,
     },
-
     section: {
         marginTop: 12,
     },
@@ -391,42 +369,9 @@ const styles = StyleSheet.create({
         gap: 8,
         marginTop: 10,
     },
-    smallBtn: {
-        flex: 1,
-        paddingVertical: 8,
-        borderRadius: 999,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    primaryBtn: {
-        backgroundColor: '#2563eb',
-    },
-    secondaryBtn: {
-        backgroundColor: '#f3f4f6',
-    },
-    disabledBtn: {
-        opacity: 0.5,
-    },
-    smallBtnText: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#111827',
-    },
 
     // List of existing templates
-    addBtn: {
-        marginTop: 10,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        alignSelf: 'flex-start',
-        borderRadius: 999,
-        backgroundColor: '#e0edff',
-    },
-    addBtnText: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#1d4ed8',
-    },
+
     templateRow: {
         marginTop: 8,
         paddingVertical: 10,
@@ -452,22 +397,5 @@ const styles = StyleSheet.create({
     templateActions: {
         flexDirection: 'row',
         gap: 6,
-    },
-    chipBtn: {
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 999,
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-        backgroundColor: '#f9fafb',
-    },
-    chipBtnText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#334155',
-    },
-    deleteBtn: {
-        backgroundColor: '#fee2e2',
-        borderColor: '#fecaca',
     },
 });
