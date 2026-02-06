@@ -145,11 +145,10 @@ export async function updateWishlistItem(
     if (fields.fulfillment_mode !== undefined) {
         patch.fulfillment_mode = fields.fulfillment_mode;
         patch.payment_method =
-            fields.fulfillment_mode === "self"
-                ? fields.payment_method ?? null
-                : null;
+            fields.fulfillment_mode === "self" ? fields.payment_method ?? null : null;
     }
 
+    // 1) Update non-image fields first
     const { data, error } = await supabase
         .from("wishlist_items")
         .update(patch)
@@ -159,28 +158,53 @@ export async function updateWishlistItem(
 
     if (error) throw new Error(error.message);
 
-    // IMAGE HANDLING
+    // Helpers (local vs remote)
+    const isRemoteUrl = (uri?: string | null) => !!uri && /^https?:\/\//.test(uri);
+    const isLocalFile = (uri?: string | null) => !!uri && uri.startsWith("file://");
+
+    // 2) IMAGE HANDLING
+    // Case A: Explicitly removing image
     if (fields.imageUri === null) {
-        await supabase
+        const { error: imgErr } = await supabase
             .from("wishlist_items")
             .update({ image_url: null })
             .eq("id", itemId);
 
+        if (imgErr) throw new Error(imgErr.message);
+
         return { ...data, image_url: null };
     }
 
+    // Case B: imageUri provided as a string
     if (typeof fields.imageUri === "string") {
-        const url = await uploadWishlistImage(itemId, fields.imageUri);
-        await supabase
-            .from("wishlist_items")
-            .update({ image_url: url })
-            .eq("id", itemId);
+        // If it's already a remote/public URL, do NOT upload/read it.
+        // Just keep it as-is (and no extra DB write needed).
+        if (isRemoteUrl(fields.imageUri)) {
+            return { ...data, image_url: fields.imageUri };
+        }
 
-        return { ...data, image_url: url };
+        // Only upload if it's a local file picked from device (file://...)
+        if (isLocalFile(fields.imageUri)) {
+            const url = await uploadWishlistImage(itemId, fields.imageUri);
+
+            const { error: imgErr } = await supabase
+                .from("wishlist_items")
+                .update({ image_url: url })
+                .eq("id", itemId);
+
+            if (imgErr) throw new Error(imgErr.message);
+
+            return { ...data, image_url: url };
+        }
+
+        // Unknown string format (neither http nor file) - ignore safely
+        return data;
     }
 
+    // Case C: imageUri not provided => unchanged
     return data;
 }
+
 
 /* --------------------------------------------------------
    Delete wishlist item
