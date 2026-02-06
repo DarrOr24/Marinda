@@ -47,7 +47,22 @@ export default function MemberProfile() {
   const adminMemberId: string | undefined = (member as any)?.id;
 
   const memberList = familyMembers.data ?? [];
-  const current = memberList.find((m) => m.id === id);
+  const selfMemberId: string | undefined = (member as any)?.id;
+
+  // ✅ kids/teens always see ONLY their own profile
+  const viewedMemberId = isParent ? id : selfMemberId;
+
+  useEffect(() => {
+    if (!isParent && selfMemberId && id !== selfMemberId) {
+      router.replace({
+        pathname: "/profile/[id]",
+        params: { id: selfMemberId },
+      });
+    }
+  }, [isParent, selfMemberId, id]);
+
+  // ✅ member being viewed (for points card)
+  const current = memberList.find((m: any) => m.id === viewedMemberId);
   const points = (current as any)?.points ?? 0;
 
   useSubscribeTableByFamily("family_members", activeFamilyId, [
@@ -60,11 +75,11 @@ export default function MemberProfile() {
     if (activeFamilyId && familyMembers?.refetch) {
       familyMembers.refetch();
     }
-  }, [activeFamilyId, id]);
+  }, [activeFamilyId, viewedMemberId]);
 
   // Load recent points history for this member from points_ledger
   useEffect(() => {
-    if (!activeFamilyId || !id) return;
+    if (!activeFamilyId || !viewedMemberId) return;
 
     let cancelled = false;
 
@@ -73,9 +88,12 @@ export default function MemberProfile() {
         setHistoryLoading(true);
         setHistoryError(null);
 
-        const rows = await fetchMemberPointsHistory(activeFamilyId, id);
-        if (cancelled) return;
+        const rows = await fetchMemberPointsHistory(
+          activeFamilyId,
+          viewedMemberId
+        );
 
+        if (cancelled) return;
         setHistory(rows);
       } catch (e) {
         console.error("fetchMemberPointsHistory failed", e);
@@ -92,10 +110,11 @@ export default function MemberProfile() {
     return () => {
       cancelled = true;
     };
-  }, [activeFamilyId, id]);
+  }, [activeFamilyId, viewedMemberId]);
+
 
   const handleAdjustPoints = async () => {
-    if (!activeFamilyId || !id) return;
+    if (!activeFamilyId || !viewedMemberId) return;
 
     const raw = adjustDelta.trim();
 
@@ -131,7 +150,7 @@ export default function MemberProfile() {
 
       await adjustMemberPoints({
         familyId: activeFamilyId,
-        memberId: id,
+        memberId: viewedMemberId,
         delta: deltaNum,
         reason,
         approverMemberId: adminMemberId ?? null,
@@ -141,7 +160,7 @@ export default function MemberProfile() {
       setAdjustReason("");
 
       if (familyMembers?.refetch) familyMembers.refetch();
-      const rows = await fetchMemberPointsHistory(activeFamilyId, id);
+      const rows = await fetchMemberPointsHistory(activeFamilyId, viewedMemberId);
       setHistory(rows);
     } catch (e) {
       console.error("adjustMemberPoints failed", e);
