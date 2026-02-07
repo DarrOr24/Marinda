@@ -249,27 +249,27 @@ export async function markWishlistPurchased(itemId: string) {
 
         if (settingsErr) throw new Error(settingsErr.message);
 
-        const points = Math.round(
-            data.price * (settings?.points_per_currency ?? 10)
-        );
+        const points = Math.round(data.price * (settings?.points_per_currency ?? 10));
 
         if (points > 0) {
-            // Ledger entry (optional but recommended – same as chores)
-            await supabase.from("points_ledger").insert({
+            // ✅ Ledger entry (this is what makes it show up in Profile history)
+            const { error: ledgerErr } = await supabase.from("points_ledger").insert({
                 family_id: data.family_id,
                 member_id: data.member_id,
                 delta: -points,
-                source: "wishlist",
-                source_id: data.id,
                 reason: `Fulfilled wish: ${data.title}`,
+                kind: "wishlist_spend",
             });
 
-            // Apply balance change
+            if (ledgerErr) throw new Error(ledgerErr.message);
+
+            // ✅ Apply balance change
             await awardMemberPoints(data.member_id, -points);
         }
     }
 
     return data;
 }
+
 
 
