@@ -8,8 +8,9 @@ type Props = {
   children: React.ReactNode;
   gap?: "no" | "sm" | "md" | "lg";
   bottomOffset?: number;
+  withBackground?: boolean;
 
-  /** ✅ NEW: floating UI like FAB */
+  // ✅ optional floating UI (FAB, etc) rendered above scroll
   overlay?: React.ReactNode;
 };
 
@@ -17,42 +18,34 @@ export function Screen({
   children,
   gap = "md",
   bottomOffset = 0,
+  withBackground = true,
   overlay,
 }: Props) {
   const insets = useSafeAreaInsets();
 
   const gapStyle =
-    gap === "no"
-      ? 0
-      : gap === "sm"
-        ? 8
-        : gap === "md"
-          ? 16
-          : gap === "lg"
-            ? 24
-            : 16;
+    gap === "no" ? 0 : gap === "sm" ? 8 : gap === "md" ? 16 : gap === "lg" ? 24 : 16;
 
   const paddingBottom = 24 + insets.bottom + bottomOffset;
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <CheckerboardBackground />
+    <SafeAreaView style={styles.screen} edges={["left", "right", "bottom"]}>
+      {withBackground && (
+        <CheckerboardBackground colorA="#F6FAFF" colorB="#EAF3FF" size={28} />
+      )}
 
-      {/* ✅ Stage wrapper */}
+      {/* stage keeps overlay OUTSIDE scroll but on top */}
       <View style={styles.stage}>
-        {/* ✅ Scroll content */}
         <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[styles.content, { paddingBottom }, { gap: gapStyle }]}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
           keyboardDismissMode="on-drag"
-          contentContainerStyle={[
-            styles.content,
-            { gap: gapStyle, paddingBottom },
-          ]}
         >
           {children}
         </ScrollView>
 
-        {/* ✅ Overlay layer OUTSIDE scroll */}
         {overlay ? (
           <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
             {overlay}
@@ -64,16 +57,8 @@ export function Screen({
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: "transparent",
-  },
-  stage: {
-    flex: 1,
-    position: "relative",
-  },
-  content: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
+  screen: { flex: 1, backgroundColor: "#E6F4FE" },
+  stage: { flex: 1, position: "relative" },
+  scroll: { flex: 1 },
+  content: { padding: 16 },
 });
