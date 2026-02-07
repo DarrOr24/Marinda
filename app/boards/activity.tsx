@@ -10,11 +10,9 @@ import {
   View,
 } from "react-native";
 
+import AddActivityModal, { type NewActivityForm } from "@/components/add-activity-modal";
 import { Button } from "@/components/ui/button";
 import { SafeFab } from "@/components/ui/safe-fab";
-
-
-import AddActivityModal, { type NewActivityForm } from "@/components/add-activity-modal";
 import { Screen } from "@/components/ui/screen";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import {
@@ -324,16 +322,27 @@ export default function ActivityBoard() {
   const todayKey = toDateKey(today);
 
   return (
-    <Screen bottomOffset={72} gap="md">
-
-
+    <Screen
+      bottomOffset={72}
+      gap="md"
+      overlay={
+        <SafeFab bottomOffset={18} rightOffset={16}>
+          <Button
+            type="primary"
+            size="xl"
+            round
+            onPress={openAddModal}
+            leftIcon={<MaterialCommunityIcons name="plus" size={26} />}
+          />
+        </SafeFab>
+      }
+    >
       <View style={styles.center}>
         {/* Header w/ week navigation */}
         <View style={styles.headerRow}>
           <TouchableOpacity
             onPress={() =>
-              !pastCapped &&
-              setWeekOffset((o) => Math.max(MIN_PAST_WEEKS, o - 1))
+              !pastCapped && setWeekOffset((o) => Math.max(MIN_PAST_WEEKS, o - 1))
             }
             style={[styles.navBtn, pastCapped && styles.navBtnDisabled]}
             disabled={pastCapped}
@@ -360,11 +369,7 @@ export default function ActivityBoard() {
             accessibilityRole="button"
             accessibilityLabel="Next week"
           >
-            <MaterialCommunityIcons
-              name="chevron-right"
-              size={26}
-              color="#0f172a"
-            />
+            <MaterialCommunityIcons name="chevron-right" size={26} color="#0f172a" />
           </TouchableOpacity>
         </View>
 
@@ -379,19 +384,12 @@ export default function ActivityBoard() {
             const items = byDate[key] || [];
 
             return (
-              <View
-                key={i}
-                style={[styles.dayRow, isToday && styles.dayRowToday]}
-              >
+              <View key={i} style={[styles.dayRow, isToday && styles.dayRowToday]}>
                 <View style={styles.dayHeader}>
-                  <Text
-                    style={[styles.dayName, isToday && styles.dayNameToday]}
-                  >
+                  <Text style={[styles.dayName, isToday && styles.dayNameToday]}>
                     {DAY_NAMES[d.getDay()]}
                   </Text>
-                  <Text
-                    style={[styles.dayDate, isToday && styles.dayDateToday]}
-                  >
+                  <Text style={[styles.dayDate, isToday && styles.dayDateToday]}>
                     {d.getDate()}
                   </Text>
                 </View>
@@ -433,16 +431,11 @@ export default function ActivityBoard() {
                             ]}
                           >
                             <View
-                              style={[
-                                styles.colorDot,
-                                { backgroundColor: color },
-                              ]}
+                              style={[styles.colorDot, { backgroundColor: color }]}
                             />
                             <Text numberOfLines={1} style={styles.itemTitle}>
                               {a.title}
-                              {a.start_at
-                                ? ` — ${formatTimeFromIso(a.start_at)}`
-                                : ""}
+                              {a.start_at ? ` — ${formatTimeFromIso(a.start_at)}` : ""}
                               {badges ? `  ${badges}` : ""}
                             </Text>
 
@@ -481,19 +474,6 @@ export default function ActivityBoard() {
         </ScrollView>
       </View>
 
-      {/* FAB: Add activity */}
-      {/* ✅ FAB */}
-      <SafeFab bottomOffset={18} rightOffset={18}>
-        <Button
-          type="primary"
-          size="xl"
-          round
-          onPress={openAddModal}
-          leftIcon={<MaterialCommunityIcons name="plus" size={26} />}
-        />
-      </SafeFab>
-
-
       {/* Create Activity */}
       <AddActivityModal
         visible={addOpen}
@@ -502,7 +482,6 @@ export default function ActivityBoard() {
         initialDateStr={today.toISOString().split("T")[0]}
         mode="create"
         submitLabel="Save"
-        // 🔑 Pre-select creator by default in the UI
         initial={{
           participants_member_ids: member?.id ? [member.id] : [],
         }}
@@ -546,10 +525,11 @@ export default function ActivityBoard() {
         })()}
     </Screen>
   );
+
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#E6F4FE" },
+
   center: { flex: 1, paddingHorizontal: 16, paddingTop: 12, gap: 12 },
 
   headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
@@ -617,5 +597,4 @@ const styles = StyleSheet.create({
 
   partDot: { width: 8, height: 8, borderRadius: 999 },
   partMore: { fontSize: 12, color: "#334155", marginLeft: 2 },
-
 });

@@ -1,50 +1,79 @@
 // components/ui/screen.tsx
-import React from 'react'
-import { ScrollView, StyleSheet } from 'react-native'
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import CheckerboardBackground from '../checkerboard-background'
+import React from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import CheckerboardBackground from "../checkerboard-background";
 
 type Props = {
-  children: React.ReactNode
-  gap?: 'no' | 'sm' | 'md' | 'lg'
-  bottomOffset?: number
-  withBackground?: boolean
-}
+  children: React.ReactNode;
+  gap?: "no" | "sm" | "md" | "lg";
+  bottomOffset?: number;
+
+  /** ✅ NEW: floating UI like FAB */
+  overlay?: React.ReactNode;
+};
 
 export function Screen({
   children,
-  gap = 'md',
+  gap = "md",
   bottomOffset = 0,
-  withBackground = true,
+  overlay,
 }: Props) {
-  const insets = useSafeAreaInsets()
+  const insets = useSafeAreaInsets();
 
-  const gapStyle = gap === 'no' ? 0 : gap === 'sm' ? 8 : gap === 'md' ? 16 : gap === 'lg' ? 24 : 16
-  const paddingBottom = 24 + insets.bottom + bottomOffset
+  const gapStyle =
+    gap === "no"
+      ? 0
+      : gap === "sm"
+        ? 8
+        : gap === "md"
+          ? 16
+          : gap === "lg"
+            ? 24
+            : 16;
+
+  const paddingBottom = 24 + insets.bottom + bottomOffset;
+
   return (
-    <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
-      {withBackground && (
-        <CheckerboardBackground colorA="#F6FAFF" colorB="#EAF3FF" size={28} />
-      )}
+    <SafeAreaView style={styles.safe}>
+      <CheckerboardBackground />
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom },
-          { gap: gapStyle },
-        ]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {children}
-      </ScrollView>
+      {/* ✅ Stage wrapper */}
+      <View style={styles.stage}>
+        {/* ✅ Scroll content */}
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={[
+            styles.content,
+            { gap: gapStyle, paddingBottom },
+          ]}
+        >
+          {children}
+        </ScrollView>
+
+        {/* ✅ Overlay layer OUTSIDE scroll */}
+        {overlay ? (
+          <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+            {overlay}
+          </View>
+        ) : null}
+      </View>
     </SafeAreaView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#E6F4FE' },
-  scroll: { flex: 1 },
-  content: { padding: 16 },
-})
+  safe: {
+    flex: 1,
+    backgroundColor: "transparent",
+  },
+  stage: {
+    flex: 1,
+    position: "relative",
+  },
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+});

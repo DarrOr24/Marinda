@@ -76,14 +76,20 @@ export default function WishList() {
     const memberList = familyMembers.data ?? [];
     const kids = memberList.filter((m: any) => m.role === "CHILD" || m.role === "TEEN");
 
-    const nameForMemberId = (id?: string | null) => {
-        if (!id) return "Unknown";
+    const findMemberByAnyId = (id?: string | null) => {
+        if (!id) return undefined;
 
-        const m = memberList.find(
+        return memberList.find(
             (m: any) =>
-                m.id === id || m.user_id === id || m.profile?.id === id || m.profile_id === id
+                m.id === id ||
+                m.user_id === id ||
+                m.profile?.id === id ||
+                m.profile_id === id
         );
+    };
 
+    const nameForMemberId = (id?: string | null) => {
+        const m = findMemberByAnyId(id);
         return m?.profile?.first_name || "Unknown";
     };
 
@@ -93,7 +99,8 @@ export default function WishList() {
         ? selectedKidId ?? kids[0]?.id
         : (member as any)?.id;
 
-    const viewingMember = memberList.find((m: any) => m.id === effectiveMemberId);
+    const viewingMember = findMemberByAnyId(effectiveMemberId);
+
 
     // =============================
     // ⚡ BIDIRECTIONAL CALCULATOR
@@ -174,8 +181,6 @@ export default function WishList() {
 
     const exceedsSelfFulfillLimit =
         SELF_FULFILL_MAX_PRICE != null && newPrice.trim() !== "" && Number(newPrice) > SELF_FULFILL_MAX_PRICE;
-
-    const canAdd = !!activeFamilyId && !!effectiveMemberId && !addItem.isPending;
 
     function resetForm() {
         setNewTitle("");
@@ -286,7 +291,24 @@ export default function WishList() {
     }
 
     return (
-        <Screen bottomOffset={56} gap="md">
+        <Screen
+            bottomOffset={56}
+            gap="md"
+            overlay={
+                <SafeFab bottomOffset={50} rightOffset={16}>
+                    <Button
+                        type="primary"
+                        size="xl"
+                        round
+                        onPress={() => {
+                            resetForm();
+                            setShowAddModal(true);
+                        }}
+                        leftIcon={<MaterialCommunityIcons name="plus" size={26} />}
+                    />
+                </SafeFab>
+            }
+        >
             <View style={styles.container}>
                 {/* ===== TOP SECTION (2 ROWS) ===== */}
                 <View style={styles.headerBlock}>
@@ -521,25 +543,6 @@ export default function WishList() {
                     </Text>
                 )}
             </View>
-
-            {/* ✅ FAB — now SafeFab */}
-            <SafeFab bottomOffset={24}>
-                <Button
-                    type="primary"
-                    size="xl"
-                    round
-                    onPress={() => {
-                        if (isParent && !effectiveMemberId) {
-                            Alert.alert("Choose a child", "Select a child first to add a wish.");
-                            return;
-                        }
-                        resetForm();
-                        setShowAddModal(true);
-                    }}
-                    leftIcon={<MaterialCommunityIcons name="plus" size={26} />}
-                />
-            </SafeFab>
-
 
             {/* ✅ Add/Edit Modal — now ModalShell + ModalCard */}
             <ModalShell
