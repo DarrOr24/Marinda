@@ -378,9 +378,28 @@ Category: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}
                         {/* keep your dropdown as-is */}
                         {viewMenuOpen && (
                             <View style={styles.viewMenu}>
-                                ...
+                                <Pressable
+                                    style={styles.viewOption}
+                                    onPress={() => {
+                                        setViewMode("category");
+                                        setViewMenuOpen(false);
+                                    }}
+                                >
+                                    <Text style={styles.viewOptionText}>By Category</Text>
+                                </Pressable>
+
+                                <Pressable
+                                    style={styles.viewOption}
+                                    onPress={() => {
+                                        setViewMode("all");
+                                        setViewMenuOpen(false);
+                                    }}
+                                >
+                                    <Text style={styles.viewOptionText}>All Items (A → Z)</Text>
+                                </Pressable>
                             </View>
                         )}
+
                     </View>
                 </View>
             </View>
