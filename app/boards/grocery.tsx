@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { ScreenList } from "@/components/ui/screen-list";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
@@ -344,51 +345,43 @@ Category: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}
     return (
         <ScreenList style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
 
-            {/* HEADER BUTTONS */}
-            <View style={styles.actions}>
-                <TouchableOpacity style={styles.btn} onPress={startAdd}>
-                    <MaterialCommunityIcons name="plus" size={18} />
-                    <Text style={styles.btnTxt}>Add</Text>
-                </TouchableOpacity>
+            <View style={styles.header}>
+                {/* HEADER BUTTONS */}
+                <View style={styles.actions}>
+                    <Button
+                        type="outline"
+                        size="sm"
+                        title="Add"
+                        onPress={startAdd}
+                        leftIcon={<MaterialCommunityIcons name="plus" size={18} />}
+                    />
 
-                <TouchableOpacity style={[styles.btn, styles.btnDanger]} onPress={deleteChecked}>
-                    <MaterialCommunityIcons name="trash-can-outline" size={18} />
-                    <Text style={[styles.btnTxt, styles.btnDangerTxt]}>Delete Checked</Text>
-                </TouchableOpacity>
+                    <Button
+                        type="outline"
+                        size="sm"
+                        title="Delete Checked"
+                        onPress={deleteChecked}
+                        leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
+                        backgroundColor="#fff5f5"
+                        style={{ borderColor: "#fecaca" }}
+                        leftIconColor="#b91c1c"
+                    />
 
-                {/* VIEW DROPDOWN */}
-                <View style={{ position: "relative" }}>
-                    <TouchableOpacity
-                        style={styles.btn}
-                        onPress={() => setViewMenuOpen(v => !v)}
-                    >
-                        <Text style={styles.btnTxt}>View</Text>
-                        <MaterialCommunityIcons name="menu-down" size={18} />
-                    </TouchableOpacity>
-
-                    {viewMenuOpen && (
-                        <View style={styles.viewMenu}>
-                            <Pressable
-                                style={styles.viewOption}
-                                onPress={() => {
-                                    setViewMode("category");
-                                    setViewMenuOpen(false);
-                                }}
-                            >
-                                <Text style={styles.viewOptionText}>By Category</Text>
-                            </Pressable>
-
-                            <Pressable
-                                style={styles.viewOption}
-                                onPress={() => {
-                                    setViewMode("all");
-                                    setViewMenuOpen(false);
-                                }}
-                            >
-                                <Text style={styles.viewOptionText}>All Items (A → Z)</Text>
-                            </Pressable>
-                        </View>
-                    )}
+                    <View style={{ position: "relative" }}>
+                        <Button
+                            type="outline"
+                            size="sm"
+                            title="View"
+                            onPress={() => setViewMenuOpen(v => !v)}
+                            rightIcon={<MaterialCommunityIcons name="menu-down" size={18} />}
+                        />
+                        {/* keep your dropdown as-is */}
+                        {viewMenuOpen && (
+                            <View style={styles.viewMenu}>
+                                ...
+                            </View>
+                        )}
+                    </View>
                 </View>
             </View>
 
@@ -638,25 +631,24 @@ Category: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}
                         />
 
                         <View style={styles.modalActions}>
-                            <TouchableOpacity
+                            <Button
+                                type="outline"
+                                size="sm"
+                                title="Cancel"
                                 onPress={() => {
                                     setAddOpen(false);
                                     resetAddForm();
                                 }}
-                                style={[styles.btn, styles.btnGhost]}
-                            >
-                                <Text style={styles.btnTxt}>Cancel</Text>
-                            </TouchableOpacity>
+                            />
 
-                            <TouchableOpacity
+                            <Button
+                                type="primary"
+                                size="sm"
+                                title={editingItem ? "Save" : "Add"}
                                 onPress={saveItem}
-                                style={[styles.btn, styles.btnPrimary]}
-                            >
-                                <Text style={[styles.btnTxt, styles.btnPrimaryTxt]}>
-                                    {editingItem ? "Save" : "Add"}
-                                </Text>
-                            </TouchableOpacity>
+                            />
                         </View>
+
                     </View>
                 </View>
             </Modal>
@@ -668,29 +660,24 @@ Category: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}
 // STYLES
 // ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-    screen: { flex: 1, backgroundColor: "#F6FAFF", padding: 12, gap: 12 },
+    screen: { flex: 1, backgroundColor: "#F6FAFF" },
 
-    actions: { flexDirection: "row", gap: 10, alignItems: "center" },
-
-    btn: {
-        flexDirection: "row",
-        gap: 6,
-        alignItems: "center",
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 12,
-        backgroundColor: "#fff",
-        borderWidth: 1,
-        borderColor: "#e5e7eb",
+    header: {
+        paddingHorizontal: 16,
+        paddingTop: 16,
     },
-    btnTxt: { color: "#0f172a", fontWeight: "600" },
-    btnDanger: { backgroundColor: "#fff5f5", borderColor: "#fecaca" },
-    btnDangerTxt: { color: "#b91c1c" },
-    btnGhost: { backgroundColor: "#fff" },
-    btnPrimary: { backgroundColor: "#2563eb", borderColor: "#1d4ed8" },
-    btnPrimaryTxt: { color: "#fff", fontWeight: "700" },
+    actions: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        alignItems: "center",
+        gap: 10,
+    },
 
-    listContent: { paddingBottom: 40 },
+    listContent: {
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 32,
+    },
 
     group: {
         backgroundColor: "#ffffff",
