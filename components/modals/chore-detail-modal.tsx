@@ -1,6 +1,9 @@
 // components/chore-detail-modal.tsx
 import { ChipSelector } from '@/components/chip-selector';
 import MediaPicker, { PickedMedia } from '@/components/media-picker';
+import { Button } from '@/components/ui/button';
+import { ModalCard } from '@/components/ui/modal-card';
+import { ModalShell } from '@/components/ui/modal-shell';
 import { ChoreView, Proof } from '@/lib/chores/chores.types';
 import { Role } from '@/lib/members/members.types';
 import { Audio, ResizeMode, Video } from 'expo-av';
@@ -9,19 +12,12 @@ import {
     Alert,
     Image,
     Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
     View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-
 
 type MemberOption = {
     id: string;
@@ -67,22 +63,18 @@ export default function ChoreDetailModal({
     doneByOptions,
     defaultDoneById,
 }: Props) {
-
-    const insets = useSafeAreaInsets();
     const isParent = currentRole === 'MOM' || currentRole === 'DAD';
 
     // 🔹 Normalize assignees: plural-only
     const assignedIds: string[] = (chore.assignedToIds ?? []).filter(Boolean);
 
     const assignedNames: string[] =
-        (chore.assignedToNames && chore.assignedToNames.length > 0)
+        chore.assignedToNames && chore.assignedToNames.length > 0
             ? chore.assignedToNames
             : assignedIds.map((id) => nameForId(id));
 
     const assignedLabel =
-        assignedNames && assignedNames.length > 0
-            ? assignedNames.join(', ')
-            : undefined;
+        assignedNames && assignedNames.length > 0 ? assignedNames.join(', ') : undefined;
 
     const isAssigned = assignedIds.length > 0;
 
@@ -103,18 +95,10 @@ export default function ChoreDetailModal({
 
     // 🔹 initial doneBy selection (respect existing, then assignment, then default)
     const computeInitialDoneByIds = (): string[] => {
-        if (chore.doneByIds && chore.doneByIds.length > 0) {
-            return [...chore.doneByIds];
-        }
-
-        if (assignedIds.length > 0) {
-            return [...assignedIds];
-        }
-
+        if (chore.doneByIds && chore.doneByIds.length > 0) return [...chore.doneByIds];
+        if (assignedIds.length > 0) return [...assignedIds];
         return defaultDoneById ? [defaultDoneById] : [];
     };
-
-
 
     const [selectedDoneByIds, setSelectedDoneByIds] = useState<string[]>(
         computeInitialDoneByIds()
@@ -123,22 +107,17 @@ export default function ChoreDetailModal({
     React.useEffect(() => {
         setSelectedDoneByIds(computeInitialDoneByIds());
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [
-        chore.id,
-        chore.doneByIds,
-        chore.assignedToIds,
-        defaultDoneById,
-    ]);
+    }, [chore.id, chore.doneByIds, chore.assignedToIds, defaultDoneById]);
 
-    const beforeProof = chore.proofs?.find((p) => p.type === "BEFORE");
-    const afterProof = chore.proofs?.find((p) => p.type === "AFTER");
+    const beforeProof = chore.proofs?.find((p) => p.type === 'BEFORE');
+    const afterProof = chore.proofs?.find((p) => p.type === 'AFTER');
 
-    function addBefore(uri: string, kind: "image" | "video") {
-        onAttachProof(chore.id, { uri, kind, type: "BEFORE" });
+    function addBefore(uri: string, kind: 'image' | 'video') {
+        onAttachProof(chore.id, { uri, kind, type: 'BEFORE' });
     }
 
-    function addAfter(uri: string, kind: "image" | "video") {
-        onAttachProof(chore.id, { uri, kind, type: "AFTER" });
+    function addAfter(uri: string, kind: 'image' | 'video') {
+        onAttachProof(chore.id, { uri, kind, type: 'AFTER' });
     }
 
     async function playAudioDescription() {
@@ -159,8 +138,8 @@ export default function ChoreDetailModal({
      * when the chore is assigned to specific member(s).
      */
     function ensureCanModifyAssignedChore(): boolean {
-        if (!isAssigned) return true;            // not assigned → anyone can do it
-        if (!defaultDoneById) return true;      // we don't know who is logged in
+        if (!isAssigned) return true; // not assigned → anyone can do it
+        if (!defaultDoneById) return true; // we don't know who is logged in
 
         // If this logged-in member is one of the assignees → allowed
         if (assignedIds.includes(defaultDoneById)) return true;
@@ -183,6 +162,7 @@ export default function ChoreDetailModal({
         );
         return false;
     }
+
     function onPickBefore(media: PickedMedia | null) {
         if (!media) {
             removeBefore();
@@ -199,12 +179,11 @@ export default function ChoreDetailModal({
         addAfter(media.uri, media.kind);
     }
 
-
     function removeBefore() {
-        onAttachProof(chore.id, { uri: "", kind: "image", type: "BEFORE" } as any);
+        onAttachProof(chore.id, { uri: '', kind: 'image', type: 'BEFORE' } as any);
     }
     function removeAfter() {
-        onAttachProof(chore.id, { uri: "", kind: "image", type: "AFTER" } as any);
+        onAttachProof(chore.id, { uri: '', kind: 'image', type: 'AFTER' } as any);
     }
 
     const markCompleted = () => {
@@ -213,18 +192,14 @@ export default function ChoreDetailModal({
 
         if (!afterProof) {
             Alert.alert(
-                "Proof required",
-                "Please upload an AFTER photo or video before marking as completed."
+                'Proof required',
+                'Please upload an AFTER photo or video before marking as completed.'
             );
             return;
         }
 
-
         if (selectedDoneByIds.length === 0) {
-            Alert.alert(
-                'Choose who did it',
-                'Please select which family members completed this chore.'
-            );
+            Alert.alert('Choose who did it', 'Please select which family members completed this chore.');
             return;
         }
 
@@ -250,9 +225,7 @@ export default function ChoreDetailModal({
         // Helper that actually calls onApprove + closes
         const doApprove = () => {
             let updatedPoints: number | undefined;
-            if (effectivePoints !== chore.points) {
-                updatedPoints = effectivePoints;
-            }
+            if (effectivePoints !== chore.points) updatedPoints = effectivePoints;
             onApprove(chore.id, cleanedNotes, updatedPoints);
             onClose();
         };
@@ -264,11 +237,7 @@ export default function ChoreDetailModal({
                 'This chore will be approved with 0 points. Use this only for chores that should not give a reward (like cleaning up a mess they made).',
                 [
                     { text: 'Cancel', style: 'cancel' },
-                    {
-                        text: 'Approve with 0 pts',
-                        style: 'destructive',
-                        onPress: doApprove,
-                    },
+                    { text: 'Approve with 0 pts', style: 'destructive', onPress: doApprove },
                 ]
             );
             return;
@@ -307,10 +276,11 @@ export default function ChoreDetailModal({
             return;
         }
 
-        const hasUnsaved =
+        const hasUnsaved = Boolean(
             beforeProof ||
             afterProof ||
-            (proofNote && proofNote.trim().length > 0);
+            (proofNote && proofNote.trim().length > 0)
+        );
 
         if (!hasUnsaved) {
             onClose();
@@ -318,399 +288,362 @@ export default function ChoreDetailModal({
         }
 
         Alert.alert(
-            "Discard changes?",
-            "You added photos or notes. If you close now, these will be lost.",
+            'Discard changes?',
+            'You added photos or notes. If you close now, these will be lost.',
             [
-                { text: "Keep Editing", style: "cancel" },
-                { text: "Discard", style: "destructive", onPress: onClose }
+                { text: 'Keep Editing', style: 'cancel' },
+                { text: 'Discard', style: 'destructive', onPress: onClose },
             ]
         );
     }
 
     return (
-        <Modal visible={visible} animationType="slide" transparent>
-            <KeyboardAvoidingView
-                style={[s.overlay, { paddingBottom: Platform.OS === 'android' ? insets.bottom : 0 }]}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
-            >
-                <View style={s.modal}>
-                    <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
-                        <Text style={s.title}>{chore.title}</Text>
-                        <Text style={s.status}>{chore.status.toUpperCase()}</Text>
-                        {chore.points > 0 && (
-                            <Text style={[s.text, { marginTop: 2 }]}>
-                                Worth: <Text style={s.bold}>{chore.points} pts</Text>
+        <ModalShell
+            visible={visible}
+            onClose={requestClose}
+            // keep bottom-sheet feel (your ModalShell defaults to center)
+            backdropStyle={{ justifyContent: 'flex-end' }}
+            keyboardOffset={0}
+        >
+            <ModalCard radius={20} padded elevated style={s.card}>
+                <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 16 }}>
+                    <Text style={s.title}>{chore.title}</Text>
+                    <Text style={s.status}>{chore.status.toUpperCase()}</Text>
+
+                    {chore.points > 0 && (
+                        <Text style={[s.text, { marginTop: 2 }]}>
+                            Worth: <Text style={s.bold}>{chore.points} pts</Text>
+                        </Text>
+                    )}
+
+                    {chore.description ? (
+                        <Text style={[s.text, { marginTop: 6 }]}>{chore.description}</Text>
+                    ) : null}
+
+                    {chore.audioDescriptionUrl && (
+                        <View style={{ marginTop: 8 }}>
+                            <Text style={s.text}>
+                                Audio description{' '}
+                                {chore.audioDescriptionDuration != null && (
+                                    <Text style={s.bold}>({chore.audioDescriptionDuration}s)</Text>
+                                )}
                             </Text>
-                        )}
 
-                        {chore.description ? (
-                            <Text style={[s.text, { marginTop: 6 }]}>{chore.description}</Text>
-                        ) : null}
-
-                        {chore.audioDescriptionUrl && (
-                            <View style={{ marginTop: 8 }}>
-                                <Text style={s.text}>
-                                    Audio description{' '}
-                                    {chore.audioDescriptionDuration != null && (
-                                        <Text style={s.bold}>({chore.audioDescriptionDuration}s)</Text>
-                                    )}
-                                </Text>
-                                <Pressable
-                                    style={[s.btn, s.secondary, { marginTop: 6, alignSelf: 'flex-start' }]}
-                                    onPress={playAudioDescription}
-                                >
-                                    <Text style={s.btnTxt}>Play audio</Text>
-                                </Pressable>
+                            <View style={{ marginTop: 6, alignSelf: 'flex-start' }}>
+                                <Button title="Play audio" type="secondary" size="md" onPress={playAudioDescription} />
                             </View>
-                        )}
+                        </View>
+                    )}
 
-                        {assignedLabel && (
-                            <Text style={[s.text, { marginTop: 4 }]}>
-                                Assigned to: <Text style={s.bold}>{assignedLabel}</Text>
-                            </Text>
-                        )}
+                    {assignedLabel && (
+                        <Text style={[s.text, { marginTop: 4 }]}>
+                            Assigned to: <Text style={s.bold}>{assignedLabel}</Text>
+                        </Text>
+                    )}
 
-                        {chore.createdByName && (
-                            <Text style={[s.text, { marginTop: 2 }]}>
-                                Created by: <Text style={s.bold}>{chore.createdByName}</Text>
-                            </Text>
-                        )}
+                    {chore.createdByName && (
+                        <Text style={[s.text, { marginTop: 2 }]}>
+                            Created by: <Text style={s.bold}>{chore.createdByName}</Text>
+                        </Text>
+                    )}
 
-                        {/* OPEN */}
-                        {chore.status === "open" && (
-                            <>
-                                {isAssigned && (
-                                    <Text style={[s.text, { marginTop: 12 }]}>
-                                        This chore is assigned to <Text style={s.bold}>{assignedLabel}</Text>.
-                                        Only assigned family members can complete it.
-                                    </Text>
-                                )}
-
-                                {/* WHO DID IT */}
-                                {doneByOptions.length > 0 && (
-                                    <>
-                                        <Text style={[s.text, { marginTop: 12 }]}>Who did this?</Text>
-                                        <ChipSelector
-                                            multiple
-                                            options={(isAssigned
-                                                ? doneByOptions.filter((opt) => assignedIds.includes(opt.id))
-                                                : doneByOptions
-                                            ).map(opt => ({
-                                                label: opt.name,
-                                                value: opt.id,
-                                            }))}
-                                            values={selectedDoneByIds}
-                                            onChange={setSelectedDoneByIds}
-                                            style={{ marginTop: 8 }}
-                                        />
-
-                                    </>
-                                )}
-
-                                {/* BEFORE */}
-                                <Text style={[s.text, { marginTop: 16 }]}>
-                                    Before (optional)
+                    {/* OPEN */}
+                    {chore.status === 'open' && (
+                        <>
+                            {isAssigned && (
+                                <Text style={[s.text, { marginTop: 12 }]}>
+                                    This chore is assigned to <Text style={s.bold}>{assignedLabel}</Text>. Only assigned family
+                                    members can complete it.
                                 </Text>
+                            )}
 
-                                <MediaPicker
-                                    label=""
-                                    value={
-                                        beforeProof?.uri
-                                            ? { uri: beforeProof.uri, kind: beforeProof.kind }
-                                            : null
-                                    }
-                                    onChange={onPickBefore}
-                                    allowImage={true}
-                                    allowVideo={true}
-                                    /* disable gallery options */
-                                    pickFromLibrary={false}
-                                />
+                            {/* WHO DID IT */}
+                            {doneByOptions.length > 0 && (
+                                <>
+                                    <Text style={[s.text, { marginTop: 12 }]}>Who did this?</Text>
+                                    <ChipSelector
+                                        multiple
+                                        options={(isAssigned
+                                            ? doneByOptions.filter((opt) => assignedIds.includes(opt.id))
+                                            : doneByOptions
+                                        ).map((opt) => ({ label: opt.name, value: opt.id }))}
+                                        values={selectedDoneByIds}
+                                        onChange={setSelectedDoneByIds}
+                                        style={{ marginTop: 8 }}
+                                    />
+                                </>
+                            )}
 
+                            {/* BEFORE */}
+                            <Text style={[s.text, { marginTop: 16 }]}>Before (optional)</Text>
+                            <MediaPicker
+                                label=""
+                                value={beforeProof?.uri ? { uri: beforeProof.uri, kind: beforeProof.kind } : null}
+                                onChange={onPickBefore}
+                                allowImage
+                                allowVideo
+                                pickFromLibrary={false}
+                            />
 
-                                {/* AFTER */}
-                                <Text style={[s.text, { marginTop: 16 }]}>
-                                    After (required)
-                                </Text>
+                            {/* AFTER */}
+                            <Text style={[s.text, { marginTop: 16 }]}>After (required)</Text>
+                            <MediaPicker
+                                label=""
+                                value={afterProof?.uri ? { uri: afterProof.uri, kind: afterProof.kind } : null}
+                                onChange={onPickAfter}
+                                allowImage
+                                allowVideo
+                                pickFromLibrary={false}
+                            />
 
-                                <MediaPicker
-                                    label=""
-                                    value={
-                                        afterProof?.uri
-                                            ? { uri: afterProof.uri, kind: afterProof.kind }
-                                            : null
-                                    }
-                                    onChange={onPickAfter}
-                                    allowImage={true}
-                                    allowVideo={true}
-                                    pickFromLibrary={false}
-                                />
+                            {/* NOTE */}
+                            <Text style={[s.text, { marginTop: 10 }]}>Add a short note (optional)</Text>
+                            <TextInput
+                                placeholder="What did you do here?"
+                                placeholderTextColor="#94a3b8"
+                                value={proofNote}
+                                onChangeText={setProofNote}
+                                style={[s.input, { marginTop: 6 }]}
+                                multiline
+                                submitBehavior="submit"
+                                onSubmitEditing={() => Keyboard.dismiss()}
+                            />
 
-                                {/* NOTE */}
-                                <Text style={[s.text, { marginTop: 10 }]}>
-                                    Add a short note (optional)
-                                </Text>
-                                <TextInput
-                                    placeholder="What did you do here?"
-                                    placeholderTextColor="#94a3b8"
-                                    value={proofNote}
-                                    onChangeText={setProofNote}
-                                    style={[s.input, { marginTop: 6 }]}
-                                    multiline
-                                    submitBehavior="submit"
-                                    onSubmitEditing={() => Keyboard.dismiss()}
-                                />
-
-                                {/* SUBMIT */}
-                                <View style={s.row}>
-                                    <Pressable style={[s.btn, s.primary]} onPress={markCompleted}>
-                                        <Text style={[s.btnTxt, s.primaryTxt]}>Mark as completed</Text>
-                                    </Pressable>
-                                    <Pressable style={[s.btn, s.cancel]} onPress={requestClose}>
-
-                                        <Text style={[s.btnTxt, s.cancelTxt]}>Cancel</Text>
-                                    </Pressable>
+                            {/* SUBMIT */}
+                            <View style={s.row}>
+                                <View style={s.flex1}>
+                                    <Button
+                                        title="Submit"
+                                        type="primary"
+                                        size="lg"
+                                        onPress={markCompleted}
+                                        fullWidth
+                                    />
                                 </View>
-                            </>
-                        )}
+                                <View style={s.flex1}>
+                                    <Button title="Cancel" type="secondary" size="lg" onPress={requestClose} fullWidth />
+                                </View>
+                            </View>
+                        </>
+                    )}
 
-                        {/* PENDING */}
-                        {chore.status === "pending" && (
-                            <>
-                                {/* BEFORE */}
-                                {beforeProof?.uri && (
-                                    <View style={s.proof}>
-                                        {beforeProof.kind === "image" ? (
-                                            <Image source={{ uri: beforeProof.uri }} style={s.media} />
-                                        ) : (
-                                            <Video
-                                                source={{ uri: beforeProof.uri }}
-                                                style={s.media}
-                                                useNativeControls
-                                                resizeMode={ResizeMode.CONTAIN}
-                                            />
-                                        )}
-                                        <Text style={s.text}>Before</Text>
-                                    </View>
-                                )}
-
-                                {/* AFTER */}
-                                {afterProof?.uri && (
-                                    <View style={s.proof}>
-                                        {afterProof.kind === "image" ? (
-                                            <Image source={{ uri: afterProof.uri }} style={s.media} />
-                                        ) : (
-                                            <Video
-                                                source={{ uri: afterProof.uri }}
-                                                style={s.media}
-                                                useNativeControls
-                                                resizeMode={ResizeMode.CONTAIN}
-                                            />
-                                        )}
-                                        <Text style={s.text}>After</Text>
-                                    </View>
-                                )}
-
-                                {assignedLabel && (
-                                    <Text style={[s.text, { marginTop: 6 }]}>
-                                        Assigned to: <Text style={s.bold}>{assignedLabel}</Text>
-                                    </Text>
-                                )}
-
-                                {chore.createdByName && (
-                                    <Text style={[s.text, { marginTop: 2 }]}>
-                                        Created by: <Text style={s.bold}>{chore.createdByName}</Text>
-                                    </Text>
-                                )}
-
-                                <Text style={[s.text, { marginTop: 6 }]}>
-                                    Done by: <Text style={s.bold}>{doneByName}</Text>
-                                </Text>
-
-                                <Text style={s.text}>
-                                    Time:{" "}
-                                    <Text style={s.bold}>
-                                        {chore.doneAt ? new Date(chore.doneAt).toLocaleString() : "—"}
-                                    </Text>
-                                </Text>
-
-                                {chore.proofNote ? (
-                                    <Text style={[s.text, { marginTop: 6 }]}>
-                                        Kid’s note: <Text style={s.bold}>{chore.proofNote}</Text>
-                                    </Text>
-                                ) : null}
-
-                                {isParent && (
-                                    <>
-                                        <Text style={[s.text, { marginTop: 12 }]}>Points for this chore</Text>
-                                        <TextInput
-                                            value={pointsText}
-                                            onChangeText={setPointsText}
-                                            keyboardType="number-pad"
-                                            style={s.input}
-                                            returnKeyType="done"
-                                            submitBehavior="submit"
-                                            onSubmitEditing={() => Keyboard.dismiss()}
+                    {/* PENDING */}
+                    {chore.status === 'pending' && (
+                        <>
+                            {/* BEFORE */}
+                            {beforeProof?.uri && (
+                                <View style={s.proof}>
+                                    {beforeProof.kind === 'image' ? (
+                                        <Image source={{ uri: beforeProof.uri }} style={s.media} />
+                                    ) : (
+                                        <Video
+                                            source={{ uri: beforeProof.uri }}
+                                            style={s.media}
+                                            useNativeControls
+                                            resizeMode={ResizeMode.CONTAIN}
                                         />
-                                    </>
-                                )}
+                                    )}
+                                    <Text style={s.text}>Before</Text>
+                                </View>
+                            )}
 
-                                <Text style={[s.text, { marginTop: 12 }]}>Notes</Text>
-                                <TextInput
-                                    placeholder="Add a note…"
-                                    placeholderTextColor="#94a3b8"
-                                    value={notes}
-                                    onChangeText={setNotes}
-                                    style={s.input}
-                                    multiline
-                                    submitBehavior="submit"
-                                    onSubmitEditing={() => Keyboard.dismiss()}
-                                />
+                            {/* AFTER */}
+                            {afterProof?.uri && (
+                                <View style={s.proof}>
+                                    {afterProof.kind === 'image' ? (
+                                        <Image source={{ uri: afterProof.uri }} style={s.media} />
+                                    ) : (
+                                        <Video
+                                            source={{ uri: afterProof.uri }}
+                                            style={s.media}
+                                            useNativeControls
+                                            resizeMode={ResizeMode.CONTAIN}
+                                        />
+                                    )}
+                                    <Text style={s.text}>After</Text>
+                                </View>
+                            )}
 
-                                {isParent && (
-                                    <View style={[s.row, { marginTop: 18 }]}>
-                                        <Pressable style={[s.btn, s.cancel]} onPress={deny}>
-                                            <Text style={[s.btnTxt, s.cancelTxt]}>Deny</Text>
-                                        </Pressable>
-                                        <Pressable style={[s.btn, s.primary]} onPress={approve}>
-                                            <Text style={[s.btnTxt, s.primaryTxt]}>Approve</Text>
-                                        </Pressable>
-                                    </View>
-                                )}
-                                <Pressable
-                                    style={[s.btn, s.secondary, { marginTop: 12 }]}
-                                    onPress={requestClose}
-                                >
-
-                                    <Text style={s.btnTxt}>Cancel</Text>
-                                </Pressable>
-                            </>
-                        )}
-
-                        {/* APPROVED */}
-                        {chore.status === "approved" && (
-                            <>
-                                {/* BEFORE */}
-                                {beforeProof?.uri && (
-                                    <View style={s.proof}>
-                                        {beforeProof.kind === "image" ? (
-                                            <Image source={{ uri: beforeProof.uri }} style={s.media} />
-                                        ) : (
-                                            <Video
-                                                source={{ uri: beforeProof.uri }}
-                                                style={s.media}
-                                                useNativeControls
-                                                resizeMode={ResizeMode.CONTAIN}
-                                            />
-                                        )}
-                                        <Text style={s.text}>Before</Text>
-                                    </View>
-                                )}
-
-                                {/* AFTER */}
-                                {afterProof?.uri && (
-                                    <View style={s.proof}>
-                                        {afterProof.kind === "image" ? (
-                                            <Image source={{ uri: afterProof.uri }} style={s.media} />
-                                        ) : (
-                                            <Video
-                                                source={{ uri: afterProof.uri }}
-                                                style={s.media}
-                                                useNativeControls
-                                                resizeMode={ResizeMode.CONTAIN}
-                                            />
-                                        )}
-                                        <Text style={s.text}>After</Text>
-                                    </View>
-                                )}
-
-                                {assignedLabel && (
-                                    <Text style={[s.text, { marginTop: 6 }]}>
-                                        Assigned to: <Text style={s.bold}>{assignedLabel}</Text>
-                                    </Text>
-                                )}
-
-                                {chore.createdByName && (
-                                    <Text style={[s.text, { marginTop: 2 }]}>
-                                        Created by: <Text style={s.bold}>{chore.createdByName}</Text>
-                                    </Text>
-                                )}
-
+                            {assignedLabel && (
                                 <Text style={[s.text, { marginTop: 6 }]}>
-                                    Done by: <Text style={s.bold}>{doneByName}</Text>
+                                    Assigned to: <Text style={s.bold}>{assignedLabel}</Text>
                                 </Text>
+                            )}
 
+                            {chore.createdByName && (
+                                <Text style={[s.text, { marginTop: 2 }]}>
+                                    Created by: <Text style={s.bold}>{chore.createdByName}</Text>
+                                </Text>
+                            )}
+
+                            <Text style={[s.text, { marginTop: 6 }]}>
+                                Done by: <Text style={s.bold}>{doneByName}</Text>
+                            </Text>
+
+                            <Text style={s.text}>
+                                Time:{' '}
+                                <Text style={s.bold}>
+                                    {chore.doneAt ? new Date(chore.doneAt).toLocaleString() : '—'}
+                                </Text>
+                            </Text>
+
+                            {chore.proofNote ? (
+                                <Text style={[s.text, { marginTop: 6 }]}>
+                                    Kid’s note: <Text style={s.bold}>{chore.proofNote}</Text>
+                                </Text>
+                            ) : null}
+
+                            {isParent && (
+                                <>
+                                    <Text style={[s.text, { marginTop: 12 }]}>Points for this chore</Text>
+                                    <TextInput
+                                        value={pointsText}
+                                        onChangeText={setPointsText}
+                                        keyboardType="number-pad"
+                                        style={s.input}
+                                        returnKeyType="done"
+                                        submitBehavior="submit"
+                                        onSubmitEditing={() => Keyboard.dismiss()}
+                                    />
+                                </>
+                            )}
+
+                            <Text style={[s.text, { marginTop: 12 }]}>Notes</Text>
+                            <TextInput
+                                placeholder="Add a note…"
+                                placeholderTextColor="#94a3b8"
+                                value={notes}
+                                onChangeText={setNotes}
+                                style={s.input}
+                                multiline
+                                submitBehavior="submit"
+                                onSubmitEditing={() => Keyboard.dismiss()}
+                            />
+
+                            {isParent && (
+                                <View style={[s.row, { marginTop: 18 }]}>
+                                    <View style={s.flex1}>
+                                        <Button title="Deny" type="danger" size="lg" onPress={deny} fullWidth />
+                                    </View>
+                                    <View style={s.flex1}>
+                                        <Button title="Approve" type="primary" size="lg" onPress={approve} fullWidth />
+                                    </View>
+                                </View>
+                            )}
+
+                            <View style={{ marginTop: 12 }}>
+                                <Button title="Cancel" type="secondary" size="lg" onPress={requestClose} fullWidth />
+                            </View>
+                        </>
+                    )}
+
+                    {/* APPROVED */}
+                    {chore.status === 'approved' && (
+                        <>
+                            {/* BEFORE */}
+                            {beforeProof?.uri && (
+                                <View style={s.proof}>
+                                    {beforeProof.kind === 'image' ? (
+                                        <Image source={{ uri: beforeProof.uri }} style={s.media} />
+                                    ) : (
+                                        <Video
+                                            source={{ uri: beforeProof.uri }}
+                                            style={s.media}
+                                            useNativeControls
+                                            resizeMode={ResizeMode.CONTAIN}
+                                        />
+                                    )}
+                                    <Text style={s.text}>Before</Text>
+                                </View>
+                            )}
+
+                            {/* AFTER */}
+                            {afterProof?.uri && (
+                                <View style={s.proof}>
+                                    {afterProof.kind === 'image' ? (
+                                        <Image source={{ uri: afterProof.uri }} style={s.media} />
+                                    ) : (
+                                        <Video
+                                            source={{ uri: afterProof.uri }}
+                                            style={s.media}
+                                            useNativeControls
+                                            resizeMode={ResizeMode.CONTAIN}
+                                        />
+                                    )}
+                                    <Text style={s.text}>After</Text>
+                                </View>
+                            )}
+
+                            {assignedLabel && (
+                                <Text style={[s.text, { marginTop: 6 }]}>
+                                    Assigned to: <Text style={s.bold}>{assignedLabel}</Text>
+                                </Text>
+                            )}
+
+                            {chore.createdByName && (
+                                <Text style={[s.text, { marginTop: 2 }]}>
+                                    Created by: <Text style={s.bold}>{chore.createdByName}</Text>
+                                </Text>
+                            )}
+
+                            <Text style={[s.text, { marginTop: 6 }]}>
+                                Done by: <Text style={s.bold}>{doneByName}</Text>
+                            </Text>
+
+                            <Text style={s.text}>
+                                Time:{' '}
+                                <Text style={s.bold}>
+                                    {chore.doneAt ? new Date(chore.doneAt).toLocaleString() : '—'}
+                                </Text>
+                            </Text>
+
+                            {chore.proofNote ? (
+                                <Text style={[s.text, { marginTop: 6 }]}>
+                                    Kid’s note: <Text style={s.bold}>{chore.proofNote}</Text>
+                                </Text>
+                            ) : null}
+
+                            <Text style={s.text}>
+                                Approved by: <Text style={s.bold}>{approvedByName}</Text>
+                            </Text>
+
+                            <Text style={s.text}>
+                                Approved at:{' '}
+                                <Text style={s.bold}>
+                                    {chore.approvedAt ? new Date(chore.approvedAt).toLocaleString() : '—'}
+                                </Text>
+                            </Text>
+
+                            {chore.notes ? (
                                 <Text style={s.text}>
-                                    Time:{" "}
-                                    <Text style={s.bold}>
-                                        {chore.doneAt ? new Date(chore.doneAt).toLocaleString() : "—"}
-                                    </Text>
+                                    Notes: <Text style={s.bold}>{chore.notes}</Text>
                                 </Text>
+                            ) : null}
 
-                                {chore.proofNote ? (
-                                    <Text style={[s.text, { marginTop: 6 }]}>
-                                        Kid’s note: <Text style={s.bold}>{chore.proofNote}</Text>
-                                    </Text>
-                                ) : null}
-
-                                <Text style={s.text}>
-                                    Approved by: <Text style={s.bold}>{approvedByName}</Text>
-                                </Text>
-
-                                <Text style={s.text}>
-                                    Approved at:{" "}
-                                    <Text style={s.bold}>
-                                        {chore.approvedAt ? new Date(chore.approvedAt).toLocaleString() : "—"}
-                                    </Text>
-                                </Text>
-
-                                {chore.notes ? (
-                                    <Text style={s.text}>
-                                        Notes: <Text style={s.bold}>{chore.notes}</Text>
-                                    </Text>
-                                ) : null}
-
-                                <Pressable
-                                    style={[s.btn, s.secondary, { marginTop: 12 }]}
-                                    onPress={requestClose}
-                                >
-                                    <Text style={s.btnTxt}>Close</Text>
-                                </Pressable>
-                            </>
-                        )}
-
-                    </ScrollView>
-                </View>
-            </KeyboardAvoidingView>
-        </Modal>
+                            <View style={{ marginTop: 12 }}>
+                                <Button title="Close" type="secondary" size="lg" onPress={requestClose} fullWidth />
+                            </View>
+                        </>
+                    )}
+                </ScrollView>
+            </ModalCard>
+        </ModalShell>
     );
 }
 
 const s = StyleSheet.create({
-    overlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.4)',
-        justifyContent: 'flex-end',
+    card: {
+        width: '100%',
     },
-    modal: {
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        padding: 16,
-        maxHeight: '90%',
-    },
+
     title: { fontSize: 20, fontWeight: '900', color: '#0f172a' },
     status: { fontWeight: '700', color: '#64748b', marginTop: 2 },
     text: { color: '#334155' },
     bold: { fontWeight: '700' },
+
     row: { flexDirection: 'row', gap: 12, marginTop: 14 },
-    btn: { flex: 1, borderRadius: 10, alignItems: 'center', paddingVertical: 12 },
-    primary: { backgroundColor: '#2563eb' },
-    primaryTxt: { color: '#fff', fontWeight: '700' },
-    secondary: { backgroundColor: '#f1f5f9' },
-    cancel: { backgroundColor: '#fee2e2' },
-    cancelTxt: { color: '#b91c1c', fontWeight: '700' },
-    btnTxt: { fontWeight: '700', color: '#1e293b' },
+    flex1: { flex: 1 },
+
     proof: { marginTop: 12 },
     media: {
         width: '100%',
@@ -718,18 +651,7 @@ const s = StyleSheet.create({
         borderRadius: 12,
         backgroundColor: '#e2e8f0',
     },
-    removeProof: {
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        borderRadius: 16,
-        width: 28,
-        height: 28,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    removeProofTxt: { color: '#fff', fontWeight: '800', fontSize: 16 },
+
     input: {
         borderWidth: 1,
         borderColor: '#e2e8f0',
