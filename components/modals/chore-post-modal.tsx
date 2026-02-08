@@ -13,9 +13,9 @@ import {
     View,
 } from "react-native";
 
-import { MembersSelector } from "./members-selector";
-import { ModalCard } from "./ui/modal-card";
-import { ModalShell } from "./ui/modal-shell";
+import { MembersSelector } from "../members-selector";
+import { ModalCard } from "../ui/modal-card";
+import { ModalShell } from "../ui/modal-shell";
 
 type AssigneeOption = {
     id: string;

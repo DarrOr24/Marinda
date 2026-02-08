@@ -16,7 +16,7 @@ import {
 } from "react-native";
 
 import { DateRangePicker } from "@/components/date-range-picker";
-import { MembersSelector } from "./members-selector";
+import { MembersSelector } from "../members-selector";
 
 export type NewActivityForm = {
   title: string;

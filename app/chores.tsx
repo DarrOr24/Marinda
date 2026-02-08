@@ -1,12 +1,12 @@
 // app/chores.tsx
-import ChoreDetailModal from '@/components/chore-detail-modal';
+import ChoreDetailModal from '@/components/modals/chore-detail-modal';
 import { ScreenList } from '@/components/ui/screen-list';
 
 import { useChoreTemplates } from '@/lib/chores/chores-templates.hooks';
 import type { ChoreView, Proof } from '@/lib/chores/chores.types';
 import { useRouter } from 'expo-router';
 
-import ChorePostModal from '@/components/chore-post-modal';
+import ChorePostModal from '@/components/modals/chore-post-modal';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import {
   logChorePointsEvent,

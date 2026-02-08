@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 
-import AddActivityModal, { type NewActivityForm } from "@/components/add-activity-modal";
+import AddActivityModal, { type NewActivityForm } from "@/components/modals/add-activity-modal";
 import { Button } from "@/components/ui/button";
 import { SafeFab } from "@/components/ui/safe-fab";
 import { Screen } from "@/components/ui/screen";
