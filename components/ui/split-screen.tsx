@@ -1,7 +1,9 @@
+// components/ui/split-screen.tsx
 import React from "react";
 import { ScrollView, StyleSheet, View, ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CheckerboardBackground from "../checkerboard-background";
+import { KeyboardFrame } from "./keyboard-frame";
 
 type Gap = "no" | "sm" | "md" | "lg";
 
@@ -17,6 +19,10 @@ type Props = {
 
     style?: ViewStyle;
     contentStyle?: ViewStyle;
+
+    // ✅ NEW: optionally apply keyboard avoidance to the RIGHT pane only
+    keyboard?: boolean;
+    keyboardOffset?: number;
 };
 
 const gapToNumber: Record<Gap, number> = {
@@ -35,7 +41,26 @@ export function SplitScreen({
     gap = "md",
     style,
     contentStyle,
+
+    keyboard = false,
+    keyboardOffset,
 }: Props) {
+    const Right = (
+        <ScrollView
+            style={styles.right}
+            contentContainerStyle={[
+                styles.rightContent,
+                { padding: contentPadding, gap: gapToNumber[gap] },
+                contentStyle,
+            ]}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
+        >
+            {children}
+        </ScrollView>
+    );
+
     return (
         <SafeAreaView style={[styles.screen, style]} edges={edges}>
             {withBackground && (
@@ -45,18 +70,15 @@ export function SplitScreen({
             <View style={styles.row}>
                 {left}
 
-                <ScrollView
-                    style={styles.right}
-                    contentContainerStyle={[
-                        styles.rightContent,
-                        { padding: contentPadding, gap: gapToNumber[gap] },
-                        contentStyle,
-                    ]}
-                    keyboardShouldPersistTaps="handled"
-                    showsVerticalScrollIndicator={false}
-                >
-                    {children}
-                </ScrollView>
+                <View style={styles.right}>
+                    {keyboard ? (
+                        <KeyboardFrame keyboardOffset={keyboardOffset}>
+                            {Right}
+                        </KeyboardFrame>
+                    ) : (
+                        Right
+                    )}
+                </View>
             </View>
         </SafeAreaView>
     );
