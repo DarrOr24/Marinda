@@ -301,15 +301,22 @@ export default function ChoreDetailModal({
         <ModalShell
             visible={visible}
             onClose={requestClose}
-            // keep bottom-sheet feel (your ModalShell defaults to center)
+            // keep bottom-sheet feel
             backdropStyle={{ justifyContent: 'flex-end' }}
             keyboardOffset={0}
         >
             <ModalCard radius={20} padded elevated style={s.card}>
-                <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 16 }}>
-                    <Text style={s.title}>{chore.title}</Text>
-                    <Text style={s.status}>{chore.status.toUpperCase()}</Text>
+                {/* HEADER (outside scroll) */}
+                <Text style={s.title}>{chore.title}</Text>
+                <Text style={s.status}>{chore.status.toUpperCase()}</Text>
 
+                {/* SCROLLING BODY */}
+                <ScrollView
+                    nestedScrollEnabled
+                    contentContainerStyle={{ paddingBottom: 16 }}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                >
                     {chore.points > 0 && (
                         <Text style={[s.text, { marginTop: 2 }]}>
                             Worth: <Text style={s.bold}>{chore.points} pts</Text>
@@ -330,7 +337,12 @@ export default function ChoreDetailModal({
                             </Text>
 
                             <View style={{ marginTop: 6, alignSelf: 'flex-start' }}>
-                                <Button title="Play audio" type="secondary" size="md" onPress={playAudioDescription} />
+                                <Button
+                                    title="Play audio"
+                                    type="secondary"
+                                    size="md"
+                                    onPress={playAudioDescription}
+                                />
                             </View>
                         </View>
                     )}
@@ -347,7 +359,7 @@ export default function ChoreDetailModal({
                         </Text>
                     )}
 
-                    {/* OPEN */}
+                    {/* ---------------- OPEN ---------------- */}
                     {chore.status === 'open' && (
                         <>
                             {isAssigned && (
@@ -357,7 +369,6 @@ export default function ChoreDetailModal({
                                 </Text>
                             )}
 
-                            {/* WHO DID IT */}
                             {doneByOptions.length > 0 && (
                                 <>
                                     <Text style={[s.text, { marginTop: 12 }]}>Who did this?</Text>
@@ -374,7 +385,6 @@ export default function ChoreDetailModal({
                                 </>
                             )}
 
-                            {/* BEFORE */}
                             <Text style={[s.text, { marginTop: 16 }]}>Before (optional)</Text>
                             <MediaPicker
                                 label=""
@@ -385,7 +395,6 @@ export default function ChoreDetailModal({
                                 pickFromLibrary={false}
                             />
 
-                            {/* AFTER */}
                             <Text style={[s.text, { marginTop: 16 }]}>After (required)</Text>
                             <MediaPicker
                                 label=""
@@ -396,7 +405,6 @@ export default function ChoreDetailModal({
                                 pickFromLibrary={false}
                             />
 
-                            {/* NOTE */}
                             <Text style={[s.text, { marginTop: 10 }]}>Add a short note (optional)</Text>
                             <TextInput
                                 placeholder="What did you do here?"
@@ -408,29 +416,12 @@ export default function ChoreDetailModal({
                                 submitBehavior="submit"
                                 onSubmitEditing={() => Keyboard.dismiss()}
                             />
-
-                            {/* SUBMIT */}
-                            <View style={s.row}>
-                                <View style={s.flex1}>
-                                    <Button
-                                        title="Submit"
-                                        type="primary"
-                                        size="lg"
-                                        onPress={markCompleted}
-                                        fullWidth
-                                    />
-                                </View>
-                                <View style={s.flex1}>
-                                    <Button title="Cancel" type="secondary" size="lg" onPress={requestClose} fullWidth />
-                                </View>
-                            </View>
                         </>
                     )}
 
-                    {/* PENDING */}
+                    {/* ---------------- PENDING ---------------- */}
                     {chore.status === 'pending' && (
                         <>
-                            {/* BEFORE */}
                             {beforeProof?.uri && (
                                 <View style={s.proof}>
                                     {beforeProof.kind === 'image' ? (
@@ -447,7 +438,6 @@ export default function ChoreDetailModal({
                                 </View>
                             )}
 
-                            {/* AFTER */}
                             {afterProof?.uri && (
                                 <View style={s.proof}>
                                     {afterProof.kind === 'image' ? (
@@ -519,28 +509,12 @@ export default function ChoreDetailModal({
                                 submitBehavior="submit"
                                 onSubmitEditing={() => Keyboard.dismiss()}
                             />
-
-                            {isParent && (
-                                <View style={[s.row, { marginTop: 18 }]}>
-                                    <View style={s.flex1}>
-                                        <Button title="Deny" type="danger" size="lg" onPress={deny} fullWidth />
-                                    </View>
-                                    <View style={s.flex1}>
-                                        <Button title="Approve" type="primary" size="lg" onPress={approve} fullWidth />
-                                    </View>
-                                </View>
-                            )}
-
-                            <View style={{ marginTop: 12 }}>
-                                <Button title="Cancel" type="secondary" size="lg" onPress={requestClose} fullWidth />
-                            </View>
                         </>
                     )}
 
-                    {/* APPROVED */}
+                    {/* ---------------- APPROVED ---------------- */}
                     {chore.status === 'approved' && (
                         <>
-                            {/* BEFORE */}
                             {beforeProof?.uri && (
                                 <View style={s.proof}>
                                     {beforeProof.kind === 'image' ? (
@@ -557,7 +531,6 @@ export default function ChoreDetailModal({
                                 </View>
                             )}
 
-                            {/* AFTER */}
                             {afterProof?.uri && (
                                 <View style={s.proof}>
                                     {afterProof.kind === 'image' ? (
@@ -619,16 +592,50 @@ export default function ChoreDetailModal({
                                     Notes: <Text style={s.bold}>{chore.notes}</Text>
                                 </Text>
                             ) : null}
-
-                            <View style={{ marginTop: 12 }}>
-                                <Button title="Close" type="secondary" size="lg" onPress={requestClose} fullWidth />
-                            </View>
                         </>
                     )}
                 </ScrollView>
+
+                {/* FOOTER (outside scroll) */}
+                {chore.status === 'open' && (
+                    <View style={s.row}>
+                        <View style={s.flex1}>
+                            <Button title="Submit" type="primary" size="lg" onPress={markCompleted} fullWidth />
+                        </View>
+                        <View style={s.flex1}>
+                            <Button title="Cancel" type="secondary" size="lg" onPress={requestClose} fullWidth />
+                        </View>
+                    </View>
+                )}
+
+                {chore.status === 'pending' && (
+                    <>
+                        {isParent && (
+                            <View style={[s.row, { marginTop: 14 }]}>
+                                <View style={s.flex1}>
+                                    <Button title="Deny" type="danger" size="lg" onPress={deny} fullWidth />
+                                </View>
+                                <View style={s.flex1}>
+                                    <Button title="Approve" type="primary" size="lg" onPress={approve} fullWidth />
+                                </View>
+                            </View>
+                        )}
+
+                        <View style={{ marginTop: 12 }}>
+                            <Button title="Cancel" type="secondary" size="lg" onPress={requestClose} fullWidth />
+                        </View>
+                    </>
+                )}
+
+                {chore.status === 'approved' && (
+                    <View style={{ marginTop: 12 }}>
+                        <Button title="Close" type="secondary" size="lg" onPress={requestClose} fullWidth />
+                    </View>
+                )}
             </ModalCard>
         </ModalShell>
     );
+
 }
 
 const s = StyleSheet.create({
