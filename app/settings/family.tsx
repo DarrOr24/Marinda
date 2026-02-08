@@ -1,4 +1,5 @@
 // app/settings/family.tsx
+import { useRouter } from 'expo-router'
 import React from 'react'
 import {
   ActivityIndicator,
@@ -16,48 +17,37 @@ import { Button } from '@/components/ui/button'
 import { Screen } from '@/components/ui/screen'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import {
+  useCancelFamilyInvite,
   useFamily,
   useRemoveMember,
   useRotateFamilyCode,
   useUpdateMemberRole,
 } from '@/lib/families/families.hooks'
-import type { FamilyMember, Role } from '@/lib/members/members.types'
+import type { FamilyInvite } from '@/lib/families/families.types'
+import { ROLE_OPTIONS, type FamilyMember, type Role } from '@/lib/members/members.types'
 import { memberDisplayName } from '@/utils/format.utils'
 import { isParentRole } from '@/utils/validation.utils'
 
 
-// Derive ROLE_OPTIONS from Role type - ensures all roles are included
-const ALL_ROLES: readonly Role[] = ['MOM', 'DAD', 'ADULT', 'TEEN', 'CHILD'] as const
-
-const ROLE_LABELS: Record<Role, string> = {
-  MOM: 'Mom',
-  DAD: 'Dad',
-  ADULT: 'Adult',
-  TEEN: 'Teen',
-  CHILD: 'Child',
-}
-
-const ROLE_OPTIONS = ALL_ROLES.map((role) => ({
-  label: ROLE_LABELS[role],
-  value: role,
-}))
-
 export default function FamilySettingsScreen() {
+  const router = useRouter()
   const { member } = useAuthContext() as any
   const familyId = member?.family_id
   const myRole = member?.role as Role | undefined
   const myProfileId = member?.profile_id as string | undefined
   const isParent = isParentRole(myRole)
 
-  const { family, familyMembers } = useFamily(familyId as string)
+  const { family, familyMembers, familyInvites } = useFamily(familyId as string)
 
   const updateMemberRole = useUpdateMemberRole(familyId)
   const rotateCode = useRotateFamilyCode(familyId)
   const removeMember = useRemoveMember(familyId)
+  const cancelInvite = useCancelFamilyInvite(familyId)
 
   const familyData = family.data
   const isLoadingMembers = familyMembers.isLoading
   const isLoadingFamily = family.isLoading
+  const isLoadingInvites = familyInvites.isLoading
 
   if (!isParent) {
     return (
@@ -108,6 +98,32 @@ export default function FamilySettingsScreen() {
         Alert.alert('Could not rotate code', e?.message ?? 'Please try again.')
       },
     })
+  }
+
+  const handleCancelInvite = (invite: FamilyInvite) => {
+    Alert.alert(
+      'Cancel invite',
+      `Cancel invite to ${invite.invited_phone}?`,
+      [
+        { text: 'Keep', style: 'cancel' },
+        {
+          text: 'Cancel invite',
+          style: 'destructive',
+          onPress: () =>
+            cancelInvite.mutate(
+              { inviteId: invite.id },
+              {
+                onError: (e: any) => {
+                  Alert.alert(
+                    'Cancel failed',
+                    e?.message ?? 'Please try again.',
+                  )
+                },
+              },
+            ),
+        },
+      ],
+    )
   }
 
   const handleRemoveMember = (m: FamilyMember) => {
@@ -195,13 +211,66 @@ export default function FamilySettingsScreen() {
         </Text>
       </View>
 
-      {/* Members list */}
+      <View style={{ marginTop: 12 }}>
+        <Button
+          title="Add a new family member"
+          type="primary"
+          size="lg"
+          fullWidth
+          onPress={() => router.push('/settings/add-member')}
+        />
+      </View>
+
+      {/* Members + invites list */}
       <View style={{ marginTop: 16, gap: 10 }}>
         {isLoadingMembers && (
           <View style={styles.loadingRow}>
             <ActivityIndicator />
             <Text style={styles.loadingText}>Loading family members…</Text>
           </View>
+        )}
+
+        {/* Pending invites (shown as "members" with a Pending tag) */}
+        {!isLoadingInvites && (familyInvites.data?.length ?? 0) > 0 && (
+          <Text style={styles.listTitle}>Pending invites</Text>
+        )}
+
+        {!isLoadingInvites &&
+          familyInvites.data?.map((invite: FamilyInvite) => {
+            const roleLabel =
+              ROLE_OPTIONS.find((opt) => opt.value === invite.role)?.label ??
+              invite.role.toLowerCase()
+
+            return (
+              <View key={`invite-${invite.id}`} style={styles.memberRow}>
+                <View style={styles.memberAvatarWrapper}>
+                  <MemberAvatar size="md" />
+                </View>
+
+                {/* phone + role + pending tag */}
+                <View style={{ flex: 1, gap: 4 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={styles.memberName}>{invite.invited_phone}</Text>
+                  </View>
+                  <Text style={styles.pendingBadge}>Pending invite</Text>
+                  <Text style={styles.memberMeta}>
+                    Invited as: {roleLabel.toLowerCase()}
+                  </Text>
+                </View>
+
+                {/* cancel invite */}
+                <Button
+                  title="Cancel"
+                  type="danger"
+                  size="sm"
+                  onPress={() => handleCancelInvite(invite)}
+                />
+              </View>
+            )
+          })}
+
+        {!isLoadingMembers && (familyMembers.data?.length ?? 0) > 0 && (
+          <Text style={styles.listTitle}>Family members</Text>
         )}
 
         {!isLoadingMembers &&
@@ -369,6 +438,17 @@ const styles = StyleSheet.create({
 
   youBadge: {
     fontSize: 11,
+    color: '#6b7280',
+  },
+
+  pendingBadge: {
+    fontSize: 11,
+    color: '#b45309',
+  },
+
+  listTitle: {
+    fontSize: 13,
+    fontWeight: '600',
     color: '#6b7280',
   },
 

@@ -1,9 +1,16 @@
 // lib/members/members.types.ts
-import { type Profile } from "@/lib/profiles/profiles.types"
+import { type Profile } from "@/lib/profiles/profiles.types";
 
 
 export type Role = 'MOM' | 'DAD' | 'ADULT' | 'TEEN' | 'CHILD'
 
+export const ROLE_OPTIONS: { label: string; value: Role }[] = [
+  { label: 'Mom', value: 'MOM' },
+  { label: 'Dad', value: 'DAD' },
+  { label: 'Adult', value: 'ADULT' },
+  { label: 'Teen', value: 'TEEN' },
+  { label: 'Child', value: 'CHILD' },
+]
 export interface Color {
   name: string
   hex: string

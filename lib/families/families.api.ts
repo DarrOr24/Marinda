@@ -1,119 +1,127 @@
 // lib/families/families.api.ts
-import { MEMBER_WITH_PROFILE_SELECT } from '../members/members.select'
-import { FamilyMember, Role } from '../members/members.types'
-import { getSupabase } from '../supabase'
-import { MyFamily } from './families.types'
+import { MEMBER_WITH_PROFILE_SELECT } from "../members/members.select";
+import { FamilyMember, Role } from "../members/members.types";
+import { getSupabase } from "../supabase";
+import { FamilyInvite, MyFamily } from "./families.types";
 
-const supabase = getSupabase()
+const supabase = getSupabase();
 
-export async function rpcCreateFamily(name: string, nickname: string | null): Promise<string> {
-  const { data, error } = await supabase.rpc('create_family', {
+export async function rpcCreateFamily(
+  name: string,
+  nickname: string | null,
+): Promise<string> {
+  const { data, error } = await supabase.rpc("create_family", {
     p_name: name,
     p_nickname: nickname,
-  })
-  if (error) throw new Error(error.message)
-  return data as string
+  });
+  if (error) throw new Error(error.message);
+  return data as string;
 }
 
 export async function rpcJoinFamily(
   code: string,
-  role: Role = 'TEEN',
-  nickname: string | null
+  role: Role = "TEEN",
+  nickname: string | null,
 ): Promise<string> {
-  const { data, error } = await supabase.rpc('join_family_by_code', {
+  const { data, error } = await supabase.rpc("join_family_by_code", {
     p_code: code,
     p_role: role,
     p_nickname: nickname,
-  })
-  if (error) throw new Error(error.message)
-  return data as string
+  });
+  if (error) throw new Error(error.message);
+  return data as string;
 }
 
 export async function fetchFamily(familyId: string) {
   const { data, error } = await supabase
-    .from('families')
-    .select('id, name, code, avatar_url, created_at')
-    .eq('id', familyId)
-    .single()
-  if (error) throw new Error(error.message)
-  return data
+    .from("families")
+    .select("id, name, code, avatar_url, created_at")
+    .eq("id", familyId)
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
 }
 
-export async function fetchMember(familyId: string, profileId: string): Promise<FamilyMember> {
+export async function fetchMember(
+  familyId: string,
+  profileId: string,
+): Promise<FamilyMember> {
   const { data, error } = await supabase
-    .from('family_members')
+    .from("family_members")
     .select(MEMBER_WITH_PROFILE_SELECT)
-    .eq('family_id', familyId)
-    .eq('profile_id', profileId)
-    .single()
+    .eq("family_id", familyId)
+    .eq("profile_id", profileId)
+    .single();
 
-  if (error) throw new Error(error.message)
-  return data as unknown as FamilyMember
+  if (error) throw new Error(error.message);
+  return data as unknown as FamilyMember;
 }
 
 export async function fetchMemberById(id: string): Promise<FamilyMember> {
   const { data, error } = await supabase
-    .from('family_members')
+    .from("family_members")
     .select(MEMBER_WITH_PROFILE_SELECT)
-    .eq('id', id)
-    .single()
+    .eq("id", id)
+    .single();
 
-  if (error) throw new Error(error.message)
-  return data as unknown as FamilyMember
+  if (error) throw new Error(error.message);
+  return data as unknown as FamilyMember;
 }
 
-export async function fetchFamilyMembers(familyId: string): Promise<FamilyMember[]> {
+export async function fetchFamilyMembers(
+  familyId: string,
+): Promise<FamilyMember[]> {
   const { data, error } = await supabase
-    .from('family_members')
+    .from("family_members")
     .select(`
       id, role, nickname, profile_id, joined_at, points,
       color:color_palette(name, hex),
       profile:profiles(id, first_name, last_name, gender, avatar_url, birth_date)
     `)
-    .eq('family_id', familyId)
-    .eq('is_active', true)
+    .eq("family_id", familyId)
+    .eq("is_active", true);
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error(error.message);
 
-  const members = (data ?? []) as unknown as FamilyMember[]
+  const members = (data ?? []) as unknown as FamilyMember[];
 
-  const roleOrder: Role[] = ['DAD', 'MOM', 'ADULT', 'TEEN', 'CHILD']
+  const roleOrder: Role[] = ["DAD", "MOM", "ADULT", "TEEN", "CHILD"];
   members.sort(
-    (a, b) => roleOrder.indexOf(a.role) - roleOrder.indexOf(b.role)
-  )
+    (a, b) => roleOrder.indexOf(a.role) - roleOrder.indexOf(b.role),
+  );
 
-  return members
+  return members;
 }
 
 export async function updateFamilyAvatar(
   familyId: string,
   fileUri: string,
 ): Promise<{ id: string; avatar_url: string | null }> {
-  const ext = fileUri.split('.').pop() || 'jpg'
-  const path = `${familyId}/avatar-${Date.now()}.${ext}`
+  const ext = fileUri.split(".").pop() || "jpg";
+  const path = `${familyId}/avatar-${Date.now()}.${ext}`;
 
-  const res = await fetch(fileUri)
-  const blob = await res.blob()
+  const res = await fetch(fileUri);
+  const blob = await res.blob();
 
   const { error: uploadError } = await supabase.storage
-    .from('family-avatars')
-    .upload(path, blob, { upsert: true })
+    .from("family-avatars")
+    .upload(path, blob, { upsert: true });
 
-  if (uploadError) throw new Error(uploadError.message)
+  if (uploadError) throw new Error(uploadError.message);
 
   const { data, error } = await supabase
-    .from('families')
+    .from("families")
     .update({ avatar_url: path })
-    .eq('id', familyId)
-    .select('id, avatar_url')
-    .single()
+    .eq("id", familyId)
+    .select("id, avatar_url")
+    .single();
 
-  if (error) throw new Error(error.message)
-  return data
+  if (error) throw new Error(error.message);
+  return data;
 }
 
 export async function awardMemberPoints(memberId: string, delta: number) {
-  const { data, error } = await supabase.rpc('award_member_points', {
+  const { data, error } = await supabase.rpc("award_member_points", {
     p_member_id: memberId,
     p_delta: delta,
   });
@@ -122,44 +130,44 @@ export async function awardMemberPoints(memberId: string, delta: number) {
 }
 
 export async function rotateFamilyCode(familyId: string): Promise<string> {
-  const { data, error } = await supabase.rpc('rotate_family_code', {
+  const { data, error } = await supabase.rpc("rotate_family_code", {
     p_family_id: familyId,
-  })
+  });
 
-  if (error) throw new Error(error.message)
-  return data as string
+  if (error) throw new Error(error.message);
+  return data as string;
 }
 
 export async function removeFamilyMember(
   familyId: string,
   memberId: string,
 ): Promise<boolean> {
-  const { error } = await supabase.rpc('remove_family_member', {
+  const { error } = await supabase.rpc("remove_family_member", {
     p_family_id: familyId,
     p_member_id: memberId,
-  })
-  if (error) throw new Error(error.message)
-  return true
+  });
+  if (error) throw new Error(error.message);
+  return true;
 }
 
 export async function updateMemberRole(
   memberId: string,
   role: Role,
-): Promise<Pick<FamilyMember, 'id' | 'role'>> {
+): Promise<Pick<FamilyMember, "id" | "role">> {
   const { data, error } = await supabase
-    .from('family_members')
+    .from("family_members")
     .update({ role })
-    .eq('id', memberId)
-    .select('id, role')
-    .single()
+    .eq("id", memberId)
+    .select("id, role")
+    .single();
 
-  if (error) throw new Error(error.message)
-  return data as Pick<FamilyMember, 'id' | 'role'>
+  if (error) throw new Error(error.message);
+  return data as Pick<FamilyMember, "id" | "role">;
 }
 
 export async function fetchMyFamilies(profileId: string): Promise<MyFamily[]> {
   const { data, error } = await supabase
-    .from('family_members')
+    .from("family_members")
     .select(`
       family_id,
       role,
@@ -170,17 +178,51 @@ export async function fetchMyFamilies(profileId: string): Promise<MyFamily[]> {
         avatar_url
       )
     `)
-    .eq('profile_id', profileId)
-    .eq('is_active', true)
+    .eq("profile_id", profileId)
+    .eq("is_active", true);
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error(error.message);
 
-  const rows = (data ?? []) as any[]
+  const rows = (data ?? []) as any[];
 
   return rows.map((row) => ({
     id: row.family.id,
     name: row.family.name,
     avatar_url: row.family.avatar_url ?? null,
     role: row.role as Role,
-  }))
+  }));
+}
+
+export async function fetchFamilyInvites(
+  familyId: string,
+): Promise<FamilyInvite[]> {
+  const { data, error } = await supabase
+    .from("family_invites")
+    .select(
+      `
+      id,
+      family_id,
+      invited_phone,
+      role,
+      status,
+      expires_at,
+      invited_by_profile_id
+    `,
+    )
+    .eq("family_id", familyId)
+    .eq("status", "pending");
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []) as unknown as FamilyInvite[];
+}
+
+export async function cancelFamilyInvite(inviteId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("family_invites")
+    .update({ status: "revoked" })
+    .eq("id", inviteId);
+
+  if (error) throw new Error(error.message);
+  return true;
 }
