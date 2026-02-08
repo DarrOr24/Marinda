@@ -1,5 +1,5 @@
 // components/auth/identifier-step.tsx
-import React, { useMemo, useRef, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -9,9 +9,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import PhoneInput from 'react-native-phone-number-input'
 
-import { toE164 } from '@/lib/auth/phone'
+import { PhoneField } from '@/components/ui'
 
 export type AuthMode = 'phone' | 'email'
 
@@ -28,31 +27,20 @@ export function IdentifierStep({
   defaultCountry = 'IL',
   onContinue,
 }: Props) {
-  const phoneRef = useRef<PhoneInput>(null)
-
   const [email, setEmail] = useState('')
-  const [phoneRaw, setPhoneRaw] = useState('')
-  const [phoneE164, setPhoneE164] = useState('')
+  const [phone, setPhone] = useState('') // E.164
 
   const canContinue = useMemo(() => {
     if (mode === 'email') return /^\S+@\S+\.\S+$/.test(email.trim())
-    return !!phoneE164 && /^\+\d{8,15}$/.test(phoneE164)
-  }, [mode, email, phoneE164])
+    return !!phone && /^\+\d{8,15}$/.test(phone)
+  }, [mode, email, phone])
 
   async function handleContinue() {
     try {
       const identifier =
         mode === 'email'
           ? email.trim().toLowerCase()
-          : toE164(phoneE164 || phoneRaw, defaultCountry)
-
-      if (mode === 'phone') {
-        const isValid = phoneRef.current?.isValidNumber(phoneRaw) ?? true
-        if (!isValid) {
-          Alert.alert('Invalid phone number', 'Please check the number and try again.')
-          return
-        }
-      }
+          : phone
 
       await onContinue(identifier, mode)
     } catch (err: any) {
@@ -64,30 +52,15 @@ export function IdentifierStep({
     <>
       {mode === 'phone' ? (
         <View style={styles.field}>
-          <Text style={styles.label}>Phone number</Text>
-
-          <PhoneInput
-            ref={phoneRef}
-            defaultCode={defaultCountry as any}
-            layout="first"
-            value={phoneRaw}
-            onChangeText={setPhoneRaw}
-            onChangeFormattedText={(text) => {
-              try {
-                setPhoneE164(toE164(text, defaultCountry))
-              } catch {
-                setPhoneE164('')
-              }
-            }}
-            withDarkTheme={false}
-            withShadow={false}
-            containerStyle={styles.phoneContainer}
-            textContainerStyle={styles.phoneTextContainer}
-            textInputStyle={styles.phoneTextInput}
+          <PhoneField
+            label="Phone number"
+            value={phone}
+            onChange={setPhone}
+            defaultCountry={defaultCountry}
           />
 
-          {!!phoneE164 && (
-            <Text style={styles.helperText}>We’ll send a code to {phoneE164}</Text>
+          {!!phone && (
+            <Text style={styles.helperText}>We’ll send a code to {phone}</Text>
           )}
         </View>
       ) : (
@@ -138,15 +111,6 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
 
-  phoneContainer: {
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-  },
-  phoneTextContainer: { backgroundColor: '#F8FAFC' },
-  phoneTextInput: { fontSize: 16, color: '#111827' },
 
   helperText: { fontSize: 12, color: '#6b7280', marginTop: 6 },
 

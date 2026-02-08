@@ -14,11 +14,6 @@ const GENDER_OPTIONS = [
   { label: 'Female', value: 'FEMALE' },
 ]
 
-function isValidDate(s: string) {
-  if (!s.trim()) return true
-  return /^\d{4}-\d{2}-\d{2}$/.test(s.trim())
-}
-
 export default function OnboardingDetails() {
   const { profileId } = useAuthContext()
   const profile = useProfile(profileId)

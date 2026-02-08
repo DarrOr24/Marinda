@@ -9,7 +9,7 @@ import { useMember, useUpdateMember } from '@/lib/members/members.hooks'
 
 
 type MemberAvatarProps = {
-  memberId: string
+  memberId?: string
   isUpdatable?: boolean
   size?: AvatarSize
 }
@@ -19,7 +19,7 @@ export function MemberAvatar({
   isUpdatable = false,
   size = 'md',
 }: MemberAvatarProps) {
-  const { data: member } = useMember(memberId)
+  const { data: member } = useMember(memberId ?? null)
   const updateMember = useUpdateMember()
 
   const [uri, setUri] = useState<string | null>(null)
@@ -47,7 +47,7 @@ export function MemberAvatar({
   }, [member?.public_avatar_url, avatarCacheBuster])
 
   const handlePress = async () => {
-    if (!isUpdatable) return
+    if (!isUpdatable || !memberId) return
 
     const pickerMediaTypes =
       (ImagePicker as any).MediaType?.Images

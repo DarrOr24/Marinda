@@ -107,7 +107,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return () => sub.subscription.unsubscribe()
   }, [supabase])
 
-  // Native deep linking support (for OAuth / magic link)
+  // Native deep linking support (for OAuth code exchange or magic link with tokens in fragment)
   useEffect(() => {
     if (Platform.OS === 'web') return
 
@@ -115,12 +115,28 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (!url) return
       if (!url.includes('auth-callback')) return
 
+      // Magic link redirect: tokens in fragment (e.g. ...#access_token=...&refresh_token=...)
+      const hashIdx = url.indexOf('#')
+      if (hashIdx >= 0) {
+        const params = new URLSearchParams(url.slice(hashIdx + 1))
+        const access_token = params.get('access_token')
+        const refresh_token = params.get('refresh_token')
+        if (access_token && refresh_token) {
+          const { data, error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          })
+          if (!error && data?.session) setSession(data.session)
+          return
+        }
+      }
+
+      // OAuth / PKCE: code in URL
       const { data, error } = await supabase.auth.exchangeCodeForSession(url)
       if (error) {
         console.error('exchangeCodeForSession error:', error)
         return
       }
-
       if (data?.session) setSession(data.session)
 
       const refreshed = await supabase.auth.getSession()

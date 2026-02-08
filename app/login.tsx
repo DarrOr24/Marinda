@@ -1,11 +1,21 @@
-// app/login.tsx (or wherever your login screen lives)
+// app/login.tsx
+import Constants from 'expo-constants'
 import { useState } from 'react'
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import {
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native'
 
 import { IdentifierStep } from '@/components/auth/identifier-step'
 import { OtpStep } from '@/components/auth/otp-step'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import type { IdentifierInfo } from '@/lib/auth/auth.service'
+import { showInvokeErrorAlert } from '@/lib/errors'
+import { getSupabase } from '@/lib/supabase'
 
 type Stage = 'IDENTIFIER' | 'OTP'
 type Mode = 'phone' | 'email'
@@ -18,6 +28,42 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false)
 
   const [lastIdentifier, setLastIdentifier] = useState<IdentifierInfo | null>(null)
+  const [devEmail, setDevEmail] = useState('')
+  const [devLoading, setDevLoading] = useState(false)
+
+  const extra = (Constants?.expoConfig?.extra ?? {}) as { devLoginSecret?: string }
+  const showDevLogin = __DEV__ && !!extra.devLoginSecret
+
+  async function onDevLogin() {
+    const email = devEmail.trim().toLowerCase()
+    if (!email) {
+      Alert.alert('Dev login', 'Enter the user’s email address.')
+      return
+    }
+    setDevLoading(true)
+    try {
+      const { data, error } = await getSupabase().functions.invoke('dev_login', {
+        body: {
+          secret: extra.devLoginSecret,
+          email,
+        },
+      })
+      if (error) {
+        showInvokeErrorAlert('Dev login failed', error, data, 'Could not sign in.')
+        return
+      }
+      if (!data?.ok || !data?.access_token || !data?.refresh_token) {
+        Alert.alert('Dev login', data?.error ?? 'Could not sign in.')
+        return
+      }
+      await getSupabase().auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      })
+    } finally {
+      setDevLoading(false)
+    }
+  }
 
   async function onContinue(rawValue: string, stepMode: Mode) {
     try {
@@ -95,6 +141,31 @@ export default function LoginScreen() {
           >
             <Text style={[styles.link, loading && styles.linkDisabled]}>{helper}</Text>
           </TouchableOpacity>
+
+          {showDevLogin && (
+            <View style={styles.devLogin}>
+              <Text style={styles.devLoginLabel}>Dev: log in without OTP</Text>
+              <TextInput
+                style={styles.devLoginInput}
+                value={devEmail}
+                onChangeText={setDevEmail}
+                placeholder="user@example.com"
+                placeholderTextColor="#94a3b8"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                editable={!devLoading}
+              />
+              <TouchableOpacity
+                style={[styles.devLoginButton, devLoading && styles.devLoginButtonDisabled]}
+                onPress={onDevLogin}
+                disabled={devLoading}
+              >
+                <Text style={styles.devLoginButtonText}>
+                  {devLoading ? 'Getting link…' : 'Get magic link'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </>
       ) : (
         <OtpStep
@@ -161,5 +232,42 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 8,
     marginTop: -6,
+  },
+
+  devLogin: {
+    marginTop: 24,
+    paddingTop: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#e2e8f0',
+    gap: 8,
+  },
+  devLoginLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  devLoginInput: {
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#0f172a',
+    backgroundColor: '#f8fafc',
+  },
+  devLoginButton: {
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#334155',
+    alignItems: 'center',
+  },
+  devLoginButtonDisabled: {
+    opacity: 0.6,
+  },
+  devLoginButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
   },
 })
