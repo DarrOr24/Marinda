@@ -49,12 +49,17 @@ export function MemberAvatar({
   const handlePress = async () => {
     if (!isUpdatable || !memberId) return
 
+    const pickerMediaTypes =
+      (ImagePicker as any).MediaType?.Images
+        ? [(ImagePicker as any).MediaType.Images]
+        : (ImagePicker as any).MediaTypeOptions.Images;
+
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: pickerMediaTypes,
       quality: 0.9,
       allowsEditing: true,
       aspect: [1, 1],
-    })
+    });
 
     if (result.canceled) return
 

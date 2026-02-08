@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { Colors } from '@/config/colors';
+import type { GestureResponderEvent, Insets } from 'react-native';
 
 export type ButtonType =
   | 'primary'
@@ -32,7 +33,7 @@ type ButtonProps = {
   title?: string;
   type?: ButtonType;
   size?: ButtonSize;
-  onPress?: () => void;
+  onPress?: (e?: GestureResponderEvent) => void;
   bold?: boolean;
   uppercase?: boolean;
   disabled?: boolean;
@@ -44,6 +45,10 @@ type ButtonProps = {
   leftIconColor?: string;
   rightIcon?: React.ReactElement;
   rightIconColor?: string;
+  hitSlop?: number | Insets;
+
+  // NEW — optional override
+  backgroundColor?: string;
 };
 
 export function Button({
@@ -62,6 +67,8 @@ export function Button({
   leftIconColor,
   rightIcon,
   rightIconColor,
+  hitSlop,
+  backgroundColor,
 }: ButtonProps) {
   const scheme = useColorScheme();
   const theme = scheme === 'dark' ? Colors.dark : Colors.light;
@@ -97,7 +104,6 @@ export function Button({
   const hasRightIcon = Boolean(rightIcon);
   const iconOnly = !hasText && (hasLeftIcon || hasRightIcon);
 
-
   const renderLeftIcon = () => {
     if (!leftIcon) return null;
     return React.cloneElement(leftIcon as any, {
@@ -122,6 +128,7 @@ export function Button({
 
   return (
     <Pressable
+      hitSlop={hitSlop}
       onPress={disabled ? undefined : onPress}
       disabled={disabled}
       style={({ pressed }) => [
@@ -136,6 +143,7 @@ export function Button({
           }
           : sizeButtonStyle,
         typeStyles.button,
+        backgroundColor && { backgroundColor }, // ✅ opt-in override
         fullWidth && styles.fullWidth,
         showShadow && styles.shadow,
         {

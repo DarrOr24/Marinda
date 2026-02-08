@@ -1,3 +1,6 @@
+import { GroceryItemModal } from "@/components/modals/grocery-item-modal";
+import { Button } from "@/components/ui/button";
+import { ScreenList } from "@/components/ui/screen-list";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
 import { useSubscribeTableByFamily } from "@/lib/families/families.realtime";
@@ -14,15 +17,13 @@ import { useEffect, useMemo, useState } from "react";
 import {
     Alert,
     FlatList,
-    Modal,
     Pressable,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
-    View,
+    View
 } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -341,53 +342,64 @@ Category: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}
     // RENDER
     // ─────────────────────────────────────────────────────────────
     return (
-        <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
+        <ScreenList style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
 
-            {/* HEADER BUTTONS */}
-            <View style={styles.actions}>
-                <TouchableOpacity style={styles.btn} onPress={startAdd}>
-                    <MaterialCommunityIcons name="plus" size={18} />
-                    <Text style={styles.btnTxt}>Add</Text>
-                </TouchableOpacity>
+            <View style={styles.header}>
+                {/* HEADER BUTTONS */}
+                <View style={styles.actions}>
+                    <Button
+                        type="outline"
+                        size="sm"
+                        title="Add"
+                        onPress={startAdd}
+                        leftIcon={<MaterialCommunityIcons name="plus" size={18} />}
+                    />
 
-                <TouchableOpacity style={[styles.btn, styles.btnDanger]} onPress={deleteChecked}>
-                    <MaterialCommunityIcons name="trash-can-outline" size={18} />
-                    <Text style={[styles.btnTxt, styles.btnDangerTxt]}>Delete Checked</Text>
-                </TouchableOpacity>
+                    <Button
+                        type="outline"
+                        size="sm"
+                        title="Delete Checked"
+                        onPress={deleteChecked}
+                        leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
+                        backgroundColor="#fff5f5"
+                        style={{ borderColor: "#fecaca" }}
+                        leftIconColor="#b91c1c"
+                    />
 
-                {/* VIEW DROPDOWN */}
-                <View style={{ position: "relative" }}>
-                    <TouchableOpacity
-                        style={styles.btn}
-                        onPress={() => setViewMenuOpen(v => !v)}
-                    >
-                        <Text style={styles.btnTxt}>View</Text>
-                        <MaterialCommunityIcons name="menu-down" size={18} />
-                    </TouchableOpacity>
+                    <View style={{ position: "relative" }}>
+                        <Button
+                            type="outline"
+                            size="sm"
+                            title="View"
+                            onPress={() => setViewMenuOpen(v => !v)}
+                            rightIcon={<MaterialCommunityIcons name="menu-down" size={18} />}
+                        />
+                        {/* keep your dropdown as-is */}
+                        {viewMenuOpen && (
+                            <View style={styles.viewMenu}>
+                                <Pressable
+                                    style={styles.viewOption}
+                                    onPress={() => {
+                                        setViewMode("category");
+                                        setViewMenuOpen(false);
+                                    }}
+                                >
+                                    <Text style={styles.viewOptionText}>By Category</Text>
+                                </Pressable>
 
-                    {viewMenuOpen && (
-                        <View style={styles.viewMenu}>
-                            <Pressable
-                                style={styles.viewOption}
-                                onPress={() => {
-                                    setViewMode("category");
-                                    setViewMenuOpen(false);
-                                }}
-                            >
-                                <Text style={styles.viewOptionText}>By Category</Text>
-                            </Pressable>
+                                <Pressable
+                                    style={styles.viewOption}
+                                    onPress={() => {
+                                        setViewMode("all");
+                                        setViewMenuOpen(false);
+                                    }}
+                                >
+                                    <Text style={styles.viewOptionText}>All Items (A → Z)</Text>
+                                </Pressable>
+                            </View>
+                        )}
 
-                            <Pressable
-                                style={styles.viewOption}
-                                onPress={() => {
-                                    setViewMode("all");
-                                    setViewMenuOpen(false);
-                                }}
-                            >
-                                <Text style={styles.viewOptionText}>All Items (A → Z)</Text>
-                            </Pressable>
-                        </View>
-                    )}
+                    </View>
                 </View>
             </View>
 
@@ -446,34 +458,33 @@ Category: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}
                                     </View>
 
                                     {/* edit */}
-                                    <TouchableOpacity
-                                        onPress={e => {
-                                            e.stopPropagation();
+                                    <Button
+                                        type="ghost"
+                                        size="sm"
+                                        round
+                                        hitSlop={10}
+                                        leftIcon={<MaterialCommunityIcons name="pencil-outline" size={20} />}
+                                        leftIconColor="#0f172a"
+                                        onPress={(e) => {
+                                            e?.stopPropagation?.();
                                             startEdit(it);
                                         }}
-                                        style={styles.infoBtn}
-                                    >
-                                        <MaterialCommunityIcons
-                                            name="pencil-outline"
-                                            size={20}
-                                            color="#0f172a"
-                                        />
-                                    </TouchableOpacity>
+                                    />
 
                                     {/* info */}
-                                    <TouchableOpacity
-                                        onPress={e => {
-                                            e.stopPropagation();
+                                    <Button
+                                        type="ghost"
+                                        size="sm"
+                                        round
+                                        hitSlop={10}
+                                        leftIcon={<MaterialCommunityIcons name="information-outline" size={20} />}
+                                        leftIconColor="#475569"
+                                        onPress={(e) => {
+                                            e?.stopPropagation?.();
                                             showItemInfo(it);
                                         }}
-                                        style={styles.infoBtn}
-                                    >
-                                        <MaterialCommunityIcons
-                                            name="information-outline"
-                                            size={20}
-                                            color="#475569"
-                                        />
-                                    </TouchableOpacity>
+                                    />
+
                                 </Pressable>
                             ))}
                         </View>
@@ -526,138 +537,59 @@ Category: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}
                                 )}
                             </View>
 
-                            <TouchableOpacity
-                                onPress={e => {
-                                    e.stopPropagation();
+                            <Button
+                                type="ghost"
+                                size="sm"
+                                round
+                                hitSlop={10}
+                                leftIcon={<MaterialCommunityIcons name="pencil-outline" size={20} />}
+                                leftIconColor="#0f172a"
+                                onPress={(e) => {
+                                    e?.stopPropagation?.();
                                     startEdit(it);
                                 }}
-                                style={styles.infoBtn}
-                            >
-                                <MaterialCommunityIcons
-                                    name="pencil-outline"
-                                    size={20}
-                                    color="#0f172a"
-                                />
-                            </TouchableOpacity>
+                            />
 
-                            <TouchableOpacity
-                                onPress={e => {
-                                    e.stopPropagation();
+                            <Button
+                                type="ghost"
+                                size="sm"
+                                round
+                                hitSlop={10}
+                                leftIcon={<MaterialCommunityIcons name="information-outline" size={20} />}
+                                leftIconColor="#475569"
+                                onPress={(e) => {
+                                    e?.stopPropagation?.();
                                     showItemInfo(it);
                                 }}
-                                style={styles.infoBtn}
-                            >
-                                <MaterialCommunityIcons
-                                    name="information-outline"
-                                    size={20}
-                                    color="#475569"
-                                />
-                            </TouchableOpacity>
+                            />
+
                         </Pressable>
                     )}
                 />
             )}
 
-            {/* ADD / EDIT MODAL */}
-            <Modal
+            <GroceryItemModal
                 visible={addOpen}
-                animationType="fade"
-                transparent
-                onRequestClose={() => {
+                mode={editingItem ? "edit" : "add"}
+                name={name}
+                onChangeName={setName}
+                category={category}
+                onChangeCategory={(next) => {
+                    setCategory(next);
+                    setCategoryOpen(false); // important: close dropdown when selecting
+                }}
+                amount={amount}
+                onChangeAmount={setAmount}
+                categoryOpen={categoryOpen}
+                onToggleCategoryOpen={() => setCategoryOpen(v => !v)}
+                onCancel={() => {
                     setAddOpen(false);
                     resetAddForm();
                 }}
-            >
-                <View style={styles.modalBackdrop}>
-                    <View style={styles.modalCard}>
-                        <Text style={styles.modalTitle}>
-                            {editingItem ? "Edit Grocery Item" : "Add Grocery Item"}
-                        </Text>
+                onSubmit={saveItem}
+            />
 
-                        <Text style={styles.label}>Item</Text>
-                        <TextInput
-                            placeholder="e.g., Bananas"
-                            value={name}
-                            onChangeText={setName}
-                            style={styles.input}
-                            autoFocus
-                        />
-
-                        <Text style={styles.label}>Category</Text>
-                        <TouchableOpacity
-                            onPress={() => setCategoryOpen(v => !v)}
-                            style={styles.select}
-                            activeOpacity={0.8}
-                        >
-                            <Text style={styles.selectText}>
-                                {category ?? "Select a category"}
-                            </Text>
-                            <MaterialCommunityIcons
-                                name="menu-down"
-                                size={22}
-                                color="#334155"
-                            />
-                        </TouchableOpacity>
-
-                        {categoryOpen && (
-                            <View style={styles.menu}>
-                                <Pressable
-                                    onPress={() => {
-                                        setCategory(undefined);
-                                        setCategoryOpen(false);
-                                    }}
-                                    style={styles.menuItem}
-                                >
-                                    <Text style={styles.menuItemTxt}>— None —</Text>
-                                </Pressable>
-
-                                {DEFAULT_CATEGORIES.map(c => (
-                                    <Pressable
-                                        key={c}
-                                        onPress={() => {
-                                            setCategory(c);
-                                            setCategoryOpen(false);
-                                        }}
-                                        style={styles.menuItem}
-                                    >
-                                        <Text style={styles.menuItemTxt}>{c}</Text>
-                                    </Pressable>
-                                ))}
-                            </View>
-                        )}
-
-                        <Text style={styles.label}>Amount (optional)</Text>
-                        <TextInput
-                            placeholder="e.g., 2, 3 packs, 1kg"
-                            value={amount}
-                            onChangeText={setAmount}
-                            style={styles.input}
-                        />
-
-                        <View style={styles.modalActions}>
-                            <TouchableOpacity
-                                onPress={() => {
-                                    setAddOpen(false);
-                                    resetAddForm();
-                                }}
-                                style={[styles.btn, styles.btnGhost]}
-                            >
-                                <Text style={styles.btnTxt}>Cancel</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                onPress={saveItem}
-                                style={[styles.btn, styles.btnPrimary]}
-                            >
-                                <Text style={[styles.btnTxt, styles.btnPrimaryTxt]}>
-                                    {editingItem ? "Save" : "Add"}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
-        </SafeAreaView>
+        </ScreenList>
     );
 }
 
@@ -665,29 +597,24 @@ Category: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}
 // STYLES
 // ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-    screen: { flex: 1, backgroundColor: "#F6FAFF", padding: 12, gap: 12 },
+    screen: { flex: 1, backgroundColor: "#F6FAFF" },
 
-    actions: { flexDirection: "row", gap: 10, alignItems: "center" },
-
-    btn: {
-        flexDirection: "row",
-        gap: 6,
-        alignItems: "center",
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 12,
-        backgroundColor: "#fff",
-        borderWidth: 1,
-        borderColor: "#e5e7eb",
+    header: {
+        paddingHorizontal: 16,
+        paddingTop: 16,
     },
-    btnTxt: { color: "#0f172a", fontWeight: "600" },
-    btnDanger: { backgroundColor: "#fff5f5", borderColor: "#fecaca" },
-    btnDangerTxt: { color: "#b91c1c" },
-    btnGhost: { backgroundColor: "#fff" },
-    btnPrimary: { backgroundColor: "#2563eb", borderColor: "#1d4ed8" },
-    btnPrimaryTxt: { color: "#fff", fontWeight: "700" },
+    actions: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        alignItems: "center",
+        gap: 10,
+    },
 
-    listContent: { paddingBottom: 40 },
+    listContent: {
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 32,
+    },
 
     group: {
         backgroundColor: "#ffffff",
@@ -741,8 +668,6 @@ const styles = StyleSheet.create({
         color: "#0f172a",
     },
 
-    infoBtn: { padding: 6 },
-
     // View dropdown
     viewMenu: {
         position: "absolute",
@@ -766,66 +691,4 @@ const styles = StyleSheet.create({
         color: "#0f172a",
     },
 
-    // Modal
-    modalBackdrop: {
-        flex: 1,
-        backgroundColor: "rgba(15, 23, 42, 0.45)",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-    },
-    modalCard: {
-        width: "100%",
-        maxWidth: 460,
-        backgroundColor: "#fff",
-        borderRadius: 16,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: "#e5e7eb",
-    },
-    modalTitle: { fontSize: 18, fontWeight: "800", color: "#0f172a", marginBottom: 12 },
-
-    label: { fontSize: 12, color: "#475569", marginTop: 8, marginBottom: 4 },
-
-    input: {
-        borderWidth: 1,
-        borderColor: "#e5e7eb",
-        backgroundColor: "#fff",
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        fontSize: 16,
-        color: "#0f172a",
-    },
-
-    select: {
-        borderWidth: 1,
-        borderColor: "#e5e7eb",
-        backgroundColor: "#fff",
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-    },
-    selectText: { color: "#0f172a", fontSize: 16 },
-
-    menu: {
-        marginTop: 6,
-        borderWidth: 1,
-        borderColor: "#e5e7eb",
-        borderRadius: 12,
-        backgroundColor: "#fff",
-        overflow: "hidden",
-    },
-    menuItem: { paddingHorizontal: 12, paddingVertical: 10 },
-    menuItemTxt: { color: "#0f172a", fontSize: 16 },
-
-    modalActions: {
-        flexDirection: "row",
-        justifyContent: "flex-end",
-        gap: 10,
-        marginTop: 16,
-    },
 });

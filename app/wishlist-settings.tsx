@@ -4,15 +4,15 @@ import {
     Alert,
     Modal,
     Pressable,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Button } from "@/components/ui/button";
+import { Screen } from "@/components/ui/screen";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import type { Role } from "@/lib/members/members.types";
 import {
@@ -129,154 +129,160 @@ export default function WishlistSettingsScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={styles.center}>
-                <Text>Loading wishlist settings…</Text>
-            </SafeAreaView>
+            <Screen gap="md" withBackground={false}>
+                <View style={styles.center}>
+                    <Text>Loading wishlist settings…</Text>
+                </View>
+            </Screen>
         );
     }
 
     if (isError) {
         return (
-            <SafeAreaView style={styles.center}>
-                <Text>Failed to load wishlist settings.</Text>
-            </SafeAreaView>
+            <Screen gap="md" withBackground={false}>
+                <View style={styles.center}>
+                    <Text>Failed to load wishlist settings.</Text>
+                </View>
+            </Screen>
         );
     }
 
+
     return (
-        <SafeAreaView style={styles.screen} edges={["bottom", "left", "right"]}>
-            <ScrollView
-                contentContainerStyle={styles.container}
-                showsVerticalScrollIndicator={false}
-            >
-                <Text style={styles.intro}>
-                    Parents can configure the currency and conversion rate for wish list items.
+        <Screen gap="md" withBackground={false}>
+
+            <Text style={styles.intro}>
+                Parents can configure the currency and conversion rate for wish list items.
+            </Text>
+
+            {/* Currency Section */}
+            <Section title="Currency">
+                <Text style={styles.label}>Currency Type</Text>
+
+                <Pressable
+                    onPress={() => {
+                        if (!isParent) return blockIfNotParent();
+                        setShowCurrencyPicker(true);
+                    }}
+                    style={[styles.input, styles.dropdownBox, !isParent && styles.disabledInput]}
+                >
+                    <Text style={styles.dropdownText}>{currency}</Text>
+                </Pressable>
+
+                {/* Modal */}
+                <Modal
+                    visible={showCurrencyPicker}
+                    transparent
+                    animationType="fade"
+                >
+                    <Pressable
+                        style={styles.modalOverlay}
+                        onPress={() => setShowCurrencyPicker(false)}
+                    >
+                        <View style={styles.modalSheet}>
+                            {CURRENCIES.map((cur) => (
+                                <TouchableOpacity
+                                    key={cur}
+                                    style={styles.modalOption}
+                                    onPress={() => {
+                                        setCurrency(cur);
+                                        setShowCurrencyPicker(false);
+                                    }}
+                                >
+                                    <Text style={styles.modalOptionText}>{cur}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </Pressable>
+                </Modal>
+            </Section>
+
+            {/* Points Section */}
+            <Section title="Points Conversion">
+                <Text style={styles.label}>Points per 1 unit of currency</Text>
+
+                <Pressable
+                    onPress={() => {
+                        if (!isParent) {
+                            Alert.alert("Parents only", "Only parents can change wishlist settings.");
+                        }
+                    }}
+                >
+                    <TextInput
+                        value={pointsRate}
+                        // onChangeText={setPointsRate}
+                        onChangeText={onChangeRate}
+                        editable={isParent}
+                        keyboardType="numeric"
+                        style={[styles.input, !isParent && styles.disabledInput]}
+                        placeholder="e.g. 10"
+                        placeholderTextColor="#94a3b8"
+                        pointerEvents={isParent ? "auto" : "none"} // prevents typing
+                    />
+                </Pressable>
+
+
+                <Text style={styles.note}>
+                    Whole numbers only — must be 1 or higher.
+                </Text>
+            </Section>
+
+            {/* Self-fulfill limit (UI only for now — we will wire saving in Patch 4) */}
+            <Section title="Self-Fulfilled Wishes">
+                <Text style={styles.label}>
+                    Max price a child can fulfill on their own
                 </Text>
 
-                {/* Currency Section */}
-                <Section title="Currency">
-                    <Text style={styles.label}>Currency Type</Text>
-
-                    <Pressable
-                        onPress={() => {
-                            if (!isParent) return blockIfNotParent();
-                            setShowCurrencyPicker(true);
-                        }}
-                        style={[styles.input, styles.dropdownBox, !isParent && styles.disabledInput]}
-                    >
-                        <Text style={styles.dropdownText}>{currency}</Text>
-                    </Pressable>
-
-                    {/* Modal */}
-                    <Modal
-                        visible={showCurrencyPicker}
-                        transparent
-                        animationType="fade"
-                    >
-                        <Pressable
-                            style={styles.modalOverlay}
-                            onPress={() => setShowCurrencyPicker(false)}
-                        >
-                            <View style={styles.modalSheet}>
-                                {CURRENCIES.map((cur) => (
-                                    <TouchableOpacity
-                                        key={cur}
-                                        style={styles.modalOption}
-                                        onPress={() => {
-                                            setCurrency(cur);
-                                            setShowCurrencyPicker(false);
-                                        }}
-                                    >
-                                        <Text style={styles.modalOptionText}>{cur}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </Pressable>
-                    </Modal>
-                </Section>
-
-                {/* Points Section */}
-                <Section title="Points Conversion">
-                    <Text style={styles.label}>Points per 1 unit of currency</Text>
-
-                    <Pressable
-                        onPress={() => {
-                            if (!isParent) {
-                                Alert.alert("Parents only", "Only parents can change wishlist settings.");
+                <Pressable
+                    onPress={() => {
+                        if (!isParent) {
+                            Alert.alert("Parents only", "Only parents can change wishlist settings.");
+                        }
+                    }}
+                >
+                    <TextInput
+                        value={selfFulfillMaxPrice}
+                        onChangeText={(txt) => {
+                            // allow empty or digits + one dot
+                            let cleaned = txt.replace(/[^0-9.]/g, "");
+                            const parts = cleaned.split(".");
+                            if (parts.length > 2) {
+                                cleaned = parts[0] + "." + parts.slice(1).join("");
                             }
+                            setSelfFulfillMaxPrice(cleaned);
                         }}
-                    >
-                        <TextInput
-                            value={pointsRate}
-                            // onChangeText={setPointsRate}
-                            onChangeText={onChangeRate}
-                            editable={isParent}
-                            keyboardType="numeric"
-                            style={[styles.input, !isParent && styles.disabledInput]}
-                            placeholder="e.g. 10"
-                            pointerEvents={isParent ? "auto" : "none"} // prevents typing
-                        />
-                    </Pressable>
+                        editable={isParent}
+                        keyboardType="numeric"
+                        placeholder="e.g. 60 (leave empty for no limit)"
+                        placeholderTextColor="#94a3b8"
+                        style={[styles.input, !isParent && styles.disabledInput]}
+                        pointerEvents={isParent ? "auto" : "none"}
+                    />
+                </Pressable>
+
+                <Text style={styles.note}>
+                    This controls when kids can use “I can get this myself”.
+                </Text>
+            </Section>
 
 
-                    <Text style={styles.note}>
-                        Whole numbers only — must be 1 or higher.
-                    </Text>
-                </Section>
-
-                {/* Self-fulfill limit (UI only for now — we will wire saving in Patch 4) */}
-                <Section title="Self-Fulfilled Wishes">
-                    <Text style={styles.label}>
-                        Max price a child can fulfill on their own
-                    </Text>
-
-                    <Pressable
-                        onPress={() => {
-                            if (!isParent) {
-                                Alert.alert("Parents only", "Only parents can change wishlist settings.");
-                            }
-                        }}
-                    >
-                        <TextInput
-                            value={selfFulfillMaxPrice}
-                            onChangeText={(txt) => {
-                                // allow empty or digits + one dot
-                                let cleaned = txt.replace(/[^0-9.]/g, "");
-                                const parts = cleaned.split(".");
-                                if (parts.length > 2) {
-                                    cleaned = parts[0] + "." + parts.slice(1).join("");
-                                }
-                                setSelfFulfillMaxPrice(cleaned);
-                            }}
-                            editable={isParent}
-                            keyboardType="numeric"
-                            placeholder="e.g. 60 (leave empty for no limit)"
-                            style={[styles.input, !isParent && styles.disabledInput]}
-                            pointerEvents={isParent ? "auto" : "none"}
-                        />
-                    </Pressable>
-
-                    <Text style={styles.note}>
-                        This controls when kids can use “I can get this myself”.
-                    </Text>
-                </Section>
+            {isParent && (
+                <Button
+                    title={updateSettings.isPending ? "Saving…" : "Save Settings"}
+                    type="primary"
+                    size="lg"
+                    fullWidth
+                    showShadow
+                    disabled={updateSettings.isPending}
+                    onPress={onSave}
+                />
+            )}
 
 
-                {isParent && (
-                    <Pressable
-                        style={[styles.saveButton, updateSettings.isPending && styles.disabled]}
-                        onPress={onSave}
-                    >
-                        <Text style={styles.saveButtonText}>
-                            {updateSettings.isPending ? "Saving…" : "Save Settings"}
-                        </Text>
-                    </Pressable>
-                )}
+            <View style={{ height: 60 }} />
+            {/* Extra padding so Samsung navbar never covers content */}
+        </Screen>
 
-                <View style={{ height: 60 }} />
-                {/* Extra padding so Samsung navbar never covers content */}
-            </ScrollView>
-        </SafeAreaView>
     );
 }
 
@@ -292,14 +298,8 @@ function Section({ title, children }: any) {
 /* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
-    screen: { flex: 1, backgroundColor: "#F7FBFF" },
+
     center: { flex: 1, justifyContent: "center", alignItems: "center" },
-
-    container: {
-        padding: 16,
-        paddingBottom: 40, // For Samsung navbar safety
-    },
-
     intro: { fontSize: 14, color: "#475569", marginBottom: 20 },
 
     section: { marginBottom: 22 },
@@ -321,20 +321,6 @@ const styles = StyleSheet.create({
     dropdownText: { fontSize: 14, color: "#0f172a" },
 
     note: { marginTop: 6, fontSize: 12, color: "#64748b" },
-
-    saveButton: {
-        marginTop: 10,
-        backgroundColor: "#2563eb",
-        paddingVertical: 14,
-        borderRadius: 999,
-        alignItems: "center",
-    },
-    saveButtonText: {
-        color: "white",
-        fontWeight: "700",
-        fontSize: 15,
-    },
-    disabled: { opacity: 0.5 },
 
     modalOverlay: {
         flex: 1,

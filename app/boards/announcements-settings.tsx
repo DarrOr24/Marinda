@@ -1,15 +1,11 @@
-import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Alert,
-    Pressable,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
-    View,
+    View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthContext } from '@/hooks/use-auth-context';
 import {
@@ -19,10 +15,11 @@ import {
     useUpdateAnnouncementTab,
 } from '@/lib/announcements/announcements.hooks';
 
+import { Button } from '@/components/ui/button';
+import { Screen } from '@/components/ui/screen';
 import type { Role } from '@/lib/members/members.types';
 
 export default function AnnouncementSettingsScreen() {
-    const router = useRouter();
 
     const { activeFamilyId, member } = useAuthContext() as any;
     const currentRole = (member?.role as Role) ?? 'TEEN';
@@ -146,122 +143,132 @@ export default function AnnouncementSettingsScreen() {
     const customTabs = tabs ?? [];
 
     return (
-        <SafeAreaView style={styles.screen}>
-            <ScrollView contentContainerStyle={styles.content}>
-                <Text style={styles.header}>
-                    Announcement Tabs Settings
+        <Screen gap="md" withBackground={false}>
+
+            <Text style={styles.header}>
+                Announcement Tabs Settings
+            </Text>
+
+            <Text style={styles.subtext}>
+                Organize which tabs appear in your announcement board.
+            </Text>
+
+            {/* Custom Tabs */}
+            <Section title="Custom tabs">
+                <Text style={styles.description}>
+                    Creating custom tabs helps you organize your family’s announcements in the way that works best for you.
                 </Text>
 
-                <Text style={styles.subtext}>
-                    Organize which tabs appear in your announcement board.
-                </Text>
-
-                {/* Custom Tabs */}
-                <Section title="Custom tabs">
-                    <Text style={styles.description}>
-                        Creating custom tabs helps you organize your family’s announcements in the way that works best for you.
+                {!isParent && (
+                    <Text style={styles.note}>
+                        Only parents can add or edit custom tabs.
                     </Text>
+                )}
 
-                    {!isParent && (
-                        <Text style={styles.note}>
-                            Only parents can add or edit custom tabs.
+                {/* Add button */}
+                <Button
+                    title="Add tab"
+                    type="outline"
+                    size="sm"
+                    onPress={startAdd}
+                    backgroundColor="#e0edff"
+                    style={{ alignSelf: 'flex-start' }}
+                />
+
+
+                {/* List custom tabs */}
+                {customTabs.map((t) => (
+                    <View key={t.id} style={styles.row}>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.tabLabel}>{t.label}</Text>
+                            <Text style={styles.placeholderPreview}>
+                                Placeholder: {t.placeholder || '(none)'}
+                            </Text>
+                        </View>
+
+                        <View style={styles.actions}>
+                            <Button
+                                title="Edit"
+                                type="outline"
+                                size="sm"
+                                onPress={() => startEdit(t)}
+                            />
+
+
+                            <Button
+                                title="Delete"
+                                type="danger"
+                                size="sm"
+                                onPress={() => confirmDelete(t)}
+                            />
+
+                        </View>
+                    </View>
+                ))}
+
+                {/* Editor panel */}
+                {editing && (
+                    <View style={styles.editorCard}>
+                        <Text style={styles.editorTitle}>
+                            {editing.id ? 'Edit tab' : 'Add new tab'}
                         </Text>
-                    )}
 
-                    {/* Add button */}
-                    <Pressable style={styles.addBtn} onPress={startAdd}>
-                        <Text style={styles.addBtnText}>＋ Add tab</Text>
-                    </Pressable>
+                        <Text style={styles.label}>Name</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={editing.label}
+                            onChangeText={txt =>
+                                setEditing(prev =>
+                                    prev ? { ...prev, label: txt } : prev
+                                )
+                            }
+                            placeholder="Holidays"
+                            placeholderTextColor="#94a3b8"
+                        />
 
-                    {/* List custom tabs */}
-                    {customTabs.map((t) => (
-                        <View key={t.id} style={styles.row}>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.tabLabel}>{t.label}</Text>
-                                <Text style={styles.placeholderPreview}>
-                                    Placeholder: {t.placeholder || '(none)'}
-                                </Text>
-                            </View>
+                        <Text style={[styles.label, { marginTop: 10 }]}>
+                            Input placeholder
+                        </Text>
+                        <TextInput
+                            style={styles.input}
+                            value={editing.placeholder}
+                            onChangeText={txt =>
+                                setEditing(prev =>
+                                    prev ? { ...prev, placeholder: txt } : prev
+                                )
+                            }
+                            placeholder={
+                                editing.label
+                                    ? `Write a new ${editing.label.toLowerCase()}...`
+                                    : 'Write a new announcement...'
+                            }
+                            placeholderTextColor="#94a3b8"
+                        />
 
-                            <View style={styles.actions}>
-                                <Pressable
-                                    style={styles.smallChip}
-                                    onPress={() => startEdit(t)}
-                                >
-                                    <Text style={styles.smallChipText}>Edit</Text>
-                                </Pressable>
-
-                                <Pressable
-                                    style={styles.smallChipDelete}
-                                    onPress={() => confirmDelete(t)}
-                                >
-                                    <Text style={[styles.smallChipText, { color: '#b91c1c' }]}>
-                                        Delete
-                                    </Text>
-                                </Pressable>
-                            </View>
-                        </View>
-                    ))}
-
-                    {/* Editor panel */}
-                    {editing && (
-                        <View style={styles.editorCard}>
-                            <Text style={styles.editorTitle}>
-                                {editing.id ? 'Edit tab' : 'Add new tab'}
-                            </Text>
-
-                            <Text style={styles.label}>Name</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={editing.label}
-                                onChangeText={txt =>
-                                    setEditing(prev =>
-                                        prev ? { ...prev, label: txt } : prev
-                                    )
-                                }
-                                placeholder="Holidays"
+                        <View style={styles.editorButtons}>
+                            <Button
+                                title="Cancel"
+                                type="secondary"
+                                size="md"
+                                onPress={() => setEditing(null)}
+                                fullWidth
                             />
 
-                            <Text style={[styles.label, { marginTop: 10 }]}>
-                                Input placeholder
-                            </Text>
-                            <TextInput
-                                style={styles.input}
-                                value={editing.placeholder}
-                                onChangeText={txt =>
-                                    setEditing(prev =>
-                                        prev ? { ...prev, placeholder: txt } : prev
-                                    )
-                                }
-                                placeholder={
-                                    editing.label
-                                        ? `Write a new ${editing.label.toLowerCase()}...`
-                                        : 'Write a new announcement...'
-                                }
+                            <Button
+                                title="Save"
+                                type="primary"
+                                size="md"
+                                onPress={saveTab}
+                                fullWidth
+                                showShadow
                             />
 
-                            <View style={styles.editorButtons}>
-                                <Pressable
-                                    style={[styles.smallBtn, styles.cancelBtn]}
-                                    onPress={() => setEditing(null)}
-                                >
-                                    <Text style={styles.smallBtnText}>Cancel</Text>
-                                </Pressable>
-
-                                <Pressable
-                                    style={[styles.smallBtn, styles.saveBtn]}
-                                    onPress={saveTab}
-                                >
-                                    <Text style={[styles.smallBtnText, { color: '#fff' }]}>
-                                        Save
-                                    </Text>
-                                </Pressable>
-                            </View>
                         </View>
-                    )}
-                </Section>
-            </ScrollView>
-        </SafeAreaView>
+                    </View>
+                )}
+            </Section>
+        </Screen>
+
     );
 }
 
@@ -287,14 +294,6 @@ function Section({
    STYLES
 --------------------------------------------------------- */
 const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: '#F8FAFC',
-    },
-    content: {
-        padding: 16,
-        paddingBottom: 40,
-    },
     header: {
         fontSize: 20,
         fontWeight: '700',
@@ -346,27 +345,6 @@ const styles = StyleSheet.create({
         gap: 6,
     },
 
-    smallChip: {
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 999,
-        borderWidth: 1,
-        borderColor: '#cbd5e1',
-        backgroundColor: '#f8fafc',
-    },
-    smallChipDelete: {
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 999,
-        borderWidth: 1,
-        borderColor: '#fecaca',
-        backgroundColor: '#fee2e2',
-    },
-    smallChipText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#334155',
-    },
 
     // Editor card
     editorCard: {
@@ -404,22 +382,6 @@ const styles = StyleSheet.create({
         gap: 8,
         marginTop: 14,
     },
-    smallBtn: {
-        flex: 1,
-        paddingVertical: 10,
-        borderRadius: 999,
-        alignItems: 'center',
-    },
-    cancelBtn: {
-        backgroundColor: '#e2e8f0',
-    },
-    saveBtn: {
-        backgroundColor: '#2563eb',
-    },
-    smallBtnText: {
-        fontSize: 13,
-        fontWeight: '700',
-    },
 
     note: {
         fontSize: 12,
@@ -427,17 +389,4 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
 
-    addBtn: {
-        marginTop: 8,
-        alignSelf: 'flex-start',
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 999,
-        backgroundColor: '#e0edff',
-    },
-    addBtnText: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#1d4ed8',
-    },
 });

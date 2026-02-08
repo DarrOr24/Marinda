@@ -1,23 +1,21 @@
 // app/wishlist.tsx
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Screen } from "@/components/ui/screen";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
+    Image,
+    Linking,
     Pressable,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
-    TouchableOpacity, // ✅ for dismiss
-    TouchableWithoutFeedback,
+    TouchableOpacity,
     View
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+
 
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
@@ -26,7 +24,8 @@ import type { Role } from "@/lib/members/members.types";
 import type { WishlistItem } from "@/lib/wishlist/wishlist.types";
 
 import { KidSwitcher } from "@/components/kid-switcher";
-import MediaPicker from '@/components/media-picker';
+import { Button } from "@/components/ui/button";
+
 import { useFamilyWishlistSettings } from "@/lib/wishlist/wishlist-settings.hooks";
 import {
     useAddWishlistItem,
@@ -35,15 +34,18 @@ import {
     useUpdateWishlistItem,
     useWishlist,
 } from "@/lib/wishlist/wishlist.hooks";
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { Image, Linking } from 'react-native';
 
+// ✅ NEW UI helpers
+import { WishlistItemModal } from "@/components/modals/wishlist-item-modal";
+import { SafeFab } from "@/components/ui/safe-fab";
 
 export default function WishList() {
+
     const { activeFamilyId, member } = useAuthContext() as any;
+
     const currentRole = (member?.role as Role) ?? "TEEN";
     const isParent = currentRole === "MOM" || currentRole === "DAD";
+
     const { data: wishlistSettings } = useFamilyWishlistSettings(activeFamilyId);
     const POINTS_PER_CURRENCY = wishlistSettings?.points_per_currency ?? 10;
     const FAMILY_CURRENCY = wishlistSettings?.currency ?? "CAD";
@@ -53,10 +55,7 @@ export default function WishList() {
 
     const { familyMembers } = useFamily(activeFamilyId);
 
-    useSubscribeTableByFamily("wishlist_items", activeFamilyId, [
-        "wishlist",
-        activeFamilyId,
-    ]);
+    useSubscribeTableByFamily("wishlist_items", activeFamilyId, ["wishlist", activeFamilyId]);
 
     const {
         data: wishlist = [],
@@ -71,21 +70,22 @@ export default function WishList() {
 
     // -------- member selection logic (for parents) --------
     const memberList = familyMembers.data ?? [];
-    const kids = memberList.filter(
-        (m: any) => m.role === "CHILD" || m.role === "TEEN"
-    );
+    const kids = memberList.filter((m: any) => m.role === "CHILD" || m.role === "TEEN");
 
-    const nameForMemberId = (id?: string | null) => {
-        if (!id) return "Unknown";
+    const findMemberByAnyId = (id?: string | null) => {
+        if (!id) return undefined;
 
-        const m = memberList.find(
+        return memberList.find(
             (m: any) =>
                 m.id === id ||
                 m.user_id === id ||
                 m.profile?.id === id ||
                 m.profile_id === id
         );
+    };
 
+    const nameForMemberId = (id?: string | null) => {
+        const m = findMemberByAnyId(id);
         return m?.profile?.first_name || "Unknown";
     };
 
@@ -95,61 +95,51 @@ export default function WishList() {
         ? selectedKidId ?? kids[0]?.id
         : (member as any)?.id;
 
-    const viewingMember = memberList.find((m: any) => m.id === effectiveMemberId);
+    const viewingMember = findMemberByAnyId(effectiveMemberId);
+
+
     // =============================
     // ⚡ BIDIRECTIONAL CALCULATOR
     // =============================
-
-    const [calcCad, setCalcCad] = useState(""); // already existed
-    const [calcPointsStr, setCalcPointsStr] = useState(""); // NEW
+    const [calcCad, setCalcCad] = useState("");
+    const [calcPointsStr, setCalcPointsStr] = useState("");
     const [calcLock, setCalcLock] = useState<"cad" | "points" | null>(null);
 
-    // fulfillment intent (NEW)
-    const [canFulfillSelf, setCanFulfillSelf] = useState(false)
-    const [paymentMethod, setPaymentMethod] = useState("")
+    const [canFulfillSelf, setCanFulfillSelf] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState("");
 
-
-    // CAD → Points
     const calcPoints = useMemo(() => {
         const cad = parseFloat(calcCad);
         if (!calcCad.trim() || Number.isNaN(cad)) return 0;
         return Math.round(cad * POINTS_PER_CURRENCY);
-    }, [calcCad]);
+    }, [calcCad, POINTS_PER_CURRENCY]);
 
-    // Points → CAD
     const calcCadFromPoints = useMemo(() => {
         const pts = parseFloat(calcPointsStr);
         if (!calcPointsStr.trim() || Number.isNaN(pts)) return "";
         return (pts / POINTS_PER_CURRENCY).toFixed(2);
-    }, [calcPointsStr]);
+    }, [calcPointsStr, POINTS_PER_CURRENCY]);
 
-    // Sync when editing CAD
     useEffect(() => {
         if (calcLock === "cad") {
             if (!calcCad.trim()) setCalcPointsStr("");
             else setCalcPointsStr(String(calcPoints));
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [calcCad]);
 
-    // Sync when editing Points
     useEffect(() => {
         if (calcLock === "points") {
             if (!calcPointsStr.trim()) setCalcCad("");
             else setCalcCad(calcCadFromPoints);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [calcPointsStr]);
-
-
-
 
     // -------- tabs --------
     const [tab, setTab] = useState<"wishes" | "fulfilled">("wishes");
 
-    // filter wishlist by member + tab
-    const itemsForMember = wishlist.filter(
-        (w) => w.member_id === effectiveMemberId
-    );
-
+    const itemsForMember = wishlist.filter((w) => w.member_id === effectiveMemberId);
     const wishes = itemsForMember.filter((w) => w.status === "open");
     const fulfilled = itemsForMember.filter((w) => w.status === "fulfilled");
 
@@ -162,40 +152,29 @@ export default function WishList() {
     const [newLink, setNewLink] = useState("");
     const [newImageUri, setNewImageUri] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (!canFulfillSelf) return;
-        if (!newPrice.trim()) return;
-        if (wishlistSettings?.self_fulfill_max_price == null) return;
-
-        const price = Number(newPrice);
-        if (Number.isNaN(price)) return;
-
-        if (price > wishlistSettings.self_fulfill_max_price) {
-            Alert.alert(
-                "Price too high",
-                `This wish exceeds the self-fulfill limit of ${FAMILY_CURRENCY} ${wishlistSettings.self_fulfill_max_price}.`
-            );
-            setCanFulfillSelf(false);
-        }
-    }, [newPrice]);
-
     const previewPoints = useMemo(() => {
         const val = parseFloat(newPrice);
         if (!newPrice.trim() || Number.isNaN(val)) return 0;
         return Math.round(val * POINTS_PER_CURRENCY);
-    }, [newPrice]);
+    }, [newPrice, POINTS_PER_CURRENCY]);
 
     const exceedsSelfFulfillLimit =
-        SELF_FULFILL_MAX_PRICE != null &&
-        newPrice.trim() !== "" &&
-        Number(newPrice) > SELF_FULFILL_MAX_PRICE;
+        SELF_FULFILL_MAX_PRICE != null && newPrice.trim() !== "" && Number(newPrice) > SELF_FULFILL_MAX_PRICE;
 
-    const canAdd =
-        !!activeFamilyId && !!effectiveMemberId && !addItem.isPending;
+    function resetForm() {
+        setNewTitle("");
+        setNewPrice("");
+        setNewNote("");
+        setNewLink("");
+        setNewImageUri(null);
+        setEditingItem(null);
+        setCanFulfillSelf(false);
+        setPaymentMethod("");
+    }
 
     const handleSave = () => {
-        const trimmedTitle = newTitle.trim()
-        if (!trimmedTitle) return
+        const trimmedTitle = newTitle.trim();
+        if (!trimmedTitle) return;
 
         if (editingItem) {
             updateWishlistItem.mutate(
@@ -213,20 +192,20 @@ export default function WishList() {
                 },
                 {
                     onSuccess: () => {
-                        console.log("[wishlist] update success")
-                        setShowAddModal(false)
-                        resetForm()
+                        console.log("[wishlist] update success");
+                        setShowAddModal(false);
+                        resetForm();
                     },
                     onError: (err: any) => {
-                        console.log("[wishlist] update error", err)
+                        console.log("[wishlist] update error", err);
                         Alert.alert(
                             "Failed to update wish",
                             err?.message || err?.toString?.() || "Unknown error"
-                        )
+                        );
                     },
                 }
-            )
-            return
+            );
+            return;
         }
 
         addItem.mutate(
@@ -243,71 +222,75 @@ export default function WishList() {
             },
             {
                 onSuccess: (data) => {
-                    console.log("[wishlist] add success", data)
-                    setShowAddModal(false)
-                    resetForm()
+                    console.log("[wishlist] add success", data);
+                    setShowAddModal(false);
+                    resetForm();
                 },
                 onError: (err: any) => {
-                    console.log("[wishlist] add error", err)
+                    console.log("[wishlist] add error", err);
                     Alert.alert(
                         "Failed to add wish",
                         err?.message || err?.toString?.() || "Unknown error"
-                    )
-                    // keep modal open so you can retry
+                    );
                 },
             }
-        )
-    }
-
+        );
+    };
 
     // -------- loading/error --------
     if (!activeFamilyId) {
         return (
-            <SafeAreaView style={styles.centerScreen}>
-                <Text style={styles.muted}>No family selected yet</Text>
-            </SafeAreaView>
+            <Screen gap="md">
+                <View style={styles.centerScreen}>
+                    <Text style={styles.muted}>No family selected yet</Text>
+                </View>
+            </Screen>
         );
     }
 
     if (familyMembers.isLoading || wishlistLoading) {
         return (
-            <SafeAreaView style={styles.centerScreen}>
-                <ActivityIndicator />
-                <Text style={styles.muted}>Loading wish list…</Text>
-            </SafeAreaView>
+            <Screen gap="md">
+                <View style={styles.centerScreen}>
+                    <ActivityIndicator />
+                    <Text style={styles.muted}>Loading wish list…</Text>
+                </View>
+            </Screen>
         );
     }
 
     if (familyMembers.isError || wishlistError) {
         return (
-            <SafeAreaView style={styles.centerScreen}>
-                <Text style={styles.muted}>Failed to load wish list.</Text>
-            </SafeAreaView>
+            <Screen gap="md">
+                <View style={styles.centerScreen}>
+                    <Text style={styles.muted}>Failed to load wish list.</Text>
+                </View>
+            </Screen>
         );
     }
 
-    // Reset all modal fields
-    function resetForm() {
-        setNewTitle("");
-        setNewPrice("");
-        setNewNote("");
-        setNewLink("");
-        setNewImageUri(null);
-        setEditingItem(null);
-        setCanFulfillSelf(false)
-        setPaymentMethod("")
-    }
-
     return (
-        <SafeAreaView style={styles.screen} edges={["bottom", "left", "right"]}>
-            <ScrollView
-                style={{ flex: 1 }}
-                contentContainerStyle={styles.container}
-                keyboardShouldPersistTaps="handled"
-            >
+        <Screen
+            bottomOffset={56}
+            gap="md"
+            overlay={
+                <SafeFab bottomOffset={50} rightOffset={16}>
+                    <Button
+                        type="primary"
+                        size="xl"
+                        round
+                        onPress={() => {
+                            resetForm();
+                            setShowAddModal(true);
+                        }}
+                        leftIcon={<MaterialCommunityIcons name="plus" size={26} />}
+                    />
+                </SafeFab>
+            }
+        >
+            <View style={styles.container}>
                 {/* ===== TOP SECTION (2 ROWS) ===== */}
                 <View style={styles.headerBlock}>
-
                     {/* ROW 1 — Title + Icons */}
                     <View style={styles.row1}>
                         <Text style={styles.title}>
@@ -317,25 +300,29 @@ export default function WishList() {
                         </Text>
 
                         <View style={styles.iconsRow}>
-                            <Pressable onPress={() => router.push('/wishlist-info')}>
-                                <Ionicons
-                                    name="information-circle-outline"
-                                    size={22}
-                                    color="#334155"
-                                />
-                            </Pressable>
+                            <Button
+                                type="outline"
+                                size="sm"
+                                round
+                                hitSlop={8}
+                                backgroundColor="#eef2ff"
+                                onPress={() => router.push("/wishlist-info")}
+                                leftIcon={<Ionicons name="information-circle-outline" size={20} />}
+                            />
 
-                            <Pressable onPress={() => router.push("/wishlist-settings")}>
-                                <Ionicons
-                                    name="settings-outline"
-                                    size={22}
-                                    color="#334155"
-                                />
-                            </Pressable>
+                            <Button
+                                type="outline"
+                                size="sm"
+                                round
+                                hitSlop={8}
+                                backgroundColor="#eef2ff"
+                                onPress={() => router.push("/wishlist-settings")}
+                                leftIcon={<Ionicons name="settings-outline" size={20} />}
+                            />
                         </View>
                     </View>
 
-                    {/* ROW 2 — Points + Switcher (LEFT only) */}
+                    {/* ROW 2 — Points + Switcher */}
                     <View style={styles.row2}>
                         <View style={styles.pointsAndSwitcher}>
                             <Text style={styles.pointsValue}>
@@ -351,11 +338,10 @@ export default function WishList() {
                             )}
                         </View>
                     </View>
-
                 </View>
 
                 {/* =======================
-                     BIDIRECTIONAL CALCULATOR
+                    BIDIRECTIONAL CALCULATOR
                     ======================= */}
                 <View style={{ gap: 6 }}>
                     <View style={styles.calcRow}>
@@ -363,6 +349,7 @@ export default function WishList() {
                             <Text style={styles.calcLabel}>{FAMILY_CURRENCY}</Text>
                             <TextInput
                                 placeholder="0"
+                                placeholderTextColor="#94a3b8"
                                 keyboardType="numeric"
                                 value={calcCad}
                                 onChangeText={(v) => {
@@ -380,6 +367,7 @@ export default function WishList() {
                             <Text style={styles.calcLabel}>Points</Text>
                             <TextInput
                                 placeholder="0"
+                                placeholderTextColor="#94a3b8"
                                 keyboardType="numeric"
                                 value={calcPointsStr}
                                 onChangeText={(v) => {
@@ -395,7 +383,6 @@ export default function WishList() {
                     <Text style={styles.rateText}>
                         {POINTS_PER_CURRENCY} points = $1 {FAMILY_CURRENCY}
                     </Text>
-
                 </View>
 
                 {/* Tabs */}
@@ -404,22 +391,16 @@ export default function WishList() {
                         style={[styles.tab, tab === "wishes" && styles.tabActive]}
                         onPress={() => setTab("wishes")}
                     >
-                        <Text
-                            style={[styles.tabText, tab === "wishes" && styles.tabTextActive]}
-                        >
+                        <Text style={[styles.tabText, tab === "wishes" && styles.tabTextActive]}>
                             Wishes
                         </Text>
                     </Pressable>
+
                     <Pressable
                         style={[styles.tab, tab === "fulfilled" && styles.tabActive]}
                         onPress={() => setTab("fulfilled")}
                     >
-                        <Text
-                            style={[
-                                styles.tabText,
-                                tab === "fulfilled" && styles.tabTextActive,
-                            ]}
-                        >
+                        <Text style={[styles.tabText, tab === "fulfilled" && styles.tabTextActive]}>
                             Fulfilled
                         </Text>
                     </Pressable>
@@ -427,32 +408,22 @@ export default function WishList() {
 
                 {/* List */}
                 {(tab === "wishes" ? wishes : fulfilled).map((item) => {
-                    const pts =
-                        item.price != null
-                            ? Math.round(item.price * POINTS_PER_CURRENCY)
-                            : null;
-
                     const canFulfill =
-                        item.status === "open" &&
-                        (isParent || item.fulfillment_mode === "self");
+                        item.status === "open" && (isParent || item.fulfillment_mode === "self");
 
                     return (
                         <View key={item.id} style={styles.cardRow}>
-                            {/* IMAGE LEFT */}
                             {item.image_url && (
-                                <Image
-                                    source={{ uri: item.image_url }}
-                                    style={styles.cardThumb}
-                                />
+                                <Image source={{ uri: item.image_url }} style={styles.cardThumb} />
                             )}
 
-                            {/* RIGHT SIDE CONTENT */}
                             <View style={styles.cardRight}>
                                 <Text style={styles.cardTitle}>{item.title}</Text>
 
                                 {item.price != null && (
                                     <Text style={styles.cardSubtitle}>
-                                        ${item.price.toFixed(2)} · {Math.round(item.price * POINTS_PER_CURRENCY)} pts
+                                        ${item.price.toFixed(2)} ·{" "}
+                                        {Math.round(item.price * POINTS_PER_CURRENCY)} pts
                                     </Text>
                                 )}
 
@@ -474,22 +445,18 @@ export default function WishList() {
                                     </Text>
                                 )}
 
-
-
-                                {/* ADDED DATE */}
                                 {item.created_at && (
                                     <Text style={styles.cardDate}>
                                         Added {new Date(item.created_at).toLocaleDateString()}
                                     </Text>
                                 )}
 
-                                {/* LINK */}
                                 {item.link && (
                                     <Text
                                         style={styles.cardLink}
                                         numberOfLines={1}
                                         onPress={() => {
-                                            const url = item.link!.startsWith('http')
+                                            const url = item.link!.startsWith("http")
                                                 ? item.link!
                                                 : `https://${item.link!}`;
                                             Linking.openURL(url);
@@ -499,9 +466,7 @@ export default function WishList() {
                                     </Text>
                                 )}
 
-                                {/* ACTIONS */}
                                 <View style={styles.cardActionsRow}>
-                                    {/* Edit & Delete only for open wishes */}
                                     {item.status === "open" && (
                                         <>
                                             <TouchableOpacity
@@ -539,200 +504,62 @@ export default function WishList() {
                                         </>
                                     )}
 
-                                    {/* Fulfill action */}
                                     {canFulfill && (
                                         <TouchableOpacity onPress={() => markPurchased.mutate(item.id)}>
                                             <Text style={styles.actionPrimary}>Mark fulfilled</Text>
                                         </TouchableOpacity>
                                     )}
                                 </View>
-
                             </View>
                         </View>
-
                     );
                 })}
 
                 {itemsForMember.length === 0 && (
                     <Text style={styles.emptyText}>
                         No wishes yet.{" "}
-                        {isParent
-                            ? "Ask them to add one!"
-                            : "Tap + to add your first wish."}
+                        {isParent ? "Ask them to add one!" : "Tap + to add your first wish."}
                     </Text>
                 )}
-            </ScrollView>
+            </View>
 
-            {/* FAB — kids + parents */}
-            <TouchableOpacity
-                style={[styles.fab, !canAdd && { opacity: 0.5 }]}
-                onPress={() => {
-                    if (isParent && !effectiveMemberId) {
-                        Alert.alert("Choose a child", "Select a child first to add a wish.");
-                        return;
-                    }
+            {/* ✅ Add/Edit Modal  */}
+            <WishlistItemModal
+                visible={showAddModal}
+                mode={editingItem ? "edit" : "add"}
+                currency={FAMILY_CURRENCY}
+                pointsPerCurrency={POINTS_PER_CURRENCY}
+                selfFulfillMaxPrice={SELF_FULFILL_MAX_PRICE}
+                title={newTitle}
+                onChangeTitle={setNewTitle}
+                price={newPrice}
+                onChangePrice={setNewPrice}
+                note={newNote}
+                onChangeNote={setNewNote}
+                link={newLink}
+                onChangeLink={setNewLink}
+                imageUri={newImageUri}
+                onChangeImageUri={setNewImageUri}
+                canFulfillSelf={canFulfillSelf}
+                onChangeCanFulfillSelf={setCanFulfillSelf}
+                paymentMethod={paymentMethod}
+                onChangePaymentMethod={setPaymentMethod}
+                previewPoints={previewPoints}
+                exceedsSelfFulfillLimit={exceedsSelfFulfillLimit}
+                onClose={() => {
+                    setShowAddModal(false);
                     resetForm();
-                    setShowAddModal(true);
                 }}
-                disabled={!canAdd}
-            >
-                <MaterialCommunityIcons name="plus" size={26} color="#fff" />
-            </TouchableOpacity>
+                onSubmit={handleSave}
+            />
 
-            {/* Add/Edit Modal */}
-            <Modal visible={showAddModal} transparent animationType="fade">
-                <Pressable
-                    style={styles.modalOverlay}
-                    onPress={() => {
-                        setShowAddModal(false);
-                        resetForm();
-                    }}
-                />
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === "ios" ? "padding" : "height"}
-                    style={{ flex: 1, justifyContent: "center", paddingHorizontal: 20 }}
-                >
-                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                        <View style={styles.modalBox}>
-                            <Text style={styles.modalTitle}>
-                                {editingItem ? "Edit Wish" : "Add Wish"}
-                            </Text>
-
-                            <TextInput
-                                placeholder="Title"
-                                value={newTitle}
-                                onChangeText={setNewTitle}
-                                style={styles.input}
-                            />
-                            <TextInput
-                                placeholder={`Price (${FAMILY_CURRENCY})`}
-                                keyboardType="numeric"
-                                value={newPrice}
-                                onChangeText={setNewPrice}
-                                style={styles.input}
-                            />
-                            <Text style={styles.previewText}>
-                                ≈ {previewPoints} points ({POINTS_PER_CURRENCY} pts = $1)
-                            </Text>
-
-                            <Pressable
-                                style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}
-                                onPress={() => {
-                                    // 1️⃣ Price is required
-                                    if (!newPrice.trim()) {
-                                        Alert.alert(
-                                            "Price required",
-                                            "Please enter a price before choosing to fulfill this wish yourself."
-                                        );
-                                        return;
-                                    }
-
-                                    // 2️⃣ Price exceeds self-fulfill limit
-                                    if (
-                                        !canFulfillSelf &&
-                                        exceedsSelfFulfillLimit
-                                    ) {
-                                        Alert.alert(
-                                            "Price too high",
-                                            `You can only fulfill wishes up to ${FAMILY_CURRENCY} ${SELF_FULFILL_MAX_PRICE} on your own.`
-                                        );
-                                        return;
-                                    }
-
-                                    // 3️⃣ Toggle normally
-                                    setCanFulfillSelf(v => !v);
-                                }}
-
-                            >
-                                <MaterialCommunityIcons
-                                    name={canFulfillSelf ? "checkbox-marked" : "checkbox-blank-outline"}
-                                    size={22}
-                                    color="#2563eb"
-                                />
-                                <Text style={{ marginLeft: 8 }}>
-                                    I can get this myself
-                                    {SELF_FULFILL_MAX_PRICE != null && (
-                                        <Text style={{ color: "#64748b" }}>
-                                            {" "} (up to {FAMILY_CURRENCY} {SELF_FULFILL_MAX_PRICE})
-                                        </Text>
-                                    )}
-                                </Text>
-
-                            </Pressable>
-                            {canFulfillSelf && (
-                                <TextInput
-                                    placeholder="How will I pay? (optional)"
-                                    value={paymentMethod}
-                                    onChangeText={setPaymentMethod}
-                                    style={styles.input}
-                                />
-                            )}
-
-                            <TextInput
-                                placeholder="Note (optional)"
-                                value={newNote}
-                                onChangeText={setNewNote}
-                                style={[styles.input, { minHeight: 60 }]}
-                                multiline
-                                returnKeyType="done"
-                                onSubmitEditing={Keyboard.dismiss}
-                                submitBehavior="submit"
-                            />
-                            {/* LINK INPUT */}
-                            <TextInput
-                                placeholder="Link (optional)"
-                                value={newLink}
-                                onChangeText={setNewLink}
-                                style={styles.input}
-                            />
-
-                            <MediaPicker
-                                label="Image"
-                                value={
-                                    newImageUri
-                                        ? { uri: newImageUri, kind: "image" }
-                                        : null
-                                }
-                                onChange={(media) => {
-                                    setNewImageUri(media?.uri ?? null);
-                                }}
-                                allowImage
-                                allowVideo={false}
-                                pickFromLibrary={true}
-                            />
-
-                            <View style={styles.modalButtonsRow}>
-                                <TouchableOpacity
-                                    style={[styles.modalButton, styles.modalCancel]}
-                                    onPress={() => {
-                                        setShowAddModal(false);
-                                        resetForm();
-                                    }}
-                                >
-                                    <Text style={styles.modalCancelText}>Cancel</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.modalButton, styles.modalSave]}
-                                    onPress={handleSave}
-                                >
-                                    <Text style={styles.modalSaveText}>Save</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </TouchableWithoutFeedback>
-                </KeyboardAvoidingView>
-            </Modal>
-        </SafeAreaView>
+        </Screen>
     );
 }
 
 /* ----------------- styles ----------------- */
 
 const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: "#ffffff",
-    },
     centerScreen: {
         flex: 1,
         alignItems: "center",
@@ -876,74 +703,6 @@ const styles = StyleSheet.create({
         color: "#94a3b8",
     },
 
-    fab: {
-        position: "absolute",
-        right: 20,
-        bottom: 28,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: "#2563eb",
-        alignItems: "center",
-        justifyContent: "center",
-        elevation: 6,
-    },
-
-    modalOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: "rgba(0,0,0,0.25)",
-    },
-    modalBox: {
-        padding: 20,
-        borderRadius: 16,
-        backgroundColor: "#ffffff",
-        elevation: 8,
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: "700",
-        marginBottom: 10,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: "#e2e8f0",
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        marginBottom: 10,
-        backgroundColor: "#ffffff",
-    },
-    previewText: {
-        fontSize: 12,
-        color: "#64748b",
-        marginBottom: 8,
-    },
-    modalButtonsRow: {
-        flexDirection: "row",
-        justifyContent: "flex-end",
-        gap: 8,
-        marginTop: 8,
-    },
-    modalButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 14,
-        borderRadius: 999,
-    },
-    modalCancel: {
-        backgroundColor: "#e5e7eb",
-    },
-    modalCancelText: {
-        color: "#111827",
-        fontWeight: "600",
-    },
-    modalSave: {
-        backgroundColor: "#2563eb",
-    },
-    modalSaveText: {
-        color: "#ffffff",
-        fontWeight: "700",
-    },
-
     cardLink: {
         fontSize: 13,
         color: "#2563eb",
@@ -986,5 +745,4 @@ const styles = StyleSheet.create({
         marginTop: 6,
         gap: 16,
     },
-
 });

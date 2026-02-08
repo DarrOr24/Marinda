@@ -1,12 +1,12 @@
 // app/chores.tsx
-import ChoreDetailModal from '@/components/chore-detail-modal';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import ChoreDetailModal from '@/components/modals/chore-detail-modal';
+import { ScreenList } from '@/components/ui/screen-list';
 
 import { useChoreTemplates } from '@/lib/chores/chores-templates.hooks';
 import type { ChoreView, Proof } from '@/lib/chores/chores.types';
 import { useRouter } from 'expo-router';
 
-import ChorePostModal from '@/components/chore-post-modal';
+import ChorePostModal from '@/components/modals/chore-post-modal';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import {
   logChorePointsEvent,
@@ -18,6 +18,7 @@ import { useFamily } from '@/lib/families/families.hooks';
 import { useSubscribeTableByFamily } from '@/lib/families/families.realtime';
 import type { Role } from '@/lib/members/members.types';
 
+import { Button } from "@/components/ui/button";
 
 import {
   useAddChore,
@@ -34,11 +35,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
-  GestureResponderEvent,
   Pressable,
   StyleSheet,
   Text,
-  View,
+  View
 } from 'react-native';
 
 
@@ -838,13 +838,6 @@ export default function Chores() {
     setSelectedId(item.id);
   }
 
-  // stop bubbling from the icon buttons into the card press
-  const stop = (fn: () => void) => (e: GestureResponderEvent) => {
-    // @ts-ignore RN supports stopPropagation
-    e.stopPropagation?.();
-    fn();
-  };
-
   const humanTabLabel: Record<TabKey, string> = {
     open: 'To do',
     pending: 'Needs check',
@@ -853,33 +846,44 @@ export default function Chores() {
   };
 
   return (
-    <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
+    <ScreenList style={styles.screen} edges={['bottom', 'left', 'right']}>
       <View style={styles.header}>
 
         {/* LEFT: Post Chore */}
-        <Pressable onPress={() => setShowPost(true)} style={styles.postBtn}>
-          <Ionicons name="add" size={20} color="#fff" />
-          <Text style={styles.postTxt}>Post Chore</Text>
-        </Pressable>
+        <Button
+          title="Post Chore"
+          type="primary"
+          size="md"
+          showShadow
+          onPress={() => setShowPost(true)}
+          leftIcon={<Ionicons name="add" size={18} />}
+          style={{ borderRadius: 12 }} // optional if you want the same shape
+        />
+
 
         {/* RIGHT: info + settings */}
         <View style={styles.headerRight}>
-          <Pressable
+          <Button
+            type="outline"
+            size="sm"
+            backgroundColor="#eef2ff"
+            round
+            hitSlop={8}
             onPress={() => router.push('/chores-info')}
-            style={styles.iconCircle}
-            hitSlop={8}
-          >
-            <Ionicons name="information-circle-outline" size={18} color="#1e3a8a" />
-          </Pressable>
+            leftIcon={<Ionicons name="information-circle-outline" size={18} />}
+          />
 
-          <Pressable
-            onPress={() => router.push('/chores-settings')}
-            style={styles.iconCircle}
+          <Button
+            type="outline"
+            size="sm"
+            backgroundColor="#eef2ff"
+            round
             hitSlop={8}
-          >
-            <Ionicons name="settings-outline" size={18} color="#1e3a8a" />
-          </Pressable>
+            onPress={() => router.push('/chores-settings')}
+            leftIcon={<Ionicons name="settings-outline" size={18} />}
+          />
         </View>
+
 
       </View>
 
@@ -945,6 +949,9 @@ export default function Chores() {
             item.assignedToNames && item.assignedToNames.length > 0
               ? item.assignedToNames.join(', ')
               : null;
+
+
+
 
 
           return (
@@ -1031,31 +1038,52 @@ export default function Chores() {
                 {item.status === 'open' && (
                   <View style={styles.actions}>
                     {/* Duplicate – everyone */}
-                    <Pressable
-                      onPress={stop(() => onDuplicate(item.id))}
-                      style={styles.iconBtn}
+                    <Button
+                      type="outline"
+                      size="sm"
+                      round
                       hitSlop={8}
-                    >
-                      <Feather name="copy" size={16} color="#1e3a8a" />
-                    </Pressable>
+                      backgroundColor="#eef2ff"
+                      onPress={(e) => {
+                        e?.stopPropagation?.();
+                        onDuplicate(item.id);
+                      }}
+
+                      leftIcon={<Feather name="copy" size={16} />}
+                    />
+
 
                     {/* Edit + Delete – only creator or parent */}
                     {canModify && (
                       <>
-                        <Pressable
-                          onPress={stop(() => setEditing(item))}
-                          style={styles.iconBtn}
+                        <Button
+                          type="outline"
+                          size="sm"
+                          round
                           hitSlop={8}
-                        >
-                          <Feather name="edit-3" size={16} color="#1e3a8a" />
-                        </Pressable>
-                        <Pressable
-                          onPress={stop(() => onDelete(item.id))}
-                          style={[styles.iconBtn, styles.deleteBtn]}
+                          backgroundColor="#eef2ff"
+                          onPress={(e) => {
+                            e?.stopPropagation?.();
+                            setEditing(item);
+                          }}
+
+                          leftIcon={<Feather name="edit-3" size={16} />}
+                        />
+
+                        <Button
+                          type="outline"
+                          size="sm"
+                          round
                           hitSlop={8}
-                        >
-                          <Feather name="trash-2" size={16} color="#b91c1c" />
-                        </Pressable>
+                          backgroundColor="#fee2e2"
+                          onPress={(e) => {
+                            e?.stopPropagation?.();
+                            onDelete(item.id);
+                          }}
+
+                          leftIcon={<Feather name="trash-2" size={16} />}
+                        />
+
                       </>
                     )}
                   </View>
@@ -1117,7 +1145,7 @@ export default function Chores() {
           defaultDoneById={myFamilyMemberId}
         />
       )}
-    </SafeAreaView>
+    </ScreenList>
   );
 }
 
@@ -1137,28 +1165,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-
-  iconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#eff6ff',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-
-  postBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  postTxt: { color: '#fff', fontWeight: '800' },
 
   tabsRow: {
     flexDirection: 'row',
@@ -1227,15 +1233,6 @@ const styles = StyleSheet.create({
   },
 
   actions: { flexDirection: 'row', gap: 8, marginRight: 2 },
-  iconBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#eef2ff',
-  },
-  deleteBtn: { backgroundColor: '#fee2e2' },
 
   badge: {
     flexDirection: 'row',
