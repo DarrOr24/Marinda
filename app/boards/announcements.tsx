@@ -7,13 +7,11 @@ import {
     Alert,
     FlatList,
     Keyboard,
-    KeyboardAvoidingView,
     Platform,
     Pressable,
     StyleSheet,
     Text,
     TextInput,
-    TouchableWithoutFeedback,
     View,
 } from 'react-native';
 
@@ -41,7 +39,6 @@ import {
 } from '@/lib/announcements/announcements.types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-
 // --------------------------------------------
 // Helper: Build a default placeholder
 // --------------------------------------------
@@ -51,7 +48,6 @@ function buildDefaultPlaceholder(label: string) {
 
 // Helper
 const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 6)}` : '—');
-
 
 // --------------------------------------------
 // MAIN COMPONENT
@@ -116,12 +112,10 @@ export default function AnnouncementsBoard() {
         return me?.id as string | undefined;
     }, [member, rawMembers, authUserId]);
 
-
     // --------------------------------------------
     // Load Announcements + Realtime
     // --------------------------------------------
-    const { data: announcements, isLoading, error } =
-        useFamilyAnnouncements(familyId);
+    const { data: announcements, isLoading, error } = useFamilyAnnouncements(familyId);
 
     useAnnouncementsRealtime(familyId);
 
@@ -129,22 +123,16 @@ export default function AnnouncementsBoard() {
     const deleteMutation = useDeleteAnnouncement(familyId);
     const updateMutation = useUpdateAnnouncement(familyId);
 
-
     // --------------------------------------------
     // Load Custom Tabs
     // --------------------------------------------
     const { data: customTabs = [] } = useFamilyAnnouncementTabs(familyId);
     const createTabMutation = useCreateAnnouncementTab(familyId);
 
-    const ALL_TABS: AnnouncementTab[] = [
-        ...DEFAULT_ANNOUNCEMENT_TABS,
-        ...customTabs,
-    ];
+    const ALL_TABS: AnnouncementTab[] = [...DEFAULT_ANNOUNCEMENT_TABS, ...customTabs];
 
     const [activeKind, setActiveKind] = useState<string>('free');
-    const activeTab =
-        ALL_TABS.find(t => t.id === activeKind) ?? ALL_TABS[0];
-
+    const activeTab = ALL_TABS.find(t => t.id === activeKind) ?? ALL_TABS[0];
 
     // --------------------------------------------
     // UI State
@@ -188,21 +176,15 @@ export default function AnnouncementsBoard() {
     // SORT
     if (sortBy === 'newest') {
         filteredAnnouncements.sort(
-            (a, b) =>
-                new Date(b.created_at).getTime() -
-                new Date(a.created_at).getTime()
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
     } else if (sortBy === 'oldest') {
         filteredAnnouncements.sort(
-            (a, b) =>
-                new Date(a.created_at).getTime() -
-                new Date(b.created_at).getTime()
+            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         );
     } else if (sortBy === 'edited') {
         filteredAnnouncements.sort(
-            (a, b) =>
-                new Date(b.updated_at).getTime() -
-                new Date(a.updated_at).getTime()
+            (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
         );
     }
 
@@ -214,6 +196,9 @@ export default function AnnouncementsBoard() {
 
         const trimmed = newText.trim();
         if (!trimmed) return;
+
+        // ✅ CLOSE keyboard immediately
+        Keyboard.dismiss();
 
         createMutation.mutate(
             {
@@ -292,414 +277,355 @@ export default function AnnouncementsBoard() {
     // MAIN RENDER
     // --------------------------------------------
     return (
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <ScreenList gap="md" >
-                <KeyboardAvoidingView
-                    style={styles.container}
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                    keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-                >
-                    {/* ---------------------------------------------- */}
-                    {/* ROW 1: SORT — BY — INFO */}
-                    {/* ---------------------------------------------- */}
-                    <View style={styles.sortInfoRow}>
-
-                        <View style={styles.sortByGroup}>
-                            <Pressable
-                                style={styles.filterBtn}
-                                onPress={() => setShowSortMenu(true)}
-                            >
-                                <Text style={styles.filterBtnLabel}>Sort: {sortBy}</Text>
-                            </Pressable>
-
-                            <Pressable
-                                style={styles.filterBtn}
-                                onPress={() => setShowAuthorMenu(true)}
-                            >
-                                <Text style={styles.filterBtnLabel}>
-                                    By: {filterAuthor === 'all' ? 'All' : filterAuthor}
-                                </Text>
-                            </Pressable>
-                        </View>
-
-                        <View style={styles.iconGroup}>
-                            <Button
-                                type="outline"
-                                size="sm"
-                                backgroundColor="#eef2ff"
-                                round
-                                hitSlop={8}
-                                onPress={() => router.push('/boards/announcements-info')}
-                                leftIcon={<Ionicons name="information-circle-outline" size={20} />}
-                            />
-
-                            <Button
-                                type="outline"
-                                size="sm"
-                                backgroundColor="#eef2ff"
-                                round
-                                hitSlop={8}
-                                onPress={() => router.push('/boards/announcements-settings')}
-                                leftIcon={<Ionicons name="settings-outline" size={20} />}
-                            />
-                        </View>
-
-
-                    </View>
-
-
-                    {/* ---------------------------------------------- */}
-                    {/* ROW 2: SEARCH BAR WITH "X" CLEAR */}
-                    {/* ---------------------------------------------- */}
-                    <View style={styles.searchWrapper}>
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder="Search announcements..."
-                            placeholderTextColor="#94a3b8"
-                            value={search}
-                            onChangeText={setSearch}
-                        />
-                        {search.length > 0 && (
-                            <Pressable
-                                style={styles.clearSearchBtn}
-                                onPress={() => setSearch('')}
-                            >
-                                <Ionicons name="close-circle" size={20} color="#999" />
-                            </Pressable>
-                        )}
-                    </View>
-
-
-                    {/* ---------------------------------------------- */}
-                    {/* ROW 3: TABS + +ADD TAB */}
-                    {/* ---------------------------------------------- */}
-                    <View style={styles.tabsContainer}>
-                        {ALL_TABS.map(tab => {
-                            const isActive = !isSearching && tab.id === activeKind;
-                            return (
-                                <Pressable
-                                    key={tab.id}
-                                    style={[styles.tab, isActive && styles.tabActive]}
-                                    onPress={() => {
-                                        if (!isSearching) {
-                                            setActiveKind(tab.id);
-                                            setNewText('');
-                                        }
-                                    }}
-                                >
-                                    <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
-                                        {tab.label}
-                                    </Text>
-                                </Pressable>
-                            );
-                        })}
-
-                        {/* ADD NEW TAB */}
-                        <Pressable
-                            style={styles.addTabBtn}
-                            onPress={() => {
-                                setNewTabLabel('');
-                                setNewTabPlaceholder('');
-                                setShowAddTabModal(true);
-                            }}
-                        >
-                            <Text style={styles.addTabBtnText}>+ Add Tab</Text>
+        <ScreenList gap="md">
+            <View style={styles.container}>
+                {/* ---------------------------------------------- */}
+                {/* ROW 1: SORT — BY — INFO */}
+                {/* ---------------------------------------------- */}
+                <View style={styles.sortInfoRow}>
+                    <View style={styles.sortByGroup}>
+                        <Pressable style={styles.filterBtn} onPress={() => setShowSortMenu(true)}>
+                            <Text style={styles.filterBtnLabel}>Sort: {sortBy}</Text>
                         </Pressable>
-                    </View>
 
-
-                    {/* ---------------------------------------------- */}
-                    {/* LIST */}
-                    {/* ---------------------------------------------- */}
-                    <FlatList
-                        data={filteredAnnouncements}
-                        keyExtractor={item => item.id}
-                        keyboardShouldPersistTaps="handled"
-                        contentContainerStyle={[
-                            filteredAnnouncements.length === 0 ? styles.emptyList : undefined,
-                            { paddingBottom: INPUT_BAR_HEIGHT + insets.bottom + 16, } // ⭐ Prevent Samsung nav bar + room for input
-                        ]}
-                        renderItem={({ item }) => (
-                            <View style={styles.itemRow}>
-                                <View style={styles.itemTextContainer}>
-                                    <Text style={styles.itemMeta}>
-                                        {item.created_by_name} •{' '}
-                                        {new Date(item.created_at).toLocaleString()}
-                                    </Text>
-
-                                    {item.created_at !== item.updated_at && (
-                                        <Text style={styles.itemMeta}>
-                                            (edited • {new Date(item.updated_at).toLocaleString()})
-                                        </Text>
-                                    )}
-
-                                    <Text style={styles.itemText}>{item.text}</Text>
-
-                                    {item.completed && (
-                                        <Text style={styles.itemMeta}>✓ Completed</Text>
-                                    )}
-                                </View>
-
-                                {/* EDIT */}
-                                {(item.created_by_member_id === myFamilyMemberId ||
-                                    member?.role === 'MOM' ||
-                                    member?.role === 'DAD') && (
-                                        <Pressable
-                                            style={styles.editBtn}
-                                            onPress={() => {
-                                                setEditingItem(item);
-                                                setEditText(item.text);
-                                            }}
-                                        >
-                                            <Text style={styles.deleteBtnText}>✎</Text>
-                                        </Pressable>
-                                    )}
-
-                                {/* DELETE */}
-                                <Pressable
-                                    style={styles.deleteBtn}
-                                    onPress={() => confirmDelete(item)}
-                                >
-                                    <Text style={styles.deleteBtnText}>✕</Text>
-                                </Pressable>
-                            </View>
-                        )}
-                        ListEmptyComponent={
-                            <Text style={styles.infoText}>{activeTab.emptyText}</Text>
-                        }
-                    />
-
-
-                    {/* ---------------------------------------------- */}
-                    {/* ADD ANNOUNCEMENT INPUT */}
-                    {/* ---------------------------------------------- */}
-                    <View
-                        style={[
-                            styles.inputBar,
-                            { paddingBottom: Platform.OS === 'android' ? 24 : 0 }
-                        ]}
-                    >
-                        <TextInput
-                            style={styles.input}
-                            placeholder={activeTab.placeholder}
-                            placeholderTextColor="#94a3b8"
-                            value={newText}
-                            onChangeText={setNewText}
-                            multiline
-                            numberOfLines={1}                   // enables Samsung DONE/checkmark
-                            returnKeyType="done"                // tells keyboard to show action key
-                            onSubmitEditing={() => Keyboard.dismiss()}
-                        />
-
-                        <Pressable
-                            style={[
-                                styles.addBtn,
-                                (!newText.trim() || createMutation.isPending) &&
-                                styles.addBtnDisabled,
-                            ]}
-                            onPress={handleAdd}
-                            disabled={!newText.trim() || createMutation.isPending}
-                        >
-                            <Text style={styles.addBtnText}>
-                                {createMutation.isPending ? '...' : 'Add'}
+                        <Pressable style={styles.filterBtn} onPress={() => setShowAuthorMenu(true)}>
+                            <Text style={styles.filterBtnLabel}>
+                                By: {filterAuthor === 'all' ? 'All' : filterAuthor}
                             </Text>
                         </Pressable>
                     </View>
 
+                    <View style={styles.iconGroup}>
+                        <Button
+                            type="outline"
+                            size="sm"
+                            backgroundColor="#eef2ff"
+                            round
+                            hitSlop={8}
+                            onPress={() => router.push('/boards/announcements-info')}
+                            leftIcon={<Ionicons name="information-circle-outline" size={20} />}
+                        />
 
-                    {/* ---------------------------------------------- */}
-                    {/* EDIT ANNOUNCEMENT MODAL */}
-                    {/* ---------------------------------------------- */}
-                    {editingItem && (
-                        <View style={styles.modalOverlay}>
-                            <View style={styles.modalBox}>
-                                <Text style={styles.modalTitle}>Edit Announcement</Text>
+                        <Button
+                            type="outline"
+                            size="sm"
+                            backgroundColor="#eef2ff"
+                            round
+                            hitSlop={8}
+                            onPress={() => router.push('/boards/announcements-settings')}
+                            leftIcon={<Ionicons name="settings-outline" size={20} />}
+                        />
+                    </View>
+                </View>
 
-                                <TextInput
-                                    style={styles.modalInput}
-                                    multiline
-                                    value={editText}
-                                    onChangeText={setEditText}
-                                />
-
-                                <View style={styles.modalButtons}>
-                                    <Pressable onPress={() => setEditingItem(null)}>
-                                        <Text style={styles.modalCancel}>Cancel</Text>
-                                    </Pressable>
-
-                                    <Pressable
-                                        onPress={() => {
-                                            updateMutation.mutate(
-                                                {
-                                                    id: editingItem.id,
-                                                    updates: { text: editText.trim() },
-                                                },
-                                                {
-                                                    onSuccess: () => setEditingItem(null),
-                                                    onError: err =>
-                                                        Alert.alert('Error', err.message),
-                                                }
-                                            );
-                                        }}
-                                    >
-                                        <Text style={styles.modalSave}>Save</Text>
-                                    </Pressable>
-                                </View>
-
-                            </View>
-                        </View>
-                    )}
-
-
-                    {/* ---------------------------------------------- */}
-                    {/* ADD TAB MODAL */}
-                    {/* ---------------------------------------------- */}
-                    {showAddTabModal && (
-                        <View style={styles.modalOverlay}>
-                            <View style={styles.modalBox}>
-                                <Text style={styles.modalTitle}>Create New Tab</Text>
-
-                                {/* Label */}
-                                <TextInput
-                                    style={styles.modalInput}
-                                    placeholder="Tab name (e.g., Holidays)"
-                                    placeholderTextColor="#94a3b8"
-                                    value={newTabLabel}
-                                    onChangeText={setNewTabLabel}
-                                />
-
-                                {/* Placeholder (auto default) */}
-                                <TextInput
-                                    style={styles.modalInput}
-                                    placeholder={
-                                        newTabLabel.trim()
-                                            ? buildDefaultPlaceholder(newTabLabel)
-                                            : "Placeholder (optional)"
-                                    }
-                                    placeholderTextColor="#94a3b8"
-                                    value={newTabPlaceholder}
-                                    onChangeText={setNewTabPlaceholder}
-                                />
-
-                                <View style={styles.modalButtons}>
-                                    <Pressable onPress={() => setShowAddTabModal(false)}>
-                                        <Text style={styles.modalCancel}>Cancel</Text>
-                                    </Pressable>
-
-                                    <Pressable
-                                        onPress={() => {
-                                            const trimmed = newTabLabel.trim();
-                                            if (!trimmed) return;
-
-                                            const finalPlaceholder =
-                                                newTabPlaceholder.trim() ||
-                                                buildDefaultPlaceholder(trimmed);
-
-                                            createTabMutation.mutate(
-                                                {
-                                                    familyId: familyId!,
-                                                    label: trimmed,
-                                                    placeholder: finalPlaceholder,
-                                                },
-                                                {
-                                                    onSuccess: (newTab) => {
-                                                        setShowAddTabModal(false);
-                                                        setActiveKind(newTab.id);
-                                                    },
-                                                    onError: err =>
-                                                        Alert.alert('Error', err.message),
-                                                }
-                                            );
-                                        }}
-                                    >
-                                        <Text style={styles.modalSave}>
-                                            {createTabMutation.isPending ? '...' : 'Create'}
-                                        </Text>
-                                    </Pressable>
-                                </View>
-
-                            </View>
-                        </View>
-                    )}
-
-
-                    {/* ---------------------------------------------- */}
-                    {/* SORT MENU */}
-                    {/* ---------------------------------------------- */}
-                    {showSortMenu && (
-                        <Pressable
-                            style={styles.modalOverlay}
-                            onPress={() => setShowSortMenu(false)}
-                        >
-                            <Pressable style={styles.simpleMenu}>
-                                {['newest', 'oldest', 'edited'].map(option => (
-                                    <Pressable
-                                        key={option}
-                                        style={styles.menuItem}
-                                        onPress={() => {
-                                            setSortBy(option as any)
-                                            setShowSortMenu(false)
-                                        }}
-                                    >
-                                        <Text style={styles.menuItemText}>{option}</Text>
-                                    </Pressable>
-                                ))}
-                            </Pressable>
+                {/* ---------------------------------------------- */}
+                {/* ROW 2: SEARCH BAR WITH "X" CLEAR */}
+                {/* ---------------------------------------------- */}
+                <View style={styles.searchWrapper}>
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search announcements..."
+                        placeholderTextColor="#94a3b8"
+                        value={search}
+                        onChangeText={setSearch}
+                    />
+                    {search.length > 0 && (
+                        <Pressable style={styles.clearSearchBtn} onPress={() => setSearch('')}>
+                            <Ionicons name="close-circle" size={20} color="#999" />
                         </Pressable>
                     )}
+                </View>
 
+                {/* ---------------------------------------------- */}
+                {/* ROW 3: TABS + +ADD TAB */}
+                {/* ---------------------------------------------- */}
+                <View style={styles.tabsContainer}>
+                    {ALL_TABS.map(tab => {
+                        const isActive = !isSearching && tab.id === activeKind;
+                        return (
+                            <Pressable
+                                key={tab.id}
+                                style={[styles.tab, isActive && styles.tabActive]}
+                                onPress={() => {
+                                    if (!isSearching) {
+                                        setActiveKind(tab.id);
+                                        setNewText('');
+                                    }
+                                }}
+                            >
+                                <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+                                    {tab.label}
+                                </Text>
+                            </Pressable>
+                        );
+                    })}
 
+                    <Pressable
+                        style={styles.addTabBtn}
+                        onPress={() => {
+                            setNewTabLabel('');
+                            setNewTabPlaceholder('');
+                            setShowAddTabModal(true);
+                        }}
+                    >
+                        <Text style={styles.addTabBtnText}>+ Add Tab</Text>
+                    </Pressable>
+                </View>
 
-                    {/* ---------------------------------------------- */}
-                    {/* AUTHOR MENU */}
-                    {/* ---------------------------------------------- */}
-                    {showAuthorMenu && (
-                        <Pressable
-                            style={styles.modalOverlay}
-                            onPress={() => setShowAuthorMenu(false)}
-                        >
-                            <Pressable style={styles.simpleMenu}>
-                                <Pressable
-                                    style={styles.menuItem}
-                                    onPress={() => {
-                                        setFilterAuthor('all')
-                                        setShowAuthorMenu(false)
-                                    }}
-                                >
-                                    <Text style={styles.menuItemText}>All</Text>
+                {/* ---------------------------------------------- */}
+                {/* LIST */}
+                {/* ---------------------------------------------- */}
+                <FlatList
+                    style={{ flex: 1 }}
+                    data={filteredAnnouncements}
+                    keyExtractor={item => item.id}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode={Platform.OS === 'ios' ? 'on-drag' : 'none'}
+                    onScrollBeginDrag={Keyboard.dismiss}
+                    contentContainerStyle={[
+                        filteredAnnouncements.length === 0 ? styles.emptyList : undefined,
+                        { paddingBottom: INPUT_BAR_HEIGHT + insets.bottom + 16 },
+                    ]}
+                    renderItem={({ item }) => (
+                        <View style={styles.itemRow}>
+                            <View style={styles.itemTextContainer}>
+                                <Text style={styles.itemMeta}>
+                                    {item.created_by_name} • {new Date(item.created_at).toLocaleString()}
+                                </Text>
+
+                                {item.created_at !== item.updated_at && (
+                                    <Text style={styles.itemMeta}>
+                                        (edited • {new Date(item.updated_at).toLocaleString()})
+                                    </Text>
+                                )}
+
+                                <Text style={styles.itemText}>{item.text}</Text>
+
+                                {item.completed && <Text style={styles.itemMeta}>✓ Completed</Text>}
+                            </View>
+
+                            {(item.created_by_member_id === myFamilyMemberId ||
+                                member?.role === 'MOM' ||
+                                member?.role === 'DAD') && (
+                                    <Pressable
+                                        style={styles.editBtn}
+                                        onPress={() => {
+                                            setEditingItem(item);
+                                            setEditText(item.text);
+                                        }}
+                                    >
+                                        <Text style={styles.deleteBtnText}>✎</Text>
+                                    </Pressable>
+                                )}
+
+                            <Pressable style={styles.deleteBtn} onPress={() => confirmDelete(item)}>
+                                <Text style={styles.deleteBtnText}>✕</Text>
+                            </Pressable>
+                        </View>
+                    )}
+                    ListEmptyComponent={<Text style={styles.infoText}>{activeTab.emptyText}</Text>}
+                />
+
+                {/* ---------------------------------------------- */}
+                {/* ADD ANNOUNCEMENT INPUT */}
+                {/* ---------------------------------------------- */}
+                <View
+                    style={[
+                        styles.inputBar,
+                        { paddingBottom: Platform.OS === 'android' ? 24 : 0 },
+                    ]}
+                >
+                    <TextInput
+                        style={styles.input}
+                        placeholder={activeTab.placeholder}
+                        placeholderTextColor="#94a3b8"
+                        value={newText}
+                        onChangeText={setNewText}
+                        multiline
+                        numberOfLines={1}
+                        returnKeyType="done"
+                        onSubmitEditing={() => Keyboard.dismiss()}
+                    />
+
+                    <Pressable
+                        style={[
+                            styles.addBtn,
+                            (!newText.trim() || createMutation.isPending) && styles.addBtnDisabled,
+                        ]}
+                        onPress={handleAdd}
+                        disabled={!newText.trim() || createMutation.isPending}
+                    >
+                        <Text style={styles.addBtnText}>
+                            {createMutation.isPending ? '...' : 'Add'}
+                        </Text>
+                    </Pressable>
+                </View>
+
+                {/* ---------------------------------------------- */}
+                {/* EDIT ANNOUNCEMENT MODAL */}
+                {/* ---------------------------------------------- */}
+                {editingItem && (
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalBox}>
+                            <Text style={styles.modalTitle}>Edit Announcement</Text>
+
+                            <TextInput
+                                style={styles.modalInput}
+                                multiline
+                                value={editText}
+                                onChangeText={setEditText}
+                            />
+
+                            <View style={styles.modalButtons}>
+                                <Pressable onPress={() => setEditingItem(null)}>
+                                    <Text style={styles.modalCancel}>Cancel</Text>
                                 </Pressable>
 
-                                {rawMembers.map(m => {
-                                    const name =
-                                        m?.nickname ||
-                                        m?.profile?.first_name ||
-                                        m?.name ||
-                                        shortId(m.id)
+                                <Pressable
+                                    onPress={() => {
+                                        updateMutation.mutate(
+                                            { id: editingItem.id, updates: { text: editText.trim() } },
+                                            {
+                                                onSuccess: () => setEditingItem(null),
+                                                onError: err => Alert.alert('Error', err.message),
+                                            }
+                                        );
+                                    }}
+                                >
+                                    <Text style={styles.modalSave}>Save</Text>
+                                </Pressable>
+                            </View>
+                        </View>
+                    </View>
+                )}
 
-                                    return (
-                                        <Pressable
-                                            key={m.id}
-                                            style={styles.menuItem}
-                                            onPress={() => {
-                                                setFilterAuthor(name)
-                                                setShowAuthorMenu(false)
-                                            }}
-                                        >
-                                            <Text style={styles.menuItemText}>{name}</Text>
-                                        </Pressable>
-                                    )
-                                })}
-                            </Pressable>
+                {/* ---------------------------------------------- */}
+                {/* ADD TAB MODAL */}
+                {/* ---------------------------------------------- */}
+                {showAddTabModal && (
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalBox}>
+                            <Text style={styles.modalTitle}>Create New Tab</Text>
+
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder="Tab name (e.g., Holidays)"
+                                placeholderTextColor="#94a3b8"
+                                value={newTabLabel}
+                                onChangeText={setNewTabLabel}
+                            />
+
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder={
+                                    newTabLabel.trim()
+                                        ? buildDefaultPlaceholder(newTabLabel)
+                                        : 'Placeholder (optional)'
+                                }
+                                placeholderTextColor="#94a3b8"
+                                value={newTabPlaceholder}
+                                onChangeText={setNewTabPlaceholder}
+                            />
+
+                            <View style={styles.modalButtons}>
+                                <Pressable onPress={() => setShowAddTabModal(false)}>
+                                    <Text style={styles.modalCancel}>Cancel</Text>
+                                </Pressable>
+
+                                <Pressable
+                                    onPress={() => {
+                                        const trimmed = newTabLabel.trim();
+                                        if (!trimmed) return;
+
+                                        const finalPlaceholder =
+                                            newTabPlaceholder.trim() || buildDefaultPlaceholder(trimmed);
+
+                                        createTabMutation.mutate(
+                                            { familyId: familyId!, label: trimmed, placeholder: finalPlaceholder },
+                                            {
+                                                onSuccess: newTab => {
+                                                    setShowAddTabModal(false);
+                                                    setActiveKind(newTab.id);
+                                                },
+                                                onError: err => Alert.alert('Error', err.message),
+                                            }
+                                        );
+                                    }}
+                                >
+                                    <Text style={styles.modalSave}>
+                                        {createTabMutation.isPending ? '...' : 'Create'}
+                                    </Text>
+                                </Pressable>
+                            </View>
+                        </View>
+                    </View>
+                )}
+
+                {/* ---------------------------------------------- */}
+                {/* SORT MENU */}
+                {/* ---------------------------------------------- */}
+                {showSortMenu && (
+                    <Pressable style={styles.modalOverlay} onPress={() => setShowSortMenu(false)}>
+                        <Pressable style={styles.simpleMenu}>
+                            {['newest', 'oldest', 'edited'].map(option => (
+                                <Pressable
+                                    key={option}
+                                    style={styles.menuItem}
+                                    onPress={() => {
+                                        setSortBy(option as any);
+                                        setShowSortMenu(false);
+                                    }}
+                                >
+                                    <Text style={styles.menuItemText}>{option}</Text>
+                                </Pressable>
+                            ))}
                         </Pressable>
-                    )}
+                    </Pressable>
+                )}
 
+                {/* ---------------------------------------------- */}
+                {/* AUTHOR MENU */}
+                {/* ---------------------------------------------- */}
+                {showAuthorMenu && (
+                    <Pressable
+                        style={styles.modalOverlay}
+                        onPress={() => setShowAuthorMenu(false)}
+                    >
+                        <Pressable style={styles.simpleMenu}>
+                            <Pressable
+                                style={styles.menuItem}
+                                onPress={() => {
+                                    setFilterAuthor('all');
+                                    setShowAuthorMenu(false);
+                                }}
+                            >
+                                <Text style={styles.menuItemText}>All</Text>
+                            </Pressable>
 
-                </KeyboardAvoidingView>
-            </ScreenList>
-        </TouchableWithoutFeedback>
+                            {rawMembers.map(m => {
+                                const name =
+                                    m?.nickname || m?.profile?.first_name || m?.name || shortId(m.id);
+
+                                return (
+                                    <Pressable
+                                        key={m.id}
+                                        style={styles.menuItem}
+                                        onPress={() => {
+                                            setFilterAuthor(name);
+                                            setShowAuthorMenu(false);
+                                        }}
+                                    >
+                                        <Text style={styles.menuItemText}>{name}</Text>
+                                    </Pressable>
+                                );
+                            })}
+                        </Pressable>
+                    </Pressable>
+                )}
+            </View>
+        </ScreenList>
     );
 }
-
 
 // --------------------------------------------
 // STYLES
@@ -710,7 +636,6 @@ const styles = StyleSheet.create({
     emptyList: { flexGrow: 1, justifyContent: 'center' },
     infoText: { fontSize: 16, textAlign: 'center', opacity: 0.7 },
     errorText: { fontSize: 16, textAlign: 'center', color: 'red' },
-
 
     // --------------------------------------
     // ROW 1: SORT — BY — INFO
@@ -744,9 +669,8 @@ const styles = StyleSheet.create({
     iconGroup: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8, // PERFECT subtle spacing between icons
+        gap: 8,
     },
-
 
     // --------------------------------------
     // SEARCH BAR WITH CLEAR X
@@ -763,7 +687,7 @@ const styles = StyleSheet.create({
         borderColor: '#ddd',
         paddingHorizontal: 12,
         paddingVertical: 8,
-        paddingRight: 32, // space for X
+        paddingRight: 32,
     },
 
     clearSearchBtn: {
@@ -773,7 +697,6 @@ const styles = StyleSheet.create({
         transform: [{ translateY: -10 }],
         padding: 4,
     },
-
 
     // --------------------------------------
     // TABS
@@ -815,7 +738,6 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
 
-
     // --------------------------------------
     // LIST
     // --------------------------------------
@@ -834,7 +756,6 @@ const styles = StyleSheet.create({
     deleteBtn: { padding: 8, alignSelf: 'center' },
     deleteBtnText: { fontSize: 18, opacity: 0.6 },
     editBtn: { padding: 8, alignSelf: 'center' },
-
 
     // --------------------------------------
     // ADD ANNOUNCEMENT
@@ -865,7 +786,6 @@ const styles = StyleSheet.create({
     },
     addBtnDisabled: { opacity: 0.4 },
     addBtnText: { color: 'white', fontWeight: '600' },
-
 
     // --------------------------------------
     // SHARED MODAL STYLES
@@ -902,7 +822,6 @@ const styles = StyleSheet.create({
     },
     modalCancel: { fontSize: 16, color: '#64748b' },
     modalSave: { fontSize: 16, color: '#2563eb', fontWeight: '700' },
-
 
     // --------------------------------------
     // MENUS
