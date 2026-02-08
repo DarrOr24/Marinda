@@ -1,15 +1,18 @@
 import { Button } from "@/components/ui/button";
+import { ModalCard } from "@/components/ui/modal-card";
+import { ModalShell } from "@/components/ui/modal-shell";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import {
-    Modal,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from "react-native";
+
 
 type Props = {
     visible: boolean;
@@ -62,11 +65,15 @@ export function GroceryItemModal({
     const submitLabel = mode === "edit" ? "Save" : "Add";
 
     return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-            <View style={styles.backdrop}>
-                <View style={styles.card}>
-                    <Text style={styles.title}>{title}</Text>
+        <ModalShell visible={visible} onClose={onCancel} keyboardOffset={40}>
+            <ModalCard style={styles.card} maxHeightPadding={24}>
+                <Text style={styles.title}>{title}</Text>
 
+                <ScrollView
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    contentContainerStyle={{ paddingBottom: 12 }}
+                >
                     <Text style={styles.label}>Item</Text>
                     <TextInput
                         value={name}
@@ -78,24 +85,42 @@ export function GroceryItemModal({
                     />
 
                     <Text style={styles.label}>Category</Text>
-                    <TouchableOpacity onPress={onToggleCategoryOpen} style={styles.select} activeOpacity={0.8}>
-                        <Text style={styles.selectText}>{category ?? "Select a category"}</Text>
-                        <MaterialCommunityIcons name="menu-down" size={22} color="#334155" />
+                    <TouchableOpacity
+                        onPress={onToggleCategoryOpen}
+                        style={styles.select}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={styles.selectText}>
+                            {category ?? "Select a category"}
+                        </Text>
+                        <MaterialCommunityIcons
+                            name="menu-down"
+                            size={22}
+                            color="#334155"
+                        />
                     </TouchableOpacity>
 
                     {categoryOpen && (
                         <View style={styles.menu}>
                             <Pressable
-                                onPress={() => onChangeCategory(undefined)}
+                                onPress={() => {
+                                    onChangeCategory(undefined);
+                                    onToggleCategoryOpen();
+                                }}
                                 style={styles.menuItem}
                             >
                                 <Text style={styles.menuItemText}>— None —</Text>
                             </Pressable>
 
-                            {DEFAULT_CATEGORIES.map(c => (
+
+                            {DEFAULT_CATEGORIES.map((c) => (
                                 <Pressable
                                     key={c}
-                                    onPress={() => onChangeCategory(c)}
+                                    onPress={() => {
+                                        onChangeCategory(c);
+                                        onToggleCategoryOpen();
+                                    }}
+
                                     style={styles.menuItem}
                                 >
                                     <Text style={styles.menuItemText}>{c}</Text>
@@ -112,34 +137,25 @@ export function GroceryItemModal({
                         placeholderTextColor="#94a3b8"
                         style={styles.input}
                     />
+                </ScrollView>
 
-                    <View style={styles.actions}>
-                        <Button type="outline" size="sm" title="Cancel" onPress={onCancel} />
-                        <Button type="primary" size="sm" title={submitLabel} onPress={onSubmit} />
-                    </View>
+                <View style={styles.actions}>
+                    <Button type="outline" size="sm" title="Cancel" onPress={onCancel} />
+                    <Button type="primary" size="sm" title={submitLabel} onPress={onSubmit} />
                 </View>
-            </View>
-        </Modal>
+            </ModalCard>
+        </ModalShell>
     );
+
 }
 
 const styles = StyleSheet.create({
-    backdrop: {
-        flex: 1,
-        backgroundColor: "rgba(15, 23, 42, 0.45)",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-    },
+
     card: {
         width: "100%",
         maxWidth: 460,
-        backgroundColor: "#fff",
-        borderRadius: 16,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: "#e5e7eb",
     },
+
     title: { fontSize: 18, fontWeight: "800", color: "#0f172a", marginBottom: 12 },
     label: { fontSize: 12, color: "#475569", marginTop: 8, marginBottom: 4 },
 
