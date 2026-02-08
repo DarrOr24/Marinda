@@ -136,10 +136,11 @@ export function WishlistItemModal({
 
     return (
         <ModalShell visible={visible} onClose={onClose} keyboardOffset={40}>
-            <ModalCard style={styles.modalBox} bottomPadding={12} maxHeightPadding={24}>
+            <ModalCard bottomPadding={12} maxHeightPadding={24} style={styles.card}>
                 <Text style={styles.modalTitle}>{mode === "edit" ? "Edit Wish" : "Add Wish"}</Text>
 
                 <ScrollView
+                    nestedScrollEnabled
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
                     contentContainerStyle={{ paddingBottom: 12 }}
@@ -247,11 +248,8 @@ export function WishlistItemModal({
 }
 
 const styles = StyleSheet.create({
-    modalBox: {
-        padding: 20,
-        borderRadius: 16,
-        backgroundColor: "#ffffff",
-        elevation: 8,
+    card: {
+        gap: 10,
     },
     modalTitle: {
         fontSize: 18,
@@ -279,3 +277,4 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
 });
+

@@ -3,14 +3,13 @@ import { Audio } from "expo-av";
 import React from "react";
 import {
     Alert,
-    Dimensions,
     Keyboard,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
-    View,
+    View
 } from "react-native";
 
 import { MembersSelector } from "../members-selector";
@@ -51,7 +50,6 @@ type Props = {
     canEditPoints?: boolean;
 };
 
-const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 export default function ChorePostModal({
     visible,
@@ -182,21 +180,13 @@ export default function ChorePostModal({
 
     return (
         <ModalShell visible={visible} onClose={onClose} keyboardOffset={40}>
-            {/* ModalCard: you can keep styles.card as-is; ModalCard will add bottom padding insets */}
-            <ModalCard
-                style={[
-                    styles.card,
-                    {
-                        // keep a ceiling so it never goes under status/nav bars
-                        maxHeight: SCREEN_HEIGHT - 24,
-                    },
-                ]}
-                bottomPadding={12}
-            >
+
+            <ModalCard bottomPadding={12} maxHeightPadding={24} style={styles.card}>
+
                 <Text style={styles.h1}>{titleText}</Text>
 
                 <ScrollView
-                    style={{ maxHeight: SCREEN_HEIGHT * 0.82 }}
+                    nestedScrollEnabled
                     contentContainerStyle={{ paddingBottom: 8 }}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
@@ -417,9 +407,6 @@ export default function ChorePostModal({
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: "#fff",
-        borderRadius: 20,
-        padding: 16,
         gap: 10,
     },
     h1: { fontSize: 18, fontWeight: "800", color: "#0f172a", marginBottom: 6 },
