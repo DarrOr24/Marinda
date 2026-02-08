@@ -1,22 +1,21 @@
 // components/add-activity-modal.tsx
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Animated,
-  Easing,
-  Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  useWindowDimensions,
 } from "react-native";
 
+import { ChipSelector } from "@/components/chip-selector";
 import { DateRangePicker } from "@/components/date-range-picker";
+import { ModalCard } from "@/components/ui/modal-card";
+import { ModalShell } from "@/components/ui/modal-shell";
 import { MembersSelector } from "../members-selector";
+import { Button } from "../ui/button";
 
 export type NewActivityForm = {
   title: string;
@@ -51,16 +50,10 @@ export default function AddActivityModal({
   submitLabel,
   initial,
 }: Props) {
-  const { height } = useWindowDimensions();
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(40)).current;
-
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
   const [money, setMoney] = useState("");
-  const [rideNeeded, setRideNeeded] = useState(false);
-  const [presentNeeded, setPresentNeeded] = useState(false);
-  const [babysitterNeeded, setBabysitterNeeded] = useState(false);
+  const [flags, setFlags] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   const [range, setRange] = useState<{ start_at: string; end_at: string } | null>(
@@ -78,9 +71,13 @@ export default function AddActivityModal({
         ? String(initial?.money)
         : ""
     );
-    setRideNeeded(!!initial?.ride_needed);
-    setPresentNeeded(!!initial?.present_needed);
-    setBabysitterNeeded(!!initial?.babysitter_needed);
+
+    setFlags([
+      ...(initial?.ride_needed ? ["ride_needed"] : []),
+      ...(initial?.present_needed ? ["present_needed"] : []),
+      ...(initial?.babysitter_needed ? ["babysitter_needed"] : []),
+    ]);
+
     setSelectedIds(initial?.participants_member_ids ?? []);
     setNotes(initial?.notes ?? "");
     setRange(
@@ -90,43 +87,13 @@ export default function AddActivityModal({
     );
   }, [visible, initialDateStr, initial]);
 
-  // animate in/out
-  useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 180,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.spring(translateY, { toValue: 0, useNativeDriver: true }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 140,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateY, {
-          toValue: 40,
-          duration: 140,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible]);
-
   const canSave = title.trim().length > 0 && !!range?.start_at;
 
   function reset() {
     setTitle("");
     setLocation("");
     setMoney("");
-    setRideNeeded(false);
-    setPresentNeeded(false);
-    setBabysitterNeeded(false);
+    setFlags([]);
     setSelectedIds([]);
     setNotes("");
     setRange(null);
@@ -141,9 +108,11 @@ export default function AddActivityModal({
       end_at: range.end_at,
       location: location.trim() || undefined,
       money: money ? Number(money) : undefined,
-      ride_needed: rideNeeded || undefined,
-      present_needed: presentNeeded || undefined,
-      babysitter_needed: babysitterNeeded || undefined,
+
+      ride_needed: flags.includes("ride_needed") || undefined,
+      present_needed: flags.includes("present_needed") || undefined,
+      babysitter_needed: flags.includes("babysitter_needed") || undefined,
+
       participants_member_ids: selectedIds.length ? selectedIds : undefined,
       notes: notes.trim() || undefined,
     };
@@ -154,22 +123,17 @@ export default function AddActivityModal({
   }
 
   return (
-    <Modal
+    <ModalShell
       visible={visible}
-      transparent
-      animationType="none"
-      onRequestClose={onClose}
+      onClose={onClose}
+      keyboardOffset={40}
+      backdropStyle={{
+        justifyContent: "flex-end",
+        paddingHorizontal: 0,
+        paddingBottom: 0,
+      }}
     >
-      <Animated.View style={[styles.backdrop, { opacity }]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-      </Animated.View>
-
-      <Animated.View
-        style={[
-          styles.sheet,
-          { transform: [{ translateY }], maxHeight: Math.min(height * 0.86, 720) },
-        ]}
-      >
+      <ModalCard style={styles.sheet} maxHeightPadding={24} padded radius={0}>
         <View style={styles.header}>
           <Text style={styles.title}>
             {mode === "edit" ? "Edit Activity ✏️" : "New Activity ✨"}
@@ -182,9 +146,9 @@ export default function AddActivityModal({
         <ScrollView
           contentContainerStyle={{ paddingBottom: 12 }}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
-          {/* Start / End (timestamptz) */}
           <DateRangePicker
             baseDateStr={initialDateStr}
             initialStartAt={initial?.start_at}
@@ -192,17 +156,16 @@ export default function AddActivityModal({
             onChange={setRange}
           />
 
-          {/* Required fields */}
           <Text style={styles.label}>🏷️ Title *</Text>
           <TextInput
             placeholder="e.g., Soccer practice ⚽️"
+            placeholderTextColor="#94a3b8"
             value={title}
             onChangeText={setTitle}
             style={styles.input}
             autoCapitalize="words"
           />
 
-          {/* Optional fields */}
           <Text style={styles.label}>📍 Place</Text>
           <View style={styles.fieldRow}>
             <MaterialCommunityIcons
@@ -212,6 +175,7 @@ export default function AddActivityModal({
             />
             <TextInput
               placeholder="e.g., Community Center"
+              placeholderTextColor="#94a3b8"
               value={location}
               onChangeText={setLocation}
               style={styles.input}
@@ -223,6 +187,7 @@ export default function AddActivityModal({
             <MaterialCommunityIcons name="cash" size={18} color="#475569" />
             <TextInput
               placeholder="e.g., 15"
+              placeholderTextColor="#94a3b8"
               keyboardType="numeric"
               value={money}
               onChangeText={setMoney}
@@ -230,51 +195,25 @@ export default function AddActivityModal({
             />
           </View>
 
-          {/* Flags */}
-          <View className="wrapChipsRow" style={styles.wrapChipsRow}>
-            <TouchableOpacity
-              onPress={() => setRideNeeded((v) => !v)}
-              style={[styles.chip, rideNeeded && styles.chipActive]}
-            >
-              <Text style={[styles.chipTxt, rideNeeded && styles.chipTxtActive]}>
-                🚗 Ride {rideNeeded ? "✅" : "❌"}
-              </Text>
-            </TouchableOpacity>
+          <Text style={styles.label}>Flags</Text>
+          <ChipSelector
+            multiple
+            values={flags}
+            onChange={setFlags}
+            options={[
+              { label: "🚗 Ride", value: "ride_needed" },
+              { label: "🎁 Present", value: "present_needed" },
+              { label: "🍼 Babysitter", value: "babysitter_needed" },
+            ]}
+          />
 
-            <TouchableOpacity
-              onPress={() => setPresentNeeded((v) => !v)}
-              style={[styles.chip, presentNeeded && styles.chipActive]}
-            >
-              <Text
-                style={[styles.chipTxt, presentNeeded && styles.chipTxtActive]}
-              >
-                🎁 Present {presentNeeded ? "✅" : "❌"}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setBabysitterNeeded((v) => !v)}
-              style={[styles.chip, babysitterNeeded && styles.chipActive]}
-            >
-              <Text
-                style={[
-                  styles.chipTxt,
-                  babysitterNeeded && styles.chipTxtActive,
-                ]}
-              >
-                🍼 Babysitter {babysitterNeeded ? "✅" : "❌"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Participants */}
           <Text style={styles.label}>👥 Who’s going?</Text>
           <MembersSelector values={selectedIds} onChange={setSelectedIds} />
 
-          {/* Notes */}
           <Text style={styles.label}>📝 Notes</Text>
           <TextInput
             placeholder="Add a note…"
+            placeholderTextColor="#94a3b8"
             value={notes}
             onChangeText={setNotes}
             style={[styles.input, { height: 80 }]}
@@ -283,50 +222,39 @@ export default function AddActivityModal({
         </ScrollView>
 
         <View style={styles.actions}>
-          <TouchableOpacity style={[styles.btn, styles.btnGhost]} onPress={onClose}>
-            <Text style={styles.btnGhostTxt}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.btn, canSave ? styles.btnPrimary : styles.btnDisabled]}
+          <Button type="outline" size="sm" title="Cancel" onPress={onClose} />
+          <Button
+            type="primary"
+            size="sm"
+            title={submitLabel ?? (mode === "edit" ? "Update" : "Save")}
             onPress={handleSave}
             disabled={!canSave}
-          >
-            <Text style={canSave ? styles.btnPrimaryTxt : styles.btnDisabledTxt}>
-              {submitLabel ?? (mode === "edit" ? "Update" : "Save")}
-            </Text>
-          </TouchableOpacity>
+          />
         </View>
-      </Animated.View>
-    </Modal>
+      </ModalCard>
+    </ModalShell>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.35)",
-  },
   sheet: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "#fff",
+    width: "100%",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
+    // keep it looking like a bottom sheet even though ModalCard sets radius=0
+    // (ModalCard uses borderRadius, but we're overriding corners here)
+    overflow: "hidden",
   },
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
   },
+
   title: { fontSize: 18, fontWeight: "800", color: "#0f172a" },
+
   label: {
     fontSize: 13,
     color: "#475569",
@@ -334,12 +262,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontWeight: "700",
   },
+
   fieldRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     marginBottom: 10,
   },
+
   input: {
     flex: 1,
     borderWidth: 1,
@@ -348,35 +278,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    backgroundColor: "#f9fafb",
-  },
-  chip: {
-    borderWidth: 2,
-    borderColor: "#cbd5e1",
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
     backgroundColor: "#fff",
+    color: "#0f172a",
   },
-  chipActive: { borderColor: "#2563eb", backgroundColor: "#eff6ff" },
-  chipTxt: { color: "#0f172a", fontWeight: "800" },
-  chipTxtActive: { color: "#1d4ed8" },
-  wrapChipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+
   actions: {
     flexDirection: "row",
     justifyContent: "flex-end",
     gap: 8,
     marginTop: 12,
   },
-  btn: { borderRadius: 14, paddingVertical: 14, paddingHorizontal: 18 },
-  btnGhost: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-  },
-  btnGhostTxt: { color: "#0f172a", fontWeight: "700" },
-  btnPrimary: { backgroundColor: "#2563eb" },
-  btnPrimaryTxt: { color: "#fff", fontWeight: "800", fontSize: 16 },
-  btnDisabled: { backgroundColor: "#e5e7eb" },
-  btnDisabledTxt: { color: "#64748b", fontWeight: "800", fontSize: 16 },
 });
