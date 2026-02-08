@@ -58,7 +58,8 @@
       "supabaseUrl": "https://lemtpzciuequvwmkehcw.supabase.co",
       "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlbXRwemNpdWVxdXZ3bWtlaGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5NTA2MDIsImV4cCI6MjA3NjUyNjYwMn0.RummUmQYYn8bzmcgCP6e1SiBCRyKdQZTFg1xLwVFC_0",
       "supabaseApiPublishableKey": "sb_publishable_fo2kCMBO4urMq5TcjIGxhQ_REveOOaH",
-      "supabaseApiSecretKey": "sb_secret_h3bRHPNC8NM6qb-xXXByYg_d8jNvTFs"
+      "supabaseApiSecretKey": "sb_secret_h3bRHPNC8NM6qb-xXXByYg_d8jNvTFs",
+      "devLoginSecret": "29729b6840c5abb0f947f6f9ee80ed1755f944fc674f586ebddfe30d9df3a1e2"
     },
     "owner": "marinda"
   }
