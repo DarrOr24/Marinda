@@ -7,15 +7,13 @@ import {
     ActivityIndicator,
     Alert,
     Image,
-    Keyboard,
     Linking,
     Pressable,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from "react-native";
 
 
@@ -26,7 +24,6 @@ import type { Role } from "@/lib/members/members.types";
 import type { WishlistItem } from "@/lib/wishlist/wishlist.types";
 
 import { KidSwitcher } from "@/components/kid-switcher";
-import MediaPicker from "@/components/media-picker";
 import { Button } from "@/components/ui/button";
 
 import { useFamilyWishlistSettings } from "@/lib/wishlist/wishlist-settings.hooks";
@@ -39,8 +36,7 @@ import {
 } from "@/lib/wishlist/wishlist.hooks";
 
 // ✅ NEW UI helpers
-import { ModalCard } from "@/components/ui/modal-card";
-import { ModalShell } from "@/components/ui/modal-shell";
+import { WishlistItemModal } from "@/components/modals/wishlist-item-modal";
 import { SafeFab } from "@/components/ui/safe-fab";
 
 export default function WishList() {
@@ -544,155 +540,49 @@ export default function WishList() {
                 )}
             </View>
 
-            {/* ✅ Add/Edit Modal — now ModalShell + ModalCard */}
-            <ModalShell
+            {/* ✅ Add/Edit Modal  */}
+            <WishlistItemModal
                 visible={showAddModal}
+                mode={editingItem ? "edit" : "add"}
+                currency={FAMILY_CURRENCY}
+                pointsPerCurrency={POINTS_PER_CURRENCY}
+                selfFulfillMaxPrice={SELF_FULFILL_MAX_PRICE}
+                title={newTitle}
+                onChangeTitle={setNewTitle}
+                price={newPrice}
+                onChangePrice={setNewPrice}
+                note={newNote}
+                onChangeNote={setNewNote}
+                link={newLink}
+                onChangeLink={setNewLink}
+                imageUri={newImageUri}
+                onChangeImageUri={setNewImageUri}
+                canFulfillSelf={canFulfillSelf}
+                onToggleCanFulfillSelf={() => {
+                    if (!newPrice.trim()) {
+                        Alert.alert("Price required", "Please enter a price before choosing to fulfill this wish yourself.");
+                        return;
+                    }
+                    if (!canFulfillSelf && exceedsSelfFulfillLimit) {
+                        Alert.alert(
+                            "Price too high",
+                            `You can only fulfill wishes up to ${FAMILY_CURRENCY} ${SELF_FULFILL_MAX_PRICE} on your own.`
+                        );
+                        return;
+                    }
+                    setCanFulfillSelf((v) => !v);
+                }}
+                paymentMethod={paymentMethod}
+                onChangePaymentMethod={setPaymentMethod}
+                previewPoints={previewPoints}
+                exceedsSelfFulfillLimit={exceedsSelfFulfillLimit}
                 onClose={() => {
                     setShowAddModal(false);
                     resetForm();
                 }}
-                keyboardOffset={40}
-            >
-                <ModalCard style={styles.modalBox} bottomPadding={12} maxHeightPadding={24}>
-                    <Text style={styles.modalTitle}>{editingItem ? "Edit Wish" : "Add Wish"}</Text>
+                onSubmit={handleSave}
+            />
 
-                    {/* Scroll inside the card so keyboard doesn’t trap inputs */}
-                    <ScrollView
-                        keyboardShouldPersistTaps="handled"
-                        keyboardDismissMode="on-drag"
-                        contentContainerStyle={{ paddingBottom: 12 }}
-                    >
-                        <TextInput
-                            placeholder="Title"
-                            placeholderTextColor="#94a3b8"
-                            value={newTitle}
-                            onChangeText={setNewTitle}
-                            style={styles.input}
-                            returnKeyType="done"
-                            submitBehavior="submit"
-                            onSubmitEditing={() => Keyboard.dismiss()}
-                        />
-
-                        <TextInput
-                            placeholder={`Price (${FAMILY_CURRENCY})`}
-                            placeholderTextColor="#94a3b8"
-                            keyboardType="numeric"
-                            value={newPrice}
-                            onChangeText={setNewPrice}
-                            style={styles.input}
-                            returnKeyType="done"
-                            submitBehavior="submit"
-                            onSubmitEditing={() => Keyboard.dismiss()}
-                        />
-
-                        <Text style={styles.previewText}>
-                            ≈ {previewPoints} points ({POINTS_PER_CURRENCY} pts = $1)
-                        </Text>
-
-                        <Pressable
-                            style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}
-                            onPress={() => {
-                                if (!newPrice.trim()) {
-                                    Alert.alert(
-                                        "Price required",
-                                        "Please enter a price before choosing to fulfill this wish yourself."
-                                    );
-                                    return;
-                                }
-
-                                if (!canFulfillSelf && exceedsSelfFulfillLimit) {
-                                    Alert.alert(
-                                        "Price too high",
-                                        `You can only fulfill wishes up to ${FAMILY_CURRENCY} ${SELF_FULFILL_MAX_PRICE} on your own.`
-                                    );
-                                    return;
-                                }
-
-                                setCanFulfillSelf((v) => !v);
-                            }}
-                        >
-                            <MaterialCommunityIcons
-                                name={canFulfillSelf ? "checkbox-marked" : "checkbox-blank-outline"}
-                                size={22}
-                                color="#2563eb"
-                            />
-                            <Text style={{ marginLeft: 8 }}>
-                                I can get this myself
-                                {SELF_FULFILL_MAX_PRICE != null && (
-                                    <Text style={{ color: "#64748b" }}>
-                                        {" "}
-                                        (up to {FAMILY_CURRENCY} {SELF_FULFILL_MAX_PRICE})
-                                    </Text>
-                                )}
-                            </Text>
-                        </Pressable>
-
-                        {canFulfillSelf && (
-                            <TextInput
-                                placeholder="How will I pay? (optional)"
-                                placeholderTextColor="#94a3b8"
-                                value={paymentMethod}
-                                onChangeText={setPaymentMethod}
-                                style={styles.input}
-                                returnKeyType="done"
-                                submitBehavior="submit"
-                                onSubmitEditing={() => Keyboard.dismiss()}
-                            />
-                        )}
-
-                        <TextInput
-                            placeholder="Note (optional)"
-                            placeholderTextColor="#94a3b8"
-                            value={newNote}
-                            onChangeText={setNewNote}
-                            style={[styles.input, { minHeight: 60 }]}
-                            multiline
-                            returnKeyType="done"
-                            submitBehavior="submit"
-                            onSubmitEditing={() => Keyboard.dismiss()}
-                        />
-
-                        <TextInput
-                            placeholder="Link (optional)"
-                            placeholderTextColor="#94a3b8"
-                            value={newLink}
-                            onChangeText={setNewLink}
-                            style={styles.input}
-                            returnKeyType="done"
-                            submitBehavior="submit"
-                            onSubmitEditing={() => Keyboard.dismiss()}
-                        />
-
-                        <MediaPicker
-                            label="Image"
-                            value={newImageUri ? { uri: newImageUri, kind: "image" } : null}
-                            onChange={(media) => setNewImageUri(media?.uri ?? null)}
-                            allowImage
-                            allowVideo={false}
-                            pickFromLibrary={true}
-                        />
-                    </ScrollView>
-
-                    <View style={styles.modalButtonsRow}>
-                        <TouchableOpacity
-                            style={[styles.modalButton, styles.modalCancel]}
-                            onPress={() => {
-                                setShowAddModal(false);
-                                resetForm();
-                            }}
-                        >
-                            <Text style={styles.modalCancelText}>Cancel</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.modalButton, styles.modalSave]}
-                            onPress={handleSave}
-                        >
-                            <Text style={styles.modalSaveText}>Save</Text>
-                        </TouchableOpacity>
-                    </View>
-                </ModalCard>
-            </ModalShell>
         </Screen>
     );
 }
@@ -841,57 +731,6 @@ const styles = StyleSheet.create({
         marginTop: 8,
         fontSize: 13,
         color: "#94a3b8",
-    },
-
-    modalBox: {
-        padding: 20,
-        borderRadius: 16,
-        backgroundColor: "#ffffff",
-        elevation: 8,
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: "700",
-        marginBottom: 10,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: "#e2e8f0",
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        marginBottom: 10,
-        backgroundColor: "#ffffff",
-    },
-    previewText: {
-        fontSize: 12,
-        color: "#64748b",
-        marginBottom: 8,
-    },
-    modalButtonsRow: {
-        flexDirection: "row",
-        justifyContent: "flex-end",
-        gap: 8,
-        marginTop: 8,
-    },
-    modalButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 14,
-        borderRadius: 999,
-    },
-    modalCancel: {
-        backgroundColor: "#e5e7eb",
-    },
-    modalCancelText: {
-        color: "#111827",
-        fontWeight: "600",
-    },
-    modalSave: {
-        backgroundColor: "#2563eb",
-    },
-    modalSaveText: {
-        color: "#ffffff",
-        fontWeight: "700",
     },
 
     cardLink: {
