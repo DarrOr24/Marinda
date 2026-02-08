@@ -152,23 +152,6 @@ export default function WishList() {
     const [newLink, setNewLink] = useState("");
     const [newImageUri, setNewImageUri] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (!canFulfillSelf) return;
-        if (!newPrice.trim()) return;
-        if (wishlistSettings?.self_fulfill_max_price == null) return;
-
-        const price = Number(newPrice);
-        if (Number.isNaN(price)) return;
-
-        if (price > wishlistSettings.self_fulfill_max_price) {
-            Alert.alert(
-                "Price too high",
-                `This wish exceeds the self-fulfill limit of ${FAMILY_CURRENCY} ${wishlistSettings.self_fulfill_max_price}.`
-            );
-            setCanFulfillSelf(false);
-        }
-    }, [newPrice, canFulfillSelf, wishlistSettings?.self_fulfill_max_price, FAMILY_CURRENCY]);
-
     const previewPoints = useMemo(() => {
         const val = parseFloat(newPrice);
         if (!newPrice.trim() || Number.isNaN(val)) return 0;
@@ -558,20 +541,7 @@ export default function WishList() {
                 imageUri={newImageUri}
                 onChangeImageUri={setNewImageUri}
                 canFulfillSelf={canFulfillSelf}
-                onToggleCanFulfillSelf={() => {
-                    if (!newPrice.trim()) {
-                        Alert.alert("Price required", "Please enter a price before choosing to fulfill this wish yourself.");
-                        return;
-                    }
-                    if (!canFulfillSelf && exceedsSelfFulfillLimit) {
-                        Alert.alert(
-                            "Price too high",
-                            `You can only fulfill wishes up to ${FAMILY_CURRENCY} ${SELF_FULFILL_MAX_PRICE} on your own.`
-                        );
-                        return;
-                    }
-                    setCanFulfillSelf((v) => !v);
-                }}
+                onChangeCanFulfillSelf={setCanFulfillSelf}
                 paymentMethod={paymentMethod}
                 onChangePaymentMethod={setPaymentMethod}
                 previewPoints={previewPoints}

@@ -1,6 +1,15 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import React from "react";
-import { Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useEffect } from "react";
+import {
+    Alert,
+    Keyboard,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from "react-native";
 
 import MediaPicker from "@/components/media-picker";
 import { Button } from "@/components/ui/button";
@@ -31,7 +40,7 @@ type Props = {
     onChangeImageUri: (v: string | null) => void;
 
     canFulfillSelf: boolean;
-    onToggleCanFulfillSelf: () => void;
+    onChangeCanFulfillSelf: (next: boolean) => void;
 
     paymentMethod: string;
     onChangePaymentMethod: (v: string) => void;
@@ -67,7 +76,7 @@ export function WishlistItemModal({
     onChangeImageUri,
 
     canFulfillSelf,
-    onToggleCanFulfillSelf,
+    onChangeCanFulfillSelf,
 
     paymentMethod,
     onChangePaymentMethod,
@@ -78,6 +87,53 @@ export function WishlistItemModal({
     onClose,
     onSubmit,
 }: Props) {
+    function handleToggleSelfFulfill() {
+        // must have a price first
+        if (!price.trim()) {
+            Alert.alert(
+                "Price required",
+                "Please enter a price before choosing to fulfill this wish yourself."
+            );
+            return;
+        }
+
+        // if price isn't a number, show error (so we don't silently do nothing)
+        const n = Number(price);
+        if (Number.isNaN(n)) {
+            Alert.alert("Invalid price", "Please enter a valid number.");
+            return;
+        }
+
+        // enforcing limit only when user is turning ON self-fulfill
+        if (!canFulfillSelf && exceedsSelfFulfillLimit) {
+            Alert.alert(
+                "Price too high",
+                `You can only fulfill wishes up to ${currency} ${selfFulfillMaxPrice ?? ""} on your own.`
+            );
+            return;
+        }
+
+        onChangeCanFulfillSelf(!canFulfillSelf);
+    }
+
+    useEffect(() => {
+        if (!canFulfillSelf) return;
+        if (!price.trim()) return;
+        if (selfFulfillMaxPrice == null) return;
+
+        const n = Number(price);
+        if (Number.isNaN(n)) return;
+
+        if (n > selfFulfillMaxPrice) {
+            Alert.alert(
+                "Price too high",
+                `This wish exceeds the self-fulfill limit of ${currency} ${selfFulfillMaxPrice}.`
+            );
+            onChangeCanFulfillSelf(false);
+        }
+    }, [price, canFulfillSelf, selfFulfillMaxPrice, currency, onChangeCanFulfillSelf]);
+
+
     return (
         <ModalShell visible={visible} onClose={onClose} keyboardOffset={40}>
             <ModalCard style={styles.modalBox} bottomPadding={12} maxHeightPadding={24}>
@@ -117,7 +173,7 @@ export function WishlistItemModal({
 
                     <Pressable
                         style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}
-                        onPress={onToggleCanFulfillSelf}
+                        onPress={handleToggleSelfFulfill}
                     >
                         <MaterialCommunityIcons
                             name={canFulfillSelf ? "checkbox-marked" : "checkbox-blank-outline"}
