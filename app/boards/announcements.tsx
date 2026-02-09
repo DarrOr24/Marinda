@@ -30,7 +30,10 @@ import {
 
 import { useAnnouncementsRealtime } from '@/lib/announcements/announcements.realtime';
 
+import { ChipSelector } from '@/components/chip-selector';
 import { Button } from '@/components/ui/button';
+import { ModalCard } from '@/components/ui/modal-card';
+import { ModalShell } from '@/components/ui/modal-shell';
 import { ScreenList } from '@/components/ui/screen-list';
 import {
     DEFAULT_ANNOUNCEMENT_TABS,
@@ -284,15 +287,22 @@ export default function AnnouncementsBoard() {
                 {/* ---------------------------------------------- */}
                 <View style={styles.sortInfoRow}>
                     <View style={styles.sortByGroup}>
-                        <Pressable style={styles.filterBtn} onPress={() => setShowSortMenu(true)}>
-                            <Text style={styles.filterBtnLabel}>Sort: {sortBy}</Text>
-                        </Pressable>
+                        <Button
+                            type="outline"
+                            size="sm"
+                            backgroundColor="#eef2ff"
+                            onPress={() => setShowSortMenu(true)}
+                            title={`Sort: ${sortBy}`}
+                        />
 
-                        <Pressable style={styles.filterBtn} onPress={() => setShowAuthorMenu(true)}>
-                            <Text style={styles.filterBtnLabel}>
-                                By: {filterAuthor === 'all' ? 'All' : filterAuthor}
-                            </Text>
-                        </Pressable>
+                        <Button
+                            type="outline"
+                            size="sm"
+                            backgroundColor="#eef2ff"
+                            onPress={() => setShowAuthorMenu(true)}
+                            title={`By: ${filterAuthor === 'all' ? 'All' : filterAuthor}`}
+                        />
+
                     </View>
 
                     <View style={styles.iconGroup}>
@@ -323,12 +333,13 @@ export default function AnnouncementsBoard() {
                 {/* ---------------------------------------------- */}
                 <View style={styles.searchWrapper}>
                     <TextInput
-                        style={styles.searchInput}
+                        style={[styles.textInput, styles.textInputWithRightIcon]}
                         placeholder="Search announcements..."
                         placeholderTextColor="#94a3b8"
                         value={search}
                         onChangeText={setSearch}
                     />
+
                     {search.length > 0 && (
                         <Pressable style={styles.clearSearchBtn} onPress={() => setSearch('')}>
                             <Ionicons name="close-circle" size={20} color="#999" />
@@ -340,36 +351,75 @@ export default function AnnouncementsBoard() {
                 {/* ROW 3: TABS + +ADD TAB */}
                 {/* ---------------------------------------------- */}
                 <View style={styles.tabsContainer}>
-                    {ALL_TABS.map(tab => {
-                        const isActive = !isSearching && tab.id === activeKind;
-                        return (
-                            <Pressable
-                                key={tab.id}
-                                style={[styles.tab, isActive && styles.tabActive]}
-                                onPress={() => {
-                                    if (!isSearching) {
-                                        setActiveKind(tab.id);
-                                        setNewText('');
-                                    }
-                                }}
-                            >
-                                <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
-                                    {tab.label}
-                                </Text>
-                            </Pressable>
-                        );
-                    })}
+                    <View style={{ flex: 1 }}>
+                        <ChipSelector
+                            value={isSearching ? null : activeKind}
+                            onChange={(val) => {
+                                if (!val) return;
+                                if (!isSearching) {
+                                    setActiveKind(val);
+                                    setNewText('');
+                                }
+                            }}
+                            allowDeselect={false}
+                            options={ALL_TABS.map((t) => ({ label: t.label, value: t.id }))}
+                            chipStyle={(active) => ({
+                                backgroundColor: active ? '#111827' : '#f9fafb',
+                                borderColor: active ? '#111827' : '#d4d4d4',
+                            })}
+                            chipTextStyle={(active) => ({
+                                color: active ? '#ffffff' : '#4b5563',
+                                fontWeight: active ? '600' : '500',
+                            })}
+                        />
+                    </View>
 
-                    <Pressable
-                        style={styles.addTabBtn}
-                        onPress={() => {
-                            setNewTabLabel('');
-                            setNewTabPlaceholder('');
-                            setShowAddTabModal(true);
-                        }}
-                    >
-                        <Text style={styles.addTabBtnText}>+ Add Tab</Text>
-                    </Pressable>
+                    <View style={{ marginLeft: 8, alignSelf: 'flex-start' }}>
+                        <Button
+                            type="secondary"
+                            size="sm"
+                            title="+ Add Tab"
+                            onPress={() => {
+                                setNewTabLabel('');
+                                setNewTabPlaceholder('');
+                                setShowAddTabModal(true);
+                            }}
+                        />
+                    </View>
+                </View>
+
+
+                {/* ---------------------------------------------- */}
+                {/* ADD ANNOUNCEMENT INPUT */}
+                {/* ---------------------------------------------- */}
+                <View
+                    style={[
+                        styles.inputBar,
+                        { paddingBottom: Platform.OS === 'android' ? 24 : 0 },
+                    ]}
+                >
+                    <TextInput
+                        style={[styles.textInput, styles.textInputMultiline]}
+                        placeholder={activeTab.placeholder}
+                        placeholderTextColor="#94a3b8"
+                        value={newText}
+                        onChangeText={setNewText}
+                        multiline
+                        numberOfLines={1}
+                        returnKeyType="done"
+                        onSubmitEditing={() => Keyboard.dismiss()}
+                    />
+
+
+                    <Button
+                        title={createMutation.isPending ? '...' : 'Add'}
+                        type="primary"
+                        size="sm"
+                        onPress={handleAdd}
+                        disabled={!newText.trim() || createMutation.isPending}
+                        style={{ alignSelf: 'flex-end' }}
+                    />
+
                 </View>
 
                 {/* ---------------------------------------------- */}
@@ -407,159 +457,151 @@ export default function AnnouncementsBoard() {
                             {(item.created_by_member_id === myFamilyMemberId ||
                                 member?.role === 'MOM' ||
                                 member?.role === 'DAD') && (
-                                    <Pressable
-                                        style={styles.editBtn}
+                                    <Button
+                                        type="ghost"
+                                        size="sm"
+                                        round
+                                        hitSlop={10}
                                         onPress={() => {
                                             setEditingItem(item);
                                             setEditText(item.text);
                                         }}
-                                    >
-                                        <Text style={styles.deleteBtnText}>✎</Text>
-                                    </Pressable>
+                                        title="✎"
+                                    />
+
                                 )}
 
-                            <Pressable style={styles.deleteBtn} onPress={() => confirmDelete(item)}>
-                                <Text style={styles.deleteBtnText}>✕</Text>
-                            </Pressable>
+                            <Button
+                                type="ghost"
+                                size="sm"
+                                round
+                                hitSlop={10}
+                                onPress={() => confirmDelete(item)}
+                                title="✕"
+                            />
+
                         </View>
                     )}
                     ListEmptyComponent={<Text style={styles.infoText}>{activeTab.emptyText}</Text>}
                 />
 
                 {/* ---------------------------------------------- */}
-                {/* ADD ANNOUNCEMENT INPUT */}
+                {/* EDIT ANNOUNCEMENT MODAL (ModalShell + ModalCard) */}
                 {/* ---------------------------------------------- */}
-                <View
-                    style={[
-                        styles.inputBar,
-                        { paddingBottom: Platform.OS === 'android' ? 24 : 0 },
-                    ]}
+                <ModalShell
+                    visible={!!editingItem}
+                    onClose={() => setEditingItem(null)}
+                    keyboardOffset={0}
                 >
-                    <TextInput
-                        style={styles.input}
-                        placeholder={activeTab.placeholder}
-                        placeholderTextColor="#94a3b8"
-                        value={newText}
-                        onChangeText={setNewText}
-                        multiline
-                        numberOfLines={1}
-                        returnKeyType="done"
-                        onSubmitEditing={() => Keyboard.dismiss()}
-                    />
+                    <ModalCard>
+                        <Text style={styles.modalTitle}>Edit Announcement</Text>
 
-                    <Pressable
-                        style={[
-                            styles.addBtn,
-                            (!newText.trim() || createMutation.isPending) && styles.addBtnDisabled,
-                        ]}
-                        onPress={handleAdd}
-                        disabled={!newText.trim() || createMutation.isPending}
-                    >
-                        <Text style={styles.addBtnText}>
-                            {createMutation.isPending ? '...' : 'Add'}
-                        </Text>
-                    </Pressable>
-                </View>
+                        <TextInput
+                            style={[styles.textInput, styles.textInputMultiline]}
+                            multiline
+                            value={editText}
+                            onChangeText={setEditText}
+                            placeholder="Edit your note..."
+                            placeholderTextColor="#94a3b8"
+                        />
 
-                {/* ---------------------------------------------- */}
-                {/* EDIT ANNOUNCEMENT MODAL */}
-                {/* ---------------------------------------------- */}
-                {editingItem && (
-                    <View style={styles.modalOverlay}>
-                        <View style={styles.modalBox}>
-                            <Text style={styles.modalTitle}>Edit Announcement</Text>
-
-                            <TextInput
-                                style={styles.modalInput}
-                                multiline
-                                value={editText}
-                                onChangeText={setEditText}
+                        <View style={styles.modalButtons}>
+                            <Button
+                                type="ghost"
+                                size="sm"
+                                title="Cancel"
+                                onPress={() => setEditingItem(null)}
                             />
 
-                            <View style={styles.modalButtons}>
-                                <Pressable onPress={() => setEditingItem(null)}>
-                                    <Text style={styles.modalCancel}>Cancel</Text>
-                                </Pressable>
+                            <Button
+                                type="primary"
+                                size="sm"
+                                title={updateMutation.isPending ? '...' : 'Save'}
+                                disabled={!editText.trim() || updateMutation.isPending || !editingItem}
+                                onPress={() => {
+                                    if (!editingItem) return;
 
-                                <Pressable
-                                    onPress={() => {
-                                        updateMutation.mutate(
-                                            { id: editingItem.id, updates: { text: editText.trim() } },
-                                            {
-                                                onSuccess: () => setEditingItem(null),
-                                                onError: err => Alert.alert('Error', err.message),
-                                            }
-                                        );
-                                    }}
-                                >
-                                    <Text style={styles.modalSave}>Save</Text>
-                                </Pressable>
-                            </View>
+                                    updateMutation.mutate(
+                                        { id: editingItem.id, updates: { text: editText.trim() } },
+                                        {
+                                            onSuccess: () => setEditingItem(null),
+                                            onError: err => Alert.alert('Error', err.message),
+                                        }
+                                    );
+                                }}
+                            />
                         </View>
-                    </View>
-                )}
+                    </ModalCard>
+                </ModalShell>
+
 
                 {/* ---------------------------------------------- */}
-                {/* ADD TAB MODAL */}
+                {/* ADD TAB MODAL (ModalShell + ModalCard) */}
                 {/* ---------------------------------------------- */}
-                {showAddTabModal && (
-                    <View style={styles.modalOverlay}>
-                        <View style={styles.modalBox}>
-                            <Text style={styles.modalTitle}>Create New Tab</Text>
+                <ModalShell
+                    visible={showAddTabModal}
+                    onClose={() => setShowAddTabModal(false)}
+                    keyboardOffset={0}
+                >
+                    <ModalCard>
+                        <Text style={styles.modalTitle}>Create New Tab</Text>
 
-                            <TextInput
-                                style={styles.modalInput}
-                                placeholder="Tab name (e.g., Holidays)"
-                                placeholderTextColor="#94a3b8"
-                                value={newTabLabel}
-                                onChangeText={setNewTabLabel}
+                        <TextInput
+                            style={styles.textInput}
+                            placeholder="Tab name (e.g., Holidays)"
+                            placeholderTextColor="#94a3b8"
+                            value={newTabLabel}
+                            onChangeText={setNewTabLabel}
+                        />
+
+                        <TextInput
+                            style={[styles.textInput, styles.textInputMultiline]}
+                            placeholder={
+                                newTabLabel.trim()
+                                    ? buildDefaultPlaceholder(newTabLabel)
+                                    : 'Placeholder (optional)'
+                            }
+                            placeholderTextColor="#94a3b8"
+                            value={newTabPlaceholder}
+                            onChangeText={setNewTabPlaceholder}
+                        />
+
+                        <View style={styles.modalButtons}>
+                            <Button
+                                type="ghost"
+                                size="sm"
+                                title="Cancel"
+                                onPress={() => setShowAddTabModal(false)}
                             />
 
-                            <TextInput
-                                style={styles.modalInput}
-                                placeholder={
-                                    newTabLabel.trim()
-                                        ? buildDefaultPlaceholder(newTabLabel)
-                                        : 'Placeholder (optional)'
-                                }
-                                placeholderTextColor="#94a3b8"
-                                value={newTabPlaceholder}
-                                onChangeText={setNewTabPlaceholder}
+                            <Button
+                                type="primary"
+                                size="sm"
+                                title={createTabMutation.isPending ? '...' : 'Create'}
+                                disabled={!newTabLabel.trim() || createTabMutation.isPending}
+                                onPress={() => {
+                                    const trimmed = newTabLabel.trim();
+                                    if (!trimmed) return;
+
+                                    const finalPlaceholder =
+                                        newTabPlaceholder.trim() || buildDefaultPlaceholder(trimmed);
+
+                                    createTabMutation.mutate(
+                                        { familyId: familyId!, label: trimmed, placeholder: finalPlaceholder },
+                                        {
+                                            onSuccess: newTab => {
+                                                setShowAddTabModal(false);
+                                                setActiveKind(newTab.id);
+                                            },
+                                            onError: err => Alert.alert('Error', err.message),
+                                        }
+                                    );
+                                }}
                             />
-
-                            <View style={styles.modalButtons}>
-                                <Pressable onPress={() => setShowAddTabModal(false)}>
-                                    <Text style={styles.modalCancel}>Cancel</Text>
-                                </Pressable>
-
-                                <Pressable
-                                    onPress={() => {
-                                        const trimmed = newTabLabel.trim();
-                                        if (!trimmed) return;
-
-                                        const finalPlaceholder =
-                                            newTabPlaceholder.trim() || buildDefaultPlaceholder(trimmed);
-
-                                        createTabMutation.mutate(
-                                            { familyId: familyId!, label: trimmed, placeholder: finalPlaceholder },
-                                            {
-                                                onSuccess: newTab => {
-                                                    setShowAddTabModal(false);
-                                                    setActiveKind(newTab.id);
-                                                },
-                                                onError: err => Alert.alert('Error', err.message),
-                                            }
-                                        );
-                                    }}
-                                >
-                                    <Text style={styles.modalSave}>
-                                        {createTabMutation.isPending ? '...' : 'Create'}
-                                    </Text>
-                                </Pressable>
-                            </View>
                         </View>
-                    </View>
-                )}
+                    </ModalCard>
+                </ModalShell>
+
 
                 {/* ---------------------------------------------- */}
                 {/* SORT MENU */}
@@ -638,6 +680,32 @@ const styles = StyleSheet.create({
     errorText: { fontSize: 16, textAlign: 'center', color: 'red' },
 
     // --------------------------------------
+    // SHARED INPUTS
+    // --------------------------------------
+    textInput: {
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        color: '#111827',
+        marginBottom: 6,
+    },
+
+    textInputMultiline: {
+        minHeight: 44,
+        maxHeight: 120,
+        textAlignVertical: 'top',
+    },
+
+    // used when you need space for the clear "X"
+    textInputWithRightIcon: {
+        paddingRight: 36,
+    },
+
+
+    // --------------------------------------
     // ROW 1: SORT — BY — INFO
     // --------------------------------------
     sortInfoRow: {
@@ -652,19 +720,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 8,
     },
-    filterBtn: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        backgroundColor: '#eef2ff',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#d1d5db',
-        marginRight: 6,
-    },
-    filterBtnLabel: {
-        fontSize: 14,
-        color: '#1e3a8a',
-    },
+
 
     iconGroup: {
         flexDirection: 'row',
@@ -677,18 +733,9 @@ const styles = StyleSheet.create({
     // --------------------------------------
     searchWrapper: {
         position: 'relative',
-        marginBottom: 12,
+        marginBottom: 4,
     },
 
-    searchInput: {
-        backgroundColor: '#fff',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#ddd',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        paddingRight: 32,
-    },
 
     clearSearchBtn: {
         position: 'absolute',
@@ -703,39 +750,10 @@ const styles = StyleSheet.create({
     // --------------------------------------
     tabsContainer: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-        marginBottom: 12,
+        alignItems: 'flex-start',
+        gap: 4,
+
         width: '100%',
-    },
-
-    tab: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 999,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: '#d4d4d4',
-        backgroundColor: '#f9fafb',
-    },
-    tabActive: {
-        backgroundColor: '#111827',
-        borderColor: '#111827',
-    },
-    tabLabel: { fontSize: 14, color: '#4b5563' },
-    tabLabelActive: { color: 'white', fontWeight: '600' },
-
-    addTabBtn: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        backgroundColor: '#e5e7eb',
-        borderRadius: 999,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: '#ccc',
-    },
-    addTabBtnText: {
-        fontSize: 14,
-        color: '#1f2937',
-        fontWeight: '500',
     },
 
     // --------------------------------------
@@ -753,39 +771,13 @@ const styles = StyleSheet.create({
     itemText: { fontSize: 16 },
     itemMeta: { fontSize: 12, opacity: 0.6, marginTop: 2 },
 
-    deleteBtn: { padding: 8, alignSelf: 'center' },
-    deleteBtnText: { fontSize: 18, opacity: 0.6 },
-    editBtn: { padding: 8, alignSelf: 'center' },
-
     // --------------------------------------
     // ADD ANNOUNCEMENT
     // --------------------------------------
     inputBar: {
-        borderTopWidth: StyleSheet.hairlineWidth,
-        borderTopColor: '#ddd',
         paddingTop: 8,
-        marginTop: 8,
+        marginTop: 4,
     },
-    input: {
-        minHeight: 40,
-        maxHeight: 120,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: '#ccc',
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        marginBottom: 8,
-        textAlignVertical: 'top',
-    },
-    addBtn: {
-        alignSelf: 'flex-end',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 999,
-        backgroundColor: '#333',
-    },
-    addBtnDisabled: { opacity: 0.4 },
-    addBtnText: { color: 'white', fontWeight: '600' },
 
     // --------------------------------------
     // SHARED MODAL STYLES
@@ -800,28 +792,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    modalBox: {
-        width: '85%',
-        padding: 20,
-        backgroundColor: 'white',
-        borderRadius: 12,
-    },
+
     modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
-    modalInput: {
-        minHeight: 40,
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
-        padding: 10,
-        marginBottom: 16,
-    },
+
     modalButtons: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
         gap: 20,
     },
-    modalCancel: { fontSize: 16, color: '#64748b' },
-    modalSave: { fontSize: 16, color: '#2563eb', fontWeight: '700' },
 
     // --------------------------------------
     // MENUS
