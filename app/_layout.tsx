@@ -135,11 +135,20 @@ function RootNavigator() {
             headerTitle: 'Groceries 🛒',
           }}
         />
+
       </Stack.Protected>
 
       <Stack.Protected guard={!isLoggedIn}>
         <Stack.Screen name="login" options={{ headerShown: false }} />
       </Stack.Protected>
+
+      {/* Invite: reachable when logged in (accept flow) or not (persist token → login) */}
+      <Stack.Screen
+        name="invite"
+        options={{
+          headerShown: false,
+        }}
+      />
 
       <Stack.Screen name="+not-found" />
     </Stack>

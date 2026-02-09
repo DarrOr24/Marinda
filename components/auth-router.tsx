@@ -1,7 +1,6 @@
 // components/auth-router.tsx
 import { usePathname, useRouter } from 'expo-router'
 import { useEffect } from 'react'
-import { ActivityIndicator, View } from 'react-native'
 
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useFamily } from '@/lib/families/families.hooks'
@@ -13,18 +12,12 @@ import { isKidRole } from '@/utils/validation.utils'
 const ENTRY_ROUTES = [
   '/',
   '/login',
+  '/invite',
   '/onboarding/create-or-join',
   '/onboarding/details',
-  '/select-family',
+  '/onboarding/accept-invite',
+  '/onboarding/select-family',
 ]
-
-function CenterLoader() {
-  return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <ActivityIndicator />
-    </View>
-  )
-}
 
 function isProfileComplete(p: Profile | undefined) {
   if (!p) return false
@@ -42,6 +35,7 @@ export function AuthRouter() {
     memberships,
     activeFamilyId,
     member,
+    pendingInviteToken,
   } = useAuthContext()
 
   const profile = useProfile(profileId)
@@ -49,19 +43,24 @@ export function AuthRouter() {
 
   const isEntryRoute = ENTRY_ROUTES.includes(pathname)
 
-  const shouldBlock =
-    isLoading ||
-    (isLoggedIn && profile.isLoading) ||
-    (isLoggedIn && !memberships) ||
-    (isLoggedIn && memberships && memberships.length > 1 && !activeFamilyId) ||
-    (isLoggedIn && activeFamilyId && !member) ||
-    (activeFamilyId && familyMembers.isLoading)
-
   useEffect(() => {
     if (isLoading) return
 
-    // Not logged in -> let the app show login / public routes
-    if (!isLoggedIn) return
+    // Not logged in: only allow login and invite; redirect /invite -> login so they can sign in
+    if (!isLoggedIn) {
+      if (pathname === '/invite') {
+        router.replace('/login')
+      }
+      return
+    }
+
+    // Logged in with a pending invite -> onboarding accept-invite step
+    if (pendingInviteToken) {
+      if (pathname !== '/onboarding/accept-invite') {
+        router.replace('/onboarding/accept-invite')
+      }
+      return
+    }
 
     // Wait until memberships loaded
     if (!memberships) return
@@ -95,10 +94,15 @@ export function AuthRouter() {
       return
     }
 
-    // 3) Has families but no active -> select family (only if more than 1)
+    // 3) Has families but no active -> select family (only if more than 1); allow create/join so they can add another family
     if (!activeFamilyId) {
-      if (memberships.length > 1 && pathname !== '/select-family') {
-        router.replace('/select-family')
+      const onSelectFamily = pathname === '/onboarding/select-family'
+      const onCreateOrJoin =
+        pathname === '/onboarding/create-or-join' ||
+        pathname === '/onboarding/create' ||
+        pathname === '/onboarding/join'
+      if (memberships.length > 1 && !onSelectFamily && !onCreateOrJoin) {
+        router.replace('/onboarding/select-family')
       }
       return
     }
@@ -126,11 +130,12 @@ export function AuthRouter() {
     activeFamilyId,
     member,
     pathname,
+    pendingInviteToken,
     router,
     profile.isLoading,
     profile.data,
     familyMembers.data,
   ])
 
-  return shouldBlock ? <CenterLoader /> : null
+  return null
 }

@@ -21,7 +21,7 @@ type Stage = 'IDENTIFIER' | 'OTP'
 type Mode = 'phone' | 'email'
 
 export default function LoginScreen() {
-  const { startAuth, confirmOtp, pendingIdentifier } = useAuthContext()
+  const { startAuth, confirmOtp, pendingIdentifier, pendingInviteToken } = useAuthContext()
 
   const [stage, setStage] = useState<Stage>('IDENTIFIER')
   const [mode, setMode] = useState<Mode>('phone')
@@ -123,6 +123,11 @@ export default function LoginScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Welcome to Marinda 💫</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
+        {!!pendingInviteToken && (
+          <Text style={styles.inviteNote}>
+            You have a family invite waiting. Finish signing in to accept it.
+          </Text>
+        )}
       </View>
 
       {stage === 'IDENTIFIER' ? (
@@ -232,6 +237,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 8,
     marginTop: -6,
+  },
+
+  inviteNote: {
+    fontSize: 12,
+    color: '#16a34a',
+    textAlign: 'center',
+    paddingHorizontal: 8,
+    marginTop: 4,
   },
 
   devLogin: {

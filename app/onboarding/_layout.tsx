@@ -25,9 +25,11 @@ export default function OnboardingLayout() {
 
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#fff' } }}>
         <Stack.Screen name="details" />
+        <Stack.Screen name="select-family" />
         <Stack.Screen name="create-or-join" />
         <Stack.Screen name="create" />
         <Stack.Screen name="join" />
+        <Stack.Screen name="accept-invite" />
       </Stack>
     </View>
   )

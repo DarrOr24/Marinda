@@ -51,6 +51,7 @@ export async function fetchMember(
     .select(MEMBER_WITH_PROFILE_SELECT)
     .eq("family_id", familyId)
     .eq("profile_id", profileId)
+    .eq("is_active", true)
     .single();
 
   if (error) throw new Error(error.message);
@@ -225,4 +226,12 @@ export async function cancelFamilyInvite(inviteId: string): Promise<boolean> {
 
   if (error) throw new Error(error.message);
   return true;
+}
+
+export async function getInviteStatus(inviteToken: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('get_invite_status', {
+    invite_token: inviteToken,
+  })
+  if (error) throw new Error(error.message)
+  return (data as string | null) ?? null
 }

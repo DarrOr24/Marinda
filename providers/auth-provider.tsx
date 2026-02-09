@@ -13,7 +13,9 @@ import { fetchProfileByAuthUserId } from '@/lib/profiles/profiles.api'
 import { Profile } from '@/lib/profiles/profiles.types'
 import { getSupabase } from '@/lib/supabase'
 
-const ACTIVE_FAMILY_KEY = 'marinda:activeFamilyId'
+
+export const ACTIVE_FAMILY_KEY = 'marinda:activeFamilyId'
+export const PENDING_INVITE_KEY = 'marinda:pendingInviteToken'
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const supabase = getSupabase()
@@ -43,6 +45,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
     else await appStorage.removeItem(ACTIVE_FAMILY_KEY)
   }, [])
 
+  const [pendingInviteToken, _setPendingInviteToken] = useState<string | null>(null)
+  const setPendingInviteToken = useCallback(async (token: string | null) => {
+    _setPendingInviteToken(token)
+    if (token) await appStorage.setItem(PENDING_INVITE_KEY, token)
+    else await appStorage.removeItem(PENDING_INVITE_KEY)
+  }, [])
+
   const [pendingIdentifier, setPendingIdentifier] = useState<IdentifierInfo | null>(null)
 
   const cleanState = useCallback(async () => {
@@ -51,6 +60,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setProfile(null)
     setPendingIdentifier(null)
     await setActiveFamilyId(null)
+    await setPendingInviteToken(null)
   }, [setActiveFamilyId])
 
   const fetchMemberships = useCallback(async () => {
@@ -66,16 +76,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
         .from('family_members')
         .select(`family_id, family:families(id, name, code)`)
         .eq('profile_id', profile.id)
+        .eq('is_active', true)
         .order('joined_at', { ascending: true })
 
       if (error) throw error
 
       setMemberships(
-        (data ?? []).map((m: any) => ({
-          familyId: m.family.id,
-          familyName: m.family.name,
-          familyCode: m.family.code,
-        })),
+        (data ?? [])
+          .filter((m: any) => m.family)
+          .map((m: any) => ({
+            familyId: m.family.id,
+            familyName: m.family.name,
+            familyCode: m.family.code,
+          })),
       )
     } catch (e) {
       console.error('Error fetching memberships:', e)
@@ -192,6 +205,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
     restoreActiveFamily()
   }, [authUserId, memberships, setActiveFamilyId])
 
+  // Restore pending invite token on app start
+  useEffect(() => {
+    const restorePendingInvite = async () => {
+      const stored = await appStorage.getItem(PENDING_INVITE_KEY)
+      _setPendingInviteToken(stored ?? null)
+    }
+    restorePendingInvite()
+  }, [])
+
   // Fetch the profile when the session changes
   useEffect(() => {
     const fetchCurrProfile = async () => {
@@ -283,6 +305,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signOut,
       activeFamilyId,
       setActiveFamilyId,
+      pendingInviteToken,
+      setPendingInviteToken,
     }),
     [
       session,
@@ -300,6 +324,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signOut,
       activeFamilyId,
       setActiveFamilyId,
+      pendingInviteToken,
+      setPendingInviteToken,
     ],
   )
 

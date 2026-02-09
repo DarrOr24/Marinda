@@ -26,6 +26,8 @@ export type AuthData = {
   signOut: () => Promise<void>
   activeFamilyId: string | null
   setActiveFamilyId: (id: string | null) => Promise<void>
+  pendingInviteToken: string | null
+  setPendingInviteToken: (token: string | null) => Promise<void>
 }
 
 export const AuthContext = createContext<AuthData>({
@@ -46,6 +48,8 @@ export const AuthContext = createContext<AuthData>({
   signOut: async () => { },
   activeFamilyId: null,
   setActiveFamilyId: async () => { },
+  pendingInviteToken: null,
+  setPendingInviteToken: async () => { },
 })
 
 export const useAuthContext = () => useContext(AuthContext)

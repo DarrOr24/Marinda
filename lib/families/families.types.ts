@@ -14,7 +14,7 @@ export type Membership = {
   familyCode: string;
 };
 
-export type FamilyInviteStatus = "pending" | "accepted" | "revoked" | "expired";
+export type FamilyInviteStatus = "pending" | "accepted" | "revoked" | "expired" | "rejected";
 
 export interface FamilyInvite {
   id: string;
