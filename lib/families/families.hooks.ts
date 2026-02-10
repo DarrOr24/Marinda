@@ -5,6 +5,7 @@ import { useAuthContext } from "@/hooks/use-auth-context";
 import { useToast } from "@/hooks/use-toast-context";
 import {
   cancelFamilyInvite,
+  createKidMember,
   fetchFamily,
   fetchFamilyInvites,
   fetchFamilyMembers,
@@ -16,6 +17,7 @@ import {
   updateFamilyAvatar,
   updateMemberRole,
 } from "@/lib/families/families.api";
+import type { CreateKidMemberParams } from "@/lib/families/families.api";
 import { FamilyInvite, MyFamily } from "@/lib/families/families.types";
 import { FamilyMember, Role } from "@/lib/members/members.types";
 
@@ -181,6 +183,23 @@ export function useCancelFamilyInvite(familyId: string) {
       cancelFamilyInvite(inviteId),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ["family-invites", familyId] }),
+  });
+}
+
+export function useCreateKidMember(familyId: string) {
+  const qc = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation({
+    mutationFn: (params: CreateKidMemberParams) =>
+      createKidMember(familyId, params),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["family-members", familyId] });
+      showToast("Kid added to the family.", "success");
+    },
+    onError: (error: Error) => {
+      showToast(error?.message ?? "Could not add kid. Please try again.", "error");
+    },
   });
 }
 

@@ -32,6 +32,32 @@ export async function rpcJoinFamily(
   return data as string;
 }
 
+export type CreateKidMemberParams = {
+  firstName: string
+  lastName?: string | null
+  gender: 'MALE' | 'FEMALE'
+  birthDate: string // YYYY-MM-DD
+  nickname?: string | null
+  role: Role
+}
+
+export async function createKidMember(
+  familyId: string,
+  params: CreateKidMemberParams,
+): Promise<string> {
+  const { data, error } = await supabase.rpc('create_kid_member', {
+    p_family_id: familyId,
+    p_first_name: params.firstName.trim(),
+    p_last_name: params.lastName?.trim() ?? null,
+    p_gender: params.gender,
+    p_birth_date: params.birthDate || null,
+    p_nickname: params.nickname?.trim() ?? null,
+    p_role: params.role,
+  })
+  if (error) throw new Error(error.message)
+  return data as string
+}
+
 export async function fetchFamily(familyId: string) {
   const { data, error } = await supabase
     .from("families")

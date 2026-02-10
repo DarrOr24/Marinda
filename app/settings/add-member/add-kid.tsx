@@ -1,31 +1,58 @@
 // app/settings/add-member/add-kid.tsx
-import { useMemo, useState } from 'react'
-import { Alert, StyleSheet, Text, TextInput } from 'react-native'
+import { useState } from 'react'
+import { StyleSheet, Text, TextInput } from 'react-native'
+import { useRouter } from 'expo-router'
 
 import { ChipSelector } from '@/components/chip-selector'
 import { DatePicker } from '@/components/date-picker'
 import { Button, Screen, Section } from '@/components/ui'
+import { useAuthContext } from '@/hooks/use-auth-context'
+import { useCreateKidMember, useFamily } from '@/lib/families/families.hooks'
 import { ROLE_OPTIONS, type Role } from '@/lib/members/members.types'
-import { GENDER_OPTIONS } from '@/lib/profiles/profiles.types'
+import { GENDER_OPTIONS, type Gender } from '@/lib/profiles/profiles.types'
 
+
+const KID_ROLE_OPTIONS = ROLE_OPTIONS.filter((o) =>
+  o.value === 'TEEN' || o.value === 'CHILD'
+)
 
 export default function AddKidWithoutPhoneScreen() {
+  const router = useRouter()
+  const { member } = useAuthContext()
+  const familyId = member?.family_id
+
+  const { family } = useFamily(familyId ?? undefined)
+  const familyName = family.data?.name ?? null
+
   const [firstName, setFirstName] = useState('')
-  const [gender, setGender] = useState<string | null>(null)
+  const [gender, setGender] = useState<Gender | null>(null)
   const [birthDate, setBirthDate] = useState('')
   const [nickname, setNickname] = useState('')
   const [role, setRole] = useState<Role>('CHILD')
 
-  const showRoleWarning = useMemo(() => role !== 'CHILD', [role])
+  const createKid = useCreateKidMember(familyId ?? '')
 
   const canCreate =
+    !!familyId &&
     firstName.trim().length > 0 &&
     gender !== null &&
     birthDate.trim().length > 0
 
   function onCreate() {
-    // Step 4+: call RPC create kid profile + family_member + optional avatar upload
-    Alert.alert('Not implemented yet', 'We’ll wire this in Step 4.')
+    if (!familyId || !gender) return
+    createKid.mutate(
+      {
+        firstName: firstName.trim(),
+        lastName: familyName,
+        gender,
+        birthDate: birthDate.trim(),
+        nickname: nickname.trim() || null,
+        role,
+      },
+      {
+        onSuccess: () => router.replace('/settings/family'),
+      },
+    )
   }
 
   return (
@@ -33,7 +60,7 @@ export default function AddKidWithoutPhoneScreen() {
       <Section>
         <Text style={styles.title}>Add kid (no phone)</Text>
         <Text style={styles.subtitle}>
-          This creates a family member without an account.
+          This creates a family member without an account. It's meant for kids who don't have a phone.
         </Text>
 
         <Text style={styles.label}>Kid’s first name</Text>
@@ -43,7 +70,7 @@ export default function AddKidWithoutPhoneScreen() {
         <ChipSelector
           options={GENDER_OPTIONS}
           value={gender}
-          onChange={setGender}
+          onChange={(v) => setGender((v as Gender) ?? null)}
           style={{ marginTop: 4 }}
         />
 
@@ -62,17 +89,11 @@ export default function AddKidWithoutPhoneScreen() {
 
         <Text style={styles.label}>Role</Text>
         <ChipSelector
-          options={ROLE_OPTIONS}
+          options={KID_ROLE_OPTIONS}
           value={role}
           onChange={(v) => setRole((v as Role) ?? 'CHILD')}
           style={{ marginTop: 4 }}
         />
-
-        {showRoleWarning ? (
-          <Text style={styles.warning}>
-            Note: if this family member has a phone, it’s better to invite them by SMS instead.
-          </Text>
-        ) : null}
 
         {/* Step 4+: avatar selection for member avatar */}
 
@@ -81,7 +102,7 @@ export default function AddKidWithoutPhoneScreen() {
           size="lg"
           fullWidth
           onPress={onCreate}
-          disabled={!canCreate}
+          disabled={!canCreate || createKid.isPending}
           bold
         />
       </Section>
@@ -102,14 +123,5 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     fontSize: 16,
     color: '#0f172a',
-  },
-  warning: {
-    fontSize: 12,
-    color: '#92400e',
-    backgroundColor: '#fffbeb',
-    borderColor: '#f59e0b',
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 10,
   },
 })
