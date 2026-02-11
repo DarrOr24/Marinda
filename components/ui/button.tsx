@@ -47,8 +47,9 @@ type ButtonProps = {
   rightIconColor?: string;
   hitSlop?: number | Insets;
 
-  // NEW — optional override
+  // optional overrides
   backgroundColor?: string;
+  titleColor?: string;
 };
 
 export function Button({
@@ -69,11 +70,14 @@ export function Button({
   rightIconColor,
   hitSlop,
   backgroundColor,
+  titleColor,
 }: ButtonProps) {
   const scheme = useColorScheme();
   const theme = scheme === 'dark' ? Colors.dark : Colors.light;
 
   const typeStyles = getTypeStyles(type, theme);
+
+  const resolvedTextColor = titleColor ?? (typeStyles.text?.color ?? '#000');
 
   const sizeButtonStyle =
     size === 'sm'
@@ -95,9 +99,8 @@ export function Button({
 
   const roundSize = ROUND_SIZES[size];
 
-  const textColor = (typeStyles.text && typeStyles.text.color) || '#000';
-  const resolvedLeftIconColor = leftIconColor ?? textColor;
-  const resolvedRightIconColor = rightIconColor ?? textColor;
+  const resolvedLeftIconColor = leftIconColor ?? resolvedTextColor;
+  const resolvedRightIconColor = rightIconColor ?? resolvedTextColor;
 
   const hasText = Boolean(title);
   const hasLeftIcon = Boolean(leftIcon);
@@ -161,6 +164,7 @@ export function Button({
               styles.text,
               sizeTextStyle,
               typeStyles.text,
+              titleColor ? { color: titleColor } : undefined,
               bold && styles.textBold,
               uppercase && styles.uppercase,
             ]}
