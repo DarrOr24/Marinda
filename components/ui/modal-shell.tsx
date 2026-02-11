@@ -47,7 +47,7 @@ export function ModalShell({
                 ]}
             >
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <View style={{ width: "100%" }}>{children}</View>
+                    <View style={styles.content}>{children}</View>
                 </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
         </Modal>
@@ -56,5 +56,11 @@ export function ModalShell({
 
 const styles = StyleSheet.create({
     overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.25)" },
-    backdrop: { flex: 1, justifyContent: "center", paddingHorizontal: 16 },
+    backdrop: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 16,
+    },
+    content: { flex: 1, width: "100%", minHeight: 0 },
 });

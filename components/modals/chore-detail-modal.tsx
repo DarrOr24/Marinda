@@ -301,21 +301,19 @@ export default function ChoreDetailModal({
         <ModalShell
             visible={visible}
             onClose={requestClose}
-            // keep bottom-sheet feel
-            backdropStyle={{ justifyContent: 'flex-end' }}
-            keyboardOffset={0}
+            keyboardOffset={40}
         >
-            <ModalCard radius={20} padded elevated style={s.card}>
+            <ModalCard style={s.card} maxHeightPadding={24} bottomPadding={12}>
                 {/* HEADER (outside scroll) */}
                 <Text style={s.title}>{chore.title}</Text>
                 <Text style={s.status}>{chore.status.toUpperCase()}</Text>
 
                 {/* SCROLLING BODY */}
                 <ScrollView
-                    nestedScrollEnabled
-                    contentContainerStyle={{ paddingBottom: 16 }}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 16 }}
                 >
                     {chore.points > 0 && (
                         <Text style={[s.text, { marginTop: 2 }]}>
@@ -641,6 +639,7 @@ export default function ChoreDetailModal({
 const s = StyleSheet.create({
     card: {
         width: '100%',
+        maxWidth: 460,
     },
 
     title: { fontSize: 20, fontWeight: '900', color: '#0f172a' },

@@ -123,17 +123,8 @@ export default function AddActivityModal({
   }
 
   return (
-    <ModalShell
-      visible={visible}
-      onClose={onClose}
-      keyboardOffset={40}
-      backdropStyle={{
-        justifyContent: "flex-end",
-        paddingHorizontal: 0,
-        paddingBottom: 0,
-      }}
-    >
-      <ModalCard style={styles.sheet} maxHeightPadding={24} padded radius={0}>
+    <ModalShell visible={visible} onClose={onClose} keyboardOffset={40}>
+      <ModalCard style={styles.sheet} maxHeightPadding={24} bottomPadding={12}>
         <View style={styles.header}>
           <Text style={styles.title}>
             {mode === "edit" ? "Edit Activity ✏️" : "New Activity ✨"}
@@ -144,10 +135,10 @@ export default function AddActivityModal({
         </View>
 
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 12 }}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 16 }}
         >
           <DateRangePicker
             baseDateStr={initialDateStr}
@@ -239,11 +230,7 @@ export default function AddActivityModal({
 const styles = StyleSheet.create({
   sheet: {
     width: "100%",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    // keep it looking like a bottom sheet even though ModalCard sets radius=0
-    // (ModalCard uses borderRadius, but we're overriding corners here)
-    overflow: "hidden",
+    maxWidth: 460,
   },
 
   header: {
