@@ -11,6 +11,7 @@ import {
   View
 } from "react-native";
 
+import { ChipSelector } from "@/components/chip-selector";
 import { KidSwitcher } from "@/components/kid-switcher";
 import MemberSidebar from "@/components/members-sidebar";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,9 @@ export default function MemberProfile() {
   const [adjustDelta, setAdjustDelta] = useState("");
   const [adjustReason, setAdjustReason] = useState("");
   const [adjustSaving, setAdjustSaving] = useState(false);
+
+  // Recent activity time range: 7, 30, or 90 days
+  const [historyRangeDays, setHistoryRangeDays] = useState<number>(30);
 
   const currentRole = (member?.role as Role | undefined) ?? "TEEN";
   const isParent = isParentRole(currentRole);
@@ -81,6 +85,10 @@ export default function MemberProfile() {
   useEffect(() => {
     if (!activeFamilyId || !viewedMemberId) return;
 
+    const since = new Date();
+    since.setDate(since.getDate() - historyRangeDays);
+    const sinceISO = since.toISOString();
+
     let cancelled = false;
 
     (async () => {
@@ -90,7 +98,9 @@ export default function MemberProfile() {
 
         const rows = await fetchMemberPointsHistory(
           activeFamilyId,
-          viewedMemberId
+          viewedMemberId,
+          50,
+          sinceISO
         );
 
         if (cancelled) return;
@@ -110,7 +120,7 @@ export default function MemberProfile() {
     return () => {
       cancelled = true;
     };
-  }, [activeFamilyId, viewedMemberId]);
+  }, [activeFamilyId, viewedMemberId, historyRangeDays]);
 
 
   const handleAdjustPoints = async () => {
@@ -160,7 +170,14 @@ export default function MemberProfile() {
       setAdjustReason("");
 
       if (familyMembers?.refetch) familyMembers.refetch();
-      const rows = await fetchMemberPointsHistory(activeFamilyId, viewedMemberId);
+      const since = new Date();
+      since.setDate(since.getDate() - historyRangeDays);
+      const rows = await fetchMemberPointsHistory(
+        activeFamilyId,
+        viewedMemberId,
+        50,
+        since.toISOString()
+      );
       setHistory(rows);
     } catch (e) {
       console.error("adjustMemberPoints failed", e);
@@ -336,6 +353,17 @@ export default function MemberProfile() {
       {/* Recent points activity */}
       <View style={styles.card}>
         <Text style={styles.historyTitle}>Recent points activity</Text>
+
+        <ChipSelector
+          value={String(historyRangeDays)}
+          onChange={(v) => v && setHistoryRangeDays(Number(v))}
+          options={[
+            { label: "Past week", value: "7" },
+            { label: "Past month", value: "30" },
+            { label: "Past 3 months", value: "90" },
+          ]}
+          style={{ marginBottom: 12 }}
+        />
 
         {historyLoading && (
           <View style={styles.historyEmpty}>
