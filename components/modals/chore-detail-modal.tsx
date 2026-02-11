@@ -310,6 +310,7 @@ export default function ChoreDetailModal({
 
                 {/* SCROLLING BODY */}
                 <ScrollView
+                    style={{ flex: 1, minHeight: 0 }}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
                     showsVerticalScrollIndicator={false}
@@ -638,6 +639,7 @@ export default function ChoreDetailModal({
 
 const s = StyleSheet.create({
     card: {
+        flex: 1,
         width: '100%',
         maxWidth: 460,
     },
