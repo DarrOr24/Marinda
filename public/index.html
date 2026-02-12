@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Marinda</title>
+    <meta name="description" content="Marinda helps families coordinate routines, chores, and moments—together." />
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; }
+      .wrap { max-width: 860px; margin: 0 auto; padding: 48px 20px; }
+      .card { border: 1px solid #e5e5e5; border-radius: 16px; padding: 24px; }
+      .row { display: flex; gap: 12px; flex-wrap: wrap; }
+      .btn { display: inline-flex; align-items: center; justify-content: center; padding: 12px 16px; border-radius: 12px; border: 1px solid #ddd; text-decoration: none; color: #111; }
+      .btn.primary { border-color: #111; }
+      .muted { color: #666; }
+      .hero { margin-bottom: 18px; }
+      h1 { font-size: 40px; margin: 0 0 10px; }
+      p { font-size: 16px; line-height: 1.5; }
+      footer { margin-top: 22px; font-size: 13px; color: #777; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="hero">
+        <h1>Marinda</h1>
+        <p class="muted">A simple way for families to coordinate routines, chores, and moments—together.</p>
+      </div>
+
+      <div class="card">
+        <p><strong>Get the app</strong></p>
+        <p class="muted">If you received an invite link via SMS, open it on this device to join.</p>
+
+        <div class="row">
+          <!-- Replace # with real store links when you have them -->
+          <a class="btn primary" href="#" aria-disabled="true" onclick="return false;">Download on iOS (soon)</a>
+          <a class="btn primary" href="#" aria-disabled="true" onclick="return false;">Get it on Android (soon)</a>
+        </div>
+
+        <footer>
+          © <span id="y"></span> Marinda • <span class="muted">Early access</span>
+        </footer>
+      </div>
+    </div>
+
+    <script>
+      document.getElementById("y").textContent = new Date().getFullYear();
+    </script>
+  </body>
+</html>

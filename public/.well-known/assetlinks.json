@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.marinda.marinda",
+      "sha256_cert_fingerprints": [
+        "04:5B:8E:6A:65:15:42:BD:38:9D:20:79:47:30:C6:C6:ED:14:F3:FA:12:FF:67:60:28:5E:11:F5:8B:BD:CC:F8"
+      ]
+    }
+  }
+]
