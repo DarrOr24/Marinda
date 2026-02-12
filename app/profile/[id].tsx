@@ -256,11 +256,12 @@ export default function MemberProfile() {
       withBackground
       left={<MemberSidebar />}
       contentPadding={16}
+      contentStyle={{ paddingLeft: 20, paddingRight: 16 }}
       gap="md"
     >
       {isParent && (
         <>
-          <View style={{ alignSelf: "flex-start", marginBottom: 8 }}>
+          <View style={{ alignSelf: "flex-start" }}>
             <KidSwitcher
               kids={memberList.filter((m) => isKidRole(m.role))}
               selectedKidId={id}
@@ -270,7 +271,7 @@ export default function MemberProfile() {
             />
           </View>
 
-          <View style={{ alignSelf: "flex-start", marginBottom: 12 }}>
+          <View style={{ alignSelf: "flex-start" }}>
             <Button
               title="Manage my family"
               type="primary"
@@ -434,7 +435,6 @@ const styles = StyleSheet.create({
   },
 
   pointsCard: {
-    marginTop: 8,
     padding: 16,
     backgroundColor: "#fff",
     borderRadius: 16,
@@ -457,7 +457,6 @@ const styles = StyleSheet.create({
 
   /* Manual adjust card */
   adjustCard: {
-    marginTop: 8,
     padding: 14,
     backgroundColor: "#ffffff",
     borderRadius: 16,
