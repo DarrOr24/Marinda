@@ -1,7 +1,15 @@
 // components/modals/activity-detail-modal.tsx
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
-import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import {
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Button } from "@/components/ui/button";
@@ -33,13 +41,26 @@ function DetailRow({
   content,
   yesNo,
   iconColor = "#64748b",
+  onPress,
 }: {
   icon: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
   label?: string;
   content: string;
   yesNo?: boolean;
   iconColor?: string;
+  onPress?: () => void;
 }) {
+  const contentNode = (
+    <>
+      {label ? (
+        <Text style={styles.rowLabel}>{label}</Text>
+      ) : null}
+      <Text style={[styles.rowContent, onPress && styles.rowContentLink]} numberOfLines={2}>
+        {content}
+      </Text>
+    </>
+  );
+
   return (
     <View style={styles.row}>
       <View style={styles.iconCol}>
@@ -50,12 +71,13 @@ function DetailRow({
         />
       </View>
       <View style={styles.contentCol}>
-        {label ? (
-          <Text style={styles.rowLabel}>{label}</Text>
-        ) : null}
-        <Text style={styles.rowContent} numberOfLines={2}>
-          {content}
-        </Text>
+        {onPress ? (
+          <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.linkPressed]}>
+            {contentNode}
+          </Pressable>
+        ) : (
+          contentNode
+        )}
       </View>
       {yesNo !== undefined && (
         <View style={styles.rightCol}>
@@ -162,7 +184,14 @@ export function ActivityDetailModal({
           />
 
           {activity.location && (
-            <DetailRow icon="map-marker-outline" content={activity.location} />
+            <DetailRow
+              icon="map-marker-outline"
+              content={activity.location}
+              onPress={() => {
+                const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location!)}`;
+                Linking.openURL(url);
+              }}
+            />
           )}
           {typeof activity.money === "number" && (
             <DetailRow
@@ -322,6 +351,11 @@ const styles = StyleSheet.create({
     color: "#0f172a",
     fontWeight: "500",
   },
+  rowContentLink: {
+    color: "#2563eb",
+    textDecorationLine: "underline",
+  },
+  linkPressed: { opacity: 0.7 },
   buttons: {
     flexDirection: "row",
     flexWrap: "wrap",
