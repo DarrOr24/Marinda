@@ -3,8 +3,11 @@ import { MEMBER_WITH_PROFILE_SELECT } from "../members/members.select";
 import { FamilyMember, Role } from "../members/members.types";
 import { getSupabase } from "../supabase";
 import { FamilyInvite, MyFamily } from "./families.types";
+import * as FileSystem from "expo-file-system/legacy";
+import { decode } from "base64-arraybuffer";
 
 const supabase = getSupabase();
+const FAMILY_AVATAR_BUCKET = "family-avatars";
 
 export async function rpcCreateFamily(
   name: string,
@@ -68,6 +71,12 @@ export async function fetchFamily(familyId: string) {
   return data;
 }
 
+export function getFamilyAvatarPublicUrl(path: string | null): string | null {
+  if (!path) return null;
+  const { data } = supabase.storage.from(FAMILY_AVATAR_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
 export async function fetchMember(
   familyId: string,
   profileId: string,
@@ -127,12 +136,18 @@ export async function updateFamilyAvatar(
   const ext = fileUri.split(".").pop() || "jpg";
   const path = `${familyId}/avatar-${Date.now()}.${ext}`;
 
-  const res = await fetch(fileUri);
-  const blob = await res.blob();
+  // Read local file as base64 (Expo-friendly) and convert to binary buffer
+  const base64 = await FileSystem.readAsStringAsync(fileUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  const fileBuffer = decode(base64);
 
   const { error: uploadError } = await supabase.storage
-    .from("family-avatars")
-    .upload(path, blob, { upsert: true });
+    .from(FAMILY_AVATAR_BUCKET)
+    .upload(path, fileBuffer, {
+      upsert: true,
+      contentType: "image/jpeg",
+    });
 
   if (uploadError) throw new Error(uploadError.message);
 

@@ -6,6 +6,8 @@ export interface MyFamily {
   name: string;
   avatar_url: string | null;
   role: Role;
+  // client-only: injected into React Query cache
+  public_avatar_url?: string | null;
 }
 
 export type Membership = {
