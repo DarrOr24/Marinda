@@ -1,11 +1,11 @@
 // components/avatar/family-avatar.tsx
 import * as ImagePicker from 'expo-image-picker'
 import React, { useEffect, useState } from 'react'
+import { Image } from 'react-native'
 
 import type { AvatarSize } from '@/components/avatar/avatar'
 import { Avatar } from '@/components/avatar/avatar'
 import { useFamily, useUpdateFamilyAvatar } from '@/lib/families/families.hooks'
-import { getSupabase } from '@/lib/supabase'
 
 type FamilyAvatarProps = {
   familyId: string
@@ -24,23 +24,22 @@ export function FamilyAvatar({
 }: FamilyAvatarProps) {
   const { family } = useFamily(familyId)
   const familyData = family.data
-  const supabase = getSupabase()
 
-  const [uri, setUri] = useState<string | null>(null)
+  const [loadedUri, setLoadedUri] = useState<string | null>(null)
   const updateFamilyAvatar = useUpdateFamilyAvatar(familyId)
 
   useEffect(() => {
-    if (!familyData?.avatar_url) {
-      setUri(null)
+    if (!familyData?.public_avatar_url) {
+      setLoadedUri(null)
       return
     }
 
-    const { data: pub } = supabase.storage
-      .from('family-avatars')
-      .getPublicUrl(familyData.avatar_url)
+    const url = familyData.public_avatar_url as string
 
-    setUri(pub.publicUrl ?? null)
-  }, [familyData?.avatar_url, supabase])
+    Image.prefetch(url)
+      .then(() => setLoadedUri(url))
+      .catch(() => setLoadedUri(url))
+  }, [familyData?.public_avatar_url])
 
   const handlePress = async () => {
     // selection logic has priority over editing
@@ -61,13 +60,13 @@ export function FamilyAvatar({
     if (result.canceled) return
 
     const localUri = result.assets[0].uri
-    const previousUri = uri
+    const previousUri = loadedUri
 
-    setUri(localUri)
+    setLoadedUri(localUri)
 
     updateFamilyAvatar.mutate(localUri, {
       onError: () => {
-        setUri(previousUri ?? null)
+        setLoadedUri(previousUri ?? null)
       },
     })
   }
@@ -75,7 +74,7 @@ export function FamilyAvatar({
   return (
     <Avatar
       type="family"
-      uri={uri ?? undefined}
+      uri={loadedUri ?? undefined}
       size={size}
       onPress={isUpdatable || onSelect ? handlePress : undefined}
       isSelected={isSelected}

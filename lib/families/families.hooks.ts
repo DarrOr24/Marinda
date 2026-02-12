@@ -10,6 +10,7 @@ import {
   fetchFamilyInvites,
   fetchFamilyMembers,
   fetchMyFamilies,
+  getFamilyAvatarPublicUrl,
   removeFamilyMember,
   rotateFamilyCode,
   rpcCreateFamily,
@@ -83,7 +84,15 @@ export function useJoinFamily(defaultRole: Role = "TEEN") {
 export function useFamily(familyId?: string) {
   const family = useQuery({
     queryKey: ["family", familyId],
-    queryFn: () => fetchFamily(familyId!),
+    queryFn: async () => {
+      const f = await fetchFamily(familyId!);
+      return {
+        ...f,
+        public_avatar_url: f.avatar_url
+          ? getFamilyAvatarPublicUrl(f.avatar_url)
+          : null,
+      };
+    },
     enabled: !!familyId,
   });
 
@@ -206,7 +215,15 @@ export function useCreateKidMember(familyId: string) {
 export function useMyFamilies(profileId?: string) {
   return useQuery<MyFamily[]>({
     queryKey: ["my-families", profileId],
-    queryFn: () => fetchMyFamilies(profileId!),
+    queryFn: async () => {
+      const families = await fetchMyFamilies(profileId!);
+      return families.map((f) => ({
+        ...f,
+        public_avatar_url: f.avatar_url
+          ? getFamilyAvatarPublicUrl(f.avatar_url)
+          : null,
+      }));
+    },
     enabled: !!profileId,
   });
 }
