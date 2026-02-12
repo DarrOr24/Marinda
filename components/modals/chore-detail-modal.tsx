@@ -2,7 +2,7 @@
 import { ChipSelector } from '@/components/chip-selector';
 import MediaPicker, { PickedMedia } from '@/components/media-picker';
 import { Button } from '@/components/ui/button';
-import { ModalCard } from '@/components/ui/modal-card';
+import { ModalCard, useModalScrollMaxHeight } from '@/components/ui/modal-card';
 import { ModalShell } from '@/components/ui/modal-shell';
 import { ChoreView, Proof } from '@/lib/chores/chores.types';
 import { Role } from '@/lib/members/members.types';
@@ -63,6 +63,7 @@ export default function ChoreDetailModal({
     doneByOptions,
     defaultDoneById,
 }: Props) {
+    const scrollMaxHeight = useModalScrollMaxHeight(140);
     const isParent = currentRole === 'MOM' || currentRole === 'DAD';
 
     // 🔹 Normalize assignees: plural-only
@@ -310,11 +311,11 @@ export default function ChoreDetailModal({
 
                 {/* SCROLLING BODY */}
                 <ScrollView
-                    style={{ flex: 1, minHeight: 0 }}
+                    style={{ maxHeight: scrollMaxHeight }}
+                    contentContainerStyle={{ paddingBottom: 16, flexGrow: 0 }}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 16 }}
                 >
                     {chore.points > 0 && (
                         <Text style={[s.text, { marginTop: 2 }]}>
@@ -639,7 +640,8 @@ export default function ChoreDetailModal({
 
 const s = StyleSheet.create({
     card: {
-        flex: 1,
+        flexGrow: 0,
+        flexShrink: 1,
         width: '100%',
         maxWidth: 460,
     },

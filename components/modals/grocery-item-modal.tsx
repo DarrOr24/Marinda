@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ModalCard } from "@/components/ui/modal-card";
+import { ModalCard, useModalScrollMaxHeight } from "@/components/ui/modal-card";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
@@ -61,6 +61,7 @@ export function GroceryItemModal({
     onCancel,
     onSubmit,
 }: Props) {
+    const scrollMaxHeight = useModalScrollMaxHeight(140);
     const title = mode === "edit" ? "Edit Grocery Item" : "Add Grocery Item";
     const submitLabel = mode === "edit" ? "Save" : "Add";
 
@@ -70,10 +71,11 @@ export function GroceryItemModal({
                 <Text style={styles.title}>{title}</Text>
 
                 <ScrollView
+                    style={{ maxHeight: scrollMaxHeight }}
+                    contentContainerStyle={{ paddingBottom: 16, flexGrow: 0 }}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 16 }}
                 >
                     <Text style={styles.label}>Item</Text>
                     <TextInput

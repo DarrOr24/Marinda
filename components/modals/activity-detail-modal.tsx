@@ -7,13 +7,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import { Button } from "@/components/ui/button";
-import { ModalCard } from "@/components/ui/modal-card";
+import { ModalCard, useModalScrollMaxHeight } from "@/components/ui/modal-card";
 import { ModalShell } from "@/components/ui/modal-shell";
 import type { Activity } from "@/lib/activities/activities.types";
 
@@ -115,10 +112,7 @@ export function ActivityDetailModal({
   isParent,
   isCreator,
 }: Props) {
-  const { height: screenH } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  const scrollMaxHeight =
-    screenH - insets.top - insets.bottom - 24 - 16 - 16 - 120;
+  const scrollMaxHeight = useModalScrollMaxHeight(120);
 
   if (!activity) return null;
 

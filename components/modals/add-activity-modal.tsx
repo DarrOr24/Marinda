@@ -12,7 +12,7 @@ import {
 
 import { ChipSelector } from "@/components/chip-selector";
 import { DateRangePicker } from "@/components/date-range-picker";
-import { ModalCard } from "@/components/ui/modal-card";
+import { ModalCard, useModalScrollMaxHeight } from "@/components/ui/modal-card";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { MembersSelector } from "../members-selector";
 import { Button } from "../ui/button";
@@ -117,6 +117,7 @@ export default function AddActivityModal({
     );
   }, [visible, initialDateStr, initial]);
 
+  const scrollMaxHeight = useModalScrollMaxHeight(140);
   const canSave = title.trim().length > 0 && !!range?.start_at;
 
   function reset() {
@@ -165,10 +166,11 @@ export default function AddActivityModal({
         </View>
 
         <ScrollView
+          style={{ maxHeight: scrollMaxHeight }}
+          contentContainerStyle={[styles.scrollContent, { flexGrow: 0 }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
         >
           <FormFieldRow icon="clock-outline" first>
             <Text style={styles.label}>When *</Text>

@@ -1,7 +1,14 @@
 // components/ui/modal-card.tsx
 import React from "react";
-import { Dimensions, View, ViewProps } from "react-native";
+import { Dimensions, useWindowDimensions, View, ViewProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+/** Max height for ScrollView content so modals shrink-to-fit but scroll when needed */
+export function useModalScrollMaxHeight(reserve = 140) {
+  const { height: screenH } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  return screenH - insets.top - insets.bottom - 24 - 16 - 16 - reserve;
+}
 
 type Props = ViewProps & {
     // extra padding inside card (above safe area)
@@ -39,6 +46,8 @@ export function ModalCard({
             {...props}
             style={[
                 {
+                    flexGrow: 0,
+                    flexShrink: 1,
                     maxHeight: maxH,
 
                     // safe bottom padding

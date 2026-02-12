@@ -12,7 +12,7 @@ import {
     View
 } from "react-native";
 
-import { ModalCard } from "@/components/ui/modal-card";
+import { ModalCard, useModalScrollMaxHeight } from "@/components/ui/modal-card";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { MembersSelector } from "../members-selector";
 
@@ -63,6 +63,7 @@ export default function ChorePostModal({
     assigneeOptions,
     canEditPoints = true,
 }: Props) {
+    const scrollMaxHeight = useModalScrollMaxHeight(140);
     const [title, setTitle] = React.useState(initial?.title ?? "");
     const [description, setDescription] = React.useState(initial?.description ?? "");
     const [points, setPoints] = React.useState(String(initial?.points ?? 0));
@@ -187,10 +188,11 @@ export default function ChorePostModal({
                 <Text style={styles.h1}>{titleText}</Text>
 
                 <ScrollView
+                    style={{ maxHeight: scrollMaxHeight }}
+                    contentContainerStyle={{ paddingBottom: 16, flexGrow: 0 }}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 16 }}
                 >
                     {/* Routine chores as dropdown */}
                     {templates && templates.length > 0 && (
