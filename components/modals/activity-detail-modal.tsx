@@ -19,9 +19,7 @@ import type { Activity } from "@/lib/activities/activities.types";
 
 function formatTimeFromIso(iso: string) {
   const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
+  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
 function sameDay(a: Date, b: Date) {
