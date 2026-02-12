@@ -325,6 +325,7 @@ export default function ActivityBoard() {
     <Screen
       bottomOffset={72}
       gap="md"
+      contentStyle={{ paddingTop: 8 }}
       overlay={
         <SafeFab bottomOffset={18} rightOffset={16}>
           <Button
@@ -530,7 +531,7 @@ export default function ActivityBoard() {
 
 const styles = StyleSheet.create({
 
-  center: { flex: 1, paddingHorizontal: 16, paddingTop: 12, gap: 12 },
+  center: { flex: 1, paddingHorizontal: 16, paddingTop: 0, gap: 12 },
 
   headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   headerTitleWrap: {
