@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Open Marinda</title>
+  </head>
+  <body style="font-family: system-ui; padding: 24px;">
+    <h1>Open Marinda</h1>
+    <p id="msg">Preparing…</p>
+    <button id="open" style="padding:12px 16px; font-size:16px;">Open in app</button>
+
+    <script>
+      const params = new URLSearchParams(location.search);
+      const token = params.get("token");
+
+      document.getElementById("msg").textContent =
+        token ? `Invite token: ${token}` : "Missing token.";
+
+      document.getElementById("open").onclick = () => {
+        if (!token) return;
+        // best-effort deep link attempt (not the final solution)
+        location.href = `marinda://invite?token=${encodeURIComponent(token)}`;
+      };
+    </script>
+  </body>
+</html>
