@@ -312,13 +312,32 @@ export default function ActivityBoard() {
                         const color = creatorColor(a);
                         const base = activityColor(a.status, color);
 
-                        const badges = [
-                          a.ride_needed ? "🚗" : "",
-                          a.present_needed ? "🎁" : "",
-                          a.babysitter_needed ? "🍼" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ");
+                        const badgeIcons = [
+                          a.ride_needed && (
+                            <MaterialCommunityIcons
+                              key="ride"
+                              name="car-outline"
+                              size={16}
+                              color="#64748b"
+                            />
+                          ),
+                          a.present_needed && (
+                            <MaterialCommunityIcons
+                              key="present"
+                              name="gift-outline"
+                              size={16}
+                              color="#64748b"
+                            />
+                          ),
+                          a.babysitter_needed && (
+                            <MaterialCommunityIcons
+                              key="babysitter"
+                              name="baby-face-outline"
+                              size={16}
+                              color="#64748b"
+                            />
+                          ),
+                        ].filter(Boolean);
 
                         const goingMembers = (a.participants ?? [])
                           .map((p) => memberById.get(p.member_id))
@@ -343,8 +362,12 @@ export default function ActivityBoard() {
                             <Text numberOfLines={1} style={styles.itemTitle}>
                               {a.title}
                               {a.start_at ? ` — ${formatTimeFromIso(a.start_at)}` : ""}
-                              {badges ? `  ${badges}` : ""}
                             </Text>
+                            {badgeIcons.length > 0 ? (
+                              <View style={styles.badgeIcons}>
+                                {badgeIcons}
+                              </View>
+                            ) : null}
 
                             <View
                               style={{
@@ -530,6 +553,7 @@ const styles = StyleSheet.create({
   itemPending: {},
   colorDot: { width: 8, height: 8, borderRadius: 999 },
   itemTitle: { flex: 1, color: "#0f172a", fontWeight: "700" },
+  badgeIcons: { flexDirection: "row", alignItems: "center", gap: 6 },
 
   partDot: { width: 8, height: 8, borderRadius: 999 },
   partMore: { fontSize: 12, color: "#334155", marginLeft: 2 },

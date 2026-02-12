@@ -16,6 +16,7 @@ type Props = {
   initialStartAt?: string
   initialEndAt?: string
   onChange?: (value: { start_at: string; end_at: string }) => void
+  hideLabel?: boolean
 }
 
 type Range = { start_at: string; end_at: string }
@@ -86,6 +87,7 @@ export function DateRangePicker({
   initialStartAt,
   initialEndAt,
   onChange,
+  hideLabel = false,
 }: Props) {
   const [range, setRange] = useState<Range>(() =>
     createInitialRange(baseDateStr, initialStartAt, initialEndAt)
@@ -142,7 +144,7 @@ export function DateRangePicker({
 
   return (
     <View>
-      <Text style={styles.label}>🕒 When *</Text>
+      {!hideLabel && <Text style={styles.label}>When *</Text>}
 
       <View style={styles.row}>
         <TouchableOpacity

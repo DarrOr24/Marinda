@@ -28,12 +28,14 @@ type MultiMembersSelectorProps = {
   singleSelection?: false
   values: string[]
   onChange: (ids: string[]) => void
+  containerStyle?: ViewStyle
 }
 
 type SingleMembersSelectorProps = {
   singleSelection: true
   value: string | null
   onChange: (id: string | null) => void
+  containerStyle?: ViewStyle
 }
 
 export type MembersSelectorProps =
@@ -123,10 +125,10 @@ export function MembersSelector(props: MembersSelectorProps) {
 
   // 🔹 SINGLE SELECTION MODE (for chores, etc.)
   if (props.singleSelection) {
-    const { value, onChange } = props
+    const { value, onChange, containerStyle } = props
 
     return (
-      <View style={styles.singleWrapper}>
+      <View style={[styles.singleWrapper, containerStyle]}>
         <ChipSelector
           options={options}
           value={value}
@@ -141,7 +143,7 @@ export function MembersSelector(props: MembersSelectorProps) {
   }
 
   // 🔹 MULTI SELECTION MODE (current behavior: All / Parents / Children)
-  const { values, onChange } = props
+  const { values, onChange, containerStyle } = props
 
   const allSelected =
     memberList.length > 0 && values.length === memberList.length
@@ -189,7 +191,7 @@ export function MembersSelector(props: MembersSelectorProps) {
   }
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, containerStyle]}>
       {/* "Select All" chip */}
       <Pressable
         onPress={handleToggleAll}
