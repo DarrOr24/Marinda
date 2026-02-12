@@ -187,10 +187,10 @@ export default function ChorePostModal({
                 <Text style={styles.h1}>{titleText}</Text>
 
                 <ScrollView
-                    nestedScrollEnabled
-                    contentContainerStyle={{ paddingBottom: 8 }}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 16 }}
                 >
                     {/* Routine chores as dropdown */}
                     {templates && templates.length > 0 && (
@@ -408,6 +408,8 @@ export default function ChorePostModal({
 
 const styles = StyleSheet.create({
     card: {
+        width: '100%',
+        maxWidth: 460,
         gap: 10,
     },
     h1: { fontSize: 18, fontWeight: "800", color: "#0f172a", marginBottom: 6 },

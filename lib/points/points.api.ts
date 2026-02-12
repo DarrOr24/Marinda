@@ -14,15 +14,22 @@ export type PointsEntry = {
 export async function fetchMemberPointsHistory(
     familyId: string,
     memberId: string,
-    limit = 10
+    limit = 50,
+    since?: string
 ): Promise<PointsEntry[]> {
-    const { data, error } = await supabase
+    let query = supabase
         .from('points_ledger')
         .select('id, delta, reason, created_at, kind')
         .eq('family_id', familyId)
         .eq('member_id', memberId)
         .order('created_at', { ascending: false })
         .limit(limit);
+
+    if (since) {
+        query = query.gte('created_at', since);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         throw new Error(error.message);

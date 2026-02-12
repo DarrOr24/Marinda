@@ -72,7 +72,8 @@ export function GroceryItemModal({
                 <ScrollView
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
-                    contentContainerStyle={{ paddingBottom: 12 }}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 16 }}
                 >
                     <Text style={styles.label}>Item</Text>
                     <TextInput

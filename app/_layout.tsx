@@ -19,6 +19,8 @@ export const rootNavigatorScreenOptions: NativeStackNavigationOptions = {
   headerRight: () => <HeaderProfileButton />,
   headerStyle: { backgroundColor: '#fff' },
   headerTitleAlign: 'center',
+  headerTitleStyle: { color: '#0f172a', fontWeight: '600' },
+  headerTintColor: '#0f172a',
   headerShadowVisible: false,
 }
 

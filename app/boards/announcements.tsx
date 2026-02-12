@@ -462,6 +462,7 @@ export default function AnnouncementsBoard() {
                                         size="sm"
                                         round
                                         hitSlop={10}
+                                        titleColor="#475569"
                                         onPress={() => {
                                             setEditingItem(item);
                                             setEditText(item.text);
@@ -476,6 +477,7 @@ export default function AnnouncementsBoard() {
                                 size="sm"
                                 round
                                 hitSlop={10}
+                                titleColor="#b91c1c"
                                 onPress={() => confirmDelete(item)}
                                 title="✕"
                             />

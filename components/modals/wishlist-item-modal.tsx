@@ -140,10 +140,10 @@ export function WishlistItemModal({
                 <Text style={styles.modalTitle}>{mode === "edit" ? "Edit Wish" : "Add Wish"}</Text>
 
                 <ScrollView
-                    nestedScrollEnabled
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
-                    contentContainerStyle={{ paddingBottom: 12 }}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 16 }}
                 >
                     <TextInput
                         placeholder="Title"
@@ -249,6 +249,8 @@ export function WishlistItemModal({
 
 const styles = StyleSheet.create({
     card: {
+        width: '100%',
+        maxWidth: 460,
         gap: 10,
     },
     modalTitle: {
