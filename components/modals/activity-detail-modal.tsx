@@ -1,7 +1,8 @@
 // components/modals/activity-detail-modal.tsx
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Button } from "@/components/ui/button";
 import { ModalCard } from "@/components/ui/modal-card";
@@ -20,6 +21,52 @@ function sameDay(a: Date, b: Date) {
     a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
+  );
+}
+
+const ICON_SIZE = 20;
+const ROW_GAP = 12;
+
+function DetailRow({
+  icon,
+  label,
+  content,
+  yesNo,
+  iconColor = "#64748b",
+}: {
+  icon: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+  label?: string;
+  content: string;
+  yesNo?: boolean;
+  iconColor?: string;
+}) {
+  return (
+    <View style={styles.row}>
+      <View style={styles.iconCol}>
+        <MaterialCommunityIcons
+          name={icon}
+          size={ICON_SIZE}
+          color={iconColor}
+        />
+      </View>
+      <View style={styles.contentCol}>
+        {label ? (
+          <Text style={styles.rowLabel}>{label}</Text>
+        ) : null}
+        <Text style={styles.rowContent} numberOfLines={2}>
+          {content}
+        </Text>
+      </View>
+      {yesNo !== undefined && (
+        <View style={styles.rightCol}>
+          <MaterialCommunityIcons
+            name={yesNo ? "check-circle" : "close-circle"}
+            size={ICON_SIZE}
+            color={yesNo ? "#16a34a" : "#94a3b8"}
+          />
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -48,6 +95,11 @@ export function ActivityDetailModal({
   isParent,
   isCreator,
 }: Props) {
+  const { height: screenH } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const scrollMaxHeight =
+    screenH - insets.top - insets.bottom - 24 - 16 - 16 - 120;
+
   if (!activity) return null;
 
   const participantIds = activity.participants?.map((p) => p.member_id) ?? [];
@@ -94,60 +146,83 @@ export function ActivityDetailModal({
         <Text style={styles.title}>Activity</Text>
 
         <ScrollView
-          style={styles.scroll}
+          style={{ maxHeight: scrollMaxHeight }}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.detailTitle}>{activity.title}</Text>
 
-          <Text style={styles.detailLine}>
-            <Text style={styles.detailIcon}>📅</Text> {dateLine}
-          </Text>
-          <Text style={styles.detailLine}>
-            <Text style={styles.detailIcon}>🕒</Text> {timeLine}
-          </Text>
+          <DetailRow
+            icon="calendar"
+            content={dateLine}
+          />
+          <DetailRow
+            icon="clock-outline"
+            content={timeLine}
+          />
 
           {activity.location && (
-            <Text style={styles.detailLine}>
-              <Text style={styles.detailIcon}>📍</Text> {activity.location}
-            </Text>
+            <DetailRow icon="map-marker-outline" content={activity.location} />
           )}
           {typeof activity.money === "number" && (
-            <Text style={styles.detailLine}>
-              <Text style={styles.detailIcon}>💵</Text> ${activity.money.toFixed(2)}
-            </Text>
+            <DetailRow
+              icon="cash"
+              content={`$${activity.money.toFixed(2)}`}
+            />
           )}
 
-          <Text style={styles.detailLine}>
-            <Text style={styles.detailIcon}>🚗</Text> Ride:{" "}
-            {activity.ride_needed ? "✅" : "❌"}
-          </Text>
-          <Text style={styles.detailLine}>
-            <Text style={styles.detailIcon}>🎁</Text> Present:{" "}
-            {activity.present_needed ? "✅" : "❌"}
-          </Text>
-          <Text style={styles.detailLine}>
-            <Text style={styles.detailIcon}>🍼</Text> Babysitter:{" "}
-            {activity.babysitter_needed ? "✅" : "❌"}
-          </Text>
+          <DetailRow
+            icon="car-outline"
+            label="Ride"
+            content={activity.ride_needed ? "Yes" : "No"}
+            yesNo={!!activity.ride_needed}
+          />
+          <DetailRow
+            icon="gift-outline"
+            label="Present"
+            content={activity.present_needed ? "Yes" : "No"}
+            yesNo={!!activity.present_needed}
+          />
+          <DetailRow
+            icon="baby-face-outline"
+            label="Babysitter"
+            content={activity.babysitter_needed ? "Yes" : "No"}
+            yesNo={!!activity.babysitter_needed}
+          />
 
-          <Text style={styles.detailLine}>
-            <Text style={styles.detailIcon}>👥</Text> Who's going:{" "}
-            {names || "—"}
-          </Text>
+          <DetailRow
+            icon="account-group-outline"
+            label="Who's going"
+            content={names || "—"}
+          />
 
           {activity.notes && (
-            <Text style={styles.detailLine}>
-              <Text style={styles.detailIcon}>📝</Text> {activity.notes}
-            </Text>
+            <DetailRow icon="note-text-outline" content={activity.notes} />
           )}
 
-          <Text style={styles.detailLine}>
-            <Text style={styles.detailIcon}>⏳</Text> {statusLabel}
-          </Text>
-          <Text style={styles.detailLine}>
-            <Text style={styles.detailIcon}>👤</Text> {creatorName(activity)}
-          </Text>
+          <DetailRow
+            icon={
+              activity.status === "APPROVED"
+                ? "check-circle"
+                : activity.status === "NOT_APPROVED"
+                  ? "close-circle"
+                  : "clock-outline"
+            }
+            label="Status"
+            content={statusLabel}
+            iconColor={
+              activity.status === "APPROVED"
+                ? "#16a34a"
+                : activity.status === "NOT_APPROVED"
+                  ? "#dc2626"
+                  : "#f59e0b"
+            }
+          />
+          <DetailRow
+            icon="account-outline"
+            label="Created by"
+            content={creatorName(activity)}
+          />
         </ScrollView>
 
         <View style={styles.buttons}>
@@ -192,6 +267,8 @@ export function ActivityDetailModal({
 
 const styles = StyleSheet.create({
   card: {
+    flexGrow: 0,
+    flexShrink: 1,
     width: "100%",
     maxWidth: 400,
   },
@@ -201,26 +278,49 @@ const styles = StyleSheet.create({
     color: "#0f172a",
     marginBottom: 12,
   },
-  scroll: {
-    maxHeight: 280,
-  },
   scrollContent: {
     paddingBottom: 8,
-    gap: 4,
+    gap: 2,
+    flexGrow: 0,
   },
   detailTitle: {
     fontSize: 17,
     fontWeight: "700",
     color: "#0f172a",
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  detailLine: {
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 0,
+    gap: ROW_GAP,
+    minHeight: 36,
+  },
+  iconCol: {
+    width: ICON_SIZE + 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  contentCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  rightCol: {
+    width: ICON_SIZE + 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowLabel: {
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: "500",
+    marginBottom: 1,
+  },
+  rowContent: {
     fontSize: 14,
-    color: "#334155",
-    lineHeight: 22,
-  },
-  detailIcon: {
-    fontSize: 13,
+    color: "#0f172a",
+    fontWeight: "500",
   },
   buttons: {
     flexDirection: "row",
