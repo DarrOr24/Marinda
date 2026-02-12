@@ -342,7 +342,7 @@ Category: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}
     // RENDER
     // ─────────────────────────────────────────────────────────────
     return (
-        <ScreenList style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
+        <ScreenList style={styles.screen} edges={['bottom', 'left', 'right']}>
 
             <View style={styles.header}>
                 {/* HEADER BUTTONS */}
@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
 
     header: {
         paddingHorizontal: 16,
-        paddingTop: 16,
+        paddingTop: 12,
     },
     actions: {
         flexDirection: "row",
