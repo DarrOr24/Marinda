@@ -235,7 +235,7 @@ export function ActivityDetailModal({
               onPress={() => onEdit(activity.id)}
             />
           )}
-          {isParent && (
+          {isParent && activity.status === "PENDING" && (
             <>
               <Button
                 type="danger"

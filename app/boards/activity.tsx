@@ -123,6 +123,12 @@ export default function ActivityBoard() {
   }
 
   function activityColor(status: ActivityStatus, color: string) {
+    if (status === "NOT_APPROVED") {
+      return {
+        borderColor: "#cbd5e1",
+        backgroundColor: "#f1f5f9",
+      };
+    }
     return {
       borderColor: color,
       backgroundColor: status === "APPROVED" ? `${color}22` : "#fff",
@@ -203,6 +209,8 @@ export default function ActivityBoard() {
       present_needed: !!form.present_needed,
       babysitter_needed: !!form.babysitter_needed,
       notes: form.notes ?? null,
+      // only kid edits require re-approval; parent edits keep current status
+      ...(isParent ? {} : { status: "PENDING" as ActivityStatus }),
     };
 
     // For updates we let the DB preserve existing `response` & `is_creator`
