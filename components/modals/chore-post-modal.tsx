@@ -8,11 +8,11 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     View
 } from "react-native";
 
 import { Button } from "@/components/ui/button";
+import { TextInput } from "@/components/ui/text-input";
 import { ModalCard, useModalScrollMaxHeight } from "@/components/ui/modal-card";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { MembersSelector } from "../members-selector";
@@ -254,55 +254,48 @@ export default function ChorePostModal({
                         </View>
                     )}
 
-                    <Text style={styles.label}>Title</Text>
                     <TextInput
+                        label="Title"
                         value={title}
                         onChangeText={handleTitleChange}
                         placeholder="e.g. Empty the dishwasher"
-                        placeholderTextColor="#94a3b8"
-                        style={styles.input}
                         returnKeyType="done"
                         submitBehavior="submit"
                         onSubmitEditing={() => Keyboard.dismiss()}
                     />
 
                     {canEditPoints && (
-                        <>
-                            <Text style={styles.label}>Points</Text>
-                            <TextInput
-                                value={points}
-                                onChangeText={setPoints}
-                                keyboardType="number-pad"
-                                placeholder="e.g. 10"
-                                placeholderTextColor="#94a3b8"
-                                style={styles.input}
-                                returnKeyType="done"
-                                submitBehavior="submit"
-                                onSubmitEditing={() => Keyboard.dismiss()}
-                            />
-                        </>
+                        <TextInput
+                            label="Points"
+                            value={points}
+                            onChangeText={setPoints}
+                            keyboardType="number-pad"
+                            placeholder="e.g. 10"
+                            containerStyle={{ marginTop: 8 }}
+                            returnKeyType="done"
+                            submitBehavior="submit"
+                            onSubmitEditing={() => Keyboard.dismiss()}
+                        />
                     )}
 
-                    <Text style={[styles.label, { marginTop: 8 }]}>Finish by (optional, today)</Text>
                     <TextInput
+                        label="Finish by (optional, today)"
                         value={finishByTime}
                         onChangeText={setFinishByTime}
                         placeholder="e.g. 7:30 pm or 19:30"
-                        placeholderTextColor="#94a3b8"
-                        style={styles.input}
+                        containerStyle={{ marginTop: 8 }}
                         returnKeyType="done"
                         submitBehavior="submit"
                         onSubmitEditing={() => Keyboard.dismiss()}
                     />
 
-                    <Text style={[styles.label, { marginTop: 8 }]}>Description (optional)</Text>
                     <TextInput
+                        label="Description (optional)"
                         value={description}
                         onChangeText={setDescription}
                         placeholder="Add extra details for this chore…"
-                        placeholderTextColor="#94a3b8"
-                        style={[styles.input, { minHeight: 60, textAlignVertical: "top" }]}
                         multiline
+                        containerStyle={{ marginTop: 8 }}
                         submitBehavior="submit"
                         onSubmitEditing={() => Keyboard.dismiss()}
                     />
@@ -412,14 +405,6 @@ const styles = StyleSheet.create({
     },
     h1: { fontSize: 18, fontWeight: "800", color: "#0f172a", marginBottom: 6 },
     label: { fontSize: 12, fontWeight: "700", color: "#64748b" },
-    input: {
-        borderWidth: 1,
-        borderColor: "#e5e7eb",
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        fontSize: 16,
-    },
     row: { flexDirection: "row", gap: 10, marginTop: 8 },
     flex1: { flex: 1 },
 

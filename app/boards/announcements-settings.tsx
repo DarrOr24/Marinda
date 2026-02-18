@@ -3,7 +3,6 @@ import {
     Alert,
     StyleSheet,
     Text,
-    TextInput,
     View
 } from 'react-native';
 
@@ -16,6 +15,7 @@ import {
 } from '@/lib/announcements/announcements.hooks';
 
 import { Button } from '@/components/ui/button';
+import { TextInput } from '@/components/ui/text-input';
 import { Screen } from '@/components/ui/screen';
 import type { Role } from '@/lib/members/members.types';
 
@@ -213,9 +213,8 @@ export default function AnnouncementSettingsScreen() {
                             {editing.id ? 'Edit tab' : 'Add new tab'}
                         </Text>
 
-                        <Text style={styles.label}>Name</Text>
                         <TextInput
-                            style={styles.input}
+                            label="Name"
                             value={editing.label}
                             onChangeText={txt =>
                                 setEditing(prev =>
@@ -223,14 +222,10 @@ export default function AnnouncementSettingsScreen() {
                                 )
                             }
                             placeholder="Holidays"
-                            placeholderTextColor="#94a3b8"
                         />
 
-                        <Text style={[styles.label, { marginTop: 10 }]}>
-                            Input placeholder
-                        </Text>
                         <TextInput
-                            style={styles.input}
+                            label="Input placeholder"
                             value={editing.placeholder}
                             onChangeText={txt =>
                                 setEditing(prev =>
@@ -242,7 +237,7 @@ export default function AnnouncementSettingsScreen() {
                                     ? `Write a new ${editing.label.toLowerCase()}...`
                                     : 'Write a new announcement...'
                             }
-                            placeholderTextColor="#94a3b8"
+                            containerStyle={{ marginTop: 10 }}
                         />
 
                         <View style={styles.editorButtons}>
@@ -367,16 +362,6 @@ const styles = StyleSheet.create({
         color: '#64748b',
         marginTop: 4,
     },
-    input: {
-        marginTop: 4,
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-        borderRadius: 10,
-        padding: 10,
-        fontSize: 14,
-        backgroundColor: '#fff',
-    },
-
     editorButtons: {
         flexDirection: 'row',
         gap: 8,

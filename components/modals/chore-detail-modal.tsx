@@ -3,6 +3,7 @@ import { ChipSelector } from '@/components/chip-selector';
 import MediaPicker, { PickedMedia } from '@/components/media-picker';
 import { Button } from '@/components/ui/button';
 import { MetaRow } from '@/components/ui/meta-row';
+import { TextInput } from '@/components/ui/text-input';
 import { ModalCard, useModalScrollMaxHeight } from '@/components/ui/modal-card';
 import { ModalShell } from '@/components/ui/modal-shell';
 import { ChoreView, Proof } from '@/lib/chores/chores.types';
@@ -16,7 +17,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     View,
 } from 'react-native';
 
@@ -406,14 +406,13 @@ export default function ChoreDetailModal({
                                 pickFromLibrary={false}
                             />
 
-                            <Text style={[s.text, { marginTop: 10 }]}>Add a short note (optional)</Text>
                             <TextInput
+                                label="Add a short note (optional)"
                                 placeholder="What did you do here?"
-                                placeholderTextColor="#94a3b8"
                                 value={proofNote}
                                 onChangeText={setProofNote}
-                                style={[s.input, { marginTop: 6 }]}
                                 multiline
+                                containerStyle={{ marginTop: 10 }}
                                 submitBehavior="submit"
                                 onSubmitEditing={() => Keyboard.dismiss()}
                             />
@@ -483,12 +482,12 @@ export default function ChoreDetailModal({
 
                             {isParent && (
                                 <>
-                                    <Text style={[s.text, { marginTop: 12 }]}>Points for this chore</Text>
                                     <TextInput
+                                        label="Points for this chore"
                                         value={pointsText}
                                         onChangeText={setPointsText}
                                         keyboardType="number-pad"
-                                        style={s.input}
+                                        containerStyle={{ marginTop: 12 }}
                                         returnKeyType="done"
                                         submitBehavior="submit"
                                         onSubmitEditing={() => Keyboard.dismiss()}
@@ -496,14 +495,13 @@ export default function ChoreDetailModal({
                                 </>
                             )}
 
-                            <Text style={[s.text, { marginTop: 12 }]}>Notes</Text>
                             <TextInput
+                                label="Notes"
                                 placeholder="Add a note…"
-                                placeholderTextColor="#94a3b8"
                                 value={notes}
                                 onChangeText={setNotes}
-                                style={s.input}
                                 multiline
+                                containerStyle={{ marginTop: 12 }}
                                 submitBehavior="submit"
                                 onSubmitEditing={() => Keyboard.dismiss()}
                             />
@@ -647,16 +645,6 @@ const s = StyleSheet.create({
         height: 220,
         borderRadius: 12,
         backgroundColor: '#e2e8f0',
-    },
-
-    input: {
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-        borderRadius: 10,
-        padding: 10,
-        minHeight: 44,
-        textAlignVertical: 'top',
-        backgroundColor: '#fff',
     },
 
     metaActions: {

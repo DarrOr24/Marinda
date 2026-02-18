@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -16,6 +15,7 @@ import { ModalCard, useModalScrollMaxHeight } from "@/components/ui/modal-card";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { MembersSelector } from "../members-selector";
 import { Button } from "../ui/button";
+import { TextInput } from "../ui/text-input";
 
 const ICON_SIZE = 20;
 
@@ -187,11 +187,10 @@ export default function AddActivityModal({
             <Text style={styles.label}>Title *</Text>
             <TextInput
               placeholder="e.g., Soccer practice"
-            placeholderTextColor="#94a3b8"
-            value={title}
-            onChangeText={setTitle}
-            style={styles.input}
-            autoCapitalize="words"
+              value={title}
+              onChangeText={setTitle}
+              style={styles.input}
+              autoCapitalize="words"
             />
           </FormFieldRow>
 
@@ -199,7 +198,6 @@ export default function AddActivityModal({
             <Text style={styles.label}>Location</Text>
             <TextInput
               placeholder="e.g., Community Center"
-              placeholderTextColor="#94a3b8"
               value={location}
               onChangeText={setLocation}
               style={styles.input}
@@ -210,7 +208,6 @@ export default function AddActivityModal({
             <Text style={styles.label}>Amount ($)</Text>
             <TextInput
               placeholder="e.g., 15"
-              placeholderTextColor="#94a3b8"
               keyboardType="numeric"
               value={money}
               onChangeText={setMoney}
@@ -268,7 +265,6 @@ export default function AddActivityModal({
             <Text style={styles.label}>Notes</Text>
             <TextInput
               placeholder="Add a note…"
-              placeholderTextColor="#94a3b8"
               value={notes}
               onChangeText={setNotes}
               style={[styles.input, styles.notesInput]}
@@ -337,7 +333,7 @@ const styles = StyleSheet.create({
   },
   chipLabel: { fontSize: 14, color: "#64748b", fontWeight: "600" },
   chipLabelActive: { color: "#fff", fontWeight: "600" },
-  notesInput: { height: 80, textAlignVertical: "top" },
+  notesInput: { minHeight: 80 },
 
   fieldRow: {
     flexDirection: "row",
@@ -346,17 +342,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    backgroundColor: "#fff",
-    color: "#0f172a",
-  },
+  input: { flex: 1 },
 
   scrollContent: { paddingBottom: 16, gap: 2 },
 

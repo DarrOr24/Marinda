@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { TextInput } from "@/components/ui/text-input";
 import { ModalCard, useModalScrollMaxHeight } from "@/components/ui/modal-card";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -8,7 +9,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from "react-native";
@@ -77,17 +77,16 @@ export function GroceryItemModal({
                     keyboardDismissMode="on-drag"
                     showsVerticalScrollIndicator={false}
                 >
-                    <Text style={styles.label}>Item</Text>
                     <TextInput
+                        label="Item"
                         value={name}
                         onChangeText={onChangeName}
                         placeholder="e.g., Bananas"
-                        placeholderTextColor="#94a3b8"
-                        style={styles.input}
+                        containerStyle={styles.label}
                         autoFocus
                     />
 
-                    <Text style={styles.label}>Category</Text>
+                    <Text style={styles.labelText}>Category</Text>
                     <TouchableOpacity
                         onPress={onToggleCategoryOpen}
                         style={styles.select}
@@ -132,13 +131,12 @@ export function GroceryItemModal({
                         </View>
                     )}
 
-                    <Text style={styles.label}>Amount (optional)</Text>
                     <TextInput
+                        label="Amount (optional)"
                         value={amount}
                         onChangeText={onChangeAmount}
                         placeholder="e.g., 2, 3 packs, 1kg"
-                        placeholderTextColor="#94a3b8"
-                        style={styles.input}
+                        containerStyle={styles.label}
                     />
                 </ScrollView>
 
@@ -160,18 +158,8 @@ const styles = StyleSheet.create({
     },
 
     title: { fontSize: 18, fontWeight: "800", color: "#0f172a", marginBottom: 12 },
-    label: { fontSize: 12, color: "#475569", marginTop: 8, marginBottom: 4 },
-
-    input: {
-        borderWidth: 1,
-        borderColor: "#e5e7eb",
-        backgroundColor: "#fff",
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        fontSize: 16,
-        color: "#0f172a",
-    },
+    label: { marginTop: 8 },
+    labelText: { fontSize: 12, color: "#475569", marginTop: 8, marginBottom: 4 },
 
     select: {
         borderWidth: 1,

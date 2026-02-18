@@ -11,7 +11,6 @@ import {
     Pressable,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from "react-native";
@@ -36,6 +35,7 @@ import {
 
 // ✅ NEW UI helpers
 import { WishlistItemModal } from "@/components/modals/wishlist-item-modal";
+import { TextInput } from "@/components/ui/text-input";
 import { SafeFab } from "@/components/ui/safe-fab";
 
 export default function WishList() {
@@ -344,10 +344,9 @@ export default function WishList() {
                 <View style={{ gap: 6 }}>
                     <View style={styles.calcRow}>
                         <View style={{ flex: 1 }}>
-                            <Text style={styles.calcLabel}>{FAMILY_CURRENCY}</Text>
                             <TextInput
+                                label={FAMILY_CURRENCY}
                                 placeholder="0"
-                                placeholderTextColor="#94a3b8"
                                 keyboardType="numeric"
                                 value={calcCad}
                                 onChangeText={(v) => {
@@ -362,10 +361,9 @@ export default function WishList() {
                         <Text style={styles.arrow}>↔</Text>
 
                         <View style={{ flex: 1 }}>
-                            <Text style={styles.calcLabel}>Points</Text>
                             <TextInput
+                                label="Points"
                                 placeholder="0"
-                                placeholderTextColor="#94a3b8"
                                 keyboardType="numeric"
                                 value={calcPointsStr}
                                 onChangeText={(v) => {
@@ -621,21 +619,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         gap: 8,
     },
-    calcInput: {
-        flex: 1,
-        borderWidth: 1,
-        borderColor: "#e2e8f0",
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        backgroundColor: "#ffffff",
-    },
-    calcLabel: {
-        fontSize: 12,
-        color: "#64748b",
-        marginBottom: 4,
-        marginLeft: 2,
-    },
+    calcInput: { flex: 1 },
 
     arrow: {
         fontSize: 18,

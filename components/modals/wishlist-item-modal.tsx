@@ -7,12 +7,12 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     View,
 } from "react-native";
 
 import MediaPicker from "@/components/media-picker";
 import { Button } from "@/components/ui/button";
+import { TextInput } from "@/components/ui/text-input";
 import { ModalCard, useModalScrollMaxHeight } from "@/components/ui/modal-card";
 import { ModalShell } from "@/components/ui/modal-shell";
 
@@ -149,10 +149,9 @@ export function WishlistItemModal({
                 >
                     <TextInput
                         placeholder="Title"
-                        placeholderTextColor="#94a3b8"
                         value={title}
                         onChangeText={onChangeTitle}
-                        style={styles.input}
+                        containerStyle={styles.inputSpacing}
                         returnKeyType="done"
                         submitBehavior="submit"
                         onSubmitEditing={() => Keyboard.dismiss()}
@@ -160,11 +159,10 @@ export function WishlistItemModal({
 
                     <TextInput
                         placeholder={`Price (${currency})`}
-                        placeholderTextColor="#94a3b8"
                         keyboardType="numeric"
                         value={price}
                         onChangeText={onChangePrice}
-                        style={styles.input}
+                        containerStyle={styles.inputSpacing}
                         returnKeyType="done"
                         submitBehavior="submit"
                         onSubmitEditing={() => Keyboard.dismiss()}
@@ -197,10 +195,9 @@ export function WishlistItemModal({
                     {canFulfillSelf && (
                         <TextInput
                             placeholder="How will I pay? (optional)"
-                            placeholderTextColor="#94a3b8"
                             value={paymentMethod}
                             onChangeText={onChangePaymentMethod}
-                            style={styles.input}
+                            containerStyle={styles.inputSpacing}
                             returnKeyType="done"
                             submitBehavior="submit"
                             onSubmitEditing={() => Keyboard.dismiss()}
@@ -209,11 +206,10 @@ export function WishlistItemModal({
 
                     <TextInput
                         placeholder="Note (optional)"
-                        placeholderTextColor="#94a3b8"
                         value={note}
                         onChangeText={onChangeNote}
-                        style={[styles.input, { minHeight: 60 }]}
                         multiline
+                        containerStyle={styles.inputSpacing}
                         returnKeyType="done"
                         submitBehavior="submit"
                         onSubmitEditing={() => Keyboard.dismiss()}
@@ -221,10 +217,9 @@ export function WishlistItemModal({
 
                     <TextInput
                         placeholder="Link (optional)"
-                        placeholderTextColor="#94a3b8"
                         value={link}
                         onChangeText={onChangeLink}
-                        style={styles.input}
+                        containerStyle={styles.inputSpacing}
                         returnKeyType="done"
                         submitBehavior="submit"
                         onSubmitEditing={() => Keyboard.dismiss()}
@@ -260,15 +255,7 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         marginBottom: 10,
     },
-    input: {
-        borderWidth: 1,
-        borderColor: "#e2e8f0",
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        marginBottom: 10,
-        backgroundColor: "#ffffff",
-    },
+    inputSpacing: { marginBottom: 10 },
     previewText: {
         fontSize: 12,
         color: "#64748b",

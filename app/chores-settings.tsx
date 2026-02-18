@@ -3,11 +3,11 @@ import {
     Alert,
     StyleSheet,
     Text,
-    TextInput,
     View
 } from 'react-native';
 
 import { Button } from '@/components/ui/button';
+import { TextInput } from '@/components/ui/text-input';
 import { Screen } from '@/components/ui/screen';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useChoreTemplates } from '@/lib/chores/chores-templates.hooks';
@@ -158,27 +158,24 @@ export default function ChoreGameSettingsScreen() {
                             {editing.id ? 'Edit routine chore' : 'Add routine chore'}
                         </Text>
 
-                        <Text style={styles.label}>Title</Text>
                         <TextInput
+                            label="Title"
                             value={editing.title}
                             onChangeText={(txt) =>
                                 setEditing((prev) => (prev ? { ...prev, title: txt } : prev))
                             }
                             placeholder="e.g. Empty the dishwasher"
-                            placeholderTextColor="#94a3b8"
-                            style={styles.input}
                         />
 
-                        <Text style={[styles.label, { marginTop: 8 }]}>Points</Text>
                         <TextInput
+                            label="Points"
                             value={editing.points}
                             onChangeText={(txt) =>
                                 setEditing((prev) => (prev ? { ...prev, points: txt } : prev))
                             }
                             keyboardType="number-pad"
                             placeholder="e.g. 10"
-                            placeholderTextColor="#94a3b8"
-                            style={styles.input}
+                            containerStyle={{ marginTop: 8 }}
                         />
 
                         <View style={styles.editorButtonsRow}>
@@ -353,16 +350,6 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#64748b',
         marginTop: 4,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        fontSize: 14,
-        marginTop: 4,
-        backgroundColor: '#fff',
     },
     editorButtonsRow: {
         flexDirection: 'row',

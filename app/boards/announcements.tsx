@@ -11,7 +11,6 @@ import {
     Pressable,
     StyleSheet,
     Text,
-    TextInput,
     View,
 } from 'react-native';
 
@@ -30,6 +29,7 @@ import {
 
 import { ChipSelector } from '@/components/chip-selector';
 import { Button } from '@/components/ui/button';
+import { TextInput } from '@/components/ui/text-input';
 import { ModalCard } from '@/components/ui/modal-card';
 import { ModalShell } from '@/components/ui/modal-shell';
 import { ScreenList } from '@/components/ui/screen-list';
@@ -328,9 +328,8 @@ export default function AnnouncementsBoard() {
                 {/* ---------------------------------------------- */}
                 <View style={styles.searchWrapper}>
                     <TextInput
-                        style={[styles.textInput, styles.textInputWithRightIcon]}
+                        style={styles.textInputWithRightIcon}
                         placeholder="Search announcements..."
-                        placeholderTextColor="#94a3b8"
                         value={search}
                         onChangeText={setSearch}
                     />
@@ -394,9 +393,8 @@ export default function AnnouncementsBoard() {
                     ]}
                 >
                     <TextInput
-                        style={[styles.textInput, styles.textInputMultiline]}
+                        style={styles.textInputMultiline}
                         placeholder={activeTab.placeholder}
-                        placeholderTextColor="#94a3b8"
                         value={newText}
                         onChangeText={setNewText}
                         multiline
@@ -494,12 +492,11 @@ export default function AnnouncementsBoard() {
                         <Text style={styles.modalTitle}>Edit Announcement</Text>
 
                         <TextInput
-                            style={[styles.textInput, styles.textInputMultiline]}
+                            style={styles.textInputMultiline}
                             multiline
                             value={editText}
                             onChangeText={setEditText}
                             placeholder="Edit your note..."
-                            placeholderTextColor="#94a3b8"
                         />
 
                         <View style={styles.modalButtons}>
@@ -544,21 +541,19 @@ export default function AnnouncementsBoard() {
                         <Text style={styles.modalTitle}>Create New Tab</Text>
 
                         <TextInput
-                            style={styles.textInput}
                             placeholder="Tab name (e.g., Holidays)"
-                            placeholderTextColor="#94a3b8"
                             value={newTabLabel}
                             onChangeText={setNewTabLabel}
+                            containerStyle={{ marginBottom: 10 }}
                         />
 
                         <TextInput
-                            style={[styles.textInput, styles.textInputMultiline]}
+                            style={styles.textInputMultiline}
                             placeholder={
                                 newTabLabel.trim()
                                     ? buildDefaultPlaceholder(newTabLabel)
                                     : 'Placeholder (optional)'
                             }
-                            placeholderTextColor="#94a3b8"
                             value={newTabPlaceholder}
                             onChangeText={setNewTabPlaceholder}
                         />
@@ -677,19 +672,7 @@ const styles = StyleSheet.create({
     errorText: { fontSize: 16, textAlign: 'center', color: 'red' },
 
     // --------------------------------------
-    // SHARED INPUTS
-    // --------------------------------------
-    textInput: {
-        backgroundColor: '#fff',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#ddd',
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        color: '#111827',
-        marginBottom: 6,
-    },
-
+    // Input overrides (base from TextInput component)
     textInputMultiline: {
         minHeight: 44,
         maxHeight: 120,

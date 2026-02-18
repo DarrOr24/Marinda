@@ -7,7 +7,6 @@ import {
   Keyboard,
   StyleSheet,
   Text,
-  TextInput,
   View
 } from "react-native";
 
@@ -15,6 +14,7 @@ import { ChipSelector } from "@/components/chip-selector";
 import { KidSwitcher } from "@/components/kid-switcher";
 import MemberSidebar from "@/components/members-sidebar";
 import { Button } from "@/components/ui/button";
+import { TextInput } from "@/components/ui/text-input";
 import { ScreenList } from "@/components/ui/screen-list";
 import { SplitScreen } from "@/components/ui/split-screen";
 import WeeklyPointsChart from "@/components/weekly-points-chart";
@@ -292,25 +292,23 @@ export default function MemberProfile() {
             or special rewards.
           </Text>
 
-          <Text style={styles.adjustLabel}>Points change</Text>
           <TextInput
+            label="Points change"
             value={adjustDelta}
             onChangeText={setAdjustDelta}
             keyboardType="number-pad"
             placeholder="e.g. 10 or -5"
-            style={styles.adjustInput}
             returnKeyType="done"
             onSubmitEditing={() => Keyboard.dismiss()}
           />
 
-          <Text style={[styles.adjustLabel, { marginTop: 8 }]}>Reason</Text>
           <TextInput
+            label="Reason"
             value={adjustReason}
             onChangeText={setAdjustReason}
             placeholder="Reason for adjustment"
-            style={[styles.adjustInput, styles.adjustReasonInput]}
             multiline
-            textAlignVertical="top"
+            containerStyle={{ marginTop: 8 }}
             returnKeyType="done"
             onSubmitEditing={() => Keyboard.dismiss()}
           />
@@ -468,26 +466,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#64748b",
     marginBottom: 10,
-  },
-  adjustLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#64748b",
-    marginBottom: 4,
-  },
-  adjustInput: {
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 14,
-    backgroundColor: "#fff",
-  },
-  adjustReasonInput: {
-    marginTop: 2,
-    minHeight: 70,
-    textAlignVertical: "top",
   },
   adjustButtonsRow: {
     flexDirection: "row",
