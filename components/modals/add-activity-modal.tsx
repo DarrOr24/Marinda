@@ -1,4 +1,4 @@
-// components/add-activity-modal.tsx
+// components/modals/add-activity-modal.tsx
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
@@ -12,10 +12,40 @@ import {
 
 import { ChipSelector } from "@/components/chip-selector";
 import { DateRangePicker } from "@/components/date-range-picker";
-import { ModalCard } from "@/components/ui/modal-card";
+import { ModalCard, useModalScrollMaxHeight } from "@/components/ui/modal-card";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { MembersSelector } from "../members-selector";
 import { Button } from "../ui/button";
+
+const ICON_SIZE = 20;
+
+function FormFieldRow({
+  icon,
+  first,
+  children,
+}: {
+  icon: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+  first?: boolean;
+  children: React.ReactNode;
+}) {
+  const arr = React.Children.toArray(children);
+  const label = arr[0];
+  const content = arr.slice(1);
+
+  return (
+    <View style={[styles.formRow, first && styles.formRowFirst]}>
+      <View style={styles.labelRow}>
+        <View style={styles.iconCol}>
+          <MaterialCommunityIcons name={icon} size={ICON_SIZE} color="#64748b" />
+        </View>
+        {label}
+      </View>
+      {content.length > 0 ? (
+        <View style={styles.formCol}>{content}</View>
+      ) : null}
+    </View>
+  );
+}
 
 export type NewActivityForm = {
   title: string;
@@ -87,6 +117,7 @@ export default function AddActivityModal({
     );
   }, [visible, initialDateStr, initial]);
 
+  const scrollMaxHeight = useModalScrollMaxHeight(140);
   const canSave = title.trim().length > 0 && !!range?.start_at;
 
   function reset() {
@@ -127,43 +158,45 @@ export default function AddActivityModal({
       <ModalCard style={styles.sheet} maxHeightPadding={24} bottomPadding={12}>
         <View style={styles.header}>
           <Text style={styles.title}>
-            {mode === "edit" ? "Edit Activity ✏️" : "New Activity ✨"}
+            {mode === "edit" ? "Edit Activity" : "New Activity"}
           </Text>
           <TouchableOpacity onPress={onClose}>
-            <MaterialCommunityIcons name="close" size={22} color="#111827" />
+            <MaterialCommunityIcons name="close" size={22} color="#64748b" />
           </TouchableOpacity>
         </View>
 
         <ScrollView
+          style={{ maxHeight: scrollMaxHeight }}
+          contentContainerStyle={[styles.scrollContent, { flexGrow: 0 }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 16 }}
         >
-          <DateRangePicker
-            baseDateStr={initialDateStr}
-            initialStartAt={initial?.start_at}
-            initialEndAt={initial?.end_at}
-            onChange={setRange}
-          />
+          <FormFieldRow icon="clock-outline" first>
+            <Text style={styles.label}>When *</Text>
+            <DateRangePicker
+              baseDateStr={initialDateStr}
+              initialStartAt={initial?.start_at}
+              initialEndAt={initial?.end_at}
+              onChange={setRange}
+              hideLabel
+            />
+          </FormFieldRow>
 
-          <Text style={styles.label}>🏷️ Title *</Text>
-          <TextInput
-            placeholder="e.g., Soccer practice ⚽️"
+          <FormFieldRow icon="format-title">
+            <Text style={styles.label}>Title *</Text>
+            <TextInput
+              placeholder="e.g., Soccer practice"
             placeholderTextColor="#94a3b8"
             value={title}
             onChangeText={setTitle}
             style={styles.input}
             autoCapitalize="words"
-          />
-
-          <Text style={styles.label}>📍 Place</Text>
-          <View style={styles.fieldRow}>
-            <MaterialCommunityIcons
-              name="map-marker-outline"
-              size={18}
-              color="#475569"
             />
+          </FormFieldRow>
+
+          <FormFieldRow icon="map-marker-outline">
+            <Text style={styles.label}>Location</Text>
             <TextInput
               placeholder="e.g., Community Center"
               placeholderTextColor="#94a3b8"
@@ -171,11 +204,10 @@ export default function AddActivityModal({
               onChangeText={setLocation}
               style={styles.input}
             />
-          </View>
+          </FormFieldRow>
 
-          <Text style={styles.label}>💵 $</Text>
-          <View style={styles.fieldRow}>
-            <MaterialCommunityIcons name="cash" size={18} color="#475569" />
+          <FormFieldRow icon="cash">
+            <Text style={styles.label}>Amount ($)</Text>
             <TextInput
               placeholder="e.g., 15"
               placeholderTextColor="#94a3b8"
@@ -184,32 +216,65 @@ export default function AddActivityModal({
               onChangeText={setMoney}
               style={styles.input}
             />
-          </View>
+          </FormFieldRow>
 
-          <Text style={styles.label}>Flags</Text>
-          <ChipSelector
-            multiple
-            values={flags}
-            onChange={setFlags}
-            options={[
-              { label: "🚗 Ride", value: "ride_needed" },
-              { label: "🎁 Present", value: "present_needed" },
-              { label: "🍼 Babysitter", value: "babysitter_needed" },
-            ]}
-          />
+          <FormFieldRow icon="flag-outline">
+            <Text style={styles.label}>Flags</Text>
+            <ChipSelector
+              multiple
+              values={flags}
+              onChange={setFlags}
+              options={[
+                { label: "Ride", value: "ride_needed" },
+                { label: "Present", value: "present_needed" },
+                { label: "Babysitter", value: "babysitter_needed" },
+              ]}
+              renderOption={(opt, active) => (
+                <View style={styles.chipContent}>
+                  <MaterialCommunityIcons
+                    name={
+                      opt.value === "ride_needed"
+                        ? "car-outline"
+                        : opt.value === "present_needed"
+                          ? "gift-outline"
+                          : "baby-face-outline"
+                    }
+                    size={16}
+                    color={active ? "#fff" : "#64748b"}
+                  />
+                  <Text
+                    style={[
+                      styles.chipLabel,
+                      active && styles.chipLabelActive,
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </View>
+              )}
+            />
+          </FormFieldRow>
 
-          <Text style={styles.label}>👥 Who’s going?</Text>
-          <MembersSelector values={selectedIds} onChange={setSelectedIds} />
+          <FormFieldRow icon="account-group-outline">
+            <Text style={styles.label}>Who's going?</Text>
+            <MembersSelector
+              values={selectedIds}
+              onChange={setSelectedIds}
+              containerStyle={{ marginTop: 2, marginBottom: 0 }}
+            />
+          </FormFieldRow>
 
-          <Text style={styles.label}>📝 Notes</Text>
-          <TextInput
-            placeholder="Add a note…"
-            placeholderTextColor="#94a3b8"
-            value={notes}
-            onChangeText={setNotes}
-            style={[styles.input, { height: 80 }]}
-            multiline
-          />
+          <FormFieldRow icon="note-text-outline">
+            <Text style={styles.label}>Notes</Text>
+            <TextInput
+              placeholder="Add a note…"
+              placeholderTextColor="#94a3b8"
+              value={notes}
+              onChangeText={setNotes}
+              style={[styles.input, styles.notesInput]}
+              multiline
+            />
+          </FormFieldRow>
         </ScrollView>
 
         <View style={styles.actions}>
@@ -245,10 +310,34 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     color: "#475569",
-    marginTop: 10,
-    marginBottom: 4,
+    marginTop: 0,
+    marginBottom: 0,
     fontWeight: "700",
   },
+
+  formRow: {
+    marginTop: 14,
+  },
+  formRowFirst: { marginTop: 0 },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  iconCol: {
+    width: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  formCol: { flex: 1, minWidth: 0, marginTop: 6 },
+  chipContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  chipLabel: { fontSize: 14, color: "#64748b", fontWeight: "600" },
+  chipLabelActive: { color: "#fff", fontWeight: "600" },
+  notesInput: { height: 80, textAlignVertical: "top" },
 
   fieldRow: {
     flexDirection: "row",
@@ -269,10 +358,16 @@ const styles = StyleSheet.create({
     color: "#0f172a",
   },
 
+  scrollContent: { paddingBottom: 16, gap: 2 },
+
   actions: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "flex-end",
     gap: 8,
-    marginTop: 12,
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
   },
 });

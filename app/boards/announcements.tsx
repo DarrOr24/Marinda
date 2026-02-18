@@ -670,7 +670,7 @@ export default function AnnouncementsBoard() {
 // STYLES
 // --------------------------------------------
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 16 },
+    container: { flex: 1, paddingLeft: 20, paddingRight: 16, paddingTop: 16, paddingBottom: 16 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     emptyList: { flexGrow: 1, justifyContent: 'center' },
     infoText: { fontSize: 16, textAlign: 'center', opacity: 0.7 },

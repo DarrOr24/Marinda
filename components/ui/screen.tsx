@@ -1,6 +1,6 @@
 // components/ui/screen.tsx
 import React from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View, ViewStyle } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import CheckerboardBackground from "../checkerboard-background";
 
@@ -12,6 +12,9 @@ type Props = {
 
   // ✅ optional floating UI (FAB, etc) rendered above scroll
   overlay?: React.ReactNode;
+
+  // optional override for content padding (e.g. paddingTop to reduce space below nav header)
+  contentStyle?: ViewStyle;
 };
 
 export function Screen({
@@ -20,6 +23,7 @@ export function Screen({
   bottomOffset = 0,
   withBackground = true,
   overlay,
+  contentStyle,
 }: Props) {
   const insets = useSafeAreaInsets();
 
@@ -38,7 +42,7 @@ export function Screen({
       <View style={styles.stage}>
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={[styles.content, { paddingBottom }, { gap: gapStyle }]}
+          contentContainerStyle={[styles.content, { paddingBottom }, { gap: gapStyle }, contentStyle]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           keyboardDismissMode="on-drag"

@@ -16,6 +16,7 @@ type Props = {
   initialStartAt?: string
   initialEndAt?: string
   onChange?: (value: { start_at: string; end_at: string }) => void
+  hideLabel?: boolean
 }
 
 type Range = { start_at: string; end_at: string }
@@ -61,10 +62,15 @@ function createInitialRange(
   }
 }
 
+function formatTimeLabel(iso: string) {
+  return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+}
+
 function formatStartLabel(range: Range) {
-  const { dateStr, time } = toLocalParts(range.start_at)
+  const { dateStr } = toLocalParts(range.start_at)
   const day = getWeekDayFromDateString(dateStr)
   const month = getShortMonthFromDateString(dateStr)
+  const time = formatTimeLabel(range.start_at)
   return `${day} ${month} · ${time}`
 }
 
@@ -73,12 +79,12 @@ function formatEndLabel(range: Range) {
   const endParts = toLocalParts(range.end_at)
 
   if (startParts.dateStr === endParts.dateStr) {
-    return endParts.time
+    return formatTimeLabel(range.end_at)
   }
 
   const day = getWeekDayFromDateString(endParts.dateStr)
   const month = getShortMonthFromDateString(endParts.dateStr)
-  return `${day} ${month} ${endParts.time}`
+  return `${day} ${month} ${formatTimeLabel(range.end_at)}`
 }
 
 export function DateRangePicker({
@@ -86,6 +92,7 @@ export function DateRangePicker({
   initialStartAt,
   initialEndAt,
   onChange,
+  hideLabel = false,
 }: Props) {
   const [range, setRange] = useState<Range>(() =>
     createInitialRange(baseDateStr, initialStartAt, initialEndAt)
@@ -142,7 +149,7 @@ export function DateRangePicker({
 
   return (
     <View>
-      <Text style={styles.label}>🕒 When *</Text>
+      {!hideLabel && <Text style={styles.label}>When *</Text>}
 
       <View style={styles.row}>
         <TouchableOpacity

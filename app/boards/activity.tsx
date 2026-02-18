@@ -1,7 +1,6 @@
 // app/boards/activity.tsx
 import { useMemo, useState } from "react";
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,6 +9,7 @@ import {
   View,
 } from "react-native";
 
+import { ActivityDetailModal } from "@/components/modals/activity-detail-modal";
 import AddActivityModal, { type NewActivityForm } from "@/components/modals/add-activity-modal";
 import { Button } from "@/components/ui/button";
 import { SafeFab } from "@/components/ui/safe-fab";
@@ -47,13 +47,6 @@ function addDays(date: Date, days: number) {
 function addWeeks(date: Date, weeks: number) {
   return addDays(date, weeks * 7);
 }
-function sameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
 function formatRangeLabel(start: Date) {
   const end = addDays(start, 6);
   const fmt = (d: Date) =>
@@ -74,9 +67,7 @@ function toDateKey(d: Date) {
 
 function formatTimeFromIso(iso: string) {
   const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
+  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
 export default function ActivityBoard() {
@@ -89,6 +80,7 @@ export default function ActivityBoard() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [detailActivity, setDetailActivity] = useState<Activity | null>(null);
 
   const startOfThisWeek = useMemo(() => getStartOfWeek(today), [today]);
   const visibleWeekStart = useMemo(
@@ -129,6 +121,12 @@ export default function ActivityBoard() {
   }
 
   function activityColor(status: ActivityStatus, color: string) {
+    if (status === "NOT_APPROVED") {
+      return {
+        borderColor: "#cbd5e1",
+        backgroundColor: "#f1f5f9",
+      };
+    }
     return {
       borderColor: color,
       backgroundColor: status === "APPROVED" ? `${color}22` : "#fff",
@@ -149,99 +147,11 @@ export default function ActivityBoard() {
     return m?.color?.hex ?? m?.color ?? "#2563eb";
   }
 
+  const myRole = (member?.role ?? member?.profile?.role ?? "").toUpperCase();
+  const isParent = ["DAD", "MOM", "ADULT"].includes(myRole);
+
   function showDetails(a: Activity) {
-    const participantIds = a.participants?.map((p) => p.member_id) ?? [];
-    const names = participantIds
-      .map((id: string) => {
-        const m = memberById.get(id);
-        const prof = m?.profile;
-        if (prof?.first_name || prof?.last_name) {
-          return `${prof?.first_name ?? ""} ${prof?.last_name ?? ""}`.trim();
-        }
-        return m?.name;
-      })
-      .filter(Boolean)
-      .join(", ");
-
-    const statusLine =
-      a.status === "APPROVED"
-        ? "✅ Approved"
-        : a.status === "NOT_APPROVED"
-          ? "❌ Not approved"
-          : "⏳ Pending approval";
-
-    const start = new Date(a.start_at);
-    const end = new Date(a.end_at);
-    const sameDayRange = sameDay(start, end);
-
-    const startDateLabel = start.toLocaleDateString(undefined, {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    });
-    const endDateLabel = end.toLocaleDateString(undefined, {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    });
-
-    const dateLine = sameDayRange
-      ? `📅 ${startDateLabel}`
-      : `📅 ${startDateLabel} → ${endDateLabel}`;
-
-    const timeLine = `🕒 ${formatTimeFromIso(a.start_at)}–${formatTimeFromIso(
-      a.end_at
-    )}`;
-
-    const lines = [
-      `🏷️ ${a.title}`,
-      dateLine,
-      timeLine,
-      "",
-      a.location ? `📍 ${a.location}` : "",
-      typeof a.money === "number" ? `💵 $${a.money.toFixed(2)}` : "",
-      "",
-      `🚗 Ride: ${a.ride_needed ? "✅" : "❌"}`,
-      `🎁 Present: ${a.present_needed ? "✅" : "❌"}`,
-      `🍼 Babysitter: ${a.babysitter_needed ? "✅" : "❌"}`,
-      names ? `👥 Who’s going: ${names}` : "👥 Who’s going: —",
-      a.notes ? `📝 ${a.notes}` : "",
-      "",
-      statusLine,
-      `👤 ${creatorName(a)}`,
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    const buttons: any[] = [{ text: "CLOSE", style: "cancel" }];
-
-    const myRole = (member?.role ?? member?.profile?.role ?? "").toUpperCase();
-    const isParent = ["DAD", "MOM", "ADULT"].includes(myRole);
-    if (isParent) {
-      buttons.unshift({
-        text: "Reject ❌",
-        onPress: () =>
-          updateMut.mutate({ id: a.id, patch: { status: "NOT_APPROVED" } }),
-      });
-      buttons.unshift({
-        text: "Approve ✅",
-        onPress: () =>
-          updateMut.mutate({ id: a.id, patch: { status: "APPROVED" } }),
-      });
-    }
-
-    const isCreator = a.created_by?.id && a.created_by.id === member?.id;
-    if (isCreator) {
-      buttons.unshift({
-        text: "EDIT ✏️",
-        onPress: () => {
-          setEditingId(a.id);
-          setEditOpen(true);
-        },
-      });
-    }
-
-    Alert.alert("Activity", lines, buttons);
+    setDetailActivity(a);
   }
 
   // Group activities by start date (local)
@@ -297,6 +207,8 @@ export default function ActivityBoard() {
       present_needed: !!form.present_needed,
       babysitter_needed: !!form.babysitter_needed,
       notes: form.notes ?? null,
+      // only kid edits require re-approval; parent edits keep current status
+      ...(isParent ? {} : { status: "PENDING" as ActivityStatus }),
     };
 
     // For updates we let the DB preserve existing `response` & `is_creator`
@@ -325,6 +237,7 @@ export default function ActivityBoard() {
     <Screen
       bottomOffset={72}
       gap="md"
+      contentStyle={{ paddingTop: 8, paddingHorizontal: 0 }}
       overlay={
         <SafeFab bottomOffset={18} rightOffset={16}>
           <Button
@@ -405,13 +318,32 @@ export default function ActivityBoard() {
                         const color = creatorColor(a);
                         const base = activityColor(a.status, color);
 
-                        const badges = [
-                          a.ride_needed ? "🚗" : "",
-                          a.present_needed ? "🎁" : "",
-                          a.babysitter_needed ? "🍼" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ");
+                        const badgeIcons = [
+                          a.ride_needed && (
+                            <MaterialCommunityIcons
+                              key="ride"
+                              name="car-outline"
+                              size={16}
+                              color="#64748b"
+                            />
+                          ),
+                          a.present_needed && (
+                            <MaterialCommunityIcons
+                              key="present"
+                              name="gift-outline"
+                              size={16}
+                              color="#64748b"
+                            />
+                          ),
+                          a.babysitter_needed && (
+                            <MaterialCommunityIcons
+                              key="babysitter"
+                              name="baby-face-outline"
+                              size={16}
+                              color="#64748b"
+                            />
+                          ),
+                        ].filter(Boolean);
 
                         const goingMembers = (a.participants ?? [])
                           .map((p) => memberById.get(p.member_id))
@@ -436,8 +368,12 @@ export default function ActivityBoard() {
                             <Text numberOfLines={1} style={styles.itemTitle}>
                               {a.title}
                               {a.start_at ? ` — ${formatTimeFromIso(a.start_at)}` : ""}
-                              {badges ? `  ${badges}` : ""}
                             </Text>
+                            {badgeIcons.length > 0 ? (
+                              <View style={styles.badgeIcons}>
+                                {badgeIcons}
+                              </View>
+                            ) : null}
 
                             <View
                               style={{
@@ -487,6 +423,35 @@ export default function ActivityBoard() {
         }}
       />
 
+      {/* Activity Detail Modal */}
+      <ActivityDetailModal
+        visible={!!detailActivity}
+        activity={detailActivity}
+        onClose={() => setDetailActivity(null)}
+        onApprove={(id) => {
+          updateMut.mutate({ id, patch: { status: "APPROVED" } });
+          setDetailActivity(null);
+        }}
+        onReject={(id) => {
+          updateMut.mutate({ id, patch: { status: "NOT_APPROVED" } });
+          setDetailActivity(null);
+        }}
+        onEdit={(id) => {
+          setDetailActivity(null);
+          setEditingId(id);
+          setEditOpen(true);
+        }}
+        memberById={memberById}
+        creatorName={creatorName}
+        isParent={isParent}
+        isCreator={
+          !!(
+            detailActivity?.created_by?.id &&
+            detailActivity.created_by.id === member?.id
+          )
+        }
+      />
+
       {/* Edit Activity */}
       {editingId &&
         (() => {
@@ -530,7 +495,7 @@ export default function ActivityBoard() {
 
 const styles = StyleSheet.create({
 
-  center: { flex: 1, paddingHorizontal: 16, paddingTop: 12, gap: 12 },
+  center: { flex: 1, paddingLeft: 20, paddingRight: 16, paddingTop: 0, gap: 12 },
 
   headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   headerTitleWrap: {
@@ -594,6 +559,7 @@ const styles = StyleSheet.create({
   itemPending: {},
   colorDot: { width: 8, height: 8, borderRadius: 999 },
   itemTitle: { flex: 1, color: "#0f172a", fontWeight: "700" },
+  badgeIcons: { flexDirection: "row", alignItems: "center", gap: 6 },
 
   partDot: { width: 8, height: 8, borderRadius: 999 },
   partMore: { fontSize: 12, color: "#334155", marginLeft: 2 },

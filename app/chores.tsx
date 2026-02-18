@@ -914,7 +914,7 @@ export default function Chores() {
       </View>
 
       <FlatList
-        contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingLeft: 20, paddingRight: 16, paddingTop: 16, paddingBottom: 32, gap: 12 }}
         data={dataForTab}
         keyExtractor={(c) => c.id}
         ListEmptyComponent={
@@ -1151,7 +1151,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between', // icons left, button right
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingLeft: 20,
+    paddingRight: 16,
     paddingTop: 16,
   },
 
@@ -1163,7 +1164,8 @@ const styles = StyleSheet.create({
 
   tabsRow: {
     flexDirection: 'row',
-    paddingHorizontal: 12,
+    paddingLeft: 20,
+    paddingRight: 16,
     paddingTop: 12,
     gap: 8,
   },

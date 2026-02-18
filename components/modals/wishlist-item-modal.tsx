@@ -13,7 +13,7 @@ import {
 
 import MediaPicker from "@/components/media-picker";
 import { Button } from "@/components/ui/button";
-import { ModalCard } from "@/components/ui/modal-card";
+import { ModalCard, useModalScrollMaxHeight } from "@/components/ui/modal-card";
 import { ModalShell } from "@/components/ui/modal-shell";
 
 type Props = {
@@ -87,6 +87,7 @@ export function WishlistItemModal({
     onClose,
     onSubmit,
 }: Props) {
+    const scrollMaxHeight = useModalScrollMaxHeight(140);
     function handleToggleSelfFulfill() {
         // must have a price first
         if (!price.trim()) {
@@ -140,10 +141,11 @@ export function WishlistItemModal({
                 <Text style={styles.modalTitle}>{mode === "edit" ? "Edit Wish" : "Add Wish"}</Text>
 
                 <ScrollView
+                    style={{ maxHeight: scrollMaxHeight }}
+                    contentContainerStyle={{ paddingBottom: 16, flexGrow: 0 }}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 16 }}
                 >
                     <TextInput
                         placeholder="Title"

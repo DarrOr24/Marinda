@@ -270,6 +270,7 @@ export default function WishList() {
         <Screen
             bottomOffset={56}
             gap="md"
+            contentStyle={{ paddingTop: 8, paddingHorizontal: 0 }}
             overlay={
                 <SafeFab bottomOffset={50} rightOffset={16}>
                     <Button
@@ -569,8 +570,9 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     container: {
-        paddingHorizontal: 16,
-        paddingTop: 16,
+        paddingLeft: 20,
+        paddingRight: 16,
+        paddingTop: 0,
         paddingBottom: 24,
         gap: 16,
     },
