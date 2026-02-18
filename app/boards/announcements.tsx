@@ -17,7 +17,6 @@ import {
 
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useFamily } from '@/lib/families/families.hooks';
-import { useSubscribeTableByFamily } from '@/lib/families/families.realtime';
 
 import {
     useCreateAnnouncement,
@@ -28,7 +27,6 @@ import {
     useUpdateAnnouncement,
 } from '@/lib/announcements/announcements.hooks';
 
-import { useAnnouncementsRealtime } from '@/lib/announcements/announcements.realtime';
 
 import { ChipSelector } from '@/components/chip-selector';
 import { Button } from '@/components/ui/button';
@@ -74,7 +72,6 @@ export default function AnnouncementsBoard() {
     // Load Members
     // --------------------------------------------
     const { familyMembers } = useFamily(familyId);
-    useSubscribeTableByFamily('family_members', familyId, ['family-members', familyId]);
 
     const rawMembers: any[] = useMemo(
         () =>
@@ -119,8 +116,6 @@ export default function AnnouncementsBoard() {
     // Load Announcements + Realtime
     // --------------------------------------------
     const { data: announcements, isLoading, error } = useFamilyAnnouncements(familyId);
-
-    useAnnouncementsRealtime(familyId);
 
     const createMutation = useCreateAnnouncement(familyId);
     const deleteMutation = useDeleteAnnouncement(familyId);

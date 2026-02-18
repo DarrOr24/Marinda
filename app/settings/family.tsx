@@ -31,18 +31,18 @@ import { isParentRole } from '@/utils/validation.utils'
 
 export default function FamilySettingsScreen() {
   const router = useRouter()
-  const { member } = useAuthContext() as any
-  const familyId = member?.family_id
+  const { member, activeFamilyId } = useAuthContext() as any
+  const familyId = activeFamilyId ?? member?.family_id
   const myRole = member?.role as Role | undefined
   const myProfileId = member?.profile_id as string | undefined
   const isParent = isParentRole(myRole)
 
-  const { family, familyMembers, familyInvites } = useFamily(familyId as string)
+  const { family, familyMembers, familyInvites } = useFamily(familyId)
 
-  const updateMemberRole = useUpdateMemberRole(familyId)
-  const rotateCode = useRotateFamilyCode(familyId)
-  const removeMember = useRemoveMember(familyId)
-  const cancelInvite = useCancelFamilyInvite(familyId)
+  const updateMemberRole = familyId ? useUpdateMemberRole(familyId) : null
+  const rotateCode = familyId ? useRotateFamilyCode(familyId) : null
+  const removeMember = familyId ? useRemoveMember(familyId) : null
+  const cancelInvite = familyId ? useCancelFamilyInvite(familyId) : null
 
   const familyData = family.data
   const isLoadingMembers = familyMembers.isLoading
@@ -89,11 +89,11 @@ export default function FamilySettingsScreen() {
 
   const handleChangeRole = (m: FamilyMember, newRole: Role) => {
     if (newRole === m.role) return
-    updateMemberRole.mutate({ memberId: m.id, role: newRole })
+    updateMemberRole?.mutate({ memberId: m.id, role: newRole })
   }
 
   const handleRotateCode = () => {
-    rotateCode.mutate(undefined, {
+    rotateCode?.mutate(undefined, {
       onError: (e: any) => {
         Alert.alert('Could not rotate code', e?.message ?? 'Please try again.')
       },
@@ -110,7 +110,7 @@ export default function FamilySettingsScreen() {
           text: 'Cancel invite',
           style: 'destructive',
           onPress: () =>
-            cancelInvite.mutate(
+            cancelInvite?.mutate(
               { inviteId: invite.id },
               {
                 onError: (e: any) => {
@@ -137,7 +137,7 @@ export default function FamilySettingsScreen() {
           text: 'Remove',
           style: 'destructive',
           onPress: () =>
-            removeMember.mutate(
+            removeMember?.mutate(
               { memberId: m.id },
               {
                 onError: (e: any) => {
@@ -196,11 +196,11 @@ export default function FamilySettingsScreen() {
 
             {/* Rotate */}
             <Button
-              title={rotateCode.isPending ? 'Rotating…' : 'Rotate'}
+              title={rotateCode?.isPending ? 'Rotating…' : 'Rotate'}
               type="primary"
               size="sm"
               onPress={handleRotateCode}
-              disabled={rotateCode.isPending}
+              disabled={rotateCode?.isPending}
             />
           </View>
         </View>

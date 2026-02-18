@@ -105,6 +105,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       try {
         const { data, error } = await supabase.auth.getSession()
         if (error) console.error('Error fetching session:', error)
+        if (data.session?.access_token) supabase.realtime.setAuth(data.session.access_token)
         setSession(data.session ?? null)
         if (!data.session) await cleanState()
       } finally {
@@ -115,6 +116,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s)
+      if (s?.access_token) supabase.realtime.setAuth(s.access_token)
       if (!s) void cleanState()
     })
     return () => sub.subscription.unsubscribe()

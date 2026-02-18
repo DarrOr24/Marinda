@@ -20,7 +20,6 @@ import { SplitScreen } from "@/components/ui/split-screen";
 import WeeklyPointsChart from "@/components/weekly-points-chart";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
-import { useSubscribeTableByFamily } from "@/lib/families/families.realtime";
 import type { Role } from "@/lib/members/members.types";
 import {
   adjustMemberPoints,
@@ -68,11 +67,6 @@ export default function MemberProfile() {
   // ✅ member being viewed (for points card)
   const current = memberList.find((m: any) => m.id === viewedMemberId);
   const points = (current as any)?.points ?? 0;
-
-  useSubscribeTableByFamily("family_members", activeFamilyId, [
-    "family-members",
-    activeFamilyId,
-  ]);
 
   // 🔄 Always refetch members when entering this screen or switching profile
   useEffect(() => {

@@ -6,7 +6,6 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import { MemberAvatar } from '@/components/avatar/member-avatar'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useFamily } from '@/lib/families/families.hooks'
-import { useSubscribeTableByFamily } from '@/lib/families/families.realtime'
 import type { FamilyMember } from '@/lib/members/members.types'
 
 const SIDEBAR_WIDTH = 92
@@ -20,9 +19,6 @@ export default function MemberSidebar() {
   const { familyMembers } = useFamily(activeFamilyId as string)
 
   const { member: currentUser } = useAuthContext()
-
-  // Realtime updates for this family
-  useSubscribeTableByFamily('family_members', activeFamilyId as string, ['family-members', activeFamilyId])
 
   // Empty state: no family selected
   if (!activeFamilyId) {

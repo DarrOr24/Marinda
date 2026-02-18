@@ -5,7 +5,6 @@ import { ModalShell } from "@/components/ui/modal-shell";
 import { ScreenList } from "@/components/ui/screen-list";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
-import { useSubscribeTableByFamily } from "@/lib/families/families.realtime";
 import {
     addGroceryItem,
     deleteGroceryItems,
@@ -64,11 +63,6 @@ export default function Grocery() {
     const { activeFamilyId, member, family, members } = useAuthContext() as any;
 
     const { familyMembers } = useFamily(activeFamilyId);
-    useSubscribeTableByFamily(
-        "family_members",
-        activeFamilyId,
-        ["family-members", activeFamilyId]
-    );
 
     // memberId → first name
     const nameForId = useMemo(() => {
