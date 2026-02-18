@@ -1,5 +1,7 @@
 import { GroceryItemModal } from "@/components/modals/grocery-item-modal";
 import { Button } from "@/components/ui/button";
+import { ModalCard } from "@/components/ui/modal-card";
+import { ModalShell } from "@/components/ui/modal-shell";
 import { ScreenList } from "@/components/ui/screen-list";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
@@ -101,6 +103,7 @@ export default function Grocery() {
     // Add/edit modal state
     const [addOpen, setAddOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<GroceryItem | null>(null);
+    const [infoItem, setInfoItem] = useState<GroceryItem | null>(null);
 
     const [name, setName] = useState("");
     const [categoryOpen, setCategoryOpen] = useState(false);
@@ -326,16 +329,7 @@ export default function Grocery() {
     }
 
     function showItemInfo(it: GroceryItem) {
-        const when = new Date(it.created_at).toLocaleString();
-        const addedBy = nameForId(it.added_by_member_id);
-
-        Alert.alert(
-            it.name,
-            `Added by: ${addedBy}
-When: ${when}
-Category: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}` : ""
-            }`
-        );
+        setInfoItem(it);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -589,6 +583,38 @@ Category: ${it.category ?? "Uncategorized"}${it.amount ? `\nAmount: ${it.amount}
                 onSubmit={saveItem}
             />
 
+            {/* Item info modal */}
+            <ModalShell visible={!!infoItem} onClose={() => setInfoItem(null)} keyboardOffset={0}>
+                <ModalCard>
+                    {infoItem && (
+                        <>
+                            <Text style={styles.infoModalTitle}>{infoItem.name}</Text>
+                            <View style={styles.infoModalRow}>
+                                <Text style={styles.infoModalLabel}>Added by</Text>
+                                <Text style={styles.infoModalValue}>{nameForId(infoItem.added_by_member_id)}</Text>
+                            </View>
+                            <View style={styles.infoModalRow}>
+                                <Text style={styles.infoModalLabel}>When</Text>
+                                <Text style={styles.infoModalValue}>{new Date(infoItem.created_at).toLocaleString()}</Text>
+                            </View>
+                            <View style={styles.infoModalRow}>
+                                <Text style={styles.infoModalLabel}>Category</Text>
+                                <Text style={styles.infoModalValue}>{infoItem.category ?? "Uncategorized"}</Text>
+                            </View>
+                            {infoItem.amount && (
+                                <View style={styles.infoModalRow}>
+                                    <Text style={styles.infoModalLabel}>Amount</Text>
+                                    <Text style={styles.infoModalValue}>{infoItem.amount}</Text>
+                                </View>
+                            )}
+                            <View style={styles.infoModalActions}>
+                                <Button type="primary" size="sm" title="Close" onPress={() => setInfoItem(null)} />
+                            </View>
+                        </>
+                    )}
+                </ModalCard>
+            </ModalShell>
+
         </ScreenList>
     );
 }
@@ -691,6 +717,31 @@ const styles = StyleSheet.create({
     viewOptionText: {
         fontSize: 15,
         color: "#0f172a",
+    },
+
+    // Info modal
+    infoModalTitle: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#0f172a",
+        marginBottom: 16,
+    },
+    infoModalRow: {
+        marginBottom: 12,
+    },
+    infoModalLabel: {
+        fontSize: 12,
+        color: "#64748b",
+        marginBottom: 2,
+    },
+    infoModalValue: {
+        fontSize: 16,
+        color: "#0f172a",
+    },
+    infoModalActions: {
+        marginTop: 20,
+        flexDirection: "row",
+        justifyContent: "flex-end",
     },
 
 });
