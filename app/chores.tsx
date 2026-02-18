@@ -1061,7 +1061,7 @@ export default function Chores() {
                             setEditing(item);
                           }}
 
-                          leftIcon={<Feather name="edit-3" size={16} />}
+                          leftIcon={<MaterialCommunityIcons name="pencil-outline" size={18} />}
                         />
 
                         <Button
@@ -1075,7 +1075,7 @@ export default function Chores() {
                             onDelete(item.id);
                           }}
 
-                          leftIcon={<Feather name="trash-2" size={16} />}
+                          leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
                         />
 
                       </>

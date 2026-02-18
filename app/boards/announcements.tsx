@@ -1,14 +1,14 @@
 // app/boards/announcements.tsx
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    FlatList,
     Keyboard,
     Platform,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     View,
@@ -28,6 +28,7 @@ import {
 
 
 import { ChipSelector } from '@/components/chip-selector';
+import { StickyNote } from '@/components/sticky-note';
 import { Button, ModalCard, ModalShell, ScreenList, TextInput } from '@/components/ui';
 import {
     DEFAULT_ANNOUNCEMENT_TABS,
@@ -45,6 +46,24 @@ function buildDefaultPlaceholder(label: string) {
 
 // Helper
 const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 6)}` : '—');
+
+// Bulletin board: tab-specific sticky note colors
+const BULLETIN_COLORS: Record<string, string> = {
+    notes: '#fef9c3',      // yellow sticky
+    requests: '#dbeafe',   // light blue
+    reminders: '#fce7f3',  // light pink
+};
+const BULLETIN_BORDER: Record<string, string> = {
+    notes: '#facc15',
+    requests: '#3b82f6',
+    reminders: '#ec4899',
+};
+function getBulletinStyle(kind: string) {
+    return {
+        backgroundColor: BULLETIN_COLORS[kind] ?? '#f3f4f6',
+        borderLeftColor: BULLETIN_BORDER[kind] ?? '#9ca3af',
+    };
+}
 
 // --------------------------------------------
 // MAIN COMPONENT
@@ -399,82 +418,96 @@ export default function AnnouncementsBoard() {
                         onSubmitEditing={() => Keyboard.dismiss()}
                     />
 
-
                     <Button
                         title={createMutation.isPending ? '...' : 'Add'}
                         type="primary"
                         size="sm"
                         onPress={handleAdd}
                         disabled={!newText.trim() || createMutation.isPending}
-                        style={{ alignSelf: 'flex-end' }}
+                        style={styles.addButton}
                     />
-
                 </View>
 
                 {/* ---------------------------------------------- */}
-                {/* LIST */}
+                {/* LIST — One sticky note per tab */}
                 {/* ---------------------------------------------- */}
-                <FlatList
-                    style={{ flex: 1 }}
-                    data={filteredAnnouncements}
-                    keyExtractor={item => item.id}
+                <ScrollView
+                    style={{ flex: 1, overflow: 'visible' }}
+                    contentContainerStyle={[
+                        filteredAnnouncements.length === 0 ? styles.emptyList : undefined,
+                        {
+                            paddingTop: 0,
+                            paddingBottom: INPUT_BAR_HEIGHT + insets.bottom + 16,
+                            overflow: 'visible',
+                        },
+                    ]}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode={Platform.OS === 'ios' ? 'on-drag' : 'none'}
                     onScrollBeginDrag={Keyboard.dismiss}
-                    contentContainerStyle={[
-                        filteredAnnouncements.length === 0 ? styles.emptyList : undefined,
-                        { paddingBottom: INPUT_BAR_HEIGHT + insets.bottom + 16 },
-                    ]}
-                    renderItem={({ item }) => (
-                        <View style={styles.itemRow}>
-                            <View style={styles.itemTextContainer}>
-                                <Text style={styles.itemMeta}>
-                                    {item.created_by_name} • {new Date(item.created_at).toLocaleString()}
-                                </Text>
+                >
+                    <StickyNote
+                        backgroundColor={getBulletinStyle(activeKind).backgroundColor}
+                        borderLeftColor={getBulletinStyle(activeKind).borderLeftColor}
+                    >
+                        {filteredAnnouncements.length === 0 ? (
+                            <Text style={styles.infoText}>{activeTab.emptyText}</Text>
+                        ) : (
+                            filteredAnnouncements.map((item, idx) => (
+                                <View
+                                    key={item.id}
+                                    style={[
+                                        styles.itemRow,
+                                        idx === filteredAnnouncements.length - 1 && styles.itemRowLast,
+                                    ]}
+                                >
+                                    <View style={styles.itemTextContainer}>
+                                        <Text style={styles.itemMeta}>
+                                            {item.created_by_name} • {new Date(item.created_at).toLocaleString()}
+                                        </Text>
 
-                                {item.created_at !== item.updated_at && (
-                                    <Text style={styles.itemMeta}>
-                                        (edited • {new Date(item.updated_at).toLocaleString()})
-                                    </Text>
-                                )}
+                                        {item.created_at !== item.updated_at && (
+                                            <Text style={styles.itemMeta}>
+                                                (edited • {new Date(item.updated_at).toLocaleString()})
+                                            </Text>
+                                        )}
 
-                                <Text style={styles.itemText}>{item.text}</Text>
+                                        <Text style={styles.itemText}>{item.text}</Text>
 
-                                {item.completed && <Text style={styles.itemMeta}>✓ Completed</Text>}
-                            </View>
+                                        {item.completed && <Text style={styles.itemMeta}>✓ Completed</Text>}
+                                    </View>
 
-                            {(item.created_by_member_id === myFamilyMemberId ||
-                                member?.role === 'MOM' ||
-                                member?.role === 'DAD') && (
-                                    <Button
-                                        type="ghost"
-                                        size="sm"
-                                        round
-                                        hitSlop={10}
-                                        titleColor="#475569"
-                                        onPress={() => {
-                                            setEditingItem(item);
-                                            setEditText(item.text);
-                                        }}
-                                        title="✎"
-                                    />
-
-                                )}
-
-                            <Button
-                                type="ghost"
-                                size="sm"
-                                round
-                                hitSlop={10}
-                                titleColor="#b91c1c"
-                                onPress={() => confirmDelete(item)}
-                                title="✕"
-                            />
-
-                        </View>
-                    )}
-                    ListEmptyComponent={<Text style={styles.infoText}>{activeTab.emptyText}</Text>}
-                />
+                                    <View style={styles.cardActions}>
+                                        {(item.created_by_member_id === myFamilyMemberId ||
+                                            member?.role === 'MOM' ||
+                                            member?.role === 'DAD') && (
+                                            <Button
+                                                type="ghost"
+                                                size="sm"
+                                                round
+                                                hitSlop={10}
+                                                leftIcon={<MaterialCommunityIcons name="pencil-outline" size={18} />}
+                                                leftIconColor="#475569"
+                                                onPress={() => {
+                                                    setEditingItem(item);
+                                                    setEditText(item.text);
+                                                }}
+                                            />
+                                        )}
+                                        <Button
+                                            type="ghost"
+                                            size="sm"
+                                            round
+                                            hitSlop={10}
+                                            leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
+                                            leftIconColor="#b91c1c"
+                                            onPress={() => confirmDelete(item)}
+                                        />
+                                    </View>
+                                </View>
+                            ))
+                        )}
+                    </StickyNote>
+                </ScrollView>
 
                 {/* ---------------------------------------------- */}
                 {/* EDIT ANNOUNCEMENT MODAL (ModalShell + ModalCard) */}
@@ -663,7 +696,7 @@ export default function AnnouncementsBoard() {
 const styles = StyleSheet.create({
     container: { flex: 1, paddingLeft: 20, paddingRight: 16, paddingTop: 16, paddingBottom: 16 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    emptyList: { flexGrow: 1, justifyContent: 'center' },
+    emptyList: { flexGrow: 1 },
     infoText: { fontSize: 16, textAlign: 'center', opacity: 0.7 },
     errorText: { fontSize: 16, textAlign: 'center', color: 'red' },
 
@@ -709,7 +742,7 @@ const styles = StyleSheet.create({
     // --------------------------------------
     searchWrapper: {
         position: 'relative',
-        marginBottom: 4,
+        marginBottom: 12,
     },
 
 
@@ -728,31 +761,43 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'flex-start',
         gap: 4,
-
+        marginBottom: 12,
         width: '100%',
     },
 
     // --------------------------------------
-    // LIST
+    // LIST — One sticky note per tab (StickyNote component)
     // --------------------------------------
     itemRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        paddingVertical: 8,
+        paddingVertical: 10,
         borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: '#ddd',
+        borderBottomColor: 'rgba(0,0,0,0.08)',
         gap: 8,
+    },
+    itemRowLast: {
+        borderBottomWidth: 0,
     },
     itemTextContainer: { flex: 1 },
     itemText: { fontSize: 16 },
     itemMeta: { fontSize: 12, opacity: 0.6, marginTop: 2 },
+    cardActions: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 4,
+    },
 
     // --------------------------------------
     // ADD ANNOUNCEMENT
     // --------------------------------------
     inputBar: {
-        paddingTop: 8,
-        marginTop: 4,
+        paddingTop: 12,
+        marginTop: 0,
+    },
+    addButton: {
+        alignSelf: 'flex-end',
+        marginTop: 10,
     },
 
     // --------------------------------------
@@ -775,6 +820,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'flex-end',
         gap: 20,
+        marginTop: 16,
     },
 
     // --------------------------------------
