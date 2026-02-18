@@ -1,7 +1,7 @@
 // app/boards/announcements.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -144,8 +144,16 @@ export default function AnnouncementsBoard() {
 
     const ALL_TABS: AnnouncementTab[] = [...DEFAULT_ANNOUNCEMENT_TABS, ...customTabs];
 
-    const [activeKind, setActiveKind] = useState<string>('free');
+    const [activeKind, setActiveKind] = useState<string>('notes');
     const activeTab = ALL_TABS.find(t => t.id === activeKind) ?? ALL_TABS[0];
+
+    // If active tab was deleted (or never existed), switch to first tab
+    const tabIds = useMemo(() => ALL_TABS.map(t => t.id), [customTabs]);
+    useEffect(() => {
+        if (!tabIds.includes(activeKind) && tabIds.length > 0) {
+            setActiveKind(tabIds[0]);
+        }
+    }, [tabIds, activeKind]);
 
     // --------------------------------------------
     // UI State
