@@ -31,6 +31,11 @@ import { ChipSelector } from '@/components/chip-selector';
 import { StickyNote } from '@/components/sticky-note';
 import { Button, ModalCard, ModalShell, ScreenList, TextInput } from '@/components/ui';
 import {
+    CUSTOM_TAB_TEXT,
+    getBulletinStyle,
+    TAB_PILL_TEXT,
+} from '@/lib/announcements/announcements.styles';
+import {
     DEFAULT_ANNOUNCEMENT_TABS,
     type AnnouncementItem,
     type AnnouncementTab,
@@ -46,24 +51,6 @@ function buildDefaultPlaceholder(label: string) {
 
 // Helper
 const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 6)}` : '—');
-
-// Bulletin board: tab-specific sticky note colors
-const BULLETIN_COLORS: Record<string, string> = {
-    notes: '#fef9c3',      // yellow sticky
-    requests: '#dbeafe',   // light blue
-    reminders: '#fce7f3',  // light pink
-};
-const BULLETIN_BORDER: Record<string, string> = {
-    notes: '#facc15',
-    requests: '#3b82f6',
-    reminders: '#ec4899',
-};
-function getBulletinStyle(kind: string) {
-    return {
-        backgroundColor: BULLETIN_COLORS[kind] ?? '#f3f4f6',
-        borderLeftColor: BULLETIN_BORDER[kind] ?? '#9ca3af',
-    };
-}
 
 // --------------------------------------------
 // MAIN COMPONENT
@@ -380,12 +367,15 @@ export default function AnnouncementsBoard() {
                             }}
                             allowDeselect={false}
                             options={ALL_TABS.map((t) => ({ label: t.label, value: t.id }))}
-                            chipStyle={(active) => ({
-                                backgroundColor: active ? '#111827' : '#f9fafb',
-                                borderColor: active ? '#111827' : '#d4d4d4',
-                            })}
-                            chipTextStyle={(active) => ({
-                                color: active ? '#ffffff' : '#4b5563',
+                            chipStyle={(active, opt) => {
+                                const style = getBulletinStyle(opt.value);
+                                return {
+                                    backgroundColor: active ? style.backgroundColor : '#f9fafb',
+                                    borderColor: active ? style.borderLeftColor : '#d4d4d4',
+                                };
+                            }}
+                            chipTextStyle={(active, opt) => ({
+                                color: active ? (TAB_PILL_TEXT[opt.value] ?? CUSTOM_TAB_TEXT) : '#4b5563',
                                 fontWeight: active ? '600' : '500',
                             })}
                         />
