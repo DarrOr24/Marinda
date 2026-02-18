@@ -12,6 +12,7 @@ import {
     View
 } from "react-native";
 
+import { Button } from "@/components/ui/button";
 import { ModalCard, useModalScrollMaxHeight } from "@/components/ui/modal-card";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { MembersSelector } from "../members-selector";
@@ -310,22 +311,19 @@ export default function ChorePostModal({
 
                     <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6, gap: 8 }}>
                         {!recording ? (
-                            <Pressable style={[styles.smallBtn, styles.primary]} onPress={startRecording}>
-                                <Text style={[styles.btnTxt, { color: "#fff", fontSize: 12 }]}>
-                                    {audioUri ? "Re-record" : "Record audio"}
-                                </Text>
-                            </Pressable>
+                            <Button
+                                type="primary"
+                                size="sm"
+                                title={audioUri ? "Re-record" : "Record audio"}
+                                onPress={startRecording}
+                            />
                         ) : (
-                            <Pressable style={[styles.smallBtn, styles.cancel]} onPress={stopRecording}>
-                                <Text style={[styles.btnTxt, styles.cancelTxt, { fontSize: 12 }]}>Stop</Text>
-                            </Pressable>
+                            <Button type="danger" size="sm" title="Stop" onPress={stopRecording} />
                         )}
 
                         {audioUri && !recording && (
                             <>
-                                <Pressable style={[styles.smallBtn, styles.secondary]} onPress={playRecording}>
-                                    <Text style={[styles.btnTxt, { fontSize: 12 }]}>Play</Text>
-                                </Pressable>
+                                <Button type="secondary" size="sm" title="Play" onPress={playRecording} />
 
                                 {audioDuration != null && (
                                     <Text style={{ fontSize: 12, color: "#64748b" }}>~{audioDuration}s</Text>
@@ -365,11 +363,11 @@ export default function ChorePostModal({
                 </ScrollView>
 
                 <View style={styles.row}>
-                    <Pressable onPress={onClose} style={[styles.btn, styles.secondary]}>
-                        <Text style={styles.btnTxt}>Cancel</Text>
-                    </Pressable>
-
-                    <Pressable
+                    <Button type="outline" size="sm" title="Cancel" onPress={onClose} style={styles.flex1} />
+                    <Button
+                        type="primary"
+                        size="sm"
+                        title={submitText}
                         disabled={disabled}
                         onPress={() => {
                             let expiresAt: string | null | undefined = undefined;
@@ -398,10 +396,8 @@ export default function ChorePostModal({
 
                             Keyboard.dismiss();
                         }}
-                        style={[styles.btn, disabled ? styles.disabled : styles.primary]}
-                    >
-                        <Text style={[styles.btnTxt, { color: "#fff" }]}>{submitText}</Text>
-                    </Pressable>
+                        style={styles.flex1}
+                    />
                 </View>
             </ModalCard>
         </ModalShell>
@@ -425,16 +421,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     row: { flexDirection: "row", gap: 10, marginTop: 8 },
-    btn: {
-        flex: 1,
-        paddingVertical: 12,
-        borderRadius: 12,
-        alignItems: "center",
-    },
-    primary: { backgroundColor: "#2563eb" },
-    secondary: { backgroundColor: "#f3f4f6" },
-    disabled: { backgroundColor: "#93c5fd" },
-    btnTxt: { fontWeight: "800", color: "#111827" },
+    flex1: { flex: 1 },
 
     dropdown: {
         marginTop: 6,
@@ -471,15 +458,6 @@ const styles = StyleSheet.create({
     dropdownItemTxt: { fontSize: 14, color: "#111827", fontWeight: "600" },
     dropdownItemPoints: { fontSize: 12, color: "#6b7280", marginLeft: 8 },
 
-    smallBtn: {
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 999,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    cancel: { backgroundColor: "#fee2e2" },
-    cancelTxt: { color: "#b91c1c", fontWeight: "700" },
 });
 
 // Convert a user-entered time ("7:30 pm", "19:00") into an ISO string for today

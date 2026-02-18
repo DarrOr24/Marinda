@@ -1,5 +1,6 @@
 import { GroceryItemModal } from "@/components/modals/grocery-item-modal";
 import { Button } from "@/components/ui/button";
+import { MetaRow } from "@/components/ui/meta-row";
 import { ModalCard } from "@/components/ui/modal-card";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { ScreenList } from "@/components/ui/screen-list";
@@ -583,23 +584,11 @@ export default function Grocery() {
                     {infoItem && (
                         <>
                             <Text style={styles.infoModalTitle}>{infoItem.name}</Text>
-                            <View style={styles.infoModalRow}>
-                                <Text style={styles.infoModalLabel}>Added by</Text>
-                                <Text style={styles.infoModalValue}>{nameForId(infoItem.added_by_member_id)}</Text>
-                            </View>
-                            <View style={styles.infoModalRow}>
-                                <Text style={styles.infoModalLabel}>When</Text>
-                                <Text style={styles.infoModalValue}>{new Date(infoItem.created_at).toLocaleString()}</Text>
-                            </View>
-                            <View style={styles.infoModalRow}>
-                                <Text style={styles.infoModalLabel}>Category</Text>
-                                <Text style={styles.infoModalValue}>{infoItem.category ?? "Uncategorized"}</Text>
-                            </View>
+                            <MetaRow label="Added by" value={nameForId(infoItem.added_by_member_id)} spacing={6} />
+                            <MetaRow label="When" value={new Date(infoItem.created_at).toLocaleString()} spacing={6} />
+                            <MetaRow label="Category" value={infoItem.category ?? "Uncategorized"} spacing={6} />
                             {infoItem.amount && (
-                                <View style={styles.infoModalRow}>
-                                    <Text style={styles.infoModalLabel}>Amount</Text>
-                                    <Text style={styles.infoModalValue}>{infoItem.amount}</Text>
-                                </View>
+                                <MetaRow label="Amount" value={infoItem.amount} spacing={6} />
                             )}
                             <View style={styles.infoModalActions}>
                                 <Button type="primary" size="sm" title="Close" onPress={() => setInfoItem(null)} />
@@ -719,18 +708,6 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         color: "#0f172a",
         marginBottom: 16,
-    },
-    infoModalRow: {
-        marginBottom: 12,
-    },
-    infoModalLabel: {
-        fontSize: 12,
-        color: "#64748b",
-        marginBottom: 2,
-    },
-    infoModalValue: {
-        fontSize: 16,
-        color: "#0f172a",
     },
     infoModalActions: {
         marginTop: 20,

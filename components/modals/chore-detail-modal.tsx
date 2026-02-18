@@ -2,6 +2,7 @@
 import { ChipSelector } from '@/components/chip-selector';
 import MediaPicker, { PickedMedia } from '@/components/media-picker';
 import { Button } from '@/components/ui/button';
+import { MetaRow } from '@/components/ui/meta-row';
 import { ModalCard, useModalScrollMaxHeight } from '@/components/ui/modal-card';
 import { ModalShell } from '@/components/ui/modal-shell';
 import { ChoreView, Proof } from '@/lib/chores/chores.types';
@@ -340,7 +341,7 @@ export default function ChoreDetailModal({
                                 <Button
                                     title="Play audio"
                                     type="secondary"
-                                    size="md"
+                                    size="sm"
                                     onPress={playAudioDescription}
                                 />
                             </View>
@@ -454,34 +455,31 @@ export default function ChoreDetailModal({
                                 </View>
                             )}
 
-                            {assignedLabel && (
-                                <Text style={[s.text, { marginTop: 6 }]}>
-                                    Assigned to: <Text style={s.bold}>{assignedLabel}</Text>
-                                </Text>
-                            )}
+                            <View style={s.metaSection}>
+                                {assignedLabel && (
+                                    <MetaRow label="Assigned to" value={assignedLabel} spacing={6} />
+                                )}
 
-                            {chore.createdByName && (
-                                <Text style={[s.text, { marginTop: 2 }]}>
-                                    Created by: <Text style={s.bold}>{chore.createdByName}</Text>
-                                </Text>
-                            )}
+                                {chore.createdByName && (
+                                    <MetaRow label="Created by" value={chore.createdByName} spacing={6} />
+                                )}
 
-                            <Text style={[s.text, { marginTop: 6 }]}>
-                                Done by: <Text style={s.bold}>{doneByName}</Text>
-                            </Text>
+                                <MetaRow
+                                    label="Done by"
+                                    value={doneByName}
+                                    spacing={6}
+                                />
 
-                            <Text style={s.text}>
-                                Time:{' '}
-                                <Text style={s.bold}>
-                                    {chore.doneAt ? new Date(chore.doneAt).toLocaleString() : '—'}
-                                </Text>
-                            </Text>
+                                <MetaRow
+                                    label="Time"
+                                    value={chore.doneAt ? new Date(chore.doneAt).toLocaleString() : '—'}
+                                    spacing={6}
+                                />
 
-                            {chore.proofNote ? (
-                                <Text style={[s.text, { marginTop: 6 }]}>
-                                    Kid’s note: <Text style={s.bold}>{chore.proofNote}</Text>
-                                </Text>
-                            ) : null}
+                                {chore.proofNote ? (
+                                    <MetaRow label="Kid's note" value={chore.proofNote} spacing={6} />
+                                ) : null}
+                            </View>
 
                             {isParent && (
                                 <>
@@ -547,51 +545,39 @@ export default function ChoreDetailModal({
                                 </View>
                             )}
 
-                            {assignedLabel && (
-                                <Text style={[s.text, { marginTop: 6 }]}>
-                                    Assigned to: <Text style={s.bold}>{assignedLabel}</Text>
-                                </Text>
-                            )}
+                            <View style={s.metaSection}>
+                                {assignedLabel && (
+                                    <MetaRow label="Assigned to" value={assignedLabel} spacing={6} />
+                                )}
 
-                            {chore.createdByName && (
-                                <Text style={[s.text, { marginTop: 2 }]}>
-                                    Created by: <Text style={s.bold}>{chore.createdByName}</Text>
-                                </Text>
-                            )}
+                                {chore.createdByName && (
+                                    <MetaRow label="Created by" value={chore.createdByName} spacing={6} />
+                                )}
 
-                            <Text style={[s.text, { marginTop: 6 }]}>
-                                Done by: <Text style={s.bold}>{doneByName}</Text>
-                            </Text>
+                                <MetaRow label="Done by" value={doneByName} spacing={6} />
 
-                            <Text style={s.text}>
-                                Time:{' '}
-                                <Text style={s.bold}>
-                                    {chore.doneAt ? new Date(chore.doneAt).toLocaleString() : '—'}
-                                </Text>
-                            </Text>
+                                <MetaRow
+                                    label="Time"
+                                    value={chore.doneAt ? new Date(chore.doneAt).toLocaleString() : '—'}
+                                    spacing={6}
+                                />
 
-                            {chore.proofNote ? (
-                                <Text style={[s.text, { marginTop: 6 }]}>
-                                    Kid’s note: <Text style={s.bold}>{chore.proofNote}</Text>
-                                </Text>
-                            ) : null}
+                                {chore.proofNote ? (
+                                    <MetaRow label="Kid's note" value={chore.proofNote} spacing={6} />
+                                ) : null}
 
-                            <Text style={s.text}>
-                                Approved by: <Text style={s.bold}>{approvedByName}</Text>
-                            </Text>
+                                <MetaRow label="Approved by" value={approvedByName} spacing={6} />
 
-                            <Text style={s.text}>
-                                Approved at:{' '}
-                                <Text style={s.bold}>
-                                    {chore.approvedAt ? new Date(chore.approvedAt).toLocaleString() : '—'}
-                                </Text>
-                            </Text>
+                                <MetaRow
+                                    label="Approved at"
+                                    value={chore.approvedAt ? new Date(chore.approvedAt).toLocaleString() : '—'}
+                                    spacing={6}
+                                />
 
-                            {chore.notes ? (
-                                <Text style={s.text}>
-                                    Notes: <Text style={s.bold}>{chore.notes}</Text>
-                                </Text>
-                            ) : null}
+                                {chore.notes ? (
+                                    <MetaRow label="Notes" value={chore.notes} spacing={6} />
+                                ) : null}
+                            </View>
                         </>
                     )}
                 </ScrollView>
@@ -600,10 +586,10 @@ export default function ChoreDetailModal({
                 {chore.status === 'open' && (
                     <View style={s.row}>
                         <View style={s.flex1}>
-                            <Button title="Submit" type="primary" size="lg" onPress={markCompleted} fullWidth />
+                            <Button title="Submit" type="primary" size="sm" onPress={markCompleted} fullWidth />
                         </View>
                         <View style={s.flex1}>
-                            <Button title="Cancel" type="secondary" size="lg" onPress={requestClose} fullWidth />
+                            <Button title="Cancel" type="secondary" size="sm" onPress={requestClose} fullWidth />
                         </View>
                     </View>
                 )}
@@ -613,23 +599,23 @@ export default function ChoreDetailModal({
                         {isParent && (
                             <View style={[s.row, { marginTop: 14 }]}>
                                 <View style={s.flex1}>
-                                    <Button title="Deny" type="danger" size="lg" onPress={deny} fullWidth />
+                                    <Button title="Deny" type="danger" size="sm" onPress={deny} fullWidth />
                                 </View>
                                 <View style={s.flex1}>
-                                    <Button title="Approve" type="primary" size="lg" onPress={approve} fullWidth />
+                                    <Button title="Approve" type="primary" size="sm" onPress={approve} fullWidth />
                                 </View>
                             </View>
                         )}
 
                         <View style={{ marginTop: 12 }}>
-                            <Button title="Cancel" type="secondary" size="lg" onPress={requestClose} fullWidth />
+                            <Button title="Cancel" type="secondary" size="sm" onPress={requestClose} fullWidth />
                         </View>
                     </>
                 )}
 
                 {chore.status === 'approved' && (
-                    <View style={{ marginTop: 12 }}>
-                        <Button title="Close" type="secondary" size="lg" onPress={requestClose} fullWidth />
+                    <View style={s.metaActions}>
+                        <Button title="Close" type="secondary" size="sm" onPress={requestClose} />
                     </View>
                 )}
             </ModalCard>
@@ -655,6 +641,7 @@ const s = StyleSheet.create({
     flex1: { flex: 1 },
 
     proof: { marginTop: 12 },
+    metaSection: { marginTop: 16 },
     media: {
         width: '100%',
         height: 220,
@@ -670,5 +657,11 @@ const s = StyleSheet.create({
         minHeight: 44,
         textAlignVertical: 'top',
         backgroundColor: '#fff',
+    },
+
+    metaActions: {
+        marginTop: 16,
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
     },
 });
