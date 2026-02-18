@@ -1,150 +1,87 @@
-import { Screen } from "@/components/ui";
-import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+// app/boards/announcements-info.tsx
+import { DocsBullet, DocsPageLayout, DocsSection, docsPageStyles } from '@/components/docs-page-layout';
+import React from 'react';
+import { Text } from 'react-native';
 
 export default function AnnouncementsInfoScreen() {
     return (
-        <Screen gap="md" withBackground={false}>
-
-            <Text style={styles.intro}>
-                The Announcements Board is a shared family space where everyone can
-                post updates, reminders, good things, kind actions, and weekly notes.
-            </Text>
-
-            {/* 1. What each tab means */}
-            <Section title="1. What Each Tab Means">
-                <Bullet>
-                    <Text style={styles.highlight}>Reminders:</Text> Tests, shows,
+        <DocsPageLayout intro="The Announcements Board is a shared family space where everyone can post updates, reminders, good things, kind actions, and weekly notes.">
+            <DocsSection title="1. What Each Tab Means">
+                <DocsBullet>
+                    <Text style={docsPageStyles.highlight}>Reminders:</Text> Tests, shows,
                     competitions, appointments, signatures — anything the family needs
                     to remember.
-                </Bullet>
-                <Bullet>
-                    <Text style={styles.highlight}>Sentence of the Week:</Text> A
+                </DocsBullet>
+                <DocsBullet>
+                    <Text style={docsPageStyles.highlight}>Sentence of the Week:</Text> A
                     positive quote, affirmation, or message for the week.
-                </Bullet>
-                <Bullet>
-                    <Text style={styles.highlight}>Something Good:</Text> A moment that
-                    went well, something you’re proud of, or something you enjoyed.
-                </Bullet>
-                <Bullet>
-                    <Text style={styles.highlight}>Something Kind:</Text> A kind action
+                </DocsBullet>
+                <DocsBullet>
+                    <Text style={docsPageStyles.highlight}>Something Good:</Text> A moment that
+                    went well, something you're proud of, or something you enjoyed.
+                </DocsBullet>
+                <DocsBullet>
+                    <Text style={docsPageStyles.highlight}>Something Kind:</Text> A kind action
                     you did for someone else.
-                </Bullet>
-                <Bullet>
-                    <Text style={styles.highlight}>Notes:</Text> A free-flow sticky
+                </DocsBullet>
+                <DocsBullet>
+                    <Text style={docsPageStyles.highlight}>Notes:</Text> A free-flow sticky
                     board for anything — ideas, thoughts, doodles, or random messages.
-                </Bullet>
-            </Section>
+                </DocsBullet>
+            </DocsSection>
 
-            {/* 2. Creating announcements */}
-            <Section title="2. Creating Announcements">
-                <Bullet>Anyone in the family can post or share something.</Bullet>
-                <Bullet>
+            <DocsSection title="2. Creating Announcements">
+                <DocsBullet>Anyone in the family can post or share something.</DocsBullet>
+                <DocsBullet>
                     Posts show the name of the family member who wrote them.
-                </Bullet>
-                <Bullet>
+                </DocsBullet>
+                <DocsBullet>
                     Each post automatically records the date and time it was created.
-                </Bullet>
-            </Section>
+                </DocsBullet>
+            </DocsSection>
 
-            {/* 3. Editing & deleting */}
-            <Section title="3. Editing & Deleting">
-                <Bullet>
+            <DocsSection title="3. Editing & Deleting">
+                <DocsBullet>
                     Only the person who created a post can edit or delete it.
-                </Bullet>
-                <Bullet>
+                </DocsBullet>
+                <DocsBullet>
                     Parents can also edit or delete any post in case something needs to
                     be corrected.
-                </Bullet>
-                <Bullet>
+                </DocsBullet>
+                <DocsBullet>
                     Deleting gives a confirmation so no one removes something by mistake.
-                </Bullet>
-            </Section>
+                </DocsBullet>
+            </DocsSection>
 
-            {/* 4. Weekly sentence logic */}
-            <Section title="4. Weekly Sentence Logic">
-                <Bullet>
+            <DocsSection title="4. Weekly Sentence Logic">
+                <DocsBullet>
                     The Sentence of the Week is tied to a weekly cycle (Monday–Sunday).
-                </Bullet>
-                <Bullet>
+                </DocsBullet>
+                <DocsBullet>
                     Families can choose to replace it anytime or keep the same sentence
                     for several weeks.
-                </Bullet>
-            </Section>
+                </DocsBullet>
+            </DocsSection>
 
-            {/* 5. Examples */}
-            <Section title="5. Examples">
-                <Bullet>“Rock climbing competition in 3 weeks.”</Bullet>
-                <Bullet>“I helped my sister clean the table.”</Bullet>
-                <Bullet>“My math test is on Thursday — reminder!”</Bullet>
-                <Bullet>“Something good: I finished my book today!”</Bullet>
-                <Bullet>“Sentence of the week: I can do hard things.”</Bullet>
-            </Section>
+            <DocsSection title="5. Examples">
+                <DocsBullet>"Rock climbing competition in 3 weeks."</DocsBullet>
+                <DocsBullet>"I helped my sister clean the table."</DocsBullet>
+                <DocsBullet>"My math test is on Thursday — reminder!"</DocsBullet>
+                <DocsBullet>"Something good: I finished my book today!"</DocsBullet>
+                <DocsBullet>"Sentence of the week: I can do hard things."</DocsBullet>
+            </DocsSection>
 
-            {/* 6. Custom Tabs & Settings */}
-            <Section title="6. Custom Tabs & Settings">
-                <Bullet>
-                    Parents can create <Text style={styles.highlight}>custom tabs</Text> to organize the board in a way that fits your family — such as “Holidays,” “Signatures,” “Chores,” or anything else.
-                </Bullet>
-                <Bullet>
-                    Custom tabs can be <Text style={styles.highlight}>added, renamed, or deleted</Text> at any time from the Announcement Settings page.
-                </Bullet>
-                <Bullet>
+            <DocsSection title="6. Custom Tabs & Settings">
+                <DocsBullet>
+                    Parents can create <Text style={docsPageStyles.highlight}>custom tabs</Text> to organize the board in a way that fits your family — such as "Holidays," "Signatures," "Chores," or anything else.
+                </DocsBullet>
+                <DocsBullet>
+                    Custom tabs can be <Text style={docsPageStyles.highlight}>added, renamed, or deleted</Text> at any time from the Announcement Settings page.
+                </DocsBullet>
+                <DocsBullet>
                     Kids and teens can view and post inside custom tabs, but only parents can modify the tabs themselves.
-                </Bullet>
-            </Section>
-
-            <View style={{ height: 32 }} />
-        </Screen>
-
+                </DocsBullet>
+            </DocsSection>
+        </DocsPageLayout>
     );
 }
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-    return (
-        <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{title}</Text>
-            {children}
-        </View>
-    );
-}
-
-function Bullet({ children }: { children: React.ReactNode }) {
-    return (
-        <View style={styles.bulletRow}>
-            <Text style={styles.bulletDot}>{'\u2022'}</Text>
-            <Text style={styles.bulletText}>{children}</Text>
-        </View>
-    );
-}
-
-const styles = StyleSheet.create({
-    intro: { fontSize: 14, color: "#475569", marginBottom: 16 },
-    section: { marginTop: 12 },
-    sectionTitle: {
-        fontSize: 15,
-        fontWeight: "800",
-        color: "#0f172a",
-        marginBottom: 6,
-    },
-    bulletRow: {
-        flexDirection: "row",
-        alignItems: "flex-start",
-        marginBottom: 4,
-    },
-    bulletDot: {
-        fontSize: 14,
-        color: "#64748b",
-        marginRight: 6,
-        marginTop: 2,
-    },
-    bulletText: {
-        flex: 1,
-        fontSize: 13,
-        color: "#4b5563",
-    },
-    highlight: {
-        fontWeight: "700",
-        color: "#1d4ed8",
-    },
-});

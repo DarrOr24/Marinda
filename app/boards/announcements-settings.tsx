@@ -14,7 +14,8 @@ import {
     useUpdateAnnouncementTab,
 } from '@/lib/announcements/announcements.hooks';
 
-import { Button, Screen, TextInput } from '@/components/ui';
+import { DocsPageLayout, DocsSection, docsPageStyles } from '@/components/docs-page-layout';
+import { Button, TextInput } from '@/components/ui';
 import type { Role } from '@/lib/members/members.types';
 
 export default function AnnouncementSettingsScreen() {
@@ -141,24 +142,17 @@ export default function AnnouncementSettingsScreen() {
     const customTabs = tabs ?? [];
 
     return (
-        <Screen gap="md" withBackground={false}>
-
-            <Text style={styles.header}>
-                Announcement Tabs Settings
-            </Text>
-
-            <Text style={styles.subtext}>
-                Organize which tabs appear in your announcement board.
-            </Text>
-
-            {/* Custom Tabs */}
-            <Section title="Custom tabs">
-                <Text style={styles.description}>
+        <DocsPageLayout
+            title="Announcement Tabs Settings"
+            subtext="Organize which tabs appear in your announcement board."
+        >
+            <DocsSection title="Custom tabs">
+                <Text style={docsPageStyles.description}>
                     Creating custom tabs helps you organize your family’s announcements in the way that works best for you.
                 </Text>
 
                 {!isParent && (
-                    <Text style={styles.note}>
+                    <Text style={docsPageStyles.note}>
                         Only parents can add or edit custom tabs.
                     </Text>
                 )}
@@ -259,56 +253,12 @@ export default function AnnouncementSettingsScreen() {
                         </View>
                     </View>
                 )}
-            </Section>
-        </Screen>
-
+            </DocsSection>
+        </DocsPageLayout>
     );
 }
 
-/* --------------------------------------------------------
-   Helper Section Component
---------------------------------------------------------- */
-function Section({
-    title,
-    children,
-}: {
-    title: string;
-    children: React.ReactNode;
-}) {
-    return (
-        <View style={{ marginTop: 20 }}>
-            <Text style={styles.sectionTitle}>{title}</Text>
-            {children}
-        </View>
-    );
-}
-
-/* --------------------------------------------------------
-   STYLES
---------------------------------------------------------- */
 const styles = StyleSheet.create({
-    header: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: '#0f172a',
-    },
-    subtext: {
-        marginTop: 6,
-        fontSize: 13,
-        color: '#475569',
-    },
-    description: {
-        fontSize: 13,
-        color: '#475569',
-        marginBottom: 8,
-    },
-
-    sectionTitle: {
-        fontSize: 15,
-        fontWeight: '700',
-        color: '#1e293b',
-        marginBottom: 8,
-    },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -354,22 +304,9 @@ const styles = StyleSheet.create({
         marginBottom: 10,
         color: '#0f172a',
     },
-    label: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#64748b',
-        marginTop: 4,
-    },
     editorButtons: {
         flexDirection: 'row',
         gap: 8,
         marginTop: 14,
     },
-
-    note: {
-        fontSize: 12,
-        color: '#64748b',
-        marginBottom: 8,
-    },
-
 });

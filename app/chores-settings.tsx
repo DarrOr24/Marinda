@@ -6,7 +6,8 @@ import {
     View
 } from 'react-native';
 
-import { Button, Screen, TextInput } from '@/components/ui';
+import { DocsBullet, DocsPageLayout, DocsSection, docsPageStyles } from '@/components/docs-page-layout';
+import { Button, TextInput } from '@/components/ui';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useChoreTemplates } from '@/lib/chores/chores-templates.hooks';
 import type { Role } from '@/lib/members/members.types';
@@ -121,28 +122,21 @@ export default function ChoreGameSettingsScreen() {
     };
 
     return (
-        <Screen gap="md" withBackground={false}>
-            {/* Intro */}
-            <Text style={styles.intro}>
-                Set up your family&apos;s routine chores and points rules. These
-                settings help keep the game fair, motivating, and clear for everyone.
-            </Text>
-
-            {/* Routine chores section */}
-            <Section title="Routine chores">
-                <Bullet>
+        <DocsPageLayout intro="Set up your family's routine chores and points rules. These settings help keep the game fair, motivating, and clear for everyone.">
+            <DocsSection title="Routine chores">
+                <DocsBullet>
                     Here you can add, edit, and delete routine chores like &quot;Empty
                     dishwasher&quot; or &quot;Tidy toys&quot; with default point
                     values.
-                </Bullet>
-                <Bullet>
+                </DocsBullet>
+                <DocsBullet>
                     Later, the Post Chore screen can reuse these as quick templates so
-                    you don&apos;t have to type the same chores again and again.
-                </Bullet>
+                    you don't have to type the same chores again and again.
+                </DocsBullet>
 
                 {!isParent && (
                     <View style={{ marginTop: 8 }}>
-                        <Text style={styles.note}>
+                        <Text style={docsPageStyles.note}>
                             Only parents can change this list. You can still see the routine
                             chores, but adding, editing, or deleting them is for parents only.
                         </Text>
@@ -240,95 +234,28 @@ export default function ChoreGameSettingsScreen() {
                         ))}
                     </View>
                 )}
-            </Section>
+            </DocsSection>
 
-            {/* Points rules & bonuses (still informational for now) */}
-            <Section title="Points rules & bonuses">
-                <Bullet>
-                    Soon you&apos;ll be able to set automatic rules, like:
-                </Bullet>
-                <Bullet>
+            <DocsSection title="Points rules & bonuses">
+                <DocsBullet>
+                    Soon you'll be able to set automatic rules, like:
+                </DocsBullet>
+                <DocsBullet>
                     • Every 100 points earned in a week = +10 bonus points
-                </Bullet>
-                <Bullet>
+                </DocsBullet>
+                <DocsBullet>
                     • 0 expired chores this week = bonus points for everyone
-                </Bullet>
-                <Bullet>
-                    You&apos;ll also be able to give manual bonus points from each
-                    child&apos;s profile page.
-                </Bullet>
-            </Section>
-        </Screen>
-    );
-}
-
-/* Helper components */
-function Section({
-    title,
-    children,
-}: {
-    title: string;
-    children: React.ReactNode;
-}) {
-    return (
-        <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{title}</Text>
-            {children}
-        </View>
-    );
-}
-
-function Bullet({ children }: { children: React.ReactNode }) {
-    return (
-        <View style={styles.bulletRow}>
-            <Text style={styles.bulletDot}>{'\u2022'}</Text>
-            <Text style={styles.bulletText}>{children}</Text>
-        </View>
+                </DocsBullet>
+                <DocsBullet>
+                    You'll also be able to give manual bonus points from each
+                    child's profile page.
+                </DocsBullet>
+            </DocsSection>
+        </DocsPageLayout>
     );
 }
 
 const styles = StyleSheet.create({
-    intro: {
-        fontSize: 14,
-        color: '#475569',
-        marginBottom: 16,
-    },
-    section: {
-        marginTop: 12,
-    },
-    sectionTitle: {
-        fontSize: 15,
-        fontWeight: '800',
-        color: '#0f172a',
-        marginBottom: 6,
-    },
-
-    bulletRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        marginBottom: 4,
-    },
-    bulletDot: {
-        fontSize: 14,
-        color: '#64748b',
-        marginRight: 6,
-        marginTop: 2,
-    },
-    bulletText: {
-        flex: 1,
-        fontSize: 13,
-        color: '#4b5563',
-    },
-    highlight: {
-        fontWeight: '700',
-        color: '#1d4ed8',
-    },
-    note: {
-        fontSize: 12,
-        color: '#64748b',
-    },
-
-    // Editor styles
     editorCard: {
         marginTop: 10,
         padding: 12,

@@ -6,12 +6,12 @@ import {
     Pressable,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from "react-native";
 
-import { Button, Screen } from "@/components/ui";
+import { DocsPageLayout, DocsSection, docsPageStyles } from "@/components/docs-page-layout";
+import { Button, TextInput } from "@/components/ui";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import type { Role } from "@/lib/members/members.types";
 import {
@@ -128,34 +128,28 @@ export default function WishlistSettingsScreen() {
 
     if (isLoading) {
         return (
-            <Screen gap="md" withBackground={false}>
+            <DocsPageLayout>
                 <View style={styles.center}>
                     <Text>Loading wishlist settings…</Text>
                 </View>
-            </Screen>
+            </DocsPageLayout>
         );
     }
 
     if (isError) {
         return (
-            <Screen gap="md" withBackground={false}>
+            <DocsPageLayout>
                 <View style={styles.center}>
                     <Text>Failed to load wishlist settings.</Text>
                 </View>
-            </Screen>
+            </DocsPageLayout>
         );
     }
 
 
     return (
-        <Screen gap="md" withBackground={false}>
-
-            <Text style={styles.intro}>
-                Parents can configure the currency and conversion rate for wish list items.
-            </Text>
-
-            {/* Currency Section */}
-            <Section title="Currency">
+        <DocsPageLayout intro="Parents can configure the currency and conversion rate for wish list items.">
+            <DocsSection title="Currency">
                 <Text style={styles.label}>Currency Type</Text>
 
                 <Pressable
@@ -194,10 +188,9 @@ export default function WishlistSettingsScreen() {
                         </View>
                     </Pressable>
                 </Modal>
-            </Section>
+            </DocsSection>
 
-            {/* Points Section */}
-            <Section title="Points Conversion">
+            <DocsSection title="Points Conversion">
                 <Text style={styles.label}>Points per 1 unit of currency</Text>
 
                 <Pressable
@@ -209,25 +202,22 @@ export default function WishlistSettingsScreen() {
                 >
                     <TextInput
                         value={pointsRate}
-                        // onChangeText={setPointsRate}
                         onChangeText={onChangeRate}
                         editable={isParent}
                         keyboardType="numeric"
-                        style={[styles.input, !isParent && styles.disabledInput]}
                         placeholder="e.g. 10"
-                        placeholderTextColor="#94a3b8"
-                        pointerEvents={isParent ? "auto" : "none"} // prevents typing
+                        style={!isParent && styles.disabledInput}
+                        pointerEvents={isParent ? "auto" : "none"}
                     />
                 </Pressable>
 
 
-                <Text style={styles.note}>
+                <Text style={[docsPageStyles.note, { marginTop: 6 }]}>
                     Whole numbers only — must be 1 or higher.
                 </Text>
-            </Section>
+            </DocsSection>
 
-            {/* Self-fulfill limit (UI only for now — we will wire saving in Patch 4) */}
-            <Section title="Self-Fulfilled Wishes">
+            <DocsSection title="Self-Fulfilled Wishes">
                 <Text style={styles.label}>
                     Max price a child can fulfill on their own
                 </Text>
@@ -242,7 +232,6 @@ export default function WishlistSettingsScreen() {
                     <TextInput
                         value={selfFulfillMaxPrice}
                         onChangeText={(txt) => {
-                            // allow empty or digits + one dot
                             let cleaned = txt.replace(/[^0-9.]/g, "");
                             const parts = cleaned.split(".");
                             if (parts.length > 2) {
@@ -253,16 +242,15 @@ export default function WishlistSettingsScreen() {
                         editable={isParent}
                         keyboardType="numeric"
                         placeholder="e.g. 60 (leave empty for no limit)"
-                        placeholderTextColor="#94a3b8"
-                        style={[styles.input, !isParent && styles.disabledInput]}
+                        style={!isParent && styles.disabledInput}
                         pointerEvents={isParent ? "auto" : "none"}
                     />
                 </Pressable>
 
-                <Text style={styles.note}>
+                <Text style={docsPageStyles.note}>
                     This controls when kids can use “I can get this myself”.
                 </Text>
-            </Section>
+            </DocsSection>
 
 
             {isParent && (
@@ -278,33 +266,16 @@ export default function WishlistSettingsScreen() {
             )}
 
 
-            <View style={{ height: 60 }} />
-            {/* Extra padding so Samsung navbar never covers content */}
-        </Screen>
-
+        </DocsPageLayout>
     );
 }
-
-function Section({ title, children }: any) {
-    return (
-        <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{title}</Text>
-            {children}
-        </View>
-    );
-}
-
-/* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
-
     center: { flex: 1, justifyContent: "center", alignItems: "center" },
-    intro: { fontSize: 14, color: "#475569", marginBottom: 20 },
-
-    section: { marginBottom: 22 },
-    sectionTitle: { fontSize: 15, fontWeight: "700", color: "#0f172a", marginBottom: 6 },
     label: { fontSize: 12, fontWeight: "600", color: "#64748b", marginBottom: 4 },
-
+    dropdownBox: { justifyContent: "center" },
+    dropdownText: { fontSize: 14, color: "#0f172a" },
+    disabledInput: { opacity: 0.5 },
     input: {
         borderWidth: 1,
         borderColor: "#e5e7eb",
@@ -314,13 +285,6 @@ const styles = StyleSheet.create({
         backgroundColor: "#fff",
         fontSize: 14,
     },
-    disabledInput: { opacity: 0.5 },
-
-    dropdownBox: { justifyContent: "center" },
-    dropdownText: { fontSize: 14, color: "#0f172a" },
-
-    note: { marginTop: 6, fontSize: 12, color: "#64748b" },
-
     modalOverlay: {
         flex: 1,
         backgroundColor: "rgba(0,0,0,0.3)",

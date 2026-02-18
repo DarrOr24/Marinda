@@ -1,160 +1,79 @@
 // app/wishlist-info.tsx
-import { Screen } from '@/components/ui'
-import React from 'react'
-import {
-    StyleSheet,
-    Text,
-    View
-} from 'react-native'
+import { DocsBullet, DocsPageLayout, DocsSection, docsPageStyles } from '@/components/docs-page-layout';
+import React from 'react';
+import { Text } from 'react-native';
 
 export default function WishlistInfoScreen() {
     return (
-        <Screen gap="md" withBackground={false}>
-            <Text style={styles.intro}>
-                The Wishlist helps kids set goals, learn to save points, and make thoughtful
-                choices about how they use what they earn.
-            </Text>
-
-            {/* 1. What the Wishlist is */}
-            <Section title="1. What the Wishlist Is">
-                <Bullet>
+        <DocsPageLayout intro="The Wishlist helps kids set goals, learn to save points, and make thoughtful choices about how they use what they earn.">
+            <DocsSection title="1. What the Wishlist Is">
+                <DocsBullet>
                     Kids can add things they would like to get or do — items, experiences,
                     or personal goals.
-                </Bullet>
-                <Bullet>
+                </DocsBullet>
+                <DocsBullet>
                     Each wish can include a price, notes, links, and an optional image.
-                </Bullet>
-                <Bullet>
+                </DocsBullet>
+                <DocsBullet>
                     Wishes belong to a specific child and are visible to parents.
-                </Bullet>
-            </Section>
+                </DocsBullet>
+            </DocsSection>
 
-            {/* 2. Points & value */}
-            <Section title="2. Points & Value">
-                <Bullet>
+            <DocsSection title="2. Points & Value">
+                <DocsBullet>
                     Each family chooses how many points equal one unit of currency
-                    (for example: <Text style={styles.highlight}>10 points = $1</Text>).
-                </Bullet>
-                <Bullet>
+                    (for example: <Text style={docsPageStyles.highlight}>10 points = $1</Text>).
+                </DocsBullet>
+                <DocsBullet>
                     The conversion rate and currency are set by parents in Wishlist Settings.
-                </Bullet>
-                <Bullet>
+                </DocsBullet>
+                <DocsBullet>
                     Kids can see how many points a wish costs before saving or fulfilling it.
-                </Bullet>
-            </Section>
+                </DocsBullet>
+            </DocsSection>
 
-            {/* 3. Adding wishes */}
-            <Section title="3. Adding Wishes">
-                <Bullet>
+            <DocsSection title="3. Adding Wishes">
+                <DocsBullet>
                     Kids can add wishes themselves from their own account.
-                </Bullet>
-                <Bullet>
+                </DocsBullet>
+                <DocsBullet>
                     Parents can view, edit, or remove wishes if needed.
-                </Bullet>
-                <Bullet>
+                </DocsBullet>
+                <DocsBullet>
                     Wishes can be updated over time as priorities change.
-                </Bullet>
-            </Section>
+                </DocsBullet>
+            </DocsSection>
 
-            {/* 4. Fulfilling wishes */}
-            <Section title="4. Fulfilling Wishes">
-                <Bullet>
+            <DocsSection title="4. Fulfilling Wishes">
+                <DocsBullet>
                     When a wish is fulfilled, it is marked as{' '}
-                    <Text style={styles.highlight}>Fulfilled</Text>.
-                </Bullet>
-                <Bullet>
-                    The required points are deducted from the child’s profile.
-                </Bullet>
-                <Bullet>
+                    <Text style={docsPageStyles.highlight}>Fulfilled</Text>.
+                </DocsBullet>
+                <DocsBullet>
+                    The required points are deducted from the child's profile.
+                </DocsBullet>
+                <DocsBullet>
                     Fulfilled wishes stay visible for reference and learning.
-                </Bullet>
-                <Bullet>
+                </DocsBullet>
+                <DocsBullet>
                     Some wishes may be fulfilled directly by the child, encouraging independence and trust.
-                </Bullet>
-                <Bullet>
+                </DocsBullet>
+                <DocsBullet>
                     Parents control this by setting a maximum price for self-fulfilled wishes in Wishlist Settings.
-                </Bullet>
-            </Section>
+                </DocsBullet>
+            </DocsSection>
 
-            {/* 5. Learning & responsibility */}
-            <Section title="5. Learning & Responsibility">
-                <Bullet>
+            <DocsSection title="5. Learning & Responsibility">
+                <DocsBullet>
                     The wishlist encourages planning, patience, and goal-setting.
-                </Bullet>
-                <Bullet>
+                </DocsBullet>
+                <DocsBullet>
                     Kids learn to compare effort, time, and value before spending points.
-                </Bullet>
-                <Bullet>
+                </DocsBullet>
+                <DocsBullet>
                     Families can decide together what kinds of wishes are allowed.
-                </Bullet>
-            </Section>
-
-            <View style={{ height: 32 }} />
-        </Screen>
-    )
+                </DocsBullet>
+            </DocsSection>
+        </DocsPageLayout>
+    );
 }
-
-/* ---------- helpers ---------- */
-
-function Section({
-    title,
-    children,
-}: {
-    title: string
-    children: React.ReactNode
-}) {
-    return (
-        <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{title}</Text>
-            {children}
-        </View>
-    )
-}
-
-function Bullet({ children }: { children: React.ReactNode }) {
-    return (
-        <View style={styles.bulletRow}>
-            <Text style={styles.bulletDot}>{'\u2022'}</Text>
-            <Text style={styles.bulletText}>{children}</Text>
-        </View>
-    )
-}
-
-/* ---------- styles ---------- */
-
-const styles = StyleSheet.create({
-    intro: {
-        fontSize: 14,
-        color: '#475569',
-        marginBottom: 16,
-    },
-    section: {
-        marginTop: 12,
-    },
-    sectionTitle: {
-        fontSize: 15,
-        fontWeight: '800',
-        color: '#0f172a',
-        marginBottom: 6,
-    },
-    bulletRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        marginBottom: 4,
-    },
-    bulletDot: {
-        fontSize: 14,
-        color: '#64748b',
-        marginRight: 6,
-        marginTop: 2,
-    },
-    bulletText: {
-        flex: 1,
-        fontSize: 13,
-        color: '#4b5563',
-    },
-    highlight: {
-        fontWeight: '700',
-        color: '#1d4ed8',
-    },
-})
