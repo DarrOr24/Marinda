@@ -1,7 +1,7 @@
 // app/wishlist.tsx
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -21,7 +21,8 @@ import type { Role } from "@/lib/members/members.types";
 import type { WishlistItem } from "@/lib/wishlist/wishlist.types";
 
 import { KidSwitcher } from "@/components/kid-switcher";
-import { Button, SafeFab, Screen, TextInput } from "@/components/ui";
+import { WishlistCalculator } from "@/components/wishlist-calculator";
+import { Button, SafeFab, Screen } from "@/components/ui";
 
 import { useFamilyWishlistSettings } from "@/lib/wishlist/wishlist-settings.hooks";
 import {
@@ -92,43 +93,8 @@ export default function WishList() {
     const viewingMember = findMemberByAnyId(effectiveMemberId);
 
 
-    // =============================
-    // ⚡ BIDIRECTIONAL CALCULATOR
-    // =============================
-    const [calcCad, setCalcCad] = useState("");
-    const [calcPointsStr, setCalcPointsStr] = useState("");
-    const [calcLock, setCalcLock] = useState<"cad" | "points" | null>(null);
-
     const [canFulfillSelf, setCanFulfillSelf] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState("");
-
-    const calcPoints = useMemo(() => {
-        const cad = parseFloat(calcCad);
-        if (!calcCad.trim() || Number.isNaN(cad)) return 0;
-        return Math.round(cad * POINTS_PER_CURRENCY);
-    }, [calcCad, POINTS_PER_CURRENCY]);
-
-    const calcCadFromPoints = useMemo(() => {
-        const pts = parseFloat(calcPointsStr);
-        if (!calcPointsStr.trim() || Number.isNaN(pts)) return "";
-        return (pts / POINTS_PER_CURRENCY).toFixed(2);
-    }, [calcPointsStr, POINTS_PER_CURRENCY]);
-
-    useEffect(() => {
-        if (calcLock === "cad") {
-            if (!calcCad.trim()) setCalcPointsStr("");
-            else setCalcPointsStr(String(calcPoints));
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [calcCad]);
-
-    useEffect(() => {
-        if (calcLock === "points") {
-            if (!calcPointsStr.trim()) setCalcCad("");
-            else setCalcCad(calcCadFromPoints);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [calcPointsStr]);
 
     // -------- tabs --------
     const [tab, setTab] = useState<"wishes" | "fulfilled">("wishes");
@@ -335,48 +301,10 @@ export default function WishList() {
                     </View>
                 </View>
 
-                {/* =======================
-                    BIDIRECTIONAL CALCULATOR
-                    ======================= */}
-                <View style={{ gap: 6 }}>
-                    <View style={styles.calcRow}>
-                        <View style={{ flex: 1 }}>
-                            <TextInput
-                                label={FAMILY_CURRENCY}
-                                placeholder="0"
-                                keyboardType="numeric"
-                                value={calcCad}
-                                onChangeText={(v) => {
-                                    setCalcLock("cad");
-                                    setCalcCad(v);
-                                }}
-                                onBlur={() => setCalcLock(null)}
-                                style={styles.calcInput}
-                            />
-                        </View>
-
-                        <Text style={styles.arrow}>↔</Text>
-
-                        <View style={{ flex: 1 }}>
-                            <TextInput
-                                label="Points"
-                                placeholder="0"
-                                keyboardType="numeric"
-                                value={calcPointsStr}
-                                onChangeText={(v) => {
-                                    setCalcLock("points");
-                                    setCalcPointsStr(v);
-                                }}
-                                onBlur={() => setCalcLock(null)}
-                                style={styles.calcInput}
-                            />
-                        </View>
-                    </View>
-
-                    <Text style={styles.rateText}>
-                        {POINTS_PER_CURRENCY} points = $1 {FAMILY_CURRENCY}
-                    </Text>
-                </View>
+                <WishlistCalculator
+                    pointsPerCurrency={POINTS_PER_CURRENCY}
+                    currency={FAMILY_CURRENCY}
+                />
 
                 {/* Tabs */}
                 <View style={styles.tabsRow}>
@@ -611,23 +539,6 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         color: "#0f172a",
     },
-    calcRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-    },
-    calcInput: { flex: 1 },
-
-    arrow: {
-        fontSize: 18,
-        color: "#475569",
-    },
-    rateText: {
-        marginTop: 6,
-        fontSize: 12,
-        color: "#64748b",
-    },
-
     tabsRow: {
         flexDirection: "row",
         backgroundColor: "#e2e8f0",
