@@ -1,6 +1,5 @@
 // app/chores.tsx
 import ChoreDetailModal from '@/components/modals/chore-detail-modal';
-import { ScreenList } from '@/components/ui/screen-list';
 
 import { useChoreTemplates } from '@/lib/chores/chores-templates.hooks';
 import type { ChoreView, Proof } from '@/lib/chores/chores.types';
@@ -17,7 +16,7 @@ import { awardMemberPoints } from '@/lib/families/families.api';
 import { useFamily } from '@/lib/families/families.hooks';
 import type { Role } from '@/lib/members/members.types';
 
-import { Button } from "@/components/ui/button";
+import { Button, ScreenList } from "@/components/ui";
 
 import {
   useAddChore,

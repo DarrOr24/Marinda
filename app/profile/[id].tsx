@@ -13,10 +13,7 @@ import {
 import { ChipSelector } from "@/components/chip-selector";
 import { KidSwitcher } from "@/components/kid-switcher";
 import MemberSidebar from "@/components/members-sidebar";
-import { Button } from "@/components/ui/button";
-import { TextInput } from "@/components/ui/text-input";
-import { ScreenList } from "@/components/ui/screen-list";
-import { SplitScreen } from "@/components/ui/split-screen";
+import { Button, ScreenList, SplitScreen, TextInput } from "@/components/ui";
 import WeeklyPointsChart from "@/components/weekly-points-chart";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";

@@ -11,8 +11,7 @@ import {
     View
 } from "react-native";
 
-import { Button } from "@/components/ui/button";
-import { Screen } from "@/components/ui/screen";
+import { Button, Screen } from "@/components/ui";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import type { Role } from "@/lib/members/members.types";
 import {

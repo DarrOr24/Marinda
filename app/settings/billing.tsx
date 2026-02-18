@@ -1,7 +1,7 @@
 // app/settings/billing.tsx
 import { StyleSheet, Text, View } from 'react-native'
 
-import { Screen } from '@/components/ui/screen'
+import { Screen } from '@/components/ui'
 
 
 export default function BillingSettingsScreen() {

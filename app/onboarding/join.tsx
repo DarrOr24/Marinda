@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { Alert, StyleSheet, Text, TextInput, View } from 'react-native'
 
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui'
 import { useJoinFamily } from '@/lib/families/families.hooks'
 import type { Role } from '@/lib/members/members.types'
 import { trimOrNull } from '@/utils/format.utils'

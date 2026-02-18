@@ -11,8 +11,7 @@ import {
 
 import { ChipSelector } from "@/components/chip-selector";
 import { DateRangePicker } from "@/components/date-range-picker";
-import { ModalCard, useModalScrollMaxHeight } from "@/components/ui/modal-card";
-import { ModalShell } from "@/components/ui/modal-shell";
+import { ModalCard, ModalShell, useModalScrollMaxHeight } from "@/components/ui";
 import { MembersSelector } from "../members-selector";
 import { Button } from "../ui/button";
 import { TextInput } from "../ui/text-input";

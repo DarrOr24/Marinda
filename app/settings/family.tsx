@@ -13,8 +13,7 @@ import { FamilyAvatar } from '@/components/avatar/family-avatar'
 import { MemberAvatar } from '@/components/avatar/member-avatar'
 import { ChipSelector } from '@/components/chip-selector'
 import { ShareButton } from '@/components/share-button'
-import { Button } from '@/components/ui/button'
-import { Screen } from '@/components/ui/screen'
+import { Button, Screen } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import {
   useCancelFamilyInvite,

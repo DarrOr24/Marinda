@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, View } from 'react-native'
 
-import { Button } from '@/components/ui/button'
-import { Screen } from '@/components/ui/screen'
+import { Button, Screen } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
 
 // TODO: hook/API you’ll likely add:

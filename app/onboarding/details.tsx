@@ -5,7 +5,7 @@ import { Alert, StyleSheet, Text, TextInput, View } from 'react-native'
 
 import { ChipSelector } from '@/components/chip-selector'
 import { DatePicker } from '@/components/date-picker'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useProfile, useUpdateProfile } from '@/lib/profiles/profiles.hooks'
 

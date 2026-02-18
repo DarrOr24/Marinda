@@ -1,5 +1,4 @@
 // app/wishlist.tsx
-import { Screen } from "@/components/ui/screen";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -22,7 +21,7 @@ import type { Role } from "@/lib/members/members.types";
 import type { WishlistItem } from "@/lib/wishlist/wishlist.types";
 
 import { KidSwitcher } from "@/components/kid-switcher";
-import { Button } from "@/components/ui/button";
+import { Button, SafeFab, Screen, TextInput } from "@/components/ui";
 
 import { useFamilyWishlistSettings } from "@/lib/wishlist/wishlist-settings.hooks";
 import {
@@ -35,8 +34,6 @@ import {
 
 // ✅ NEW UI helpers
 import { WishlistItemModal } from "@/components/modals/wishlist-item-modal";
-import { TextInput } from "@/components/ui/text-input";
-import { SafeFab } from "@/components/ui/safe-fab";
 
 export default function WishList() {
 

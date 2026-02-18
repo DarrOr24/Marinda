@@ -5,7 +5,7 @@ import React from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { MemberAvatar } from '@/components/avatar/member-avatar'
-import { Screen } from '@/components/ui/screen'
+import { Screen } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
 
 

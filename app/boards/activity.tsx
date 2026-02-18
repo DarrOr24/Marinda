@@ -11,9 +11,7 @@ import {
 
 import { ActivityDetailModal } from "@/components/modals/activity-detail-modal";
 import AddActivityModal, { type NewActivityForm } from "@/components/modals/add-activity-modal";
-import { Button } from "@/components/ui/button";
-import { SafeFab } from "@/components/ui/safe-fab";
-import { Screen } from "@/components/ui/screen";
+import { Button, SafeFab, Screen } from "@/components/ui";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import {
   useCreateActivity,

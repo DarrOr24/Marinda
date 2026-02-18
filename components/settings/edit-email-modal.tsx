@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native'
 
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui'
 import { isValidEmail } from '@/utils/validation.utils'
 
 

@@ -1,11 +1,7 @@
 // components/chore-detail-modal.tsx
 import { ChipSelector } from '@/components/chip-selector';
 import MediaPicker, { PickedMedia } from '@/components/media-picker';
-import { Button } from '@/components/ui/button';
-import { MetaRow } from '@/components/ui/meta-row';
-import { TextInput } from '@/components/ui/text-input';
-import { ModalCard, useModalScrollMaxHeight } from '@/components/ui/modal-card';
-import { ModalShell } from '@/components/ui/modal-shell';
+import { Button, MetaRow, ModalCard, ModalShell, TextInput, useModalScrollMaxHeight } from '@/components/ui';
 import { ChoreView, Proof } from '@/lib/chores/chores.types';
 import { Role } from '@/lib/members/members.types';
 import { Audio, ResizeMode, Video } from 'expo-av';

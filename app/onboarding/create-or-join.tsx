@@ -3,7 +3,7 @@ import { useAuthContext } from '@/hooks/use-auth-context'
 import { router } from 'expo-router'
 import { StyleSheet, Text, View } from 'react-native'
 
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui'
 
 
 export default function OnboardingHub() {

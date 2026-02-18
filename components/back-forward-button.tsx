@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import React from 'react'
 
-import { Button, type ButtonSize } from '@/components/ui/button'
+import { Button, type ButtonSize } from '@/components/ui'
 
 type Props = {
   direction: 'back' | 'forward'

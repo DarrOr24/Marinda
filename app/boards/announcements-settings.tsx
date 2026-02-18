@@ -14,9 +14,7 @@ import {
     useUpdateAnnouncementTab,
 } from '@/lib/announcements/announcements.hooks';
 
-import { Button } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
-import { Screen } from '@/components/ui/screen';
+import { Button, Screen, TextInput } from '@/components/ui';
 import type { Role } from '@/lib/members/members.types';
 
 export default function AnnouncementSettingsScreen() {

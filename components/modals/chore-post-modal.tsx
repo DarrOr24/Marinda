@@ -11,10 +11,7 @@ import {
     View
 } from "react-native";
 
-import { Button } from "@/components/ui/button";
-import { TextInput } from "@/components/ui/text-input";
-import { ModalCard, useModalScrollMaxHeight } from "@/components/ui/modal-card";
-import { ModalShell } from "@/components/ui/modal-shell";
+import { Button, ModalCard, ModalShell, TextInput, useModalScrollMaxHeight } from "@/components/ui";
 import { MembersSelector } from "../members-selector";
 
 

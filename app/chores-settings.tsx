@@ -6,9 +6,7 @@ import {
     View
 } from 'react-native';
 
-import { Button } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
-import { Screen } from '@/components/ui/screen';
+import { Button, Screen, TextInput } from '@/components/ui';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useChoreTemplates } from '@/lib/chores/chores-templates.hooks';
 import type { Role } from '@/lib/members/members.types';

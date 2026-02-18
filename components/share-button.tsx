@@ -6,7 +6,7 @@ import { Alert, Share } from 'react-native';
 import {
   Button,
   type ButtonSize
-} from '@/components/ui/button';
+} from '@/components/ui';
 
 type ShareButtonProps = {
   /** Text that will be shared */

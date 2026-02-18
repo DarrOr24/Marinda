@@ -1,9 +1,5 @@
 import { GroceryItemModal } from "@/components/modals/grocery-item-modal";
-import { Button } from "@/components/ui/button";
-import { MetaRow } from "@/components/ui/meta-row";
-import { ModalCard } from "@/components/ui/modal-card";
-import { ModalShell } from "@/components/ui/modal-shell";
-import { ScreenList } from "@/components/ui/screen-list";
+import { Button, MetaRow, ModalCard, ModalShell, ScreenList } from "@/components/ui";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
 import {

@@ -28,11 +28,7 @@ import {
 
 
 import { ChipSelector } from '@/components/chip-selector';
-import { Button } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/text-input';
-import { ModalCard } from '@/components/ui/modal-card';
-import { ModalShell } from '@/components/ui/modal-shell';
-import { ScreenList } from '@/components/ui/screen-list';
+import { Button, ModalCard, ModalShell, ScreenList, TextInput } from '@/components/ui';
 import {
     DEFAULT_ANNOUNCEMENT_TABS,
     type AnnouncementItem,

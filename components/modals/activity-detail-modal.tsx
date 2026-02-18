@@ -9,9 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { Button } from "@/components/ui/button";
-import { ModalCard, useModalScrollMaxHeight } from "@/components/ui/modal-card";
-import { ModalShell } from "@/components/ui/modal-shell";
+import { Button, ModalCard, ModalShell, useModalScrollMaxHeight } from "@/components/ui";
 import type { Activity } from "@/lib/activities/activities.types";
 
 function formatTimeFromIso(iso: string) {

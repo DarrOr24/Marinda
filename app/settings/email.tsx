@@ -8,9 +8,7 @@ import {
 } from 'react-native'
 
 import { EditEmailModal } from '@/components/settings/edit-email-modal'
-import { Button } from '@/components/ui/button'
-import { EditButton } from '@/components/ui/edit-button'
-import { Screen } from '@/components/ui/screen'
+import { Button, EditButton, Screen } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { resendEmailChangeVerification, updateEmail } from '@/lib/auth/auth.service'
 
