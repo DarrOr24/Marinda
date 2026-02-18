@@ -15,7 +15,6 @@ import {
 } from '@/lib/chores/chores.api';
 import { awardMemberPoints } from '@/lib/families/families.api';
 import { useFamily } from '@/lib/families/families.hooks';
-import { useSubscribeTableByFamily } from '@/lib/families/families.realtime';
 import type { Role } from '@/lib/members/members.types';
 
 import { Button } from "@/components/ui/button";
@@ -95,10 +94,6 @@ export default function Chores() {
 
   // hydrate family + members via React Query
   const { familyMembers } = useFamily(activeFamilyId || undefined);
-  useSubscribeTableByFamily('family_members', activeFamilyId || undefined, [
-    'family-members',
-    activeFamilyId,
-  ]);
 
   const { data: choresRows } = useFamilyChores(activeFamilyId)
 

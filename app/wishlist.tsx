@@ -19,7 +19,6 @@ import {
 
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
-import { useSubscribeTableByFamily } from "@/lib/families/families.realtime";
 import type { Role } from "@/lib/members/members.types";
 import type { WishlistItem } from "@/lib/wishlist/wishlist.types";
 
@@ -54,8 +53,6 @@ export default function WishList() {
     const router = useRouter();
 
     const { familyMembers } = useFamily(activeFamilyId);
-
-    useSubscribeTableByFamily("wishlist_items", activeFamilyId, ["wishlist", activeFamilyId]);
 
     const {
         data: wishlist = [],

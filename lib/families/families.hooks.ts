@@ -1,4 +1,5 @@
 // lib/families/families.hooks.ts
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuthContext } from "@/hooks/use-auth-context";
@@ -19,8 +20,10 @@ import {
   updateMemberRole,
 } from "@/lib/families/families.api";
 import type { CreateKidMemberParams } from "@/lib/families/families.api";
-import { FamilyInvite, MyFamily } from "@/lib/families/families.types";
-import { FamilyMember, Role } from "@/lib/members/members.types";
+import type { FamilyInvite, MyFamily } from "@/lib/families/families.types";
+import type { FamilyMember, Role } from "@/lib/members/members.types";
+import { usePostgresChangesInvalidate } from "@/lib/realtime";
+
 
 export function useCreateFamily() {
   const qc = useQueryClient();
@@ -47,6 +50,7 @@ export function useCreateFamily() {
       qc.invalidateQueries({ queryKey: ["families"] });
       qc.invalidateQueries({ queryKey: ["family", familyId] });
       qc.invalidateQueries({ queryKey: ["family-members", familyId] });
+      qc.invalidateQueries({ queryKey: ["family-invites", familyId] });
     },
 
     onError: (_err, _vars, ctx) => {
@@ -76,12 +80,50 @@ export function useJoinFamily(defaultRole: Role = "TEEN") {
       qc.invalidateQueries({ queryKey: ["families"] });
       qc.invalidateQueries({ queryKey: ["family", familyId] });
       qc.invalidateQueries({ queryKey: ["family-members", familyId] });
+      qc.invalidateQueries({ queryKey: ["family-invites", familyId] });
       qc.invalidateQueries({ queryKey: ["memberships"] });
     },
   });
 }
 
-export function useFamily(familyId?: string) {
+export function useFamily(familyId?: string | null) {
+  const metaRt = useMemo(() => {
+    if (!familyId) return null;
+    return {
+      table: "families",
+      filter: `id=eq.${familyId}`,
+      queryKeys: [["family", familyId]],
+      channel: `rt:family:${familyId}:meta`,
+    } as const;
+  }, [familyId]);
+
+  const membersRt = useMemo(() => {
+    if (!familyId) return null;
+    return {
+      table: "family_members",
+      filter: `family_id=eq.${familyId}`,
+      queryKeys: [["family-members", familyId]],
+      channel: `rt:family:${familyId}:members`,
+    } as const;
+  }, [familyId]);
+
+  const invitesRt = useMemo(() => {
+    if (!familyId) return null;
+    return {
+      table: "family_invites",
+      filter: `family_id=eq.${familyId}`,
+      queryKeys: [
+        ["family-invites", familyId],
+        ["family-members", familyId],
+      ],
+      channel: `rt:family:${familyId}:invites`,
+    } as const;
+  }, [familyId]);
+
+  usePostgresChangesInvalidate(metaRt);
+  usePostgresChangesInvalidate(membersRt);
+  usePostgresChangesInvalidate(invitesRt);
+
   const family = useQuery({
     queryKey: ["family", familyId],
     queryFn: async () => {
@@ -119,21 +161,27 @@ export function useUpdateMemberRole(familyId: string) {
     mutationFn: ({ memberId, role }: { memberId: string; role: Role }) =>
       updateMemberRole(memberId, role),
 
-    // Optimistically update the family members list
     onMutate: async (variables) => {
       const { memberId, role } = variables;
       await qc.cancelQueries({ queryKey: ["family-members", familyId] });
+
       const previousMembers =
         qc.getQueryData<FamilyMember[]>(["family-members", familyId]) ?? [];
+
       qc.setQueryData<FamilyMember[]>(["family-members", familyId], (old) => {
         if (!old) return old;
-        return old.map((m) => m.id === memberId ? { ...m, role } : m);
+        return old.map((m) => (m.id === memberId ? { ...m, role } : m));
       });
 
       return { previousMembers };
     },
 
-    onError: (error, _vars, context) => {
+    onSuccess: () => {
+      // ensure eventual consistency (and picks up server-side changes)
+      qc.invalidateQueries({ queryKey: ["family-members", familyId] });
+    },
+
+    onError: (error: any, _vars, context) => {
       if (context?.previousMembers) {
         qc.setQueryData<FamilyMember[]>(
           ["family-members", familyId],
@@ -141,8 +189,8 @@ export function useUpdateMemberRole(familyId: string) {
         );
       }
 
-      const message = error?.message ??
-        "Could not update role. Please try again.";
+      const message =
+        error?.message ?? "Could not update role. Please try again.";
       showToast(message, "error");
     },
   });
@@ -179,8 +227,11 @@ export function useRemoveMember(familyId: string) {
   return useMutation({
     mutationFn: ({ memberId }: { memberId: string }) =>
       removeFamilyMember(familyId, memberId),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ["family-members", familyId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["family-members", familyId] });
+      // if removals can affect permissions/visibility, invites view may change too
+      qc.invalidateQueries({ queryKey: ["family-invites", familyId] });
+    },
   });
 }
 
@@ -190,8 +241,11 @@ export function useCancelFamilyInvite(familyId: string) {
   return useMutation({
     mutationFn: ({ inviteId }: { inviteId: string }) =>
       cancelFamilyInvite(inviteId),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ["family-invites", familyId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["family-invites", familyId] });
+      // optional: if your accept flow updates members via invite state, keep both consistent
+      qc.invalidateQueries({ queryKey: ["family-members", familyId] });
+    },
   });
 }
 
@@ -206,8 +260,11 @@ export function useCreateKidMember(familyId: string) {
       qc.invalidateQueries({ queryKey: ["family-members", familyId] });
       showToast("Kid added to the family.", "success");
     },
-    onError: (error: Error) => {
-      showToast(error?.message ?? "Could not add kid. Please try again.", "error");
+    onError: (error: any) => {
+      showToast(
+        error?.message ?? "Could not add kid. Please try again.",
+        "error",
+      );
     },
   });
 }
