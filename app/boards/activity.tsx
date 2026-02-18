@@ -270,8 +270,7 @@ export default function ActivityBoard() {
           </TouchableOpacity>
 
           <View style={styles.headerTitleWrap}>
-            <Text style={styles.title}>Activity Board</Text>
-            <Text style={styles.subtitle}>
+            <Text style={styles.title}>
               {weekOffset === 0 ? "This week" : rangeLabel}
             </Text>
           </View>
