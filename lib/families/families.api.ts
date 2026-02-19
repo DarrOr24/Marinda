@@ -2,7 +2,11 @@
 import { MEMBER_WITH_PROFILE_SELECT } from "../members/members.select";
 import { FamilyMember, Role } from "../members/members.types";
 import { getSupabase } from "../supabase";
-import { FamilyInvite, MyFamily } from "./families.types";
+import type {
+  Family,
+  FamilyInvite,
+  FamilySubscription,
+} from "./families.types";
 import * as FileSystem from "expo-file-system/legacy";
 import { decode } from "base64-arraybuffer";
 
@@ -61,14 +65,37 @@ export async function createKidMember(
   return data as string
 }
 
-export async function fetchFamily(familyId: string) {
+export async function fetchFamily(familyId: string): Promise<Family> {
   const { data, error } = await supabase
     .from("families")
-    .select("id, name, code, avatar_url, created_at")
+    .select("id, name, code, avatar_url, created_at, created_by, billing_owner_id")
     .eq("id", familyId)
     .single();
   if (error) throw new Error(error.message);
-  return data;
+  return data as Family;
+}
+
+export async function fetchFamilySubscription(
+  familyId: string,
+): Promise<FamilySubscription | null> {
+  const { data, error } = await supabase
+    .from("family_subscriptions")
+    .select("id, family_id, plan, status, product_id, paying_profile_id, expires_at, created_at, updated_at")
+    .eq("family_id", familyId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as FamilySubscription | null;
+}
+
+export async function setBillingOwner(
+  familyId: string,
+  newBillingOwnerProfileId: string,
+): Promise<void> {
+  const { error } = await supabase.rpc("set_billing_owner", {
+    p_family_id: familyId,
+    p_new_billing_owner_profile_id: newBillingOwnerProfileId,
+  });
+  if (error) throw new Error(error.message);
 }
 
 export function getFamilyAvatarPublicUrl(path: string | null): string | null {
@@ -207,7 +234,7 @@ export async function updateMemberRole(
   return data as Pick<FamilyMember, "id" | "role">;
 }
 
-export async function fetchMyFamilies(profileId: string): Promise<MyFamily[]> {
+export async function fetchMyFamilies(profileId: string): Promise<Family[]> {
   const { data, error } = await supabase
     .from("family_members")
     .select(`
@@ -217,7 +244,8 @@ export async function fetchMyFamilies(profileId: string): Promise<MyFamily[]> {
       family:families!family_members_family_id_fkey (
         id,
         name,
-        avatar_url
+        avatar_url,
+        billing_owner_id
       )
     `)
     .eq("profile_id", profileId)
@@ -225,14 +253,23 @@ export async function fetchMyFamilies(profileId: string): Promise<MyFamily[]> {
 
   if (error) throw new Error(error.message);
 
-  const rows = (data ?? []) as any[];
+  type Row = {
+    family_id: string;
+    role: Role;
+    family: { id: string; name: string; avatar_url: string | null; billing_owner_id: string | null } | null;
+  };
+  const rows = (data ?? []) as unknown as Row[];
 
-  return rows.map((row) => ({
-    id: row.family.id,
-    name: row.family.name,
-    avatar_url: row.family.avatar_url ?? null,
-    role: row.role as Role,
-  }));
+  return rows.map((row) => {
+    const fam = row.family ?? { id: row.family_id, name: "", avatar_url: null, billing_owner_id: null };
+    return {
+      id: fam.id,
+      name: fam.name,
+      avatar_url: fam.avatar_url ?? null,
+      role: row.role,
+      billing_owner_id: fam.billing_owner_id ?? null,
+    } satisfies Family;
+  });
 }
 
 export async function fetchFamilyInvites(

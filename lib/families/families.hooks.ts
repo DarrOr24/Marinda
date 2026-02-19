@@ -10,17 +10,23 @@ import {
   fetchFamily,
   fetchFamilyInvites,
   fetchFamilyMembers,
+  fetchFamilySubscription,
   fetchMyFamilies,
   getFamilyAvatarPublicUrl,
   removeFamilyMember,
   rotateFamilyCode,
   rpcCreateFamily,
   rpcJoinFamily,
+  setBillingOwner,
   updateFamilyAvatar,
   updateMemberRole,
 } from "@/lib/families/families.api";
 import type { CreateKidMemberParams } from "@/lib/families/families.api";
-import type { FamilyInvite, MyFamily } from "@/lib/families/families.types";
+import type {
+  Family,
+  FamilyInvite,
+  FamilySubscription,
+} from "@/lib/families/families.types";
 import type { FamilyMember, Role } from "@/lib/members/members.types";
 import { usePostgresChangesInvalidate } from "@/lib/realtime";
 
@@ -51,6 +57,7 @@ export function useCreateFamily() {
       qc.invalidateQueries({ queryKey: ["family", familyId] });
       qc.invalidateQueries({ queryKey: ["family-members", familyId] });
       qc.invalidateQueries({ queryKey: ["family-invites", familyId] });
+      qc.invalidateQueries({ queryKey: ["family-subscription", familyId] });
     },
 
     onError: (_err, _vars, ctx) => {
@@ -81,6 +88,7 @@ export function useJoinFamily(defaultRole: Role = "TEEN") {
       qc.invalidateQueries({ queryKey: ["family", familyId] });
       qc.invalidateQueries({ queryKey: ["family-members", familyId] });
       qc.invalidateQueries({ queryKey: ["family-invites", familyId] });
+      qc.invalidateQueries({ queryKey: ["family-subscription", familyId] });
       qc.invalidateQueries({ queryKey: ["memberships"] });
     },
   });
@@ -120,9 +128,20 @@ export function useFamily(familyId?: string | null) {
     } as const;
   }, [familyId]);
 
+  const subscriptionRt = useMemo(() => {
+    if (!familyId) return null;
+    return {
+      table: "family_subscriptions",
+      filter: `family_id=eq.${familyId}`,
+      queryKeys: [["family-subscription", familyId]],
+      channel: `rt:family:${familyId}:subscription`,
+    } as const;
+  }, [familyId]);
+
   usePostgresChangesInvalidate(metaRt);
   usePostgresChangesInvalidate(membersRt);
   usePostgresChangesInvalidate(invitesRt);
+  usePostgresChangesInvalidate(subscriptionRt);
 
   const family = useQuery({
     queryKey: ["family", familyId],
@@ -138,6 +157,12 @@ export function useFamily(familyId?: string | null) {
     enabled: !!familyId,
   });
 
+  const familySubscription = useQuery<FamilySubscription | null>({
+    queryKey: ["family-subscription", familyId],
+    queryFn: () => fetchFamilySubscription(familyId!),
+    enabled: !!familyId,
+  });
+
   const familyMembers = useQuery({
     queryKey: ["family-members", familyId],
     queryFn: () => fetchFamilyMembers(familyId!),
@@ -150,7 +175,7 @@ export function useFamily(familyId?: string | null) {
     enabled: !!familyId,
   });
 
-  return { family, familyMembers, familyInvites };
+  return { family, familyMembers, familyInvites, familySubscription };
 }
 
 export function useUpdateMemberRole(familyId: string) {
@@ -269,8 +294,29 @@ export function useCreateKidMember(familyId: string) {
   });
 }
 
+export function useSetBillingOwner(familyId: string) {
+  const qc = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation({
+    mutationFn: (newBillingOwnerProfileId: string) =>
+      setBillingOwner(familyId, newBillingOwnerProfileId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["family", familyId] });
+      qc.invalidateQueries({ queryKey: ["my-families"] });
+      showToast("Billing owner updated.", "success");
+    },
+    onError: (error: unknown) => {
+      showToast(
+        (error as Error)?.message ?? "Could not update billing owner.",
+        "error",
+      );
+    },
+  });
+}
+
 export function useMyFamilies(profileId?: string) {
-  return useQuery<MyFamily[]>({
+  return useQuery<Family[]>({
     queryKey: ["my-families", profileId],
     queryFn: async () => {
       const families = await fetchMyFamilies(profileId!);
