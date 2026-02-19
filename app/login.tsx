@@ -1,5 +1,4 @@
 // app/login.tsx
-import Constants from 'expo-constants'
 import { useState } from 'react'
 import {
   Alert,
@@ -31,8 +30,8 @@ export default function LoginScreen() {
   const [devEmail, setDevEmail] = useState('')
   const [devLoading, setDevLoading] = useState(false)
 
-  const extra = (Constants?.expoConfig?.extra ?? {}) as { devLoginSecret?: string }
-  const showDevLogin = __DEV__ && !!extra.devLoginSecret
+  const devLoginSecret = process.env.EXPO_PUBLIC_DEV_LOGIN_SECRET
+  const showDevLogin = __DEV__ && !!devLoginSecret
 
   async function onDevLogin() {
     const email = devEmail.trim().toLowerCase()
@@ -44,7 +43,7 @@ export default function LoginScreen() {
     try {
       const { data, error } = await getSupabase().functions.invoke('dev_login', {
         body: {
-          secret: extra.devLoginSecret,
+          secret: devLoginSecret,
           email,
         },
       })

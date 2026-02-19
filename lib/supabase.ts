@@ -3,12 +3,8 @@ import "react-native-url-polyfill/auto";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import Constants from "expo-constants";
 import * as Linking from "expo-linking";
 import { Platform } from "react-native";
-
-type Extra = { supabaseUrl: string; supabaseAnonKey: string };
-const extra = (Constants?.expoConfig?.extra ?? {}) as Partial<Extra>;
 
 export const redirectTo = Linking.createURL("auth-callback");
 
@@ -35,11 +31,11 @@ const WebStorageAdapter = {
 export function getSupabase(): SupabaseClient {
   if (_client) return _client;
 
-  const supabaseUrl = extra.supabaseUrl!;
-  const supabaseAnonKey = extra.supabaseAnonKey!;
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(
-      "Missing Supabase env. Check app.config.ts -> extra.supabaseUrl/AnonKey",
+      "Missing Supabase env. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in .env",
     );
   }
 
