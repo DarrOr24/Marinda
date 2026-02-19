@@ -1,7 +1,10 @@
 // lib/realtime.ts
 import { useQueryClient, type QueryKey } from '@tanstack/react-query'
 import { useEffect } from 'react'
+
+import { debugLog } from '@/lib/debug'
 import { getSupabase } from '@/lib/supabase'
+
 
 type Opts = {
   schema?: string
@@ -43,7 +46,7 @@ export function usePostgresChangesInvalidate(opts?: Opts | null) {
       .channel(topic)
       .on('postgres_changes', withFilter, invalidate)
       .subscribe((status) => {
-        if (__DEV__) console.log('[RT]', topic, status)
+        debugLog('realtime', topic, status)
       })
 
 
