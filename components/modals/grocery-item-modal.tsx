@@ -72,7 +72,8 @@ export function GroceryItemModal({
                     contentContainerStyle={{ paddingBottom: 16, flexGrow: 0 }}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
-                    showsVerticalScrollIndicator={false}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled
                 >
                     <TextInput
                         label="Item"

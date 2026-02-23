@@ -312,7 +312,8 @@ export default function ChoreDetailModal({
                     contentContainerStyle={{ paddingBottom: 16, flexGrow: 0 }}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
-                    showsVerticalScrollIndicator={false}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled
                 >
                     {chore.points > 0 && (
                         <Text style={[s.text, { marginTop: 2 }]}>

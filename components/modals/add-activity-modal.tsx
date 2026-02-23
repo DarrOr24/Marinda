@@ -169,7 +169,8 @@ export default function AddActivityModal({
           contentContainerStyle={[styles.scrollContent, { flexGrow: 0 }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}
+          showsVerticalScrollIndicator={true}
+          nestedScrollEnabled
         >
           <FormFieldRow icon="clock-outline" first>
             <Text style={styles.label}>When *</Text>

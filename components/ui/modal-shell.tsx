@@ -7,7 +7,6 @@ import {
     Platform,
     Pressable,
     StyleSheet,
-    TouchableWithoutFeedback,
     View,
     ViewProps,
 } from "react-native";
@@ -32,7 +31,13 @@ export function ModalShell({
 
     return (
         <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
-            <Pressable style={styles.overlay} onPress={onClose} />
+            <Pressable
+                style={styles.overlay}
+                onPress={() => {
+                    Keyboard.dismiss();
+                    onClose();
+                }}
+            />
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -46,9 +51,7 @@ export function ModalShell({
                     backdropStyle,
                 ]}
             >
-                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <View style={styles.content}>{children}</View>
-                </TouchableWithoutFeedback>
+                <View style={styles.content}>{children}</View>
             </KeyboardAvoidingView>
         </Modal>
     );
