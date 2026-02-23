@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "EXPO_ROUTER_APP_ROOT=./app expo start",
+    "start:go": "EXPO_ROUTER_APP_ROOT=./app expo start --go",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "EXPO_ROUTER_APP_ROOT=./app expo start --android",
     "ios": "EXPO_ROUTER_APP_ROOT=./app expo start --ios",
