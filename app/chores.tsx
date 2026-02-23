@@ -834,9 +834,9 @@ export default function Chores() {
 
   const humanTabLabel: Record<TabKey, string> = {
     open: 'To do',
-    pending: 'Needs check',
-    approved: 'Approved ⭐',
-    archived: 'History',
+    pending: 'Check',
+    approved: 'Done ⭐',
+    archived: 'Past',
   };
 
   return (
