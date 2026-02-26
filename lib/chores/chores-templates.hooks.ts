@@ -4,6 +4,12 @@ import type { ChoreTemplate } from "./chores.types";
 
 const supabase = getSupabase();
 
+function sortTemplatesByTitle(templates: ChoreTemplate[]): ChoreTemplate[] {
+    return [...templates].sort((a, b) =>
+        a.title.localeCompare(b.title, undefined, { sensitivity: 'base' })
+    );
+}
+
 export function useChoreTemplates(familyId?: string) {
     const [templates, setTemplates] = useState<ChoreTemplate[]>([]);
     const [loading, setLoading] = useState(false);
@@ -98,7 +104,9 @@ export function useChoreTemplates(familyId?: string) {
             };
 
             setTemplates((prev) =>
-                prev.map((t) => (t.id === template.id ? template : t))
+                sortTemplatesByTitle(
+                    prev.map((t) => (t.id === template.id ? template : t))
+                )
             );
             return template;
         }
@@ -129,7 +137,7 @@ export function useChoreTemplates(familyId?: string) {
             updatedAt: data.updated_at,
         };
 
-        setTemplates((prev) => [...prev, template]);
+        setTemplates((prev) => sortTemplatesByTitle([...prev, template]));
         return template;
     }
 

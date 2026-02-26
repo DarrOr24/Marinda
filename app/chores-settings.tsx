@@ -266,10 +266,10 @@ export default function ChoreGameSettingsScreen() {
                     Soon you'll be able to set automatic rules, like:
                 </DocsBullet>
                 <DocsBullet>
-                    • Every 100 points earned in a week = +10 bonus points
+                    Every 100 points earned in a week = +10 bonus points
                 </DocsBullet>
                 <DocsBullet>
-                    • 0 expired chores this week = bonus points for everyone
+                    0 expired chores this week = bonus points for everyone
                 </DocsBullet>
                 <DocsBullet>
                     You'll also be able to give manual bonus points from each
