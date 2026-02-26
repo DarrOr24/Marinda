@@ -430,11 +430,42 @@ export default function Chores() {
       setList((prev) => [created, ...prev]);
 
       if (saveAsTemplate) {
-        await createTemplate({
-          title,
-          defaultPoints: points,
-          createdById: myFamilyMemberId,
-        });
+        const trimmedTitle = title.trim();
+        const existing = templates?.find(
+          (t) => t.title.trim().toLowerCase() === trimmedTitle.toLowerCase()
+        );
+        if (existing) {
+          const shouldUpdate = await new Promise<boolean>((resolve) => {
+            Alert.alert(
+              'Routine chore already exists',
+              `"${existing.title}" already exists (${existing.defaultPoints} pts). Update it to ${points} points?`,
+              [
+                {
+                  text: "Don't save as routine",
+                  style: 'cancel',
+                  onPress: () => resolve(false),
+                },
+                {
+                  text: 'Update',
+                  onPress: () => resolve(true),
+                },
+              ]
+            );
+          });
+          if (shouldUpdate) {
+            await createTemplate({
+              title: trimmedTitle,
+              defaultPoints: points,
+              createdById: myFamilyMemberId,
+            });
+          }
+        } else {
+          await createTemplate({
+            title: trimmedTitle,
+            defaultPoints: points,
+            createdById: myFamilyMemberId,
+          });
+        }
       }
 
       setShowPost(false);

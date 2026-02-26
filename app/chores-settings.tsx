@@ -75,6 +75,31 @@ export default function ChoreGameSettingsScreen() {
             return;
         }
 
+        const existing = templates?.find(
+            (t) =>
+                t.id !== editing.id &&
+                t.title.trim().toLowerCase() === title.toLowerCase()
+        );
+        if (existing) {
+            Alert.alert(
+                'Routine chore already exists',
+                `"${existing.title}" already exists (${existing.defaultPoints} pts). Update it to ${pointsNum} points?`,
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Update',
+                        onPress: () => doSaveTemplate(title, pointsNum),
+                    },
+                ]
+            );
+            return;
+        }
+
+        await doSaveTemplate(title, pointsNum);
+    };
+
+    const doSaveTemplate = async (title: string, pointsNum: number) => {
+        if (!editing || !activeFamilyId) return;
         try {
             setSaving(true);
 

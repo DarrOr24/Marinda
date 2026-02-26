@@ -59,11 +59,55 @@ export function useChoreTemplates(familyId?: string) {
     }) {
         if (!familyId) return null;
 
+        const trimmedTitle = input.title.trim();
+
+        // Check for existing template with same name (case-insensitive) to avoid duplicates
+        const { data: existing } = await supabase
+            .from("chore_templates")
+            .select("id, title, default_points, created_by_id, is_archived, created_at, updated_at, family_id")
+            .eq("family_id", familyId)
+            .eq("is_archived", false)
+            .ilike("title", trimmedTitle)
+            .maybeSingle();
+
+        if (existing) {
+            // Update existing template instead of creating duplicate
+            const { data, error } = await supabase
+                .from("chore_templates")
+                .update({
+                    default_points: input.defaultPoints,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq("id", existing.id)
+                .select("*")
+                .single();
+
+            if (error || !data) {
+                throw error ?? new Error("Failed to update template");
+            }
+
+            const template: ChoreTemplate = {
+                id: data.id,
+                familyId: data.family_id,
+                title: data.title,
+                defaultPoints: data.default_points,
+                createdById: data.created_by_id,
+                isArchived: data.is_archived,
+                createdAt: data.created_at,
+                updatedAt: data.updated_at,
+            };
+
+            setTemplates((prev) =>
+                prev.map((t) => (t.id === template.id ? template : t))
+            );
+            return template;
+        }
+
         const { data, error } = await supabase
             .from("chore_templates")
             .insert({
                 family_id: familyId,
-                title: input.title.trim(),
+                title: trimmedTitle,
                 default_points: input.defaultPoints,
                 created_by_id: input.createdById ?? null,
             })
