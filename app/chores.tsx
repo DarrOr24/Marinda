@@ -866,7 +866,7 @@ export default function Chores() {
   const humanTabLabel: Record<TabKey, string> = {
     open: 'To do',
     pending: 'Check',
-    approved: 'Done ⭐',
+    approved: 'Done',
     archived: 'Past',
   };
 
@@ -991,7 +991,7 @@ export default function Chores() {
                         ? 'To do'
                         : item.status === 'pending'
                           ? 'Needs check'
-                          : 'Approved ⭐'
+                          : 'Approved'
                     }`
                     : isExpired
                       ? 'Expired'
@@ -999,7 +999,7 @@ export default function Chores() {
                         ? 'To do'
                         : item.status === 'pending'
                           ? 'Needs check'
-                          : 'Approved ⭐'}
+                          : 'Approved'}
                 </Text>
 
 
