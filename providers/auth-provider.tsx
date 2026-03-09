@@ -9,7 +9,10 @@ import { type IdentifierInfo, requestOtp, verifyOtp } from '@/lib/auth/auth.serv
 import { fetchMember } from '@/lib/families/families.api'
 import { Membership } from '@/lib/families/families.types'
 import { FamilyMember } from '@/lib/members/members.types'
-import { fetchProfileByAuthUserId } from '@/lib/profiles/profiles.api'
+import {
+  ensureProfileForAuthUser,
+  fetchProfileByAuthUserId,
+} from '@/lib/profiles/profiles.api'
 import { Profile } from '@/lib/profiles/profiles.types'
 import { getSupabase } from '@/lib/supabase'
 
@@ -229,8 +232,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const p = await fetchProfileByAuthUserId(authUserId)
         setProfile(p)
       } catch (e) {
-        console.error('Error fetching profile:', e)
-        setProfile(null)
+        // Profile may be missing if handle_new_user trigger failed (e.g. phone signup)
+        try {
+          const p = await ensureProfileForAuthUser(authUserId)
+          setProfile(p)
+        } catch (fallbackErr) {
+          console.error('Error fetching/creating profile:', e, fallbackErr)
+          setProfile(null)
+        }
       } finally {
         setIsProfileLoading(false)
       }
