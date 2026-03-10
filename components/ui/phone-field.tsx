@@ -2,7 +2,10 @@
 import { parsePhoneNumberFromString } from 'libphonenumber-js'
 import React, { useEffect, useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
-import PhoneInput, { type ICountry } from 'react-native-international-phone-number'
+import PhoneInput, {
+  getCountryByCca2,
+  type ICountry,
+} from 'react-native-international-phone-number'
 
 type Props = {
   label: string
@@ -41,16 +44,19 @@ export function PhoneField({
         onChangePhoneNumber={(phoneNumber) => {
           setInputValue(phoneNumber)
 
-          if (!selectedCountry) {
+          // Use selectedCountry, or fall back to defaultCountry (avoids race where
+          // user types before onChangeSelectedCountry fires on mount)
+          const country = selectedCountry ?? getCountryByCca2(defaultCountry)
+          if (!country) {
             onChange('')
             return
           }
 
           try {
-            const full = `${selectedCountry.idd?.root ?? ''}${phoneNumber}`
+            const full = `${country.idd?.root ?? ''}${phoneNumber}`
             const parsed = parsePhoneNumberFromString(
               full,
-              selectedCountry.cca2 as any,
+              country.cca2 as any,
             )
             if (parsed && parsed.isValid()) {
               onChange(parsed.format('E.164'))

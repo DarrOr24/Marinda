@@ -430,11 +430,42 @@ export default function Chores() {
       setList((prev) => [created, ...prev]);
 
       if (saveAsTemplate) {
-        await createTemplate({
-          title,
-          defaultPoints: points,
-          createdById: myFamilyMemberId,
-        });
+        const trimmedTitle = title.trim();
+        const existing = templates?.find(
+          (t) => t.title.trim().toLowerCase() === trimmedTitle.toLowerCase()
+        );
+        if (existing) {
+          const shouldUpdate = await new Promise<boolean>((resolve) => {
+            Alert.alert(
+              'Routine chore already exists',
+              `"${existing.title}" already exists (${existing.defaultPoints} pts). Update it to ${points} points?`,
+              [
+                {
+                  text: "Don't save as routine",
+                  style: 'cancel',
+                  onPress: () => resolve(false),
+                },
+                {
+                  text: 'Update',
+                  onPress: () => resolve(true),
+                },
+              ]
+            );
+          });
+          if (shouldUpdate) {
+            await createTemplate({
+              title: trimmedTitle,
+              defaultPoints: points,
+              createdById: myFamilyMemberId,
+            });
+          }
+        } else {
+          await createTemplate({
+            title: trimmedTitle,
+            defaultPoints: points,
+            createdById: myFamilyMemberId,
+          });
+        }
       }
 
       setShowPost(false);
@@ -834,9 +865,9 @@ export default function Chores() {
 
   const humanTabLabel: Record<TabKey, string> = {
     open: 'To do',
-    pending: 'Needs check',
-    approved: 'Approved ⭐',
-    archived: 'History',
+    pending: 'Check',
+    approved: 'Done',
+    archived: 'Past',
   };
 
   return (
@@ -960,7 +991,7 @@ export default function Chores() {
                         ? 'To do'
                         : item.status === 'pending'
                           ? 'Needs check'
-                          : 'Approved ⭐'
+                          : 'Approved'
                     }`
                     : isExpired
                       ? 'Expired'
@@ -968,7 +999,7 @@ export default function Chores() {
                         ? 'To do'
                         : item.status === 'pending'
                           ? 'Needs check'
-                          : 'Approved ⭐'}
+                          : 'Approved'}
                 </Text>
 
 

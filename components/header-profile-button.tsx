@@ -84,6 +84,17 @@ export function HeaderProfileButton() {
             style={styles.item}
             onPress={() => {
               setOpen(false)
+              router.push('/getting-started')
+            }}
+          >
+            <MaterialCommunityIcons name="play-circle-outline" size={20} color="#2563eb" />
+            <Text style={[styles.itemText, { color: '#2563eb' }]}>Get started</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.item}
+            onPress={() => {
+              setOpen(false)
               router.push('/settings');
             }}
           >

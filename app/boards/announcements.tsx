@@ -352,47 +352,49 @@ export default function AnnouncementsBoard() {
                 </View>
 
                 {/* ---------------------------------------------- */}
-                {/* ROW 3: TABS + +ADD TAB */}
+                {/* ROW 3: TABS + ADD (flows right after last tab when space allows) */}
                 {/* ---------------------------------------------- */}
                 <View style={styles.tabsContainer}>
-                    <View style={{ flex: 1 }}>
-                        <ChipSelector
-                            value={isSearching ? null : activeKind}
-                            onChange={(val) => {
-                                if (!val) return;
-                                if (!isSearching) {
-                                    setActiveKind(val);
-                                    setNewText('');
-                                }
-                            }}
-                            allowDeselect={false}
-                            options={ALL_TABS.map((t) => ({ label: t.label, value: t.id }))}
-                            chipStyle={(active, opt) => {
-                                const style = getBulletinStyle(opt.value);
-                                return {
-                                    backgroundColor: active ? style.backgroundColor : '#f9fafb',
-                                    borderColor: active ? style.borderLeftColor : '#d4d4d4',
-                                };
-                            }}
-                            chipTextStyle={(active, opt) => ({
-                                color: active ? (TAB_PILL_TEXT[opt.value] ?? CUSTOM_TAB_TEXT) : '#4b5563',
-                                fontWeight: active ? '600' : '500',
-                            })}
-                        />
-                    </View>
-
-                    <View style={{ marginLeft: 8, alignSelf: 'flex-start' }}>
-                        <Button
-                            type="secondary"
-                            size="sm"
-                            title="+ Add Tab"
-                            onPress={() => {
-                                setNewTabLabel('');
-                                setNewTabPlaceholder('');
-                                setShowAddTabModal(true);
-                            }}
-                        />
-                    </View>
+                    <ChipSelector
+                        value={isSearching ? null : activeKind}
+                        onChange={(val) => {
+                            if (!val) return;
+                            if (!isSearching) {
+                                setActiveKind(val);
+                                setNewText('');
+                            }
+                        }}
+                        allowDeselect={false}
+                        options={ALL_TABS.map((t) => ({ label: t.label, value: t.id }))}
+                        chipStyle={(active, opt) => {
+                            const style = getBulletinStyle(opt.value);
+                            return {
+                                backgroundColor: active ? style.backgroundColor : '#f9fafb',
+                                borderColor: active ? style.borderLeftColor : '#d4d4d4',
+                            };
+                        }}
+                        chipTextStyle={(active, opt) => ({
+                            color: active ? (TAB_PILL_TEXT[opt.value] ?? CUSTOM_TAB_TEXT) : '#4b5563',
+                            fontWeight: active ? '600' : '500',
+                        })}
+                        trailingElement={
+                            <Button
+                                type="outline"
+                                size="sm"
+                                backgroundColor="#eef2ff"
+                                round
+                                hitSlop={8}
+                                title=""
+                                leftIcon={<Ionicons name="add" size={16} />}
+                                style={{ width: 28, height: 28, minWidth: 28, minHeight: 28 }}
+                                onPress={() => {
+                                    setNewTabLabel('');
+                                    setNewTabPlaceholder('');
+                                    setShowAddTabModal(true);
+                                }}
+                            />
+                        }
+                    />
                 </View>
 
 
@@ -756,10 +758,7 @@ const styles = StyleSheet.create({
     // TABS
     // --------------------------------------
     tabsContainer: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 4,
-        marginBottom: 12,
+        marginBottom: 8,
         width: '100%',
     },
 
@@ -790,7 +789,7 @@ const styles = StyleSheet.create({
     // ADD ANNOUNCEMENT
     // --------------------------------------
     inputBar: {
-        paddingTop: 12,
+        paddingTop: 8,
         marginTop: 0,
     },
     addButton: {

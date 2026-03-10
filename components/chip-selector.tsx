@@ -36,10 +36,12 @@ type ChipSelectorProps = (SingleSelectProps | MultiSelectProps) & {
   renderOption?: (opt: ChipOption, active: boolean) => ReactNode
   chipStyle?: (active: boolean, opt: ChipOption) => ViewStyle
   chipTextStyle?: (active: boolean, opt: ChipOption) => TextStyle
+  /** Renders after chips, flows in same row when space allows */
+  trailingElement?: ReactNode
 }
 
 export function ChipSelector(props: ChipSelectorProps) {
-  const { options, style, renderOption, chipStyle, chipTextStyle } = props
+  const { options, style, renderOption, chipStyle, chipTextStyle, trailingElement } = props
   const isMulti = props.multiple === true
 
   return (
@@ -91,6 +93,7 @@ export function ChipSelector(props: ChipSelectorProps) {
           </Pressable>
         )
       })}
+      {trailingElement}
     </View>
   )
 }

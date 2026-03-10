@@ -75,6 +75,31 @@ export default function ChoreGameSettingsScreen() {
             return;
         }
 
+        const existing = templates?.find(
+            (t) =>
+                t.id !== editing.id &&
+                t.title.trim().toLowerCase() === title.toLowerCase()
+        );
+        if (existing) {
+            Alert.alert(
+                'Routine chore already exists',
+                `"${existing.title}" already exists (${existing.defaultPoints} pts). Update it to ${pointsNum} points?`,
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Update',
+                        onPress: () => doSaveTemplate(title, pointsNum),
+                    },
+                ]
+            );
+            return;
+        }
+
+        await doSaveTemplate(title, pointsNum);
+    };
+
+    const doSaveTemplate = async (title: string, pointsNum: number) => {
+        if (!editing || !activeFamilyId) return;
         try {
             setSaving(true);
 
@@ -241,10 +266,10 @@ export default function ChoreGameSettingsScreen() {
                     Soon you'll be able to set automatic rules, like:
                 </DocsBullet>
                 <DocsBullet>
-                    • Every 100 points earned in a week = +10 bonus points
+                    Every 100 points earned in a week = +10 bonus points
                 </DocsBullet>
                 <DocsBullet>
-                    • 0 expired chores this week = bonus points for everyone
+                    0 expired chores this week = bonus points for everyone
                 </DocsBullet>
                 <DocsBullet>
                     You'll also be able to give manual bonus points from each

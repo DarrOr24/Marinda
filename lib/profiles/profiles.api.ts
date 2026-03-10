@@ -28,6 +28,27 @@ export async function fetchProfileByAuthUserId(authUserId: string): Promise<Prof
     return data;
 }
 
+/** Creates a profile for the current auth user if missing. Used when handle_new_user trigger fails. */
+export async function ensureProfileForAuthUser(authUserId: string): Promise<Profile> {
+    const { data: existing, error: fetchError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("auth_user_id", authUserId)
+        .maybeSingle();
+
+    if (fetchError) throw new Error(fetchError.message);
+    if (existing) return existing;
+
+    const { data: created, error: insertError } = await supabase
+        .from("profiles")
+        .insert({ auth_user_id: authUserId })
+        .select()
+        .single();
+
+    if (insertError) throw new Error(insertError.message);
+    return created;
+}
+
 export async function updateProfile(profileId: string, updates: Partial<Profile>) {
     const { data, error } = await supabase
         .from("profiles")

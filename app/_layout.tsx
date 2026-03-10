@@ -88,6 +88,13 @@ function RootNavigator() {
         />
 
         <Stack.Screen
+          name="getting-started"
+          options={{
+            headerTitle: 'Get started',
+          }}
+        />
+
+        <Stack.Screen
           name="settings"
           options={{
             headerShown: false,

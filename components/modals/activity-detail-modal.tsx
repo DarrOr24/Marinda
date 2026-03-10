@@ -160,7 +160,10 @@ export function ActivityDetailModal({
         <ScrollView
           style={{ maxHeight: scrollMaxHeight }}
           contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={true}
+          nestedScrollEnabled
         >
           <Text style={styles.detailTitle}>{activity.title}</Text>
 

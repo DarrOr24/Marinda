@@ -36,6 +36,15 @@ export function IdentifierStep({
   }, [mode, email, phone])
 
   async function handleContinue() {
+    if (!canContinue) {
+      Alert.alert(
+        'Invalid input',
+        mode === 'phone'
+          ? 'Please select your country (tap the flag) and enter a valid phone number.'
+          : 'Please enter a valid email address.',
+      )
+      return
+    }
     try {
       const identifier =
         mode === 'email'
@@ -87,7 +96,7 @@ export function IdentifierStep({
           styles.primaryButton,
           (!canContinue || loading) && styles.buttonDisabled,
         ]}
-        disabled={loading || !canContinue}
+        disabled={loading}
         onPress={handleContinue}
       >
         {loading ? <ActivityIndicator /> : <Text style={styles.buttonText}>Continue</Text>}

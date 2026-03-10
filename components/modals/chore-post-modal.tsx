@@ -190,7 +190,8 @@ export default function ChorePostModal({
                     contentContainerStyle={{ paddingBottom: 16, flexGrow: 0 }}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
-                    showsVerticalScrollIndicator={false}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled
                 >
                     {/* Routine chores as dropdown */}
                     {templates && templates.length > 0 && (

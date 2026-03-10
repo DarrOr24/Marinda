@@ -10,6 +10,7 @@ import {
   View
 } from "react-native";
 
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { ChipSelector } from "@/components/chip-selector";
 import { KidSwitcher } from "@/components/kid-switcher";
 import MemberSidebar from "@/components/members-sidebar";
@@ -262,16 +263,40 @@ export default function MemberProfile() {
             />
           </View>
 
-          <View style={{ alignSelf: "flex-start" }}>
+          <View style={{ flexDirection: "row", gap: 10, width: "100%", maxWidth: 400 }}>
             <Button
-              title="Manage my family"
+              title="Get started"
+              type="primary"
+              size="md"
+              showShadow
+              onPress={() => router.push("/getting-started")}
+              leftIcon={<MaterialCommunityIcons name="play-circle-outline" size={20} />}
+              style={{ flex: 1 }}
+            />
+            <Button
+              title="My family"
               type="primary"
               size="md"
               showShadow
               onPress={() => router.push("/settings/family")}
+              leftIcon={<MaterialCommunityIcons name="cog-outline" size={20} />}
+              style={{ flex: 1 }}
             />
           </View>
         </>
+      )}
+
+      {!isParent && (
+        <View style={{ alignSelf: "flex-start" }}>
+          <Button
+            title="Get started"
+            type="primary"
+            size="md"
+            showShadow
+            onPress={() => router.push("/getting-started")}
+            leftIcon={<MaterialCommunityIcons name="play-circle-outline" size={20} />}
+          />
+        </View>
       )}
 
       {/* Points card – everyone sees current points */}
