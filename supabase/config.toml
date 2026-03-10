@@ -399,3 +399,15 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/dev_login/deno.json"
 entrypoint = "./functions/dev_login/index.ts"
+
+[functions.revenuecat_billing_sync]
+enabled = true
+verify_jwt = true
+import_map = "./functions/revenuecat_billing_sync/deno.json"
+entrypoint = "./functions/revenuecat_billing_sync/index.ts"
+
+[functions.revenuecat_billing_webhook]
+enabled = true
+verify_jwt = false
+import_map = "./functions/revenuecat_billing_webhook/deno.json"
+entrypoint = "./functions/revenuecat_billing_webhook/index.ts"

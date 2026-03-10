@@ -5,4 +5,5 @@ export const debugConfig = {
   realtime: false,
   auth: false,
   announcements: false,
+  revenuecat: false,
 } as const satisfies Record<string, boolean>

@@ -4,7 +4,7 @@ import { StepsBar } from '@/components/onboarding/steps-bar'
 import { View } from 'react-native'
 
 
-const STEPS_TOTAL = 3
+const STEPS_TOTAL = 4
 
 export default function OnboardingLayout() {
   const segments = useSegments()
@@ -12,12 +12,15 @@ export default function OnboardingLayout() {
   const last = segments[segments.length - 1]
 
   const step =
-    last === 'details' ? 1 :
-      last === 'create-or-join' ? 2 :
-        last === 'create' || last === 'join' ? 3 :
-          null
-
-
+    last === 'details'
+      ? 1
+      : last === 'create-or-join'
+        ? 2
+        : last === 'create'
+          ? 3
+          : last === 'choose-plan' || last === 'join'
+            ? 4
+            : null
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -28,6 +31,7 @@ export default function OnboardingLayout() {
         <Stack.Screen name="select-family" />
         <Stack.Screen name="create-or-join" />
         <Stack.Screen name="create" />
+        <Stack.Screen name="choose-plan" />
         <Stack.Screen name="join" />
         <Stack.Screen name="accept-invite" />
       </Stack>

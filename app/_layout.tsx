@@ -73,6 +73,13 @@ function RootNavigator() {
         />
 
         <Stack.Screen
+          name="onboarding"
+          options={{
+            headerLeft: () => null,
+          }}
+        />
+
+        <Stack.Screen
           name="profile/[id]"
           options={{
             headerLeft: () => null,

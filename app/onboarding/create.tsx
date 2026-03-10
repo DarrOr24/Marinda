@@ -21,7 +21,7 @@ export default function CreateFamilyScreen() {
     mutate(
       { name: familyName, nickname: trimOrNull(nickname) },
       {
-        onSuccess: () => router.replace('/'),
+        onSuccess: () => router.replace('/onboarding/choose-plan'),
         onError: (e: any) =>
           Alert.alert('Create failed', e?.message ?? 'Please try again.'),
       }

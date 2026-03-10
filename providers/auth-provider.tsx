@@ -4,6 +4,11 @@ import { PropsWithChildren, useCallback, useEffect, useMemo, useState } from 're
 import { Linking, Platform } from 'react-native'
 
 import { AuthContext } from '@/hooks/use-auth-context'
+import {
+  configureRevenueCat,
+  identifyRevenueCatUser,
+  logoutRevenueCat,
+} from '@/lib/billing'
 import { appStorage } from '@/lib/app-storage'
 import { type IdentifierInfo, requestOtp, verifyOtp } from '@/lib/auth/auth.service'
 import { fetchMember } from '@/lib/families/families.api'
@@ -97,6 +102,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setIsMembershipsLoading(false)
     }
   }, [authUserId, profile?.id, supabase])
+
+  // Configure RevenueCat on mount; identify when user logs in
+  useEffect(() => {
+    configureRevenueCat()
+  }, [])
+
+  useEffect(() => {
+    if (authUserId) {
+      identifyRevenueCatUser(authUserId).catch(() => { })
+    }
+  }, [authUserId])
 
   // Fetch session once and subscribe to auth state changes
   useEffect(() => {
@@ -283,6 +299,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [pendingIdentifier])
 
   const signOut = useCallback(async () => {
+    await logoutRevenueCat().catch(() => { })
     const { error } = await supabase.auth.signOut()
     if (error) throw error
     await cleanState()
