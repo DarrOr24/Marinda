@@ -24,9 +24,9 @@ const GENDER_OPTIONS = [
 ]
 
 export default function AccountSettingsScreen() {
-  const { member } = useAuthContext()
-  const profileId = member?.profile_id
-  const activeFamilyId = member?.family_id ?? null
+  const { effectiveMember } = useAuthContext()
+  const profileId = effectiveMember?.profile_id
+  const activeFamilyId = effectiveMember?.family_id ?? null
 
   const { data, isLoading } = useProfile(profileId ?? null)
   const updateProfile = useUpdateProfile()

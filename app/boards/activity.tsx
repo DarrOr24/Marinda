@@ -70,7 +70,7 @@ function formatTimeFromIso(iso: string) {
 
 export default function ActivityBoard() {
   const today = new Date();
-  const { member, activeFamilyId } = useAuthContext() as any;
+  const { effectiveMember, activeFamilyId } = useAuthContext() as any;
   const { familyMembers } = useFamily(activeFamilyId);
 
   const [weekOffset, setWeekOffset] = useState<number>(0);
@@ -145,7 +145,7 @@ export default function ActivityBoard() {
     return m?.color?.hex ?? m?.color ?? "#2563eb";
   }
 
-  const myRole = (member?.role ?? member?.profile?.role ?? "").toUpperCase();
+  const myRole = (effectiveMember?.role ?? effectiveMember?.profile?.role ?? "").toUpperCase();
   const isParent = ["DAD", "MOM", "ADULT"].includes(myRole);
 
   function showDetails(a: Activity) {
@@ -164,7 +164,7 @@ export default function ActivityBoard() {
 
   // Create
   function handleSaveActivity(form: NewActivityForm) {
-    if (!activeFamilyId || !member?.id) return;
+    if (!activeFamilyId || !effectiveMember?.id) return;
 
     const activity: ActivityInsert = {
       family_id: activeFamilyId,
@@ -177,15 +177,15 @@ export default function ActivityBoard() {
       present_needed: !!form.present_needed,
       babysitter_needed: !!form.babysitter_needed,
       notes: form.notes ?? null,
-      created_by: member.id,
+      created_by: effectiveMember.id,
     };
 
     const participants: ActivityParticipantUpsert[] = (
       form.participants_member_ids ?? []
     ).map((id) => ({
       member_id: id,
-      response: id === member.id ? "YES" : "MAYBE",
-      is_creator: id === member.id,
+      response: id === effectiveMember.id ? "YES" : "MAYBE",
+      is_creator: id === effectiveMember.id,
     }));
 
     createMut.mutate({ activity, participants });
@@ -416,7 +416,7 @@ export default function ActivityBoard() {
         mode="create"
         submitLabel="Save"
         initial={{
-          participants_member_ids: member?.id ? [member.id] : [],
+          participants_member_ids: effectiveMember?.id ? [effectiveMember.id] : [],
         }}
       />
 
@@ -444,7 +444,7 @@ export default function ActivityBoard() {
         isCreator={
           !!(
             detailActivity?.created_by?.id &&
-            detailActivity.created_by.id === member?.id
+            detailActivity.created_by.id === effectiveMember?.id
           )
         }
       />

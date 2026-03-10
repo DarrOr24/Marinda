@@ -19,9 +19,9 @@ type LocalEditorState = {
 };
 
 export default function ChoreGameSettingsScreen() {
-    const { activeFamilyId, member } = useAuthContext() as any;
-    const currentRole = (member?.role as Role) ?? 'TEEN';
-    const myFamilyMemberId: string | undefined = member?.id as string | undefined;
+    const { activeFamilyId, effectiveMember } = useAuthContext() as any;
+    const currentRole = (effectiveMember?.role as Role) ?? 'TEEN';
+    const myFamilyMemberId: string | undefined = effectiveMember?.id as string | undefined;
 
     const {
         templates,

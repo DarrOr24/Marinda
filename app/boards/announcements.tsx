@@ -60,7 +60,7 @@ export default function AnnouncementsBoard() {
     const insets = useSafeAreaInsets();
     const INPUT_BAR_HEIGHT = 78;
 
-    const { activeFamilyId, member, family, members } = useAuthContext() as any;
+    const { activeFamilyId, effectiveMember, family, members } = useAuthContext() as any;
     const familyId = activeFamilyId ?? undefined;
 
     const [search, setSearch] = useState('');
@@ -102,7 +102,7 @@ export default function AnnouncementsBoard() {
     }, [rawMembers]);
 
     const authUserId: string | undefined =
-        member?.profile?.id || member?.user_id || member?.profile_id;
+        effectiveMember?.profile?.id || effectiveMember?.user_id || effectiveMember?.profile_id;
 
     const myFamilyMemberId: string | undefined = useMemo(() => {
         const me = rawMembers.find(
@@ -112,7 +112,7 @@ export default function AnnouncementsBoard() {
                 m?.profile_id === authUserId
         );
         return me?.id as string | undefined;
-    }, [member, rawMembers, authUserId]);
+    }, [effectiveMember, rawMembers, authUserId]);
 
     // --------------------------------------------
     // Load Announcements + Realtime
@@ -236,8 +236,8 @@ export default function AnnouncementsBoard() {
     function confirmDelete(item: AnnouncementItem) {
         const canDelete =
             item.created_by_member_id === myFamilyMemberId ||
-            member?.role === 'MOM' ||
-            member?.role === 'DAD';
+            effectiveMember?.role === 'MOM' ||
+            effectiveMember?.role === 'DAD';
 
         if (!canDelete) {
             Alert.alert('Not allowed', 'You cannot delete this item.');
@@ -478,8 +478,8 @@ export default function AnnouncementsBoard() {
 
                                     <View style={styles.cardActions}>
                                         {(item.created_by_member_id === myFamilyMemberId ||
-                                            member?.role === 'MOM' ||
-                                            member?.role === 'DAD') && (
+                                            effectiveMember?.role === 'MOM' ||
+                                            effectiveMember?.role === 'DAD') && (
                                             <Button
                                                 type="ghost"
                                                 size="sm"

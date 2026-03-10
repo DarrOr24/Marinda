@@ -18,8 +18,8 @@ const KID_ROLE_OPTIONS = ROLE_OPTIONS.filter((o) =>
 
 export default function AddKidWithoutPhoneScreen() {
   const router = useRouter()
-  const { member } = useAuthContext()
-  const familyId = member?.family_id
+  const { effectiveMember } = useAuthContext()
+  const familyId = effectiveMember?.family_id
 
   const { family } = useFamily(familyId ?? undefined)
   const familyName = family.data?.name ?? null

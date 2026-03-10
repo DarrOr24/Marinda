@@ -8,19 +8,19 @@ import { useAuthContext } from '@/hooks/use-auth-context'
 // - updateMember (nickname, themeColor, etc)
 
 export default function MyFamilyMemberSettingsScreen() {
-  const { member } = useAuthContext() as any
+  const { effectiveMember } = useAuthContext() as any
 
   const [nickname, setNickname] = useState('')
   const [themeColor, setThemeColor] = useState<string>('blue') // placeholder
 
   useEffect(() => {
     // TODO: load from member row when you have it:
-    // setNickname(member?.nickname ?? '')
-    // setThemeColor(member?.theme_color ?? 'blue')
-    setNickname(member?.nickname ?? '')
-  }, [member])
+    // setNickname(effectiveMember?.nickname ?? '')
+    // setThemeColor(effectiveMember?.theme_color ?? 'blue')
+    setNickname(effectiveMember?.nickname ?? '')
+  }, [effectiveMember])
 
-  const hasChanges = nickname !== (member?.nickname ?? '') // extend later
+  const hasChanges = nickname !== (effectiveMember?.nickname ?? '') // extend later
 
   const onSave = async () => {
     try {
@@ -31,7 +31,7 @@ export default function MyFamilyMemberSettingsScreen() {
     }
   }
 
-  if (!member) {
+  if (!effectiveMember) {
     return (
       <Screen>
         <ActivityIndicator />

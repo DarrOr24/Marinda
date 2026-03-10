@@ -28,7 +28,7 @@ import { isKidRole, isParentRole } from "@/utils/validation.utils";
 
 export default function MemberProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { activeFamilyId, member } = useAuthContext() as any;
+  const { activeFamilyId, effectiveMember } = useAuthContext() as any;
   const { familyMembers } = useFamily(activeFamilyId);
 
   const [history, setHistory] = useState<PointsEntry[]>([]);
@@ -43,12 +43,12 @@ export default function MemberProfile() {
   // Recent activity time range: 7, 30, or 90 days
   const [historyRangeDays, setHistoryRangeDays] = useState<number>(30);
 
-  const currentRole = (member?.role as Role | undefined) ?? "TEEN";
+  const currentRole = (effectiveMember?.role as Role | undefined) ?? "TEEN";
   const isParent = isParentRole(currentRole);
-  const adminMemberId: string | undefined = (member as any)?.id;
+  const adminMemberId: string | undefined = (effectiveMember as any)?.id;
 
   const memberList = familyMembers.data ?? [];
-  const selfMemberId: string | undefined = (member as any)?.id;
+  const selfMemberId: string | undefined = (effectiveMember as any)?.id;
 
   // ✅ kids/teens always see ONLY their own profile
   const viewedMemberId = isParent ? id : selfMemberId;

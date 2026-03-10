@@ -84,12 +84,12 @@ const formatDateTime = (ts?: number) => {
 type TabKey = 'open' | 'pending' | 'approved' | 'archived';
 
 export default function Chores() {
-  const { activeFamilyId, member, family, members } = useAuthContext() as any;
+  const { activeFamilyId, effectiveMember, family, members } = useAuthContext() as any;
   const router = useRouter();
 
   const authUserId: string | undefined =
-    member?.profile?.id || member?.user_id || member?.profile_id;
-  const currentRole = (member?.role as Role) ?? 'TEEN';
+    effectiveMember?.profile?.id || effectiveMember?.user_id || effectiveMember?.profile_id;
+  const currentRole = (effectiveMember?.role as Role) ?? 'TEEN';
 
   // hydrate family + members via React Query
   const { familyMembers } = useFamily(activeFamilyId || undefined);
@@ -152,7 +152,7 @@ export default function Chores() {
 
   // Current signed-in family_member_id (for default selection + some mutations)
   const myFamilyMemberId: string | undefined = useMemo(() => {
-    if (member?.id) return member.id as string;
+    if (effectiveMember?.id) return effectiveMember.id as string;
     const me = rawMembers.find(
       (m: any) =>
         m?.user_id === authUserId ||
@@ -160,7 +160,7 @@ export default function Chores() {
         m?.profile_id === authUserId
     );
     return me?.id as string | undefined;
-  }, [member, rawMembers, authUserId]);
+  }, [effectiveMember, rawMembers, authUserId]);
 
   const { templates, createTemplate, deleteTemplate } = useChoreTemplates(activeFamilyId);
 

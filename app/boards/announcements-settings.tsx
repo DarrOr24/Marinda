@@ -20,8 +20,8 @@ import type { Role } from '@/lib/members/members.types';
 
 export default function AnnouncementSettingsScreen() {
 
-    const { activeFamilyId, member } = useAuthContext() as any;
-    const currentRole = (member?.role as Role) ?? 'TEEN';
+    const { activeFamilyId, effectiveMember } = useAuthContext() as any;
+    const currentRole = (effectiveMember?.role as Role) ?? 'TEEN';
     const isParent = currentRole === 'MOM' || currentRole === 'DAD';
 
     const { data: tabs } = useFamilyAnnouncementTabs(activeFamilyId);

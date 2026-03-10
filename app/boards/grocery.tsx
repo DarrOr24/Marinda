@@ -57,7 +57,7 @@ const shortId = (id?: string) =>
     id ? `ID ${String(id).slice(0, 8)}` : "—";
 
 export default function Grocery() {
-    const { activeFamilyId, member, family, members } = useAuthContext() as any;
+    const { activeFamilyId, effectiveMember, family, members } = useAuthContext() as any;
 
     const { familyMembers } = useFamily(activeFamilyId);
 
@@ -191,7 +191,7 @@ export default function Grocery() {
         }
 
         const familyId = activeFamilyId;
-        const whoId = member?.id ?? member?.profile_id ?? "guest";
+        const whoId = effectiveMember?.id ?? effectiveMember?.profile_id ?? "guest";
 
         // EDIT
         if (editingItem) {

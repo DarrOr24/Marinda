@@ -26,10 +26,10 @@ function formatPlan(plan: string): string {
 }
 
 export default function BillingSettingsScreen() {
-  const { member, activeFamilyId, profileId } = useAuthContext()
-  const familyId = activeFamilyId ?? member?.family_id
-  const myRole = member?.role
-  const myProfileId = profileId ?? member?.profile_id
+  const { effectiveMember, activeFamilyId, profileId } = useAuthContext()
+  const familyId = activeFamilyId ?? effectiveMember?.family_id
+  const myRole = effectiveMember?.role
+  const myProfileId = profileId ?? effectiveMember?.profile_id
   const isParent = isParentRole(myRole)
 
   const setBillingOwner = familyId ? useSetBillingOwner(familyId) : null

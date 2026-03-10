@@ -34,7 +34,7 @@ export function AuthRouter() {
     profileId,
     memberships,
     activeFamilyId,
-    member,
+    effectiveMember,
     pendingInviteToken,
   } = useAuthContext()
 
@@ -107,28 +107,28 @@ export function AuthRouter() {
       return
     }
 
-    // 4) Active family set but member not loaded yet -> wait
-    if (!member) return
+    // 4) Active family set but effective member not loaded yet -> wait
+    if (!effectiveMember) return
 
     // 5) If not on an entry route, don't redirect
     if (!isEntryRoute) return
 
     // 6) Redirect into app home (kid handling)
-    const isKid = isKidRole(member.role)
+    const isKid = isKidRole(effectiveMember.role)
 
     if (isKid) {
       const firstKid = familyMembers.data?.find((m: FamilyMember) => isKidRole(m.role))
-      const targetId = firstKid ? firstKid.id : member.id
+      const targetId = firstKid ? firstKid.id : effectiveMember.id
       router.replace(`/profile/${targetId}`)
     } else {
-      router.replace(`/profile/${member.id}`)
+      router.replace(`/profile/${effectiveMember.id}`)
     }
   }, [
     isLoading,
     isLoggedIn,
     memberships,
     activeFamilyId,
-    member,
+    effectiveMember,
     pathname,
     pendingInviteToken,
     router,

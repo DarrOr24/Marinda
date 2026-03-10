@@ -22,9 +22,9 @@ import {
 const CURRENCIES = ["CAD", "USD", "EUR", "GBP", "ILS"];
 
 export default function WishlistSettingsScreen() {
-    const { activeFamilyId, member } = useAuthContext() as any;
+    const { activeFamilyId, effectiveMember } = useAuthContext() as any;
 
-    const currentRole = (member?.role as Role) ?? "TEEN";
+    const currentRole = (effectiveMember?.role as Role) ?? "TEEN";
     const isParent = currentRole === "MOM" || currentRole === "DAD";
 
     const {

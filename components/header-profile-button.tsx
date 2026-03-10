@@ -17,8 +17,7 @@ import { MemberAvatar } from '@/components/avatar/member-avatar'
 
 
 export function HeaderProfileButton() {
-  const { isLoggedIn, signOut } = useAuthContext()
-  const { member } = useAuthContext()
+  const { isLoggedIn, signOut, effectiveMember } = useAuthContext()
 
   const [open, setOpen] = useState(false)
 
@@ -58,9 +57,9 @@ export function HeaderProfileButton() {
     <>
       {/* HeaderRight icon */}
       <TouchableOpacity onPress={onPressIcon} style={{ marginInlineStart: 2 }}>
-        {member?.id && (
+        {effectiveMember?.id && (
           <MemberAvatar
-            memberId={member.id}
+            memberId={effectiveMember.id}
             size="sm"
             isUpdatable={false}
           />

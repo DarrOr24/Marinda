@@ -18,7 +18,7 @@ export default function MemberSidebar() {
   const { activeFamilyId } = useAuthContext()
   const { familyMembers } = useFamily(activeFamilyId as string)
 
-  const { member: currentUser } = useAuthContext()
+  const { effectiveMember: currentUser } = useAuthContext()
 
   // Empty state: no family selected
   if (!activeFamilyId) {

@@ -29,7 +29,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const supabase = getSupabase()
 
   const [session, setSession] = useState<Session | null>(null)
-  const [member, setMember] = useState<FamilyMember | null>(null)
+  const [effectiveMember, setEffectiveMember] = useState<FamilyMember | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [memberships, setMemberships] = useState<Membership[] | null>(null)
 
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const cleanState = useCallback(async () => {
     setMemberships(null)
-    setMember(null)
+    setEffectiveMember(null)
     setProfile(null)
     setPendingIdentifier(null)
     await setActiveFamilyId(null)
@@ -268,17 +268,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     const fetchCurrMember = async () => {
       if (!profile?.id || !activeFamilyId) {
-        setMember(null)
+        setEffectiveMember(null)
         return
       }
 
       setIsMemberLoading(true)
       try {
         const m = await fetchMember(activeFamilyId, profile.id)
-        setMember(m)
+        setEffectiveMember(m)
       } catch (e) {
         console.error('Error fetching member:', e)
-        setMember(null)
+        setEffectiveMember(null)
       } finally {
         setIsMemberLoading(false)
       }
@@ -322,7 +322,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isEmailVerified,
       profileId: profile?.id ?? null,
       profile,
-      member,
+      effectiveMember,
       memberships,
       refreshMemberships: fetchMemberships,
       isLoading,
@@ -342,7 +342,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       email,
       isEmailVerified,
       profile,
-      member,
+      effectiveMember,
       memberships,
       fetchMemberships,
       isLoading,

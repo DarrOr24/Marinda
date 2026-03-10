@@ -38,9 +38,9 @@ import { WishlistItemModal } from "@/components/modals/wishlist-item-modal";
 
 export default function WishList() {
 
-    const { activeFamilyId, member } = useAuthContext() as any;
+    const { activeFamilyId, effectiveMember } = useAuthContext() as any;
 
-    const currentRole = (member?.role as Role) ?? "TEEN";
+    const currentRole = (effectiveMember?.role as Role) ?? "TEEN";
     const isParent = currentRole === "MOM" || currentRole === "DAD";
 
     const { data: wishlistSettings } = useFamilyWishlistSettings(activeFamilyId);
@@ -88,7 +88,7 @@ export default function WishList() {
 
     const effectiveMemberId: string | undefined = isParent
         ? selectedKidId ?? kids[0]?.id
-        : (member as any)?.id;
+        : (effectiveMember as any)?.id;
 
     const viewingMember = findMemberByAnyId(effectiveMemberId);
 

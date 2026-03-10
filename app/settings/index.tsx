@@ -57,19 +57,19 @@ const ITEMS: Item[] = [
 
 export default function SettingsIndex() {
   const router = useRouter()
-  const { member } = useAuthContext()
+  const { effectiveMember } = useAuthContext()
 
   return (
     <Screen>
       <View style={styles.avatarWrapper}>
-        {member?.id ? (
+        {effectiveMember?.id ? (
           <MemberAvatar
-            memberId={member.id}
+            memberId={effectiveMember.id}
             size="xl"
             isUpdatable={true}
           />
         ) : null}
-        <Text style={styles.avatarName}>{member?.profile?.first_name}{'\n'}{member?.profile?.last_name}</Text>
+        <Text style={styles.avatarName}>{effectiveMember?.profile?.first_name}{'\n'}{effectiveMember?.profile?.last_name}</Text>
       </View>
 
       <View style={styles.card}>
