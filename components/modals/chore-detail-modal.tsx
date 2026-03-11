@@ -2,8 +2,8 @@
 import { ChipSelector } from '@/components/chip-selector';
 import MediaPicker, { PickedMedia } from '@/components/media-picker';
 import { Button, MetaRow, ModalCard, ModalShell, TextInput, useModalScrollMaxHeight } from '@/components/ui';
+import { useAuthContext } from '@/hooks/use-auth-context';
 import { ChoreView, Proof } from '@/lib/chores/chores.types';
-import { Role } from '@/lib/members/members.types';
 import { Audio, ResizeMode, Video } from 'expo-av';
 import React, { useState } from 'react';
 import {
@@ -24,7 +24,6 @@ type MemberOption = {
 type Props = {
     visible: boolean;
     chore: ChoreView;
-    currentRole: Role;
     onClose: () => void;
 
     onAttachProof: (id: string, proof: Proof | null) => void; // null = clear
@@ -48,7 +47,6 @@ type Props = {
 export default function ChoreDetailModal({
     visible,
     chore,
-    currentRole,
     onClose,
     onAttachProof,
     onMarkPending,
@@ -61,7 +59,7 @@ export default function ChoreDetailModal({
     defaultDoneById,
 }: Props) {
     const scrollMaxHeight = useModalScrollMaxHeight(140);
-    const isParent = currentRole === 'MOM' || currentRole === 'DAD';
+    const { hasParentPermissions } = useAuthContext();
 
     // 🔹 Normalize assignees: plural-only
     const assignedIds: string[] = (chore.assignedToIds ?? []).filter(Boolean);
@@ -143,7 +141,7 @@ export default function ChoreDetailModal({
         if (assignedIds.includes(defaultDoneById)) return true;
 
         // Parent: allow, but explain that points go to the assigned kids
-        if (isParent) {
+        if (hasParentPermissions) {
             Alert.alert(
                 'Assigned chore',
                 assignedLabel
@@ -477,7 +475,7 @@ export default function ChoreDetailModal({
                                 ) : null}
                             </View>
 
-                            {isParent && (
+                            {hasParentPermissions && (
                                 <>
                                     <TextInput
                                         label="Points for this chore"
@@ -591,7 +589,7 @@ export default function ChoreDetailModal({
 
                 {chore.status === 'pending' && (
                     <>
-                        {isParent && (
+                        {hasParentPermissions && (
                             <View style={[s.row, { marginTop: 14 }]}>
                                 <View style={s.flex1}>
                                     <Button title="Deny" type="danger" size="sm" onPress={deny} fullWidth />

@@ -14,7 +14,6 @@ import {
 } from '@/lib/chores/chores.api';
 import { awardMemberPoints } from '@/lib/families/families.api';
 import { useFamily } from '@/lib/families/families.hooks';
-import type { Role } from '@/lib/members/members.types';
 
 import { Button, ScreenList } from "@/components/ui";
 
@@ -84,12 +83,11 @@ const formatDateTime = (ts?: number) => {
 type TabKey = 'open' | 'pending' | 'approved' | 'archived';
 
 export default function Chores() {
-  const { activeFamilyId, effectiveMember, family, members } = useAuthContext() as any;
+  const { activeFamilyId, effectiveMember, family, members, hasParentPermissions } = useAuthContext() as any;
   const router = useRouter();
 
   const authUserId: string | undefined =
     effectiveMember?.profile?.id || effectiveMember?.user_id || effectiveMember?.profile_id;
-  const currentRole = (effectiveMember?.role as Role) ?? 'TEEN';
 
   // hydrate family + members via React Query
   const { familyMembers } = useFamily(activeFamilyId || undefined);
@@ -163,11 +161,6 @@ export default function Chores() {
   }, [effectiveMember, rawMembers, authUserId]);
 
   const { templates, createTemplate, deleteTemplate } = useChoreTemplates(activeFamilyId);
-
-  const isParent = useMemo(
-    () => currentRole === 'MOM' || currentRole === 'DAD',
-    [currentRole]
-  );
 
   const [list, setList] = useState<ChoreView[]>([]);
   const [showPost, setShowPost] = useState(false);
@@ -856,7 +849,7 @@ export default function Chores() {
       return;
     }
 
-    if (item.status === 'pending' && !isParent) {
+    if (item.status === 'pending' && !hasParentPermissions) {
       Alert.alert('Pending approval', 'Only a parent can review this chore.');
       return;
     }
@@ -964,7 +957,7 @@ export default function Chores() {
             !!myFamilyMemberId &&
             item.createdByMemberId &&
             item.createdByMemberId === myFamilyMemberId;
-          const canModify = isParent || isCreator;
+          const canModify = hasParentPermissions || isCreator;
           const now = Date.now();
           const isExpired =
             item.status === 'open' && item.expiresAt && item.expiresAt < now;
@@ -1126,7 +1119,7 @@ export default function Chores() {
         onSubmit={postChore}
         templates={templates}
         assigneeOptions={doneByOptions}
-        canEditPoints={isParent}
+        canEditPoints={hasParentPermissions}
       />
 
       {/* edit */}
@@ -1148,7 +1141,7 @@ export default function Chores() {
           titleText="Edit Chore"
           submitText="Save"
           assigneeOptions={doneByOptions}
-          canEditPoints={isParent}
+          canEditPoints={hasParentPermissions}
         />
       )}
 
@@ -1157,7 +1150,6 @@ export default function Chores() {
         <ChoreDetailModal
           visible={!!selected}
           chore={selected}
-          currentRole={currentRole}
           onClose={() => setSelectedId(null)}
           onAttachProof={onAttachProof}
           onMarkPending={onMarkPending}

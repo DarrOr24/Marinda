@@ -30,11 +30,9 @@ import { isParentRole } from '@/utils/validation.utils'
 
 export default function FamilySettingsScreen() {
   const router = useRouter()
-  const { effectiveMember, activeFamilyId } = useAuthContext() as any
+  const { effectiveMember, activeFamilyId, hasParentPermissions } = useAuthContext() as any
   const familyId = activeFamilyId ?? effectiveMember?.family_id
-  const myRole = effectiveMember?.role as Role | undefined
   const myProfileId = effectiveMember?.profile_id as string | undefined
-  const isParent = isParentRole(myRole)
 
   const { family, familyMembers, familyInvites } = useFamily(familyId)
 
@@ -48,7 +46,7 @@ export default function FamilySettingsScreen() {
   const isLoadingFamily = family.isLoading
   const isLoadingInvites = familyInvites.isLoading
 
-  if (!isParent) {
+  if (!hasParentPermissions) {
     return (
       <Screen>
         <Text style={styles.sectionTitle}>Family management</Text>

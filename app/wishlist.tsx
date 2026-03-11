@@ -17,7 +17,6 @@ import {
 
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
-import type { Role } from "@/lib/members/members.types";
 import type { WishlistItem } from "@/lib/wishlist/wishlist.types";
 
 import { KidSwitcher } from "@/components/kid-switcher";
@@ -38,10 +37,7 @@ import { WishlistItemModal } from "@/components/modals/wishlist-item-modal";
 
 export default function WishList() {
 
-    const { activeFamilyId, effectiveMember } = useAuthContext() as any;
-
-    const currentRole = (effectiveMember?.role as Role) ?? "TEEN";
-    const isParent = currentRole === "MOM" || currentRole === "DAD";
+    const { activeFamilyId, effectiveMember, hasParentPermissions } = useAuthContext() as any;
 
     const { data: wishlistSettings } = useFamilyWishlistSettings(activeFamilyId);
     const POINTS_PER_CURRENCY = wishlistSettings?.points_per_currency ?? 10;
@@ -86,7 +82,7 @@ export default function WishList() {
 
     const [selectedKidId, setSelectedKidId] = useState<string | null>(null);
 
-    const effectiveMemberId: string | undefined = isParent
+    const effectiveMemberId: string | undefined = hasParentPermissions
         ? selectedKidId ?? kids[0]?.id
         : (effectiveMember as any)?.id;
 
@@ -255,7 +251,7 @@ export default function WishList() {
                     {/* ROW 1 — Title + Icons */}
                     <View style={styles.row1}>
                         <Text style={styles.title}>
-                            {isParent
+                            {hasParentPermissions
                                 ? `${viewingMember?.profile?.first_name || "Child"}'s Wish List`
                                 : "My Wish List"}
                         </Text>
@@ -290,7 +286,7 @@ export default function WishList() {
                                 {viewingMember ? `${viewingMember.points} pts` : ""}
                             </Text>
 
-                            {isParent && (
+                            {hasParentPermissions && (
                                 <KidSwitcher
                                     kids={kids}
                                     selectedKidId={selectedKidId}
@@ -330,7 +326,7 @@ export default function WishList() {
                 {/* List */}
                 {(tab === "wishes" ? wishes : fulfilled).map((item) => {
                     const canFulfill =
-                        item.status === "open" && (isParent || item.fulfillment_mode === "self");
+                        item.status === "open" && (hasParentPermissions || item.fulfillment_mode === "self");
 
                     return (
                         <View key={item.id} style={styles.cardRow}>
@@ -439,7 +435,7 @@ export default function WishList() {
                 {itemsForMember.length === 0 && (
                     <Text style={styles.emptyText}>
                         No wishes yet.{" "}
-                        {isParent ? "Ask them to add one!" : "Tap + to add your first wish."}
+                        {hasParentPermissions ? "Ask them to add one!" : "Tap + to add your first wish."}
                     </Text>
                 )}
             </View>

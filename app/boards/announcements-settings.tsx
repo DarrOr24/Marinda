@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 
 import { useAuthContext } from '@/hooks/use-auth-context';
+import { useParentPermissionGuard } from '@/hooks/use-parent-permission-guard';
 import {
     useCreateAnnouncementTab,
     useDeleteAnnouncementTab,
@@ -16,13 +17,13 @@ import {
 
 import { DocsPageLayout, DocsSection, docsPageStyles } from '@/components/docs-page-layout';
 import { Button, TextInput } from '@/components/ui';
-import type { Role } from '@/lib/members/members.types';
 
 export default function AnnouncementSettingsScreen() {
 
-    const { activeFamilyId, effectiveMember } = useAuthContext() as any;
-    const currentRole = (effectiveMember?.role as Role) ?? 'TEEN';
-    const isParent = currentRole === 'MOM' || currentRole === 'DAD';
+    const { activeFamilyId } = useAuthContext() as any;
+    const { hasParentPermissions, requireParent } = useParentPermissionGuard({
+        message: 'Only parents can add, edit, or delete announcement tabs.',
+    });
 
     const { data: tabs } = useFamilyAnnouncementTabs(activeFamilyId);
 
@@ -35,17 +36,6 @@ export default function AnnouncementSettingsScreen() {
         label: string;
         placeholder: string;
     }>(null);
-
-    const requireParent = () => {
-        if (!isParent) {
-            Alert.alert(
-                'Parents only',
-                'Only parents can add, edit, or delete announcement tabs.'
-            );
-            return false;
-        }
-        return true;
-    };
 
     /* --------------------------------------------------------
        Add tab
@@ -151,7 +141,7 @@ export default function AnnouncementSettingsScreen() {
                     Creating custom tabs helps you organize your family’s announcements in the way that works best for you.
                 </Text>
 
-                {!isParent && (
+                {!hasParentPermissions && (
                     <Text style={docsPageStyles.note}>
                         Only parents can add or edit custom tabs.
                     </Text>

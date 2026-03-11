@@ -60,7 +60,7 @@ export default function AnnouncementsBoard() {
     const insets = useSafeAreaInsets();
     const INPUT_BAR_HEIGHT = 78;
 
-    const { activeFamilyId, effectiveMember, family, members } = useAuthContext() as any;
+    const { activeFamilyId, effectiveMember, family, members, hasParentPermissions } = useAuthContext() as any;
     const familyId = activeFamilyId ?? undefined;
 
     const [search, setSearch] = useState('');
@@ -236,8 +236,7 @@ export default function AnnouncementsBoard() {
     function confirmDelete(item: AnnouncementItem) {
         const canDelete =
             item.created_by_member_id === myFamilyMemberId ||
-            effectiveMember?.role === 'MOM' ||
-            effectiveMember?.role === 'DAD';
+            hasParentPermissions;
 
         if (!canDelete) {
             Alert.alert('Not allowed', 'You cannot delete this item.');
@@ -478,21 +477,20 @@ export default function AnnouncementsBoard() {
 
                                     <View style={styles.cardActions}>
                                         {(item.created_by_member_id === myFamilyMemberId ||
-                                            effectiveMember?.role === 'MOM' ||
-                                            effectiveMember?.role === 'DAD') && (
-                                            <Button
-                                                type="ghost"
-                                                size="sm"
-                                                round
-                                                hitSlop={10}
-                                                leftIcon={<MaterialCommunityIcons name="pencil-outline" size={18} />}
-                                                leftIconColor="#475569"
-                                                onPress={() => {
-                                                    setEditingItem(item);
-                                                    setEditText(item.text);
-                                                }}
-                                            />
-                                        )}
+                                            hasParentPermissions) && (
+                                                <Button
+                                                    type="ghost"
+                                                    size="sm"
+                                                    round
+                                                    hitSlop={10}
+                                                    leftIcon={<MaterialCommunityIcons name="pencil-outline" size={18} />}
+                                                    leftIconColor="#475569"
+                                                    onPress={() => {
+                                                        setEditingItem(item);
+                                                        setEditText(item.text);
+                                                    }}
+                                                />
+                                            )}
                                         <Button
                                             type="ghost"
                                             size="sm"

@@ -70,7 +70,7 @@ function formatTimeFromIso(iso: string) {
 
 export default function ActivityBoard() {
   const today = new Date();
-  const { effectiveMember, activeFamilyId } = useAuthContext() as any;
+  const { effectiveMember, activeFamilyId, hasParentPermissions } = useAuthContext() as any;
   const { familyMembers } = useFamily(activeFamilyId);
 
   const [weekOffset, setWeekOffset] = useState<number>(0);
@@ -145,9 +145,6 @@ export default function ActivityBoard() {
     return m?.color?.hex ?? m?.color ?? "#2563eb";
   }
 
-  const myRole = (effectiveMember?.role ?? effectiveMember?.profile?.role ?? "").toUpperCase();
-  const isParent = ["DAD", "MOM", "ADULT"].includes(myRole);
-
   function showDetails(a: Activity) {
     setDetailActivity(a);
   }
@@ -206,7 +203,7 @@ export default function ActivityBoard() {
       babysitter_needed: !!form.babysitter_needed,
       notes: form.notes ?? null,
       // only kid edits require re-approval; parent edits keep current status
-      ...(isParent ? {} : { status: "PENDING" as ActivityStatus }),
+      ...(hasParentPermissions ? {} : { status: "PENDING" as ActivityStatus }),
     };
 
     // For updates we let the DB preserve existing `response` & `is_creator`
@@ -440,7 +437,7 @@ export default function ActivityBoard() {
         }}
         memberById={memberById}
         creatorName={creatorName}
-        isParent={isParent}
+        isParent={hasParentPermissions}
         isCreator={
           !!(
             detailActivity?.created_by?.id &&

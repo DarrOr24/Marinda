@@ -20,6 +20,7 @@ import {
 } from '@/lib/profiles/profiles.api'
 import { Profile } from '@/lib/profiles/profiles.types'
 import { getSupabase } from '@/lib/supabase'
+import { isParentRole } from '@/utils/validation.utils'
 
 
 export const ACTIVE_FAMILY_KEY = 'marinda:activeFamilyId'
@@ -45,6 +46,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const email = session?.user?.email ?? null
   const isEmailVerified = !!session?.user?.email_confirmed_at
+  const hasParentPermissions = isParentRole(effectiveMember?.role)
 
   const [activeFamilyId, _setActiveFamilyId] = useState<string | null>(null)
   const setActiveFamilyId = useCallback(async (id: string | null) => {
@@ -323,6 +325,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       profileId: profile?.id ?? null,
       profile,
       effectiveMember,
+      hasParentPermissions,
       memberships,
       refreshMemberships: fetchMemberships,
       isLoading,
@@ -343,6 +346,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isEmailVerified,
       profile,
       effectiveMember,
+      hasParentPermissions,
       memberships,
       fetchMemberships,
       isLoading,

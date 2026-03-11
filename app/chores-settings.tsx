@@ -9,8 +9,8 @@ import {
 import { DocsBullet, DocsPageLayout, DocsSection, docsPageStyles } from '@/components/docs-page-layout';
 import { Button, TextInput } from '@/components/ui';
 import { useAuthContext } from '@/hooks/use-auth-context';
+import { useParentPermissionGuard } from '@/hooks/use-parent-permission-guard';
 import { useChoreTemplates } from '@/lib/chores/chores-templates.hooks';
-import type { Role } from '@/lib/members/members.types';
 
 type LocalEditorState = {
     id?: string;
@@ -20,7 +20,9 @@ type LocalEditorState = {
 
 export default function ChoreGameSettingsScreen() {
     const { activeFamilyId, effectiveMember } = useAuthContext() as any;
-    const currentRole = (effectiveMember?.role as Role) ?? 'TEEN';
+    const { hasParentPermissions, requireParent } = useParentPermissionGuard({
+        message: 'Only a parent can add, edit, or delete routine chores. Ask a parent to sign in.',
+    });
     const myFamilyMemberId: string | undefined = effectiveMember?.id as string | undefined;
 
     const {
@@ -31,19 +33,6 @@ export default function ChoreGameSettingsScreen() {
 
     const [editing, setEditing] = React.useState<LocalEditorState | null>(null);
     const [saving, setSaving] = React.useState(false);
-
-    const isParent = currentRole === 'MOM' || currentRole === 'DAD';
-
-    const requireParent = () => {
-        if (!isParent) {
-            Alert.alert(
-                'Parents only',
-                'Only a parent can add, edit, or delete routine chores. Ask a parent to sign in.'
-            );
-            return false;
-        }
-        return true;
-    };
 
     const startAdd = () => {
         if (!requireParent()) return;
@@ -159,7 +148,7 @@ export default function ChoreGameSettingsScreen() {
                     you don't have to type the same chores again and again.
                 </DocsBullet>
 
-                {!isParent && (
+                {!hasParentPermissions && (
                     <View style={{ marginTop: 8 }}>
                         <Text style={docsPageStyles.note}>
                             Only parents can change this list. You can still see the routine

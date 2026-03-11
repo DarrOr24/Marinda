@@ -26,11 +26,9 @@ function formatPlan(plan: string): string {
 }
 
 export default function BillingSettingsScreen() {
-  const { effectiveMember, activeFamilyId, profileId } = useAuthContext()
+  const { effectiveMember, activeFamilyId, profileId, hasParentPermissions } = useAuthContext()
   const familyId = activeFamilyId ?? effectiveMember?.family_id
-  const myRole = effectiveMember?.role
   const myProfileId = profileId ?? effectiveMember?.profile_id
-  const isParent = isParentRole(myRole)
 
   const setBillingOwner = familyId ? useSetBillingOwner(familyId) : null
   const {
@@ -175,7 +173,7 @@ export default function BillingSettingsScreen() {
       </View>
 
       {/* Billing owner (parents only) */}
-      {isParent && (
+      {hasParentPermissions && (
         <View style={styles.card}>
           <Text style={styles.cardLabel}>Billing owner</Text>
           <Text style={styles.cardValue}>{billingOwnerName}</Text>
@@ -202,7 +200,7 @@ export default function BillingSettingsScreen() {
       )}
 
       {/* Subscribe / Manage (billing owner only) */}
-      {isParent && isBillingOwner && (
+      {hasParentPermissions && isBillingOwner && (
         <View style={styles.card}>
           <Text style={styles.cardLabel}>
             {plan === 'pro' ? 'Manage subscription' : 'Upgrade to Pro'}
@@ -270,7 +268,7 @@ export default function BillingSettingsScreen() {
         </View>
       )}
 
-      {!isParent && (
+      {!hasParentPermissions && (
         <Text style={styles.sectionSubtitle}>
           Only parents can manage billing. Ask your family’s billing owner to
           make changes.

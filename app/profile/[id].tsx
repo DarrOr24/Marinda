@@ -28,7 +28,7 @@ import { isKidRole, isParentRole } from "@/utils/validation.utils";
 
 export default function MemberProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { activeFamilyId, effectiveMember } = useAuthContext() as any;
+  const { activeFamilyId, effectiveMember, hasParentPermissions } = useAuthContext() as any;
   const { familyMembers } = useFamily(activeFamilyId);
 
   const [history, setHistory] = useState<PointsEntry[]>([]);
@@ -43,24 +43,22 @@ export default function MemberProfile() {
   // Recent activity time range: 7, 30, or 90 days
   const [historyRangeDays, setHistoryRangeDays] = useState<number>(30);
 
-  const currentRole = (effectiveMember?.role as Role | undefined) ?? "TEEN";
-  const isParent = isParentRole(currentRole);
   const adminMemberId: string | undefined = (effectiveMember as any)?.id;
 
   const memberList = familyMembers.data ?? [];
   const selfMemberId: string | undefined = (effectiveMember as any)?.id;
 
   // ✅ kids/teens always see ONLY their own profile
-  const viewedMemberId = isParent ? id : selfMemberId;
+  const viewedMemberId = hasParentPermissions ? id : selfMemberId;
 
   useEffect(() => {
-    if (!isParent && selfMemberId && id !== selfMemberId) {
+    if (!hasParentPermissions && selfMemberId && id !== selfMemberId) {
       router.replace({
         pathname: "/profile/[id]",
         params: { id: selfMemberId },
       });
     }
-  }, [isParent, selfMemberId, id]);
+  }, [hasParentPermissions, selfMemberId, id]);
 
   // ✅ member being viewed (for points card)
   const current = memberList.find((m: any) => m.id === viewedMemberId);
@@ -251,7 +249,7 @@ export default function MemberProfile() {
       contentStyle={{ paddingLeft: 20, paddingRight: 16 }}
       gap="md"
     >
-      {isParent && (
+      {hasParentPermissions && (
         <>
           <View style={{ alignSelf: "flex-start" }}>
             <KidSwitcher
@@ -286,7 +284,7 @@ export default function MemberProfile() {
         </>
       )}
 
-      {!isParent && (
+      {!hasParentPermissions && (
         <View style={{ alignSelf: "flex-start" }}>
           <Button
             title="Get started"
@@ -306,7 +304,7 @@ export default function MemberProfile() {
       </View>
 
       {/* Manual adjust – parents only */}
-      {isParent && (
+      {hasParentPermissions && (
         <View style={styles.adjustCard}>
           <Text style={styles.adjustTitle}>Adjust points manually</Text>
           <Text style={styles.adjustHelp}>

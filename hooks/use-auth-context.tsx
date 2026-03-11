@@ -16,6 +16,7 @@ export type AuthData = {
   profileId: string | null
   profile: Profile | null
   effectiveMember: FamilyMember | null
+  hasParentPermissions: boolean
   memberships: Membership[] | null
   refreshMemberships: () => Promise<void>
   isLoading: boolean
@@ -38,6 +39,7 @@ export const AuthContext = createContext<AuthData>({
   profileId: null,
   profile: null,
   effectiveMember: null,
+  hasParentPermissions: false,
   memberships: null,
   refreshMemberships: async () => { },
   isLoading: true,

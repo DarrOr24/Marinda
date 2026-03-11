@@ -13,7 +13,7 @@ import {
 import { DocsPageLayout, DocsSection, docsPageStyles } from "@/components/docs-page-layout";
 import { Button, TextInput } from "@/components/ui";
 import { useAuthContext } from "@/hooks/use-auth-context";
-import type { Role } from "@/lib/members/members.types";
+import { useParentPermissionGuard } from "@/hooks/use-parent-permission-guard";
 import {
     useFamilyWishlistSettings,
     useUpdateWishlistSettings,
@@ -22,10 +22,10 @@ import {
 const CURRENCIES = ["CAD", "USD", "EUR", "GBP", "ILS"];
 
 export default function WishlistSettingsScreen() {
-    const { activeFamilyId, effectiveMember } = useAuthContext() as any;
-
-    const currentRole = (effectiveMember?.role as Role) ?? "TEEN";
-    const isParent = currentRole === "MOM" || currentRole === "DAD";
+    const { activeFamilyId } = useAuthContext() as any;
+    const { hasParentPermissions, requireParent } = useParentPermissionGuard({
+        message: "Only parents can change wishlist settings.",
+    });
 
     const {
         data: settings,
@@ -52,16 +52,8 @@ export default function WishlistSettingsScreen() {
         }
     }, [settings]);
 
-    const blockIfNotParent = () => {
-        if (!isParent) {
-            Alert.alert("Parents only", "Only parents can change wishlist settings.");
-            return true;
-        }
-        return false;
-    };
-
     const onSave = () => {
-        if (blockIfNotParent()) return;
+        if (!requireParent()) return;
         if (!activeFamilyId) return;
 
         const num = Number(pointsRate);
@@ -154,10 +146,10 @@ export default function WishlistSettingsScreen() {
 
                 <Pressable
                     onPress={() => {
-                        if (!isParent) return blockIfNotParent();
+                        if (!requireParent()) return;
                         setShowCurrencyPicker(true);
                     }}
-                    style={[styles.input, styles.dropdownBox, !isParent && styles.disabledInput]}
+                    style={[styles.input, styles.dropdownBox, !hasParentPermissions && styles.disabledInput]}
                 >
                     <Text style={styles.dropdownText}>{currency}</Text>
                 </Pressable>
@@ -195,19 +187,17 @@ export default function WishlistSettingsScreen() {
 
                 <Pressable
                     onPress={() => {
-                        if (!isParent) {
-                            Alert.alert("Parents only", "Only parents can change wishlist settings.");
-                        }
+                        if (!requireParent()) return;
                     }}
                 >
                     <TextInput
                         value={pointsRate}
                         onChangeText={onChangeRate}
-                        editable={isParent}
+                        editable={hasParentPermissions}
                         keyboardType="numeric"
                         placeholder="e.g. 10"
-                        style={!isParent && styles.disabledInput}
-                        pointerEvents={isParent ? "auto" : "none"}
+                        style={!hasParentPermissions && styles.disabledInput}
+                        pointerEvents={hasParentPermissions ? "auto" : "none"}
                     />
                 </Pressable>
 
@@ -224,9 +214,7 @@ export default function WishlistSettingsScreen() {
 
                 <Pressable
                     onPress={() => {
-                        if (!isParent) {
-                            Alert.alert("Parents only", "Only parents can change wishlist settings.");
-                        }
+                        if (!requireParent()) return;
                     }}
                 >
                     <TextInput
@@ -239,11 +227,11 @@ export default function WishlistSettingsScreen() {
                             }
                             setSelfFulfillMaxPrice(cleaned);
                         }}
-                        editable={isParent}
+                        editable={hasParentPermissions}
                         keyboardType="numeric"
                         placeholder="e.g. 60 (leave empty for no limit)"
-                        style={!isParent && styles.disabledInput}
-                        pointerEvents={isParent ? "auto" : "none"}
+                        style={!hasParentPermissions && styles.disabledInput}
+                        pointerEvents={hasParentPermissions ? "auto" : "none"}
                     />
                 </Pressable>
 
@@ -253,7 +241,7 @@ export default function WishlistSettingsScreen() {
             </DocsSection>
 
 
-            {isParent && (
+            {hasParentPermissions && (
                 <Button
                     title={updateSettings.isPending ? "Saving…" : "Save Settings"}
                     type="primary"
