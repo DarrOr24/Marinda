@@ -7,6 +7,8 @@
     "start:go": "cross-env EXPO_ROUTER_APP_ROOT=./app expo start --go",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "cross-env EXPO_ROUTER_APP_ROOT=./app expo start --android",
+    "start:8082": "cross-env EXPO_ROUTER_APP_ROOT=./app expo start --port 8082",
+    "run:android:8082": "cross-env EXPO_ROUTER_APP_ROOT=./app REACT_NATIVE_PACKAGER_PORT=8082 expo run:android",
     "ios": "cross-env EXPO_ROUTER_APP_ROOT=./app expo start --ios",
     "web": "cross-env EXPO_ROUTER_APP_ROOT=./app expo start --web",
     "lint": "expo lint"
