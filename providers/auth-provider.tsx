@@ -1,8 +1,13 @@
 // providers/auth-provider.tsx
 import type { Session } from '@supabase/supabase-js'
-import { PropsWithChildren, useCallback, useEffect, useMemo, useState } from 'react'
-import { Linking, Platform } from 'react-native'
+import { PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Alert,
+  Linking,
+  Platform,
+} from 'react-native'
 
+import { KidModePinModal, type KidModePinPrompt } from '@/components/kid-mode-pin-modal'
 import { AuthContext } from '@/hooks/use-auth-context'
 import {
   configureRevenueCat,
@@ -11,7 +16,7 @@ import {
 } from '@/lib/billing'
 import { appStorage } from '@/lib/app-storage'
 import { type IdentifierInfo, requestOtp, verifyOtp } from '@/lib/auth/auth.service'
-import { fetchMember } from '@/lib/families/families.api'
+import { fetchMember, fetchMemberById } from '@/lib/families/families.api'
 import { Membership } from '@/lib/families/families.types'
 import { FamilyMember } from '@/lib/members/members.types'
 import {
@@ -25,27 +30,37 @@ import { isParentRole } from '@/utils/validation.utils'
 
 export const ACTIVE_FAMILY_KEY = 'marinda:activeFamilyId'
 export const PENDING_INVITE_KEY = 'marinda:pendingInviteToken'
+export const KID_MODE_MEMBER_BY_FAMILY_KEY = 'marinda:kidModeMemberByFamily'
+const KID_MODE_PIN_PATTERN = /^\d{4}$/
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const supabase = getSupabase()
 
   const [session, setSession] = useState<Session | null>(null)
-  const [effectiveMember, setEffectiveMember] = useState<FamilyMember | null>(null)
+  const [authMember, setAuthMember] = useState<FamilyMember | null>(null)
+  const [actingMemberId, setActingMemberId] = useState<string | null>(null)
+  const [actingMember, setActingMember] = useState<FamilyMember | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [memberships, setMemberships] = useState<Membership[] | null>(null)
 
   const [isSessionLoading, setIsSessionLoading] = useState(true)
   const [isMembershipsLoading, setIsMembershipsLoading] = useState(false)
-  const [isMemberLoading, setIsMemberLoading] = useState(false)
+  const [isAuthMemberLoading, setIsAuthMemberLoading] = useState(false)
+  const [isActingMemberLoading, setIsActingMemberLoading] = useState(false)
   const [isProfileLoading, setIsProfileLoading] = useState(false)
   const [isResolvingFamily, setIsResolvingFamily] = useState(false)
+  const [pinPrompt, setPinPrompt] = useState<KidModePinPrompt | null>(null)
+  const [pinValue, setPinValue] = useState('')
+  const pinPromptResolverRef = useRef<((value: string | null) => void) | null>(null)
 
-  const isLoading = isSessionLoading || isMembershipsLoading || isMemberLoading || isProfileLoading || isResolvingFamily
+  const isLoading = isSessionLoading || isMembershipsLoading || isAuthMemberLoading || isActingMemberLoading || isProfileLoading || isResolvingFamily
 
   const authUserId = session?.user?.id
 
   const email = session?.user?.email ?? null
   const isEmailVerified = !!session?.user?.email_confirmed_at
+  const isKidMode = !!actingMember && !!authMember && actingMember.id !== authMember.id
+  const effectiveMember = isKidMode ? actingMember : authMember
   const hasParentPermissions = isParentRole(effectiveMember?.role)
 
   const [activeFamilyId, _setActiveFamilyId] = useState<string | null>(null)
@@ -64,14 +79,63 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const [pendingIdentifier, setPendingIdentifier] = useState<IdentifierInfo | null>(null)
 
+  const readKidModeMemberMap = useCallback(async () => {
+    const raw = await appStorage.getItem(KID_MODE_MEMBER_BY_FAMILY_KEY)
+    if (!raw) return {} as Record<string, string>
+
+    try {
+      const parsed = JSON.parse(raw) as Record<string, string>
+      return parsed ?? {}
+    } catch {
+      return {}
+    }
+  }, [])
+
+  const setKidModeMemberForFamily = useCallback(async (familyId: string, memberId: string | null) => {
+    const current = await readKidModeMemberMap()
+
+    if (memberId) current[familyId] = memberId
+    else delete current[familyId]
+
+    if (Object.keys(current).length === 0) {
+      await appStorage.removeItem(KID_MODE_MEMBER_BY_FAMILY_KEY)
+      return
+    }
+
+    await appStorage.setItem(KID_MODE_MEMBER_BY_FAMILY_KEY, JSON.stringify(current))
+  }, [readKidModeMemberMap])
+
+  const clearAllKidModeMembers = useCallback(async () => {
+    await appStorage.removeItem(KID_MODE_MEMBER_BY_FAMILY_KEY)
+  }, [])
+
+  const promptForPin = useCallback((prompt: KidModePinPrompt) => {
+    setPinValue('')
+    setPinPrompt(prompt)
+
+    return new Promise<string | null>((resolve) => {
+      pinPromptResolverRef.current = resolve
+    })
+  }, [])
+
+  const closePinPrompt = useCallback((value: string | null) => {
+    pinPromptResolverRef.current?.(value)
+    pinPromptResolverRef.current = null
+    setPinPrompt(null)
+    setPinValue('')
+  }, [])
+
   const cleanState = useCallback(async () => {
     setMemberships(null)
-    setEffectiveMember(null)
+    setAuthMember(null)
+    setActingMemberId(null)
+    setActingMember(null)
     setProfile(null)
     setPendingIdentifier(null)
     await setActiveFamilyId(null)
     await setPendingInviteToken(null)
-  }, [setActiveFamilyId])
+    await clearAllKidModeMembers()
+  }, [clearAllKidModeMembers, setActiveFamilyId, setPendingInviteToken])
 
   const fetchMemberships = useCallback(async () => {
     if (!authUserId) {
@@ -266,28 +330,88 @@ export function AuthProvider({ children }: PropsWithChildren) {
     fetchCurrProfile()
   }, [authUserId])
 
-  // Fetch the member when the session or active family changes
+  // Fetch the auth member when the session or active family changes
   useEffect(() => {
-    const fetchCurrMember = async () => {
+    const fetchCurrentAuthMember = async () => {
       if (!profile?.id || !activeFamilyId) {
-        setEffectiveMember(null)
+        setAuthMember(null)
         return
       }
 
-      setIsMemberLoading(true)
+      setIsAuthMemberLoading(true)
       try {
         const m = await fetchMember(activeFamilyId, profile.id)
-        setEffectiveMember(m)
+        setAuthMember(m)
       } catch (e) {
-        console.error('Error fetching member:', e)
-        setEffectiveMember(null)
+        console.error('Error fetching auth member:', e)
+        setAuthMember(null)
       } finally {
-        setIsMemberLoading(false)
+        setIsAuthMemberLoading(false)
       }
     }
 
-    fetchCurrMember()
+    fetchCurrentAuthMember()
   }, [profile?.id, activeFamilyId])
+
+  useEffect(() => {
+    const restoreKidModeForFamily = async () => {
+      if (!activeFamilyId || !authMember) {
+        setActingMemberId(null)
+        return
+      }
+
+      if (authMember.family_id !== activeFamilyId) {
+        setActingMemberId(null)
+        return
+      }
+
+      if (!isParentRole(authMember.role)) {
+        await setKidModeMemberForFamily(activeFamilyId, null)
+        setActingMemberId(null)
+        return
+      }
+
+      const current = await readKidModeMemberMap()
+      const storedMemberId = current[activeFamilyId] ?? null
+      setActingMemberId(storedMemberId)
+    }
+
+    restoreKidModeForFamily()
+  }, [activeFamilyId, authMember, readKidModeMemberMap, setKidModeMemberForFamily])
+
+  useEffect(() => {
+    const fetchCurrentActingMember = async () => {
+      if (!actingMemberId || !activeFamilyId) {
+        setActingMember(null)
+        return
+      }
+
+      setIsActingMemberLoading(true)
+      try {
+        const member = await fetchMemberById(actingMemberId)
+        if (
+          member.family_id !== activeFamilyId
+          || (member.role !== 'CHILD' && member.role !== 'TEEN')
+        ) {
+          await setKidModeMemberForFamily(activeFamilyId, null)
+          setActingMemberId(null)
+          setActingMember(null)
+          return
+        }
+
+        setActingMember(member)
+      } catch (error) {
+        console.error('Error fetching acting member:', error)
+        await setKidModeMemberForFamily(activeFamilyId, null)
+        setActingMemberId(null)
+        setActingMember(null)
+      } finally {
+        setIsActingMemberLoading(false)
+      }
+    }
+
+    fetchCurrentActingMember()
+  }, [actingMemberId, activeFamilyId, setKidModeMemberForFamily])
 
   const startAuth = useCallback(async (identifier: IdentifierInfo) => {
     const res = await requestOtp(identifier)
@@ -309,6 +433,86 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return { ok: true, error: undefined }
   }, [pendingIdentifier])
 
+  const enterKidMode = useCallback(async (memberId: string) => {
+    if (!activeFamilyId || !authMember || !isParentRole(authMember.role)) {
+      return false
+    }
+
+    try {
+      const member = await fetchMemberById(memberId)
+
+      if (
+        member.family_id !== activeFamilyId
+        || (member.role !== 'CHILD' && member.role !== 'TEEN')
+      ) {
+        Alert.alert('Cannot enter kid mode', 'Please choose a kid or teen from the current family.')
+        return false
+      }
+
+      const latestAuthMember = await fetchMemberById(authMember.id)
+      if (!latestAuthMember.kid_mode_pin) {
+        Alert.alert(
+          'Kid mode PIN required',
+          'Set up a kid mode PIN in Settings before entering kid mode.',
+        )
+        return false
+      }
+
+      await setKidModeMemberForFamily(activeFamilyId, member.id)
+      setActingMemberId(member.id)
+      setActingMember(member)
+      return true
+    } catch (error) {
+      console.error('Error entering kid mode:', error)
+      Alert.alert('Could not enter kid mode', 'Please try again.')
+      return false
+    }
+  }, [activeFamilyId, authMember, setKidModeMemberForFamily])
+
+  const exitKidMode = useCallback(async () => {
+    if (!activeFamilyId || !isKidMode || !authMember) return true
+
+    try {
+      const latestAuthMember = await fetchMemberById(authMember.id)
+      if (latestAuthMember.kid_mode_pin) {
+        const pin = await promptForPin({
+          title: 'Enter parent PIN',
+          message: 'Enter your 4-digit PIN to switch back to parent mode.',
+        })
+
+        if (!pin) return false
+        if (pin !== latestAuthMember.kid_mode_pin) {
+          Alert.alert('Incorrect PIN', 'The PIN you entered is not correct.')
+          return false
+        }
+      }
+
+      await setKidModeMemberForFamily(activeFamilyId, null)
+      setActingMemberId(null)
+      setActingMember(null)
+      return true
+    } catch (error) {
+      console.error('Error exiting kid mode:', error)
+      Alert.alert('Could not exit kid mode', 'Please try again.')
+      return false
+    }
+  }, [activeFamilyId, authMember, isKidMode, promptForPin, setKidModeMemberForFamily])
+
+  const handleCancelPinPrompt = useCallback(() => {
+    closePinPrompt(null)
+  }, [closePinPrompt])
+
+  const handleSubmitPinPrompt = useCallback(() => {
+    if (!pinPrompt) return
+
+    if (!KID_MODE_PIN_PATTERN.test(pinValue)) {
+      Alert.alert('Choose a 4-digit PIN', 'Please enter exactly 4 digits.')
+      return
+    }
+
+    closePinPrompt(pinValue)
+  }, [closePinPrompt, pinPrompt, pinValue])
+
   const signOut = useCallback(async () => {
     await logoutRevenueCat().catch(() => { })
     const { error } = await supabase.auth.signOut()
@@ -324,7 +528,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isEmailVerified,
       profileId: profile?.id ?? null,
       profile,
+      authMember,
       effectiveMember,
+      isKidMode,
       hasParentPermissions,
       memberships,
       refreshMemberships: fetchMemberships,
@@ -336,6 +542,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signOut,
       activeFamilyId,
       setActiveFamilyId,
+      enterKidMode,
+      exitKidMode,
       pendingInviteToken,
       setPendingInviteToken,
     }),
@@ -345,7 +553,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       email,
       isEmailVerified,
       profile,
+      authMember,
       effectiveMember,
+      isKidMode,
       hasParentPermissions,
       memberships,
       fetchMemberships,
@@ -356,10 +566,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signOut,
       activeFamilyId,
       setActiveFamilyId,
+      enterKidMode,
+      exitKidMode,
       pendingInviteToken,
       setPendingInviteToken,
     ],
   )
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      <KidModePinModal
+        pinPrompt={pinPrompt}
+        pinValue={pinValue}
+        onChangePinValue={setPinValue}
+        onCancel={handleCancelPinPrompt}
+        onSubmit={handleSubmitPinPrompt}
+      />
+    </AuthContext.Provider>
+  )
 }

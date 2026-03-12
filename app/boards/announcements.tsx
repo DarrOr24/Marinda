@@ -3,27 +3,27 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Keyboard,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Keyboard,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useFamily } from '@/lib/families/families.hooks';
 
 import {
-    useCreateAnnouncement,
-    useCreateAnnouncementTab,
-    useDeleteAnnouncement,
-    useFamilyAnnouncements,
-    useFamilyAnnouncementTabs,
-    useUpdateAnnouncement,
+  useCreateAnnouncement,
+  useCreateAnnouncementTab,
+  useDeleteAnnouncement,
+  useFamilyAnnouncements,
+  useFamilyAnnouncementTabs,
+  useUpdateAnnouncement,
 } from '@/lib/announcements/announcements.hooks';
 
 
@@ -31,14 +31,14 @@ import { ChipSelector } from '@/components/chip-selector';
 import { StickyNote } from '@/components/sticky-note';
 import { Button, ModalCard, ModalShell, ScreenList, TextInput } from '@/components/ui';
 import {
-    CUSTOM_TAB_TEXT,
-    getBulletinStyle,
-    TAB_PILL_TEXT,
+  CUSTOM_TAB_TEXT,
+  getBulletinStyle,
+  TAB_PILL_TEXT,
 } from '@/lib/announcements/announcements.styles';
 import {
-    DEFAULT_ANNOUNCEMENT_TABS,
-    type AnnouncementItem,
-    type AnnouncementTab,
+  DEFAULT_ANNOUNCEMENT_TABS,
+  type AnnouncementItem,
+  type AnnouncementTab,
 } from '@/lib/announcements/announcements.types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -46,7 +46,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Helper: Build a default placeholder
 // --------------------------------------------
 function buildDefaultPlaceholder(label: string) {
-    return `Write a new ${label.trim()}...`;
+  return `Write a new ${label.trim()}...`;
 }
 
 // Helper
@@ -56,782 +56,784 @@ const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 6)}` : '—');
 // MAIN COMPONENT
 // --------------------------------------------
 export default function AnnouncementsBoard() {
-    const router = useRouter();
-    const insets = useSafeAreaInsets();
-    const INPUT_BAR_HEIGHT = 78;
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const INPUT_BAR_HEIGHT = 78;
 
-    const { activeFamilyId, effectiveMember, family, members, hasParentPermissions } = useAuthContext() as any;
-    const familyId = activeFamilyId ?? undefined;
+  const { activeFamilyId, effectiveMember, family, members, hasParentPermissions } = useAuthContext() as any;
+  const familyId = activeFamilyId ?? undefined;
 
-    const [search, setSearch] = useState('');
-    const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'edited'>('newest');
-    const [filterAuthor, setFilterAuthor] = useState<string>('all');
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'edited'>('newest');
+  const [filterAuthor, setFilterAuthor] = useState<string>('all');
 
-    const [showSortMenu, setShowSortMenu] = useState(false);
-    const [showAuthorMenu, setShowAuthorMenu] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [showAuthorMenu, setShowAuthorMenu] = useState(false);
 
-    // --------------------------------------------
-    // Load Members
-    // --------------------------------------------
-    const { familyMembers } = useFamily(familyId);
+  // --------------------------------------------
+  // Load Members
+  // --------------------------------------------
+  const { familyMembers } = useFamily(familyId);
 
-    const rawMembers: any[] = useMemo(
-        () =>
-            (familyMembers?.data ??
-                members?.data ??
-                members ??
-                family?.members ??
-                []) as any[],
-        [familyMembers?.data, members, family]
+  const rawMembers: any[] = useMemo(
+    () =>
+      (familyMembers?.data ??
+        members?.data ??
+        members ??
+        family?.members ??
+        []) as any[],
+    [familyMembers?.data, members, family]
+  );
+
+  const nameForId = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const m of rawMembers) {
+      const id = m?.id ?? m?.member_id;
+      if (!id) continue;
+      const name =
+        m?.nickname ||
+        m?.profile?.first_name ||
+        m?.first_name ||
+        m?.profile?.name ||
+        m?.name;
+      map[id] = name || shortId(id);
+    }
+    return (id?: string) => (id ? map[id] || shortId(id) : '—');
+  }, [rawMembers]);
+
+  const authUserId: string | undefined =
+    effectiveMember?.profile?.id || effectiveMember?.user_id || effectiveMember?.profile_id;
+
+  const myFamilyMemberId: string | undefined = useMemo(() => {
+    const me = rawMembers.find(
+      (m: any) =>
+        m?.user_id === authUserId ||
+        m?.profile?.id === authUserId ||
+        m?.profile_id === authUserId
     );
+    return me?.id as string | undefined;
+  }, [effectiveMember, rawMembers, authUserId]);
 
-    const nameForId = useMemo(() => {
-        const map: Record<string, string> = {};
-        for (const m of rawMembers) {
-            const id = m?.id ?? m?.member_id;
-            if (!id) continue;
-            const name =
-                m?.nickname ||
-                m?.profile?.first_name ||
-                m?.first_name ||
-                m?.profile?.name ||
-                m?.name;
-            map[id] = name || shortId(id);
+  // --------------------------------------------
+  // Load Announcements + Realtime
+  // --------------------------------------------
+  const { data: announcements, isLoading, error } = useFamilyAnnouncements(familyId);
+
+  const createMutation = useCreateAnnouncement(familyId);
+  const deleteMutation = useDeleteAnnouncement(familyId);
+  const updateMutation = useUpdateAnnouncement(familyId);
+
+  // --------------------------------------------
+  // Load Custom Tabs
+  // --------------------------------------------
+  const { data: customTabs = [] } = useFamilyAnnouncementTabs(familyId);
+  const createTabMutation = useCreateAnnouncementTab(familyId);
+
+  const ALL_TABS: AnnouncementTab[] = [...DEFAULT_ANNOUNCEMENT_TABS, ...customTabs];
+
+  const [activeKind, setActiveKind] = useState<string>('notes');
+  const activeTab = ALL_TABS.find(t => t.id === activeKind) ?? ALL_TABS[0];
+
+  // If active tab was deleted (or never existed), switch to first tab
+  const tabIds = useMemo(() => ALL_TABS.map(t => t.id), [customTabs]);
+  useEffect(() => {
+    if (!tabIds.includes(activeKind) && tabIds.length > 0) {
+      setActiveKind(tabIds[0]);
+    }
+  }, [tabIds, activeKind]);
+
+  // --------------------------------------------
+  // UI State
+  // --------------------------------------------
+  const [newText, setNewText] = useState('');
+  const [editingItem, setEditingItem] = useState<AnnouncementItem | null>(null);
+  const [editText, setEditText] = useState('');
+
+  const [showAddTabModal, setShowAddTabModal] = useState(false);
+  const [newTabLabel, setNewTabLabel] = useState('');
+  const [newTabPlaceholder, setNewTabPlaceholder] = useState('');
+
+  // --------------------------------------------
+  // SEARCH LOGIC
+  // --------------------------------------------
+  const isSearching = search.trim().length > 0;
+
+  let filteredAnnouncements =
+    (announcements ?? [])
+      .map(a => ({
+        ...a,
+        created_by_name: nameForId(a.created_by_member_id),
+      }))
+      .filter(a => {
+        if (isSearching) {
+          return (
+            a.text.toLowerCase().includes(search.toLowerCase()) ||
+            a.created_by_name.toLowerCase().includes(search.toLowerCase())
+          );
         }
-        return (id?: string) => (id ? map[id] || shortId(id) : '—');
-    }, [rawMembers]);
+        return a.kind === activeKind;
+      });
 
-    const authUserId: string | undefined =
-        effectiveMember?.profile?.id || effectiveMember?.user_id || effectiveMember?.profile_id;
+  // AUTHOR FILTER
+  if (filterAuthor !== 'all') {
+    filteredAnnouncements = filteredAnnouncements.filter(
+      a => a.created_by_name === filterAuthor
+    );
+  }
 
-    const myFamilyMemberId: string | undefined = useMemo(() => {
-        const me = rawMembers.find(
-            (m: any) =>
-                m?.user_id === authUserId ||
-                m?.profile?.id === authUserId ||
-                m?.profile_id === authUserId
-        );
-        return me?.id as string | undefined;
-    }, [effectiveMember, rawMembers, authUserId]);
+  // SORT
+  if (sortBy === 'newest') {
+    filteredAnnouncements.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  } else if (sortBy === 'oldest') {
+    filteredAnnouncements.sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+  } else if (sortBy === 'edited') {
+    filteredAnnouncements.sort(
+      (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    );
+  }
 
-    // --------------------------------------------
-    // Load Announcements + Realtime
-    // --------------------------------------------
-    const { data: announcements, isLoading, error } = useFamilyAnnouncements(familyId);
+  // --------------------------------------------
+  // Add Announcement
+  // --------------------------------------------
+  function handleAdd() {
+    if (!familyId || !myFamilyMemberId) return;
 
-    const createMutation = useCreateAnnouncement(familyId);
-    const deleteMutation = useDeleteAnnouncement(familyId);
-    const updateMutation = useUpdateAnnouncement(familyId);
+    const trimmed = newText.trim();
+    if (!trimmed) return;
 
-    // --------------------------------------------
-    // Load Custom Tabs
-    // --------------------------------------------
-    const { data: customTabs = [] } = useFamilyAnnouncementTabs(familyId);
-    const createTabMutation = useCreateAnnouncementTab(familyId);
+    // ✅ CLOSE keyboard immediately
+    Keyboard.dismiss();
 
-    const ALL_TABS: AnnouncementTab[] = [...DEFAULT_ANNOUNCEMENT_TABS, ...customTabs];
+    createMutation.mutate(
+      {
+        familyId,
+        createdByMemberId: myFamilyMemberId,
+        kind: activeKind,
+        text: trimmed,
+        weekStart: null,
+      },
+      {
+        onSuccess: () => setNewText(''),
+        onError: err => Alert.alert('Error', (err as Error).message),
+      }
+    );
+  }
 
-    const [activeKind, setActiveKind] = useState<string>('notes');
-    const activeTab = ALL_TABS.find(t => t.id === activeKind) ?? ALL_TABS[0];
 
-    // If active tab was deleted (or never existed), switch to first tab
-    const tabIds = useMemo(() => ALL_TABS.map(t => t.id), [customTabs]);
-    useEffect(() => {
-        if (!tabIds.includes(activeKind) && tabIds.length > 0) {
-            setActiveKind(tabIds[0]);
-        }
-    }, [tabIds, activeKind]);
+  // --------------------------------------------
+  // Delete
+  // --------------------------------------------
+  function handleDelete(item: AnnouncementItem) {
+    deleteMutation.mutate(item.id, {
+      onError: err => Alert.alert('Error', err.message),
+    });
+  }
 
-    // --------------------------------------------
-    // UI State
-    // --------------------------------------------
-    const [newText, setNewText] = useState('');
-    const [editingItem, setEditingItem] = useState<AnnouncementItem | null>(null);
-    const [editText, setEditText] = useState('');
+  function confirmDelete(item: AnnouncementItem) {
+    const canDelete =
+      item.created_by_member_id === myFamilyMemberId ||
+      hasParentPermissions;
 
-    const [showAddTabModal, setShowAddTabModal] = useState(false);
-    const [newTabLabel, setNewTabLabel] = useState('');
-    const [newTabPlaceholder, setNewTabPlaceholder] = useState('');
-
-    // --------------------------------------------
-    // SEARCH LOGIC
-    // --------------------------------------------
-    const isSearching = search.trim().length > 0;
-
-    let filteredAnnouncements =
-        (announcements ?? [])
-            .map(a => ({
-                ...a,
-                created_by_name: nameForId(a.created_by_member_id),
-            }))
-            .filter(a => {
-                if (isSearching) {
-                    return (
-                        a.text.toLowerCase().includes(search.toLowerCase()) ||
-                        a.created_by_name.toLowerCase().includes(search.toLowerCase())
-                    );
-                }
-                return a.kind === activeKind;
-            });
-
-    // AUTHOR FILTER
-    if (filterAuthor !== 'all') {
-        filteredAnnouncements = filteredAnnouncements.filter(
-            a => a.created_by_name === filterAuthor
-        );
+    if (!canDelete) {
+      Alert.alert('Not allowed', 'You cannot delete this item.');
+      return;
     }
 
-    // SORT
-    if (sortBy === 'newest') {
-        filteredAnnouncements.sort(
-            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-    } else if (sortBy === 'oldest') {
-        filteredAnnouncements.sort(
-            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        );
-    } else if (sortBy === 'edited') {
-        filteredAnnouncements.sort(
-            (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-        );
-    }
+    Alert.alert('Delete announcement?', 'This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => handleDelete(item),
+      },
+    ]);
+  }
 
-    // --------------------------------------------
-    // Add Announcement
-    // --------------------------------------------
-    function handleAdd() {
-        if (!familyId || !myFamilyMemberId) return;
-
-        const trimmed = newText.trim();
-        if (!trimmed) return;
-
-        // ✅ CLOSE keyboard immediately
-        Keyboard.dismiss();
-
-        createMutation.mutate(
-            {
-                familyId,
-                createdByMemberId: myFamilyMemberId,
-                kind: activeKind,
-                text: trimmed,
-                weekStart: null,
-            },
-            {
-                onSuccess: () => setNewText(''),
-                onError: err => Alert.alert('Error', (err as Error).message),
-            }
-        );
-    }
-
-
-    // --------------------------------------------
-    // Delete
-    // --------------------------------------------
-    function handleDelete(item: AnnouncementItem) {
-        deleteMutation.mutate(item.id, {
-            onError: err => Alert.alert('Error', err.message),
-        });
-    }
-
-    function confirmDelete(item: AnnouncementItem) {
-        const canDelete =
-            item.created_by_member_id === myFamilyMemberId ||
-            hasParentPermissions;
-
-        if (!canDelete) {
-            Alert.alert('Not allowed', 'You cannot delete this item.');
-            return;
-        }
-
-        Alert.alert('Delete announcement?', 'This cannot be undone.', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-                text: 'Delete',
-                style: 'destructive',
-                onPress: () => handleDelete(item),
-            },
-        ]);
-    }
-
-    // --------------------------------------------
-    // Render states
-    // --------------------------------------------
-    if (!familyId) {
-        return (
-            <View style={styles.center}>
-                <Text style={styles.infoText}>Please select a family.</Text>
-            </View>
-        );
-    }
-
-    if (isLoading) {
-        return (
-            <View style={styles.center}>
-                <ActivityIndicator />
-            </View>
-        );
-    }
-
-    if (error) {
-        return (
-            <View style={styles.center}>
-                <Text style={styles.errorText}>{error.message}</Text>
-            </View>
-        );
-    }
-
-    // --------------------------------------------
-    // MAIN RENDER
-    // --------------------------------------------
+  // --------------------------------------------
+  // Render states
+  // --------------------------------------------
+  if (!familyId) {
     return (
-        <ScreenList gap="md">
-            <View style={styles.container}>
-                {/* ---------------------------------------------- */}
-                {/* ROW 1: SORT — BY — INFO */}
-                {/* ---------------------------------------------- */}
-                <View style={styles.sortInfoRow}>
-                    <View style={styles.sortByGroup}>
-                        <Button
-                            type="outline"
-                            size="sm"
-                            backgroundColor="#eef2ff"
-                            onPress={() => setShowSortMenu(true)}
-                            title={`Sort: ${sortBy}`}
-                        />
-
-                        <Button
-                            type="outline"
-                            size="sm"
-                            backgroundColor="#eef2ff"
-                            onPress={() => setShowAuthorMenu(true)}
-                            title={`By: ${filterAuthor === 'all' ? 'All' : filterAuthor}`}
-                        />
-
-                    </View>
-
-                    <View style={styles.iconGroup}>
-                        <Button
-                            type="outline"
-                            size="sm"
-                            backgroundColor="#eef2ff"
-                            round
-                            hitSlop={8}
-                            onPress={() => router.push('/boards/announcements-info')}
-                            leftIcon={<Ionicons name="information-circle-outline" size={20} />}
-                        />
-
-                        <Button
-                            type="outline"
-                            size="sm"
-                            backgroundColor="#eef2ff"
-                            round
-                            hitSlop={8}
-                            onPress={() => router.push('/boards/announcements-settings')}
-                            leftIcon={<Ionicons name="settings-outline" size={20} />}
-                        />
-                    </View>
-                </View>
-
-                {/* ---------------------------------------------- */}
-                {/* ROW 2: SEARCH BAR WITH "X" CLEAR */}
-                {/* ---------------------------------------------- */}
-                <View style={styles.searchWrapper}>
-                    <TextInput
-                        style={styles.textInputWithRightIcon}
-                        placeholder="Search announcements..."
-                        value={search}
-                        onChangeText={setSearch}
-                    />
-
-                    {search.length > 0 && (
-                        <Pressable style={styles.clearSearchBtn} onPress={() => setSearch('')}>
-                            <Ionicons name="close-circle" size={20} color="#999" />
-                        </Pressable>
-                    )}
-                </View>
-
-                {/* ---------------------------------------------- */}
-                {/* ROW 3: TABS + ADD (flows right after last tab when space allows) */}
-                {/* ---------------------------------------------- */}
-                <View style={styles.tabsContainer}>
-                    <ChipSelector
-                        value={isSearching ? null : activeKind}
-                        onChange={(val) => {
-                            if (!val) return;
-                            if (!isSearching) {
-                                setActiveKind(val);
-                                setNewText('');
-                            }
-                        }}
-                        allowDeselect={false}
-                        options={ALL_TABS.map((t) => ({ label: t.label, value: t.id }))}
-                        chipStyle={(active, opt) => {
-                            const style = getBulletinStyle(opt.value);
-                            return {
-                                backgroundColor: active ? style.backgroundColor : '#f9fafb',
-                                borderColor: active ? style.borderLeftColor : '#d4d4d4',
-                            };
-                        }}
-                        chipTextStyle={(active, opt) => ({
-                            color: active ? (TAB_PILL_TEXT[opt.value] ?? CUSTOM_TAB_TEXT) : '#4b5563',
-                            fontWeight: active ? '600' : '500',
-                        })}
-                        trailingElement={
-                            <Button
-                                type="outline"
-                                size="sm"
-                                backgroundColor="#eef2ff"
-                                round
-                                hitSlop={8}
-                                title=""
-                                leftIcon={<Ionicons name="add" size={16} />}
-                                style={{ width: 28, height: 28, minWidth: 28, minHeight: 28 }}
-                                onPress={() => {
-                                    setNewTabLabel('');
-                                    setNewTabPlaceholder('');
-                                    setShowAddTabModal(true);
-                                }}
-                            />
-                        }
-                    />
-                </View>
-
-
-                {/* ---------------------------------------------- */}
-                {/* ADD ANNOUNCEMENT INPUT */}
-                {/* ---------------------------------------------- */}
-                <View
-                    style={[
-                        styles.inputBar,
-                        { paddingBottom: Platform.OS === 'android' ? 24 : 0 },
-                    ]}
-                >
-                    <TextInput
-                        style={styles.textInputMultiline}
-                        placeholder={activeTab.placeholder}
-                        value={newText}
-                        onChangeText={setNewText}
-                        multiline
-                        numberOfLines={1}
-                        returnKeyType="done"
-                        onSubmitEditing={() => Keyboard.dismiss()}
-                    />
-
-                    <Button
-                        title={createMutation.isPending ? '...' : 'Add'}
-                        type="primary"
-                        size="sm"
-                        onPress={handleAdd}
-                        disabled={!newText.trim() || createMutation.isPending}
-                        style={styles.addButton}
-                    />
-                </View>
-
-                {/* ---------------------------------------------- */}
-                {/* LIST — One sticky note per tab */}
-                {/* ---------------------------------------------- */}
-                <ScrollView
-                    style={{ flex: 1, overflow: 'visible' }}
-                    contentContainerStyle={[
-                        filteredAnnouncements.length === 0 ? styles.emptyList : undefined,
-                        {
-                            paddingTop: 0,
-                            paddingBottom: INPUT_BAR_HEIGHT + insets.bottom + 16,
-                            overflow: 'visible',
-                        },
-                    ]}
-                    keyboardShouldPersistTaps="handled"
-                    keyboardDismissMode={Platform.OS === 'ios' ? 'on-drag' : 'none'}
-                    onScrollBeginDrag={Keyboard.dismiss}
-                >
-                    <StickyNote
-                        backgroundColor={getBulletinStyle(activeKind).backgroundColor}
-                        borderLeftColor={getBulletinStyle(activeKind).borderLeftColor}
-                    >
-                        {filteredAnnouncements.length === 0 ? (
-                            <Text style={styles.infoText}>{activeTab.emptyText}</Text>
-                        ) : (
-                            filteredAnnouncements.map((item, idx) => (
-                                <View
-                                    key={item.id}
-                                    style={[
-                                        styles.itemRow,
-                                        idx === filteredAnnouncements.length - 1 && styles.itemRowLast,
-                                    ]}
-                                >
-                                    <View style={styles.itemTextContainer}>
-                                        <Text style={styles.itemMeta}>
-                                            {item.created_by_name} • {new Date(item.created_at).toLocaleString()}
-                                        </Text>
-
-                                        {item.created_at !== item.updated_at && (
-                                            <Text style={styles.itemMeta}>
-                                                (edited • {new Date(item.updated_at).toLocaleString()})
-                                            </Text>
-                                        )}
-
-                                        <Text style={styles.itemText}>{item.text}</Text>
-
-                                        {item.completed && <Text style={styles.itemMeta}>✓ Completed</Text>}
-                                    </View>
-
-                                    <View style={styles.cardActions}>
-                                        {(item.created_by_member_id === myFamilyMemberId ||
-                                            hasParentPermissions) && (
-                                                <Button
-                                                    type="ghost"
-                                                    size="sm"
-                                                    round
-                                                    hitSlop={10}
-                                                    leftIcon={<MaterialCommunityIcons name="pencil-outline" size={18} />}
-                                                    leftIconColor="#475569"
-                                                    onPress={() => {
-                                                        setEditingItem(item);
-                                                        setEditText(item.text);
-                                                    }}
-                                                />
-                                            )}
-                                        <Button
-                                            type="ghost"
-                                            size="sm"
-                                            round
-                                            hitSlop={10}
-                                            leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
-                                            leftIconColor="#b91c1c"
-                                            onPress={() => confirmDelete(item)}
-                                        />
-                                    </View>
-                                </View>
-                            ))
-                        )}
-                    </StickyNote>
-                </ScrollView>
-
-                {/* ---------------------------------------------- */}
-                {/* EDIT ANNOUNCEMENT MODAL (ModalShell + ModalCard) */}
-                {/* ---------------------------------------------- */}
-                <ModalShell
-                    visible={!!editingItem}
-                    onClose={() => setEditingItem(null)}
-                    keyboardOffset={0}
-                >
-                    <ModalCard>
-                        <Text style={styles.modalTitle}>Edit Announcement</Text>
-
-                        <TextInput
-                            style={styles.textInputMultiline}
-                            multiline
-                            value={editText}
-                            onChangeText={setEditText}
-                            placeholder="Edit your note..."
-                        />
-
-                        <View style={styles.modalButtons}>
-                            <Button
-                                type="ghost"
-                                size="sm"
-                                title="Cancel"
-                                onPress={() => setEditingItem(null)}
-                            />
-
-                            <Button
-                                type="primary"
-                                size="sm"
-                                title={updateMutation.isPending ? '...' : 'Save'}
-                                disabled={!editText.trim() || updateMutation.isPending || !editingItem}
-                                onPress={() => {
-                                    if (!editingItem) return;
-
-                                    updateMutation.mutate(
-                                        { id: editingItem.id, updates: { text: editText.trim() } },
-                                        {
-                                            onSuccess: () => setEditingItem(null),
-                                            onError: err => Alert.alert('Error', err.message),
-                                        }
-                                    );
-                                }}
-                            />
-                        </View>
-                    </ModalCard>
-                </ModalShell>
-
-
-                {/* ---------------------------------------------- */}
-                {/* ADD TAB MODAL (ModalShell + ModalCard) */}
-                {/* ---------------------------------------------- */}
-                <ModalShell
-                    visible={showAddTabModal}
-                    onClose={() => setShowAddTabModal(false)}
-                    keyboardOffset={0}
-                >
-                    <ModalCard>
-                        <Text style={styles.modalTitle}>Create New Tab</Text>
-
-                        <TextInput
-                            placeholder="Tab name (e.g., Holidays)"
-                            value={newTabLabel}
-                            onChangeText={setNewTabLabel}
-                            containerStyle={{ marginBottom: 10 }}
-                        />
-
-                        <TextInput
-                            style={styles.textInputMultiline}
-                            placeholder={
-                                newTabLabel.trim()
-                                    ? buildDefaultPlaceholder(newTabLabel)
-                                    : 'Placeholder (optional)'
-                            }
-                            value={newTabPlaceholder}
-                            onChangeText={setNewTabPlaceholder}
-                        />
-
-                        <View style={styles.modalButtons}>
-                            <Button
-                                type="ghost"
-                                size="sm"
-                                title="Cancel"
-                                onPress={() => setShowAddTabModal(false)}
-                            />
-
-                            <Button
-                                type="primary"
-                                size="sm"
-                                title={createTabMutation.isPending ? '...' : 'Create'}
-                                disabled={!newTabLabel.trim() || createTabMutation.isPending}
-                                onPress={() => {
-                                    const trimmed = newTabLabel.trim();
-                                    if (!trimmed) return;
-
-                                    const finalPlaceholder =
-                                        newTabPlaceholder.trim() || buildDefaultPlaceholder(trimmed);
-
-                                    createTabMutation.mutate(
-                                        { familyId: familyId!, label: trimmed, placeholder: finalPlaceholder },
-                                        {
-                                            onSuccess: newTab => {
-                                                setShowAddTabModal(false);
-                                                setActiveKind(newTab.id);
-                                            },
-                                            onError: err => Alert.alert('Error', err.message),
-                                        }
-                                    );
-                                }}
-                            />
-                        </View>
-                    </ModalCard>
-                </ModalShell>
-
-
-                {/* ---------------------------------------------- */}
-                {/* SORT MENU */}
-                {/* ---------------------------------------------- */}
-                {showSortMenu && (
-                    <Pressable style={styles.modalOverlay} onPress={() => setShowSortMenu(false)}>
-                        <Pressable style={styles.simpleMenu}>
-                            {['newest', 'oldest', 'edited'].map(option => (
-                                <Pressable
-                                    key={option}
-                                    style={styles.menuItem}
-                                    onPress={() => {
-                                        setSortBy(option as any);
-                                        setShowSortMenu(false);
-                                    }}
-                                >
-                                    <Text style={styles.menuItemText}>{option}</Text>
-                                </Pressable>
-                            ))}
-                        </Pressable>
-                    </Pressable>
-                )}
-
-                {/* ---------------------------------------------- */}
-                {/* AUTHOR MENU */}
-                {/* ---------------------------------------------- */}
-                {showAuthorMenu && (
-                    <Pressable
-                        style={styles.modalOverlay}
-                        onPress={() => setShowAuthorMenu(false)}
-                    >
-                        <Pressable style={styles.simpleMenu}>
-                            <Pressable
-                                style={styles.menuItem}
-                                onPress={() => {
-                                    setFilterAuthor('all');
-                                    setShowAuthorMenu(false);
-                                }}
-                            >
-                                <Text style={styles.menuItemText}>All</Text>
-                            </Pressable>
-
-                            {rawMembers.map(m => {
-                                const name =
-                                    m?.nickname || m?.profile?.first_name || m?.name || shortId(m.id);
-
-                                return (
-                                    <Pressable
-                                        key={m.id}
-                                        style={styles.menuItem}
-                                        onPress={() => {
-                                            setFilterAuthor(name);
-                                            setShowAuthorMenu(false);
-                                        }}
-                                    >
-                                        <Text style={styles.menuItemText}>{name}</Text>
-                                    </Pressable>
-                                );
-                            })}
-                        </Pressable>
-                    </Pressable>
-                )}
-            </View>
-        </ScreenList>
+      <View style={styles.center}>
+        <Text style={styles.infoText}>Please select a family.</Text>
+      </View>
     );
+  }
+
+  if (isLoading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>{error.message}</Text>
+      </View>
+    );
+  }
+
+  // --------------------------------------------
+  // MAIN RENDER
+  // --------------------------------------------
+  return (
+    <ScreenList gap="md">
+      <View style={styles.container}>
+        {/* ---------------------------------------------- */}
+        {/* ROW 1: SORT — BY — INFO */}
+        {/* ---------------------------------------------- */}
+        <View style={styles.sortInfoRow}>
+          <View style={styles.sortByGroup}>
+            <Button
+              type="outline"
+              size="sm"
+              backgroundColor="#eef2ff"
+              onPress={() => setShowSortMenu(true)}
+              title={`Sort: ${sortBy}`}
+            />
+
+            <Button
+              type="outline"
+              size="sm"
+              backgroundColor="#eef2ff"
+              onPress={() => setShowAuthorMenu(true)}
+              title={`By: ${filterAuthor === 'all' ? 'All' : filterAuthor}`}
+            />
+
+          </View>
+
+          <View style={styles.iconGroup}>
+            <Button
+              type="outline"
+              size="sm"
+              backgroundColor="#eef2ff"
+              round
+              hitSlop={8}
+              onPress={() => router.push('/boards/announcements-info')}
+              leftIcon={<Ionicons name="information-circle-outline" size={20} />}
+            />
+
+            {hasParentPermissions && (
+              <Button
+                type="outline"
+                size="sm"
+                backgroundColor="#eef2ff"
+                round
+                hitSlop={8}
+                onPress={() => router.push('/boards/announcements-settings')}
+                leftIcon={<Ionicons name="settings-outline" size={20} />}
+              />
+            )}
+          </View>
+        </View>
+
+        {/* ---------------------------------------------- */}
+        {/* ROW 2: SEARCH BAR WITH "X" CLEAR */}
+        {/* ---------------------------------------------- */}
+        <View style={styles.searchWrapper}>
+          <TextInput
+            style={styles.textInputWithRightIcon}
+            placeholder="Search announcements..."
+            value={search}
+            onChangeText={setSearch}
+          />
+
+          {search.length > 0 && (
+            <Pressable style={styles.clearSearchBtn} onPress={() => setSearch('')}>
+              <Ionicons name="close-circle" size={20} color="#999" />
+            </Pressable>
+          )}
+        </View>
+
+        {/* ---------------------------------------------- */}
+        {/* ROW 3: TABS + ADD (flows right after last tab when space allows) */}
+        {/* ---------------------------------------------- */}
+        <View style={styles.tabsContainer}>
+          <ChipSelector
+            value={isSearching ? null : activeKind}
+            onChange={(val) => {
+              if (!val) return;
+              if (!isSearching) {
+                setActiveKind(val);
+                setNewText('');
+              }
+            }}
+            allowDeselect={false}
+            options={ALL_TABS.map((t) => ({ label: t.label, value: t.id }))}
+            chipStyle={(active, opt) => {
+              const style = getBulletinStyle(opt.value);
+              return {
+                backgroundColor: active ? style.backgroundColor : '#f9fafb',
+                borderColor: active ? style.borderLeftColor : '#d4d4d4',
+              };
+            }}
+            chipTextStyle={(active, opt) => ({
+              color: active ? (TAB_PILL_TEXT[opt.value] ?? CUSTOM_TAB_TEXT) : '#4b5563',
+              fontWeight: active ? '600' : '500',
+            })}
+            trailingElement={
+              <Button
+                type="outline"
+                size="sm"
+                backgroundColor="#eef2ff"
+                round
+                hitSlop={8}
+                title=""
+                leftIcon={<Ionicons name="add" size={16} />}
+                style={{ width: 28, height: 28, minWidth: 28, minHeight: 28 }}
+                onPress={() => {
+                  setNewTabLabel('');
+                  setNewTabPlaceholder('');
+                  setShowAddTabModal(true);
+                }}
+              />
+            }
+          />
+        </View>
+
+
+        {/* ---------------------------------------------- */}
+        {/* ADD ANNOUNCEMENT INPUT */}
+        {/* ---------------------------------------------- */}
+        <View
+          style={[
+            styles.inputBar,
+            { paddingBottom: Platform.OS === 'android' ? 24 : 0 },
+          ]}
+        >
+          <TextInput
+            style={styles.textInputMultiline}
+            placeholder={activeTab.placeholder}
+            value={newText}
+            onChangeText={setNewText}
+            multiline
+            numberOfLines={1}
+            returnKeyType="done"
+            onSubmitEditing={() => Keyboard.dismiss()}
+          />
+
+          <Button
+            title={createMutation.isPending ? '...' : 'Add'}
+            type="primary"
+            size="sm"
+            onPress={handleAdd}
+            disabled={!newText.trim() || createMutation.isPending}
+            style={styles.addButton}
+          />
+        </View>
+
+        {/* ---------------------------------------------- */}
+        {/* LIST — One sticky note per tab */}
+        {/* ---------------------------------------------- */}
+        <ScrollView
+          style={{ flex: 1, overflow: 'visible' }}
+          contentContainerStyle={[
+            filteredAnnouncements.length === 0 ? styles.emptyList : undefined,
+            {
+              paddingTop: 0,
+              paddingBottom: INPUT_BAR_HEIGHT + insets.bottom + 16,
+              overflow: 'visible',
+            },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'on-drag' : 'none'}
+          onScrollBeginDrag={Keyboard.dismiss}
+        >
+          <StickyNote
+            backgroundColor={getBulletinStyle(activeKind).backgroundColor}
+            borderLeftColor={getBulletinStyle(activeKind).borderLeftColor}
+          >
+            {filteredAnnouncements.length === 0 ? (
+              <Text style={styles.infoText}>{activeTab.emptyText}</Text>
+            ) : (
+              filteredAnnouncements.map((item, idx) => (
+                <View
+                  key={item.id}
+                  style={[
+                    styles.itemRow,
+                    idx === filteredAnnouncements.length - 1 && styles.itemRowLast,
+                  ]}
+                >
+                  <View style={styles.itemTextContainer}>
+                    <Text style={styles.itemMeta}>
+                      {item.created_by_name} • {new Date(item.created_at).toLocaleString()}
+                    </Text>
+
+                    {item.created_at !== item.updated_at && (
+                      <Text style={styles.itemMeta}>
+                        (edited • {new Date(item.updated_at).toLocaleString()})
+                      </Text>
+                    )}
+
+                    <Text style={styles.itemText}>{item.text}</Text>
+
+                    {item.completed && <Text style={styles.itemMeta}>✓ Completed</Text>}
+                  </View>
+
+                  <View style={styles.cardActions}>
+                    {(item.created_by_member_id === myFamilyMemberId ||
+                      hasParentPermissions) && (
+                        <Button
+                          type="ghost"
+                          size="sm"
+                          round
+                          hitSlop={10}
+                          leftIcon={<MaterialCommunityIcons name="pencil-outline" size={18} />}
+                          leftIconColor="#475569"
+                          onPress={() => {
+                            setEditingItem(item);
+                            setEditText(item.text);
+                          }}
+                        />
+                      )}
+                    <Button
+                      type="ghost"
+                      size="sm"
+                      round
+                      hitSlop={10}
+                      leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
+                      leftIconColor="#b91c1c"
+                      onPress={() => confirmDelete(item)}
+                    />
+                  </View>
+                </View>
+              ))
+            )}
+          </StickyNote>
+        </ScrollView>
+
+        {/* ---------------------------------------------- */}
+        {/* EDIT ANNOUNCEMENT MODAL (ModalShell + ModalCard) */}
+        {/* ---------------------------------------------- */}
+        <ModalShell
+          visible={!!editingItem}
+          onClose={() => setEditingItem(null)}
+          keyboardOffset={0}
+        >
+          <ModalCard>
+            <Text style={styles.modalTitle}>Edit Announcement</Text>
+
+            <TextInput
+              style={styles.textInputMultiline}
+              multiline
+              value={editText}
+              onChangeText={setEditText}
+              placeholder="Edit your note..."
+            />
+
+            <View style={styles.modalButtons}>
+              <Button
+                type="ghost"
+                size="sm"
+                title="Cancel"
+                onPress={() => setEditingItem(null)}
+              />
+
+              <Button
+                type="primary"
+                size="sm"
+                title={updateMutation.isPending ? '...' : 'Save'}
+                disabled={!editText.trim() || updateMutation.isPending || !editingItem}
+                onPress={() => {
+                  if (!editingItem) return;
+
+                  updateMutation.mutate(
+                    { id: editingItem.id, updates: { text: editText.trim() } },
+                    {
+                      onSuccess: () => setEditingItem(null),
+                      onError: err => Alert.alert('Error', err.message),
+                    }
+                  );
+                }}
+              />
+            </View>
+          </ModalCard>
+        </ModalShell>
+
+
+        {/* ---------------------------------------------- */}
+        {/* ADD TAB MODAL (ModalShell + ModalCard) */}
+        {/* ---------------------------------------------- */}
+        <ModalShell
+          visible={showAddTabModal}
+          onClose={() => setShowAddTabModal(false)}
+          keyboardOffset={0}
+        >
+          <ModalCard>
+            <Text style={styles.modalTitle}>Create New Tab</Text>
+
+            <TextInput
+              placeholder="Tab name (e.g., Holidays)"
+              value={newTabLabel}
+              onChangeText={setNewTabLabel}
+              containerStyle={{ marginBottom: 10 }}
+            />
+
+            <TextInput
+              style={styles.textInputMultiline}
+              placeholder={
+                newTabLabel.trim()
+                  ? buildDefaultPlaceholder(newTabLabel)
+                  : 'Placeholder (optional)'
+              }
+              value={newTabPlaceholder}
+              onChangeText={setNewTabPlaceholder}
+            />
+
+            <View style={styles.modalButtons}>
+              <Button
+                type="ghost"
+                size="sm"
+                title="Cancel"
+                onPress={() => setShowAddTabModal(false)}
+              />
+
+              <Button
+                type="primary"
+                size="sm"
+                title={createTabMutation.isPending ? '...' : 'Create'}
+                disabled={!newTabLabel.trim() || createTabMutation.isPending}
+                onPress={() => {
+                  const trimmed = newTabLabel.trim();
+                  if (!trimmed) return;
+
+                  const finalPlaceholder =
+                    newTabPlaceholder.trim() || buildDefaultPlaceholder(trimmed);
+
+                  createTabMutation.mutate(
+                    { familyId: familyId!, label: trimmed, placeholder: finalPlaceholder },
+                    {
+                      onSuccess: newTab => {
+                        setShowAddTabModal(false);
+                        setActiveKind(newTab.id);
+                      },
+                      onError: err => Alert.alert('Error', err.message),
+                    }
+                  );
+                }}
+              />
+            </View>
+          </ModalCard>
+        </ModalShell>
+
+
+        {/* ---------------------------------------------- */}
+        {/* SORT MENU */}
+        {/* ---------------------------------------------- */}
+        {showSortMenu && (
+          <Pressable style={styles.modalOverlay} onPress={() => setShowSortMenu(false)}>
+            <Pressable style={styles.simpleMenu}>
+              {['newest', 'oldest', 'edited'].map(option => (
+                <Pressable
+                  key={option}
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setSortBy(option as any);
+                    setShowSortMenu(false);
+                  }}
+                >
+                  <Text style={styles.menuItemText}>{option}</Text>
+                </Pressable>
+              ))}
+            </Pressable>
+          </Pressable>
+        )}
+
+        {/* ---------------------------------------------- */}
+        {/* AUTHOR MENU */}
+        {/* ---------------------------------------------- */}
+        {showAuthorMenu && (
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setShowAuthorMenu(false)}
+          >
+            <Pressable style={styles.simpleMenu}>
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => {
+                  setFilterAuthor('all');
+                  setShowAuthorMenu(false);
+                }}
+              >
+                <Text style={styles.menuItemText}>All</Text>
+              </Pressable>
+
+              {rawMembers.map(m => {
+                const name =
+                  m?.nickname || m?.profile?.first_name || m?.name || shortId(m.id);
+
+                return (
+                  <Pressable
+                    key={m.id}
+                    style={styles.menuItem}
+                    onPress={() => {
+                      setFilterAuthor(name);
+                      setShowAuthorMenu(false);
+                    }}
+                  >
+                    <Text style={styles.menuItemText}>{name}</Text>
+                  </Pressable>
+                );
+              })}
+            </Pressable>
+          </Pressable>
+        )}
+      </View>
+    </ScreenList>
+  );
 }
 
 // --------------------------------------------
 // STYLES
 // --------------------------------------------
 const styles = StyleSheet.create({
-    container: { flex: 1, paddingLeft: 20, paddingRight: 16, paddingTop: 16, paddingBottom: 16 },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    emptyList: { flexGrow: 1 },
-    infoText: { fontSize: 16, textAlign: 'center', opacity: 0.7 },
-    errorText: { fontSize: 16, textAlign: 'center', color: 'red' },
+  container: { flex: 1, paddingLeft: 20, paddingRight: 16, paddingTop: 16, paddingBottom: 16 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyList: { flexGrow: 1 },
+  infoText: { fontSize: 16, textAlign: 'center', opacity: 0.7 },
+  errorText: { fontSize: 16, textAlign: 'center', color: 'red' },
 
-    // --------------------------------------
-    // Input overrides (base from TextInput component)
-    textInputMultiline: {
-        minHeight: 44,
-        maxHeight: 120,
-        textAlignVertical: 'top',
-    },
+  // --------------------------------------
+  // Input overrides (base from TextInput component)
+  textInputMultiline: {
+    minHeight: 44,
+    maxHeight: 120,
+    textAlignVertical: 'top',
+  },
 
-    // used when you need space for the clear "X"
-    textInputWithRightIcon: {
-        paddingRight: 36,
-    },
-
-
-    // --------------------------------------
-    // ROW 1: SORT — BY — INFO
-    // --------------------------------------
-    sortInfoRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
-        width: '100%',
-    },
-    sortByGroup: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
+  // used when you need space for the clear "X"
+  textInputWithRightIcon: {
+    paddingRight: 36,
+  },
 
 
-    iconGroup: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
+  // --------------------------------------
+  // ROW 1: SORT — BY — INFO
+  // --------------------------------------
+  sortInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    width: '100%',
+  },
+  sortByGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
 
-    // --------------------------------------
-    // SEARCH BAR WITH CLEAR X
-    // --------------------------------------
-    searchWrapper: {
-        position: 'relative',
-        marginBottom: 12,
-    },
+
+  iconGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  // --------------------------------------
+  // SEARCH BAR WITH CLEAR X
+  // --------------------------------------
+  searchWrapper: {
+    position: 'relative',
+    marginBottom: 12,
+  },
 
 
-    clearSearchBtn: {
-        position: 'absolute',
-        right: 10,
-        top: '50%',
-        transform: [{ translateY: -10 }],
-        padding: 4,
-    },
+  clearSearchBtn: {
+    position: 'absolute',
+    right: 10,
+    top: '50%',
+    transform: [{ translateY: -10 }],
+    padding: 4,
+  },
 
-    // --------------------------------------
-    // TABS
-    // --------------------------------------
-    tabsContainer: {
-        marginBottom: 8,
-        width: '100%',
-    },
+  // --------------------------------------
+  // TABS
+  // --------------------------------------
+  tabsContainer: {
+    marginBottom: 8,
+    width: '100%',
+  },
 
-    // --------------------------------------
-    // LIST — One sticky note per tab (StickyNote component)
-    // --------------------------------------
-    itemRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        paddingVertical: 10,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: 'rgba(0,0,0,0.08)',
-        gap: 8,
-    },
-    itemRowLast: {
-        borderBottomWidth: 0,
-    },
-    itemTextContainer: { flex: 1 },
-    itemText: { fontSize: 16 },
-    itemMeta: { fontSize: 12, opacity: 0.6, marginTop: 2 },
-    cardActions: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 4,
-    },
+  // --------------------------------------
+  // LIST — One sticky note per tab (StickyNote component)
+  // --------------------------------------
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(0,0,0,0.08)',
+    gap: 8,
+  },
+  itemRowLast: {
+    borderBottomWidth: 0,
+  },
+  itemTextContainer: { flex: 1 },
+  itemText: { fontSize: 16 },
+  itemMeta: { fontSize: 12, opacity: 0.6, marginTop: 2 },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 4,
+  },
 
-    // --------------------------------------
-    // ADD ANNOUNCEMENT
-    // --------------------------------------
-    inputBar: {
-        paddingTop: 8,
-        marginTop: 0,
-    },
-    addButton: {
-        alignSelf: 'flex-end',
-        marginTop: 10,
-    },
+  // --------------------------------------
+  // ADD ANNOUNCEMENT
+  // --------------------------------------
+  inputBar: {
+    paddingTop: 8,
+    marginTop: 0,
+  },
+  addButton: {
+    alignSelf: 'flex-end',
+    marginTop: 10,
+  },
 
-    // --------------------------------------
-    // SHARED MODAL STYLES
-    // --------------------------------------
-    modalOverlay: {
-        position: 'absolute',
-        top: 0,
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: 'rgba(0,0,0,0.35)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
+  // --------------------------------------
+  // SHARED MODAL STYLES
+  // --------------------------------------
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
-    modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
 
-    modalButtons: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        gap: 20,
-        marginTop: 16,
-    },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 20,
+    marginTop: 16,
+  },
 
-    // --------------------------------------
-    // MENUS
-    // --------------------------------------
-    simpleMenu: {
-        backgroundColor: 'white',
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 10,
-        width: 200,
-    },
-    menuItem: {
-        paddingVertical: 8,
-    },
-    menuItemText: {
-        fontSize: 16,
-    },
+  // --------------------------------------
+  // MENUS
+  // --------------------------------------
+  simpleMenu: {
+    backgroundColor: 'white',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    width: 200,
+  },
+  menuItem: {
+    paddingVertical: 8,
+  },
+  menuItemText: {
+    fontSize: 16,
+  },
 });

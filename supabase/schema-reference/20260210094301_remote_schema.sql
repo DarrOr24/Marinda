@@ -1076,7 +1076,8 @@ CREATE TABLE IF NOT EXISTS "public"."family_members" (
     "joined_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "color_scheme" "text" DEFAULT 'SKY'::"text" NOT NULL,
     "points" integer DEFAULT 0 NOT NULL,
-    "profile_id" "uuid"
+    "profile_id" "uuid",
+    "kid_mode_pin" "text"
 );
 
 

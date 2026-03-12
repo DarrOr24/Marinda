@@ -27,6 +27,7 @@ export interface FamilyMember {
   profile: Profile | null
   color: Color | null
   points: number
+  kid_mode_pin?: string | null
   // client-only: injected into React Query cache
   avatarCacheBuster?: number
   public_avatar_url?: string | null

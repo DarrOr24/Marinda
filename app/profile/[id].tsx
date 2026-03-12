@@ -12,23 +12,25 @@ import {
 
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { ChipSelector } from "@/components/chip-selector";
-import { KidSwitcher } from "@/components/kid-switcher";
 import MemberSidebar from "@/components/members-sidebar";
 import { Button, ScreenList, SplitScreen, TextInput } from "@/components/ui";
 import WeeklyPointsChart from "@/components/weekly-points-chart";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
-import type { Role } from "@/lib/members/members.types";
 import {
   adjustMemberPoints,
   fetchMemberPointsHistory,
   type PointsEntry,
 } from "@/lib/points/points.api";
-import { isKidRole, isParentRole } from "@/utils/validation.utils";
+import { memberDisplayName } from "@/utils/format.utils";
 
 export default function MemberProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { activeFamilyId, effectiveMember, hasParentPermissions } = useAuthContext() as any;
+  const {
+    activeFamilyId,
+    effectiveMember,
+    hasParentPermissions,
+  } = useAuthContext() as any;
   const { familyMembers } = useFamily(activeFamilyId);
 
   const [history, setHistory] = useState<PointsEntry[]>([]);
@@ -241,26 +243,16 @@ export default function MemberProfile() {
   };
 
   return (
-    <SplitScreen
-      edges={["bottom", "left", "right"]}
-      withBackground
-      left={<MemberSidebar />}
-      contentPadding={16}
-      contentStyle={{ paddingLeft: 20, paddingRight: 16 }}
-      gap="md"
-    >
-      {hasParentPermissions && (
-        <>
-          <View style={{ alignSelf: "flex-start" }}>
-            <KidSwitcher
-              kids={memberList.filter((m) => isKidRole(m.role))}
-              selectedKidId={id}
-              onSelectKid={(kidId) =>
-                router.push({ pathname: "/profile/[id]", params: { id: kidId } })
-              }
-            />
-          </View>
-
+    <>
+      <SplitScreen
+        edges={["bottom", "left", "right"]}
+        withBackground
+        left={<MemberSidebar />}
+        contentPadding={16}
+        contentStyle={{ paddingLeft: 20, paddingRight: 16 }}
+        gap="md"
+      >
+        {hasParentPermissions && (
           <View style={{ flexDirection: "row", gap: 10, width: "100%", maxWidth: 400 }}>
             <Button
               title="Get started"
@@ -281,149 +273,152 @@ export default function MemberProfile() {
               style={{ flex: 1 }}
             />
           </View>
-        </>
-      )}
-
-      {!hasParentPermissions && (
-        <View style={{ alignSelf: "flex-start" }}>
-          <Button
-            title="Get started"
-            type="primary"
-            size="md"
-            showShadow
-            onPress={() => router.push("/getting-started")}
-            leftIcon={<MaterialCommunityIcons name="play-circle-outline" size={20} />}
-          />
-        </View>
-      )}
-
-      {/* Points card – everyone sees current points */}
-      <View style={styles.pointsCard}>
-        <Text style={styles.pointsLabel}>Points</Text>
-        <Text style={styles.pointsValue}>{points}</Text>
-      </View>
-
-      {/* Manual adjust – parents only */}
-      {hasParentPermissions && (
-        <View style={styles.adjustCard}>
-          <Text style={styles.adjustTitle}>Adjust points manually</Text>
-          <Text style={styles.adjustHelp}>
-            Add or subtract points for this member. Use this for bonuses, corrections,
-            or special rewards.
-          </Text>
-
-          <TextInput
-            label="Points change"
-            value={adjustDelta}
-            onChangeText={setAdjustDelta}
-            keyboardType="number-pad"
-            placeholder="e.g. 10 or -5"
-            returnKeyType="done"
-            onSubmitEditing={() => Keyboard.dismiss()}
-          />
-
-          <TextInput
-            label="Reason"
-            value={adjustReason}
-            onChangeText={setAdjustReason}
-            placeholder="Reason for adjustment"
-            multiline
-            containerStyle={{ marginTop: 8 }}
-            returnKeyType="done"
-            onSubmitEditing={() => Keyboard.dismiss()}
-          />
-
-          <View style={styles.adjustButtonsRow}>
+        )}
+        {!hasParentPermissions && (
+          <View style={{ alignSelf: "flex-start" }}>
             <Button
-              title="Clear"
-              type="secondary"
-              size="md"
-              fullWidth
-              onPress={() => {
-                setAdjustDelta("");
-                setAdjustReason("");
-              }}
-              disabled={adjustSaving}
-              style={{ flex: 1 }}
-            />
-            <Button
-              title={adjustSaving ? "Saving…" : "Save change"}
+              title="Get started"
               type="primary"
               size="md"
-              fullWidth
-              onPress={handleAdjustPoints}
-              disabled={adjustSaving}
-              style={{ flex: 1 }}
+              showShadow
+              onPress={() => router.push("/getting-started")}
+              leftIcon={<MaterialCommunityIcons name="play-circle-outline" size={20} />}
             />
           </View>
+        )}
+
+        <View style={styles.pageHeader}>
+          <Text style={styles.pageTitle}>
+            {current ? memberDisplayName(current) : "Profile"}
+          </Text>
         </View>
-      )}
 
+        {/* Points card – everyone sees current points */}
+        <View style={styles.pointsCard}>
+          <Text style={styles.pointsLabel}>Points</Text>
+          <Text style={styles.pointsValue}>{points}</Text>
+        </View>
 
-      {/* Weekly points chart */}
-      <WeeklyPointsChart history={history} />
-
-      {/* Recent points activity */}
-      <View style={styles.card}>
-        <Text style={styles.historyTitle}>Recent points activity</Text>
-
-        <ChipSelector
-          value={String(historyRangeDays)}
-          onChange={(v) => v && setHistoryRangeDays(Number(v))}
-          options={[
-            { label: "Past week", value: "7" },
-            { label: "Past month", value: "30" },
-            { label: "Past 3 months", value: "90" },
-          ]}
-          style={{ marginBottom: 12 }}
-        />
-
-        {historyLoading && (
-          <View style={styles.historyEmpty}>
-            <ActivityIndicator size="small" />
-            <Text style={styles.historyEmptyText}>Loading points…</Text>
-          </View>
-        )}
-
-        {!historyLoading && historyError && (
-          <View style={styles.historyEmpty}>
-            <Text style={styles.historyEmptyText}>{historyError}</Text>
-          </View>
-        )}
-
-        {!historyLoading && !historyError && history.length === 0 && (
-          <View style={styles.historyEmpty}>
-            <Text style={styles.historyEmptyText}>
-              No points activity yet for this member.
+        {/* Manual adjust – parents only */}
+        {hasParentPermissions && (
+          <View style={styles.adjustCard}>
+            <Text style={styles.adjustTitle}>Adjust points manually</Text>
+            <Text style={styles.adjustHelp}>
+              Add or subtract points for this member. Use this for bonuses, corrections,
+              or special rewards.
             </Text>
+
+            <TextInput
+              label="Points change"
+              value={adjustDelta}
+              onChangeText={setAdjustDelta}
+              keyboardType="number-pad"
+              placeholder="e.g. 10 or -5"
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
+            />
+
+            <TextInput
+              label="Reason"
+              value={adjustReason}
+              onChangeText={setAdjustReason}
+              placeholder="Reason for adjustment"
+              multiline
+              containerStyle={{ marginTop: 8 }}
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
+            />
+
+            <View style={styles.adjustButtonsRow}>
+              <Button
+                title="Clear"
+                type="secondary"
+                size="md"
+                fullWidth
+                onPress={() => {
+                  setAdjustDelta("");
+                  setAdjustReason("");
+                }}
+                disabled={adjustSaving}
+                style={{ flex: 1 }}
+              />
+              <Button
+                title={adjustSaving ? "Saving…" : "Save change"}
+                type="primary"
+                size="md"
+                fullWidth
+                onPress={handleAdjustPoints}
+                disabled={adjustSaving}
+                style={{ flex: 1 }}
+              />
+            </View>
           </View>
         )}
 
-        {!historyLoading && !historyError && history.length > 0 && (
-          <View style={styles.historyList}>
-            {history.map((entry) => (
-              <View key={entry.id} style={styles.historyRow}>
-                <Text
-                  style={[
-                    styles.historyDelta,
-                    entry.delta > 0 ? styles.historyDeltaPositive : styles.historyDeltaNegative,
-                  ]}
-                >
-                  {entry.delta > 0 ? `+${entry.delta}` : entry.delta}
-                </Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.historyReason}>{entry.reason || "Points update"}</Text>
-                  <Text style={styles.historyMeta}>
-                    {humanKind(entry.kind)} • {formatEntryDate(entry.created_at)}
+        {/* Weekly points chart */}
+        <WeeklyPointsChart history={history} />
+
+        {/* Recent points activity */}
+        <View style={styles.card}>
+          <Text style={styles.historyTitle}>Recent points activity</Text>
+
+          <ChipSelector
+            value={String(historyRangeDays)}
+            onChange={(v) => v && setHistoryRangeDays(Number(v))}
+            options={[
+              { label: "Past week", value: "7" },
+              { label: "Past month", value: "30" },
+              { label: "Past 3 months", value: "90" },
+            ]}
+            style={{ marginBottom: 12 }}
+          />
+
+          {historyLoading && (
+            <View style={styles.historyEmpty}>
+              <ActivityIndicator size="small" />
+              <Text style={styles.historyEmptyText}>Loading points…</Text>
+            </View>
+          )}
+
+          {!historyLoading && historyError && (
+            <View style={styles.historyEmpty}>
+              <Text style={styles.historyEmptyText}>{historyError}</Text>
+            </View>
+          )}
+
+          {!historyLoading && !historyError && history.length === 0 && (
+            <View style={styles.historyEmpty}>
+              <Text style={styles.historyEmptyText}>
+                No points activity yet for this member.
+              </Text>
+            </View>
+          )}
+
+          {!historyLoading && !historyError && history.length > 0 && (
+            <View style={styles.historyList}>
+              {history.map((entry) => (
+                <View key={entry.id} style={styles.historyRow}>
+                  <Text
+                    style={[
+                      styles.historyDelta,
+                      entry.delta > 0 ? styles.historyDeltaPositive : styles.historyDeltaNegative,
+                    ]}
+                  >
+                    {entry.delta > 0 ? `+${entry.delta}` : entry.delta}
                   </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.historyReason}>{entry.reason || "Points update"}</Text>
+                    <Text style={styles.historyMeta}>
+                      {humanKind(entry.kind)} • {formatEntryDate(entry.created_at)}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
-
-    </SplitScreen>
+              ))}
+            </View>
+          )}
+        </View>
+      </SplitScreen>
+    </>
   );
 
 }
@@ -432,6 +427,14 @@ const styles = StyleSheet.create({
   centerOnly: {
     alignItems: "center",
     justifyContent: "center",
+  },
+  pageHeader: {
+    width: "100%",
+  },
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#0f172a",
   },
   subtitle: {
     fontSize: 14,

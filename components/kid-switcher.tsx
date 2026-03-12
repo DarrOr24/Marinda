@@ -10,14 +10,25 @@ import {
 
 import { MemberAvatar } from "@/components/avatar/member-avatar";
 import type { FamilyMember } from "@/lib/members/members.types";
+import { memberDisplayName } from "@/utils/format.utils";
 
 type KidSwitcherProps = {
   kids: FamilyMember[];              // full family list, includes adults → we will filter inside
   selectedKidId: string | null;
   onSelectKid: (kidId: string) => void;
+  triggerVariant?: "button" | "avatarOnly";
+  buttonLabel?: string;
+  buttonIconName?: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 };
 
-export function KidSwitcher({ kids, selectedKidId, onSelectKid }: KidSwitcherProps) {
+export function KidSwitcher({
+  kids,
+  selectedKidId,
+  onSelectKid,
+  triggerVariant = "button",
+  buttonLabel = "Switch Kid/Teen",
+  buttonIconName = "account-switch",
+}: KidSwitcherProps) {
   const [open, setOpen] = useState(false);
 
   // ✅ FILTER ONLY TEENS + KIDS
@@ -25,23 +36,27 @@ export function KidSwitcher({ kids, selectedKidId, onSelectKid }: KidSwitcherPro
     (m) => m.role === "CHILD" || m.role === "TEEN"
   );
 
-  // If selected kid exists, use it. Otherwise none.
-  const activeKid = onlyKids.find((k) => k.id === selectedKidId) || null;
+  // Prefer the selected kid, otherwise fall back to the first available kid.
+  const activeKid = onlyKids.find((k) => k.id === selectedKidId) || onlyKids[0] || null;
 
   return (
     <View style={{ position: "relative" }}>
-      {/* BUTTON */}
-      <Pressable style={styles.button} onPress={() => setOpen((p) => !p)}>
-        <MaterialCommunityIcons
-          name="account-switch"
-          size={18}
-          color="#334155"
-        />
-        {/* 🆕 GENERIC TEXT */}
-        <Text style={styles.buttonText}>
-          Switch Kid/Teen
-        </Text>
-      </Pressable>
+      {triggerVariant === "avatarOnly" ? (
+        <Pressable style={styles.avatarOnlyButton} onPress={() => setOpen((p) => !p)}>
+          <View style={styles.avatarOnlyAvatarBox}>
+            <MemberAvatar memberId={activeKid.id} size="md" />
+          </View>
+        </Pressable>
+      ) : (
+        <Pressable style={styles.button} onPress={() => setOpen((p) => !p)}>
+          <MaterialCommunityIcons
+            name={buttonIconName}
+            size={18}
+            color="#334155"
+          />
+          <Text style={styles.buttonText}>{buttonLabel}</Text>
+        </Pressable>
+      )}
 
       {/* CLICK OUTSIDE TO CLOSE */}
       {open && (
@@ -55,6 +70,7 @@ export function KidSwitcher({ kids, selectedKidId, onSelectKid }: KidSwitcherPro
       <View
         style={[
           styles.dropdown,
+          styles.dropdownForButton,
           !open && styles.dropdownHidden, // hide when closed
         ]}
         pointerEvents={open ? "auto" : "none"}
@@ -80,7 +96,7 @@ export function KidSwitcher({ kids, selectedKidId, onSelectKid }: KidSwitcherPro
               <View style={styles.row}>
                 <MemberAvatar memberId={kid.id} size="sm" />
                 <Text style={styles.optionText}>
-                  {kid.profile?.first_name}
+                  {memberDisplayName(kid)}
                 </Text>
               </View>
             </Pressable>
@@ -106,6 +122,21 @@ const styles = StyleSheet.create({
     color: "#334155",
     fontWeight: "500",
   },
+  avatarOnlyButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 40,
+    height: 40,
+    borderRadius: 999,
+  },
+  avatarOnlyAvatarBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+  },
 
   /* OVERLAY BEHIND DROPDOWN */
   overlay: {
@@ -119,18 +150,20 @@ const styles = StyleSheet.create({
 
   dropdown: {
     position: "absolute",
-    top: 38,
-    left: 0,
     backgroundColor: "#ffffff",
     borderRadius: 12,
     paddingVertical: 4,
-    minWidth: 160,
     zIndex: 9999,
     elevation: 10,
     shadowColor: "#000",
     shadowOpacity: 0.12,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
+  },
+  dropdownForButton: {
+    top: 38,
+    left: 0,
+    minWidth: 160,
   },
   dropdownHidden: {
     opacity: 0,

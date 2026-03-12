@@ -15,7 +15,9 @@ export type AuthData = {
   email: string | null
   profileId: string | null
   profile: Profile | null
+  authMember: FamilyMember | null
   effectiveMember: FamilyMember | null
+  isKidMode: boolean
   hasParentPermissions: boolean
   memberships: Membership[] | null
   refreshMemberships: () => Promise<void>
@@ -27,6 +29,8 @@ export type AuthData = {
   signOut: () => Promise<void>
   activeFamilyId: string | null
   setActiveFamilyId: (id: string | null) => Promise<void>
+  enterKidMode: (memberId: string) => Promise<boolean>
+  exitKidMode: () => Promise<boolean>
   pendingInviteToken: string | null
   setPendingInviteToken: (token: string | null) => Promise<void>
 }
@@ -38,7 +42,9 @@ export const AuthContext = createContext<AuthData>({
   isEmailVerified: false,
   profileId: null,
   profile: null,
+  authMember: null,
   effectiveMember: null,
+  isKidMode: false,
   hasParentPermissions: false,
   memberships: null,
   refreshMemberships: async () => { },
@@ -50,6 +56,8 @@ export const AuthContext = createContext<AuthData>({
   signOut: async () => { },
   activeFamilyId: null,
   setActiveFamilyId: async () => { },
+  enterKidMode: async () => false,
+  exitKidMode: async () => false,
   pendingInviteToken: null,
   setPendingInviteToken: async () => { },
 })

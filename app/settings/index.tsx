@@ -47,6 +47,13 @@ const ITEMS: Item[] = [
     href: '/settings/family',
   },
   {
+    key: 'kid-mode-pin',
+    title: 'Kid mode PIN',
+    description: 'Set or change the PIN used to exit kid mode',
+    icon: 'lock-closed-outline',
+    href: '/settings/kid-mode-pin',
+  },
+  {
     key: 'billing',
     title: 'Billing',
     description: 'Subscription and payment methods',
@@ -57,7 +64,10 @@ const ITEMS: Item[] = [
 
 export default function SettingsIndex() {
   const router = useRouter()
-  const { effectiveMember } = useAuthContext()
+  const { effectiveMember, hasParentPermissions } = useAuthContext()
+  const visibleItems = hasParentPermissions
+    ? ITEMS
+    : ITEMS.filter(item => item.key !== 'kid-mode-pin')
 
   return (
     <Screen>
@@ -73,7 +83,7 @@ export default function SettingsIndex() {
       </View>
 
       <View style={styles.card}>
-        {ITEMS.map((item, idx) => (
+        {visibleItems.map((item, idx) => (
           <React.Fragment key={item.key}>
             <SettingsRow
               title={item.title}
@@ -81,7 +91,7 @@ export default function SettingsIndex() {
               icon={item.icon}
               onPress={() => router.push(item.href)}
             />
-            {idx !== ITEMS.length - 1 && <View style={styles.divider} />}
+            {idx !== visibleItems.length - 1 && <View style={styles.divider} />}
           </React.Fragment>
         ))}
       </View>

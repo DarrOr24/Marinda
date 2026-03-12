@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'expo-router'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import { MemberAvatar } from '@/components/avatar/member-avatar'
+import { KidSwitcher } from '@/components/kid-switcher'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useFamily } from '@/lib/families/families.hooks'
 import type { FamilyMember } from '@/lib/members/members.types'
@@ -18,7 +19,7 @@ export default function MemberSidebar() {
   const { activeFamilyId } = useAuthContext()
   const { familyMembers } = useFamily(activeFamilyId as string)
 
-  const { effectiveMember: currentUser } = useAuthContext()
+  const { effectiveMember: currentUser, isKidMode, hasParentPermissions } = useAuthContext()
 
   // Empty state: no family selected
   if (!activeFamilyId) {
@@ -76,57 +77,29 @@ export default function MemberSidebar() {
   return (
     <View style={styles.container}>
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
       >
+        {/* PARENT → lightweight profile switcher */}
+        {!isKidMode && hasParentPermissions && (() => {
+          const selectedKidId =
+            membersData.find(m => m.id === activeMemberId)?.id || membersData[0]?.id || null
 
-        {/* CHILD / TEEN → only their own avatar */}
-        {(currentUser?.role === 'CHILD' || currentUser?.role === 'TEEN') &&
-          membersData.map(m => {
-            const isActive = activeMemberId === m.id
-            return (
-              <TouchableOpacity
-                key={m.id}
-                style={styles.item}
-                onPress={() =>
-                  router.push({ pathname: '/profile/[id]', params: { id: m.id } })
-                }
-              >
-                <View style={[styles.avatarBox, isActive && styles.avatarBoxActive]}>
-                  <MemberAvatar memberId={m.id} size="sm" />
-                </View>
-                <Text numberOfLines={1} style={styles.name}>
-                  {m.profile?.first_name}
-                </Text>
-              </TouchableOpacity>
-            )
-          })
-        }
-
-        {/* PARENT → show CURRENT kid avatar only */}
-        {(currentUser?.role === 'MOM' || currentUser?.role === 'DAD') && (() => {
-          const activeKid =
-            membersData.find(m => m.id === activeMemberId) || membersData[0]
-
-          if (!activeKid) return null
-
-          const isActive = activeMemberId === activeKid.id
+          if (!selectedKidId) return null
 
           return (
-            <TouchableOpacity
-              key={activeKid.id}
-              style={styles.item}
-              onPress={() =>
-                router.push({ pathname: '/profile/[id]', params: { id: activeKid.id } })
-              }
-            >
-              <View style={[styles.avatarBox, isActive && styles.avatarBoxActive]}>
-                <MemberAvatar memberId={activeKid.id} size="sm" />
-              </View>
-              <Text numberOfLines={1} style={styles.name}>
-                {activeKid.profile?.first_name}
-              </Text>
-            </TouchableOpacity>
+            <View key={selectedKidId} style={styles.switcherWrapper}>
+              <KidSwitcher
+                kids={membersData}
+                selectedKidId={selectedKidId}
+                onSelectKid={(kidId) => {
+                  router.push({ pathname: '/profile/[id]', params: { id: kidId } })
+                }}
+                triggerVariant="avatarOnly"
+                buttonIconName="account-switch"
+              />
+            </View>
           )
         })()}
 
@@ -188,6 +161,12 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: '#d9e1f2',
     position: 'relative',
+    overflow: 'visible',
+    zIndex: 20,
+    elevation: 20,
+  },
+  scroll: {
+    overflow: 'visible',
   },
   list: {
     gap: 14,
@@ -195,6 +174,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 12,
+    overflow: 'visible',
   },
   item: {
     width: SIDEBAR_WIDTH,
@@ -202,6 +182,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 6,
     borderRadius: 16,
+  },
+  switcherWrapper: {
+    position: 'relative',
+    width: SIDEBAR_WIDTH,
+    alignItems: 'center',
   },
   avatarBox: {
     width: AVATAR_SIZE,

@@ -19,6 +19,18 @@ const ENTRY_ROUTES = [
   '/onboarding/select-family',
 ]
 
+const KID_MODE_BLOCKED_ROUTES = [
+  '/chores-settings',
+  '/wishlist-settings',
+  '/boards/announcements-settings',
+]
+
+function isKidModeBlockedRoute(pathname: string) {
+  return pathname === '/settings'
+    || pathname.startsWith('/settings/')
+    || KID_MODE_BLOCKED_ROUTES.includes(pathname)
+}
+
 function isProfileComplete(p: Profile | undefined) {
   if (!p) return false
   return !!(p.first_name?.trim() && p.last_name?.trim())
@@ -35,6 +47,7 @@ export function AuthRouter() {
     memberships,
     activeFamilyId,
     effectiveMember,
+    isKidMode,
     pendingInviteToken,
   } = useAuthContext()
 
@@ -110,6 +123,11 @@ export function AuthRouter() {
     // 4) Active family set but effective member not loaded yet -> wait
     if (!effectiveMember) return
 
+    if (isKidMode && isKidModeBlockedRoute(pathname)) {
+      router.replace(`/profile/${effectiveMember.id}`)
+      return
+    }
+
     // 5) If not on an entry route, don't redirect
     if (!isEntryRoute) return
 
@@ -129,6 +147,7 @@ export function AuthRouter() {
     memberships,
     activeFamilyId,
     effectiveMember,
+    isKidMode,
     pathname,
     pendingInviteToken,
     router,

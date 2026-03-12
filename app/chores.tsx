@@ -891,15 +891,17 @@ export default function Chores() {
             leftIcon={<Ionicons name="information-circle-outline" size={18} />}
           />
 
-          <Button
-            type="outline"
-            size="sm"
-            backgroundColor="#eef2ff"
-            round
-            hitSlop={8}
-            onPress={() => router.push('/chores-settings')}
-            leftIcon={<Ionicons name="settings-outline" size={18} />}
-          />
+          {hasParentPermissions && (
+            <Button
+              type="outline"
+              size="sm"
+              backgroundColor="#eef2ff"
+              round
+              hitSlop={8}
+              onPress={() => router.push('/chores-settings')}
+              leftIcon={<Ionicons name="settings-outline" size={18} />}
+            />
+          )}
         </View>
 
 
