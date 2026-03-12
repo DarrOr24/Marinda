@@ -30,6 +30,7 @@ export default function MemberProfile() {
     activeFamilyId,
     effectiveMember,
     hasParentPermissions,
+    isKidMode,
   } = useAuthContext() as any;
   const { familyMembers } = useFamily(activeFamilyId);
 
@@ -252,7 +253,7 @@ export default function MemberProfile() {
         contentStyle={{ paddingLeft: 20, paddingRight: 16 }}
         gap="md"
       >
-        {hasParentPermissions && (
+        {!isKidMode && hasParentPermissions && (
           <View style={{ flexDirection: "row", gap: 10, width: "100%", maxWidth: 400 }}>
             <Button
               title="Get started"
@@ -274,7 +275,7 @@ export default function MemberProfile() {
             />
           </View>
         )}
-        {!hasParentPermissions && (
+        {!isKidMode && !hasParentPermissions && (
           <View style={{ alignSelf: "flex-start" }}>
             <Button
               title="Get started"

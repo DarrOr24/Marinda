@@ -23,6 +23,7 @@ const KID_MODE_BLOCKED_ROUTES = [
   '/chores-settings',
   '/wishlist-settings',
   '/boards/announcements-settings',
+  '/getting-started',
 ]
 
 function isKidModeBlockedRoute(pathname: string) {
