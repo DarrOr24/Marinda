@@ -7,6 +7,7 @@ import {
   focusManager,
   onlineManager,
 } from '@tanstack/react-query'
+import { Audio } from 'expo-av'
 import { PropsWithChildren, useEffect } from 'react'
 import { AppState, Platform, useColorScheme } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
@@ -44,9 +45,17 @@ function useReactQuerySync() {
   }, [])
 }
 
+function useAudioModeForSilentIOS() {
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return
+    Audio.setAudioModeAsync({ playsInSilentModeIOS: true }).catch(() => {})
+  }, [])
+}
+
 export default function Providers({ children }: PropsWithChildren) {
   const colorScheme = useColorScheme()
   useReactQuerySync()
+  useAudioModeForSilentIOS()
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
