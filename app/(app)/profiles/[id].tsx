@@ -6,6 +6,7 @@ import {
   Alert,
   Keyboard,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View
@@ -90,11 +91,15 @@ export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps)
   // ✅ member being viewed (for points card)
   const current = memberList.find((m: any) => m.id === viewedMemberId);
   const points = (current as any)?.points ?? 0;
-  const profileTitle = current ? `${memberDisplayName(current)}'s Profile` : "Profile";
+  const profileTitle = current
+    ? isKidMode
+      ? memberDisplayName(current)
+      : `${memberDisplayName(current)}'s Profile`
+    : "Profile";
 
   useAppHeader({
     title: profileTitle,
-    hiddenTitle: isKidMode,
+    hiddenTitle: false,
   });
 
   // 🔄 Always refetch members when entering this screen or switching profile
@@ -267,80 +272,84 @@ export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps)
         withBackground
         contentStyle={styles.contentContainer}
       >
-        {!isKidMode && hasParentPermissions && (
-          <View style={{ flexDirection: "row", gap: 10, width: "100%", maxWidth: 400 }}>
-            <Button
-              title="Get started"
-              type="primary"
-              size="md"
-              showShadow
-              onPress={() => router.push("/getting-started")}
-              leftIcon={<MaterialCommunityIcons name="play-circle-outline" size={20} />}
-              style={{ flex: 1 }}
-            />
-            <Button
-              title="My family"
-              type="primary"
-              size="md"
-              showShadow
-              onPress={() => router.push("/settings/family")}
-              leftIcon={<MaterialCommunityIcons name="cog-outline" size={20} />}
-              style={{ flex: 1 }}
-            />
-          </View>
-        )}
-        {!isKidMode && !hasParentPermissions && (
-          <View style={{ alignSelf: "flex-start" }}>
-            <Button
-              title="Get started"
-              type="primary"
-              size="md"
-              showShadow
-              onPress={() => router.push("/getting-started")}
-              leftIcon={<MaterialCommunityIcons name="play-circle-outline" size={20} />}
-            />
-          </View>
-        )}
+        {/* Fixed header – buttons + avatars */}
+        <View style={styles.fixedHeader}>
+          {!isKidMode && hasParentPermissions && (
+            <View style={{ flexDirection: "row", gap: 10, width: "100%", maxWidth: 400 }}>
+              <Button
+                title="Get started"
+                type="primary"
+                size="md"
+                showShadow
+                onPress={() => router.push("/getting-started")}
+                leftIcon={<MaterialCommunityIcons name="play-circle-outline" size={20} />}
+                style={{ flex: 1 }}
+              />
+              <Button
+                title="My family"
+                type="primary"
+                size="md"
+                showShadow
+                onPress={() => router.push("/settings/family")}
+                leftIcon={<MaterialCommunityIcons name="cog-outline" size={20} />}
+                style={{ flex: 1 }}
+              />
+            </View>
+          )}
+          {!isKidMode && !hasParentPermissions && (
+            <View style={{ alignSelf: "flex-start" }}>
+              <Button
+                title="Get started"
+                type="primary"
+                size="md"
+                showShadow
+                onPress={() => router.push("/getting-started")}
+                leftIcon={<MaterialCommunityIcons name="play-circle-outline" size={20} />}
+              />
+            </View>
+          )}
 
-        {hasParentPermissions && switcherKids.length > 0 && (
-          <View style={styles.profileTabs}>
-            {switcherKids.map((kid: any) => {
-              const isActive = kid.id === viewedMemberId;
+          {hasParentPermissions && switcherKids.length > 0 && (
+            <View style={styles.profileTabs}>
+              {switcherKids.map((kid: any) => {
+                const isActive = kid.id === viewedMemberId;
 
-              return (
-                <Pressable
-                  key={kid.id}
-                  style={styles.profileTab}
-                  onPress={() => {
-                    if (isRouteDrivenProfile) {
-                      router.replace({
-                        pathname: "/profiles/[id]",
-                        params: { id: kid.id },
-                      });
-                      return;
-                    }
+                return (
+                  <Pressable
+                    key={kid.id}
+                    style={styles.profileTab}
+                    onPress={() => {
+                      if (isRouteDrivenProfile) {
+                        router.replace({
+                          pathname: "/profiles/[id]",
+                          params: { id: kid.id },
+                        });
+                        return;
+                      }
 
-                    setSelectedKidId(kid.id);
-                  }}
-                >
-                  <View style={[styles.profileAvatarWrap, isActive && styles.profileAvatarWrapActive]}>
-                    <MemberAvatar memberId={kid.id} size="md" />
-                  </View>
-                  <Text style={[styles.profileTabText, isActive && styles.profileTabTextActive]}>
-                    {memberDisplayName(kid)}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
-
-        <View style={styles.pageHeader}>
-          <Text style={styles.pageTitle}>
-            {current ? memberDisplayName(current) : "Profile"}
-          </Text>
+                      setSelectedKidId(kid.id);
+                    }}
+                  >
+                    <View style={[styles.profileAvatarWrap, isActive && styles.profileAvatarWrapActive]}>
+                      <MemberAvatar memberId={kid.id} size="md" />
+                    </View>
+                    <Text style={[styles.profileTabText, isActive && styles.profileTabTextActive]}>
+                      {memberDisplayName(kid)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
         </View>
 
+        {/* Scrollable content */}
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* Points card – everyone sees current points */}
         <View style={styles.pointsCard}>
           <Text style={styles.pointsLabel}>Points</Text>
@@ -465,6 +474,7 @@ export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps)
             </View>
           )}
         </View>
+        </ScrollView>
       </ScreenList>
     </>
   );
@@ -479,22 +489,24 @@ export default function MemberProfileRoute() {
 
 const styles = StyleSheet.create({
   contentContainer: {
-    gap: 16,
+    flex: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
+    gap: 16,
+  },
+  fixedHeader: {
+    gap: 16,
+  },
+  scrollArea: {
+    flex: 1,
+  },
+  scrollContent: {
+    gap: 16,
     paddingBottom: 24,
   },
   centerOnly: {
     alignItems: "center",
     justifyContent: "center",
-  },
-  pageHeader: {
-    width: "100%",
-  },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#0f172a",
   },
   profileTabs: {
     width: "100%",

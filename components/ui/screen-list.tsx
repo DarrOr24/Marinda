@@ -1,6 +1,6 @@
 // components/ui/screen-list.tsx
 import React from "react";
-import { StyleSheet, View, ViewStyle } from "react-native";
+import { StyleSheet, View, ViewStyle, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CheckerboardBackground from "../checkerboard-background";
 
@@ -11,10 +11,9 @@ type Props = {
     edges?: ("top" | "right" | "bottom" | "left")[];
     style?: ViewStyle;
     withBackground?: boolean;
-
-    // ✅ add this
     gap?: Gap;
-    contentStyle?: ViewStyle; // ✅ optional, nice for screens like announcements
+    contentStyle?: ViewStyle;
+    scrollable?: boolean;
 };
 
 const gapToNumber: Record<Gap, number> = {
@@ -29,10 +28,12 @@ export function ScreenList({
     edges = ["left", "right", "bottom"],
     style,
     withBackground = false,
-
     gap = "no",
     contentStyle,
+    scrollable = false,
 }: Props) {
+    const contentStyles = [{ gap: gapToNumber[gap] }, contentStyle];
+
     return (
         <SafeAreaView style={[styles.screen, style]} edges={edges}>
             {withBackground && (
@@ -40,9 +41,20 @@ export function ScreenList({
             )}
 
             <View style={styles.flex}>
-                <View style={[{ flex: 1, gap: gapToNumber[gap] }, contentStyle]}>
-                    {children}
-                </View>
+                {scrollable ? (
+                    <ScrollView
+                        style={styles.scroll}
+                        contentContainerStyle={[styles.scrollContent, contentStyles]}
+                        showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {children}
+                    </ScrollView>
+                ) : (
+                    <View style={[{ flex: 1 }, contentStyles]}>
+                        {children}
+                    </View>
+                )}
             </View>
         </SafeAreaView>
     );
@@ -51,4 +63,6 @@ export function ScreenList({
 const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: "#F7FBFF" },
     flex: { flex: 1 },
+    scroll: { flex: 1 },
+    scrollContent: { flexGrow: 1 },
 });

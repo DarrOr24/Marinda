@@ -30,7 +30,6 @@ export function HeaderProfileButton() {
     effectiveMember,
     isKidMode,
     enterKidMode,
-    exitKidMode,
     hasParentPermissions,
   } = useAuthContext()
   const { familyMembers } = useFamily(activeFamilyId)
@@ -80,11 +79,6 @@ export function HeaderProfileButton() {
     setOpen(true)
   }
 
-  const handleExitKidMode = async () => {
-    const didExit = await exitKidMode()
-    if (didExit) setOpen(false)
-  }
-
   const handleOpenKidModePicker = () => {
     setOpen(false)
     if (kidModeCandidates.length === 0) {
@@ -118,13 +112,6 @@ export function HeaderProfileButton() {
   return (
     <>
       <View style={styles.headerRight}>
-        {isKidMode && (
-          <TouchableOpacity style={styles.kidModeButton} onPress={handleExitKidMode}>
-            <MaterialCommunityIcons name="shield-lock-outline" size={18} color="#1d4ed8" />
-            <Text style={styles.kidModeButtonText}>Exit kid mode</Text>
-          </TouchableOpacity>
-        )}
-
         <TouchableOpacity onPress={onPressIcon} style={{ marginLeft: 4 }}>
           {effectiveMember?.id && (
             <MemberAvatar
@@ -211,20 +198,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  kidModeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: '#dbeafe',
-  },
-  kidModeButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1d4ed8',
   },
   menuOverlay: {
     ...StyleSheet.absoluteFillObject,

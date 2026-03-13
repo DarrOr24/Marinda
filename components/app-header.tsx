@@ -9,7 +9,7 @@ import React, {
   useState,
 } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import { BackForwardButton } from '@/components/back-forward-button'
 import { HeaderProfileButton } from '@/components/header-profile-button'
@@ -34,7 +34,7 @@ const AppHeaderContext = createContext<AppHeaderContextValue | null>(null)
 
 export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { profile, isKidMode } = useAuthContext()
+  const { profile, isKidMode, exitKidMode } = useAuthContext()
   const [override, setOverride] = useState<AppHeaderConfig | null>(null)
 
   const firstName =
@@ -244,12 +244,22 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
     <AppHeaderContext.Provider value={value}>
       <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={styles.header}>
-          <View style={styles.leftSlot}>
+          <View style={[styles.leftSlot, isKidMode && styles.leftSlotWithKidMode]}>
             {showBackButton ? <BackForwardButton direction="back" size="sm" /> : null}
+            {isKidMode && (
+              <TouchableOpacity
+                style={styles.exitKidModeButton}
+                onPress={() => exitKidMode?.()}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="shield-lock-outline" size={18} color="#1d4ed8" />
+                <Text style={styles.exitKidModeButtonText}>Exit kid mode</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {!config.hiddenTitle && (
-            <View style={styles.centerSlot} pointerEvents="none">
+            <View style={[styles.centerSlot, isKidMode && styles.centerSlotWithKidMode]} pointerEvents="none">
               {config.icon ? (
                 <View style={styles.titleRow}>
                   <MaterialCommunityIcons
@@ -322,12 +332,36 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'center',
   },
+  leftSlotWithKidMode: {
+    width: undefined,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  exitKidModeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: '#dbeafe',
+  },
+  exitKidModeButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1d4ed8',
+  },
   centerSlot: {
     position: 'absolute',
     left: 72,
     right: 72,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  centerSlotWithKidMode: {
+    left: 0,
+    right: 0,
   },
   rightSlot: {
     marginLeft: 'auto',
