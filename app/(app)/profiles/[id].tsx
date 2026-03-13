@@ -267,7 +267,7 @@ export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps)
         withBackground
         contentStyle={styles.contentContainer}
       >
-        {hasParentPermissions && (
+        {!isKidMode && hasParentPermissions && (
           <View style={{ flexDirection: "row", gap: 10, width: "100%", maxWidth: 400 }}>
             <Button
               title="Get started"
@@ -289,7 +289,7 @@ export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps)
             />
           </View>
         )}
-        {!hasParentPermissions && (
+        {!isKidMode && !hasParentPermissions && (
           <View style={{ alignSelf: "flex-start" }}>
             <Button
               title="Get started"

@@ -41,6 +41,12 @@ export function HeaderProfileButton() {
   const kidModeCandidates = (familyMembers.data ?? []).filter(
     member => member.role === 'CHILD' || member.role === 'TEEN',
   )
+  const showParentMenuActions =
+    !!authMember &&
+    !!effectiveMember &&
+    authMember.id === effectiveMember.id &&
+    hasParentPermissions &&
+    !isKidMode
 
   const handleLogout = () => {
     Alert.alert('Log out?', 'Are you sure you want to log out?', [
@@ -137,49 +143,55 @@ export function HeaderProfileButton() {
         animationType="fade"
         onRequestClose={() => setOpen(false)}
       >
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={() => setOpen(false)}
-        />
+        <View style={styles.menuOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setOpen(false)}
+          />
 
-        <View style={[styles.menu, { top: insets.top + 56 }]}>
-          <TouchableOpacity
-            style={styles.item}
-            onPress={() => {
-              setOpen(false)
-              router.push('/getting-started')
-            }}
-          >
-            <MaterialCommunityIcons name="play-circle-outline" size={20} color="#2563eb" />
-            <Text style={[styles.itemText, { color: '#2563eb' }]}>Get started</Text>
-          </TouchableOpacity>
+          <View style={[styles.menuAnchor, { top: insets.top + 56 }]}>
+            <View style={styles.menu}>
+              {showParentMenuActions && (
+                <TouchableOpacity
+                  style={styles.item}
+                  onPress={() => {
+                    setOpen(false)
+                    router.push('/getting-started')
+                  }}
+                >
+                  <MaterialCommunityIcons name="play-circle-outline" size={20} color="#2563eb" />
+                  <Text style={[styles.itemText, { color: '#2563eb' }]}>Get started</Text>
+                </TouchableOpacity>
+              )}
 
-          {!isKidMode && (
-            <TouchableOpacity
-              style={styles.item}
-              onPress={() => {
-                setOpen(false)
-                router.push('/settings');
-              }}
-            >
-              <MaterialCommunityIcons name="cog-outline" size={20} color="#334155" />
-              <Text style={styles.itemText}>Settings</Text>
-            </TouchableOpacity>
-          )}
+              {showParentMenuActions && (
+                <TouchableOpacity
+                  style={styles.item}
+                  onPress={() => {
+                    setOpen(false)
+                    router.push('/settings')
+                  }}
+                >
+                  <MaterialCommunityIcons name="cog-outline" size={20} color="#334155" />
+                  <Text style={styles.itemText}>Settings</Text>
+                </TouchableOpacity>
+              )}
 
-          {!isKidMode && hasParentPermissions && (
-            <TouchableOpacity style={styles.item} onPress={handleOpenKidModePicker}>
-              <MaterialCommunityIcons name="shield-lock-outline" size={20} color="#334155" />
-              <Text style={styles.itemText}>Enter kid mode</Text>
-            </TouchableOpacity>
-          )}
+              {showParentMenuActions && (
+                <TouchableOpacity style={styles.item} onPress={handleOpenKidModePicker}>
+                  <MaterialCommunityIcons name="shield-lock-outline" size={20} color="#334155" />
+                  <Text style={styles.itemText}>Enter kid mode</Text>
+                </TouchableOpacity>
+              )}
 
-          <TouchableOpacity style={styles.item} onPress={handleLogout}>
-            <MaterialCommunityIcons name="logout" size={20} color="#dc2626" />
-            <Text style={[styles.itemText, { color: '#dc2626' }]}>
-              Log out
-            </Text>
-          </TouchableOpacity>
+              <TouchableOpacity style={styles.item} onPress={handleLogout}>
+                <MaterialCommunityIcons name="logout" size={20} color="#dc2626" />
+                <Text style={[styles.itemText, { color: '#dc2626' }]}>
+                  Log out
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Modal>
 
@@ -214,15 +226,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1d4ed8',
   },
-  menu: {
+  menuOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  menuAnchor: {
     position: 'absolute',
-    top: 60,
     right: 10,
+    zIndex: 2,
+    elevation: 8,
+  },
+  menu: {
     backgroundColor: '#fff',
     borderRadius: 12,
     width: 160,
     paddingVertical: 8,
     elevation: 6,
+    zIndex: 3,
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 10,
