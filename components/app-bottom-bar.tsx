@@ -4,6 +4,8 @@ import React, { useMemo } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { useAuthContext } from '@/hooks/use-auth-context'
+
 type BottomBarItem = {
   key: string
   label: string
@@ -17,6 +19,7 @@ export function AppBottomBar() {
   const router = useRouter()
   const pathname = usePathname()
   const insets = useSafeAreaInsets()
+  const { isKidMode } = useAuthContext()
   const items = useMemo<BottomBarItem[]>(
     () => [
       {
@@ -78,7 +81,7 @@ export function AppBottomBar() {
           >
             <MaterialCommunityIcons name={item.icon} size={24} color={iconColor} />
             <Text style={[styles.label, { color: labelColor }]} numberOfLines={1}>
-              {item.label}
+              {item.key === 'profile' && isKidMode ? 'Profile' : item.label}
             </Text>
           </Pressable>
         )
