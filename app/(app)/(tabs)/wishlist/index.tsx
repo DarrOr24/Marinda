@@ -263,7 +263,7 @@ export default function WishList() {
                 round
                 hitSlop={8}
                 backgroundColor="#eef2ff"
-                onPress={() => router.push("/wishlist-info")}
+                onPress={() => router.push("/wishlist/info")}
                 leftIcon={<Ionicons name="information-circle-outline" size={20} />}
               />
 
@@ -274,7 +274,7 @@ export default function WishList() {
                   round
                   hitSlop={8}
                   backgroundColor="#eef2ff"
-                  onPress={() => router.push("/wishlist-settings")}
+                  onPress={() => router.push("/wishlist/settings")}
                   leftIcon={<Ionicons name="settings-outline" size={20} />}
                 />
               )}

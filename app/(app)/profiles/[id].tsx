@@ -1,19 +1,21 @@
-// app/profile/[id].tsx
+// app/profiles/[id].tsx
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Keyboard,
+  Pressable,
   StyleSheet,
   Text,
   View
 } from "react-native";
 
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useAppHeader } from "@/components/app-header";
+import { MemberAvatar } from "@/components/avatar/member-avatar";
 import { ChipSelector } from "@/components/chip-selector";
-import MemberSidebar from "@/components/members-sidebar";
-import { Button, ScreenList, SplitScreen, TextInput } from "@/components/ui";
+import { Button, ScreenList, TextInput } from "@/components/ui";
 import WeeklyPointsChart from "@/components/weekly-points-chart";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
@@ -24,12 +26,16 @@ import {
 } from "@/lib/points/points.api";
 import { memberDisplayName } from "@/utils/format.utils";
 
-export default function MemberProfile() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+type MemberProfileScreenProps = {
+  memberIdParam?: string;
+};
+
+export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps) {
   const {
     activeFamilyId,
     effectiveMember,
     hasParentPermissions,
+    isKidMode,
   } = useAuthContext() as any;
   const { familyMembers } = useFamily(activeFamilyId);
 
@@ -41,6 +47,7 @@ export default function MemberProfile() {
   const [adjustDelta, setAdjustDelta] = useState("");
   const [adjustReason, setAdjustReason] = useState("");
   const [adjustSaving, setAdjustSaving] = useState(false);
+  const [selectedKidId, setSelectedKidId] = useState<string | undefined>(memberIdParam);
 
   // Recent activity time range: 7, 30, or 90 days
   const [historyRangeDays, setHistoryRangeDays] = useState<number>(30);
@@ -49,22 +56,46 @@ export default function MemberProfile() {
 
   const memberList = familyMembers.data ?? [];
   const selfMemberId: string | undefined = (effectiveMember as any)?.id;
+  const switcherKids = memberList.filter((member: any) => member.role === "CHILD" || member.role === "TEEN");
+  const fallbackParentMemberId = switcherKids[0]?.id ?? selfMemberId;
+  const isRouteDrivenProfile = Boolean(memberIdParam);
+  const resolvedMemberId = hasParentPermissions
+    ? (memberIdParam ?? selectedKidId ?? fallbackParentMemberId)
+    : selfMemberId;
 
   // ✅ kids/teens always see ONLY their own profile
-  const viewedMemberId = hasParentPermissions ? id : selfMemberId;
+  const viewedMemberId = resolvedMemberId;
 
   useEffect(() => {
-    if (!hasParentPermissions && selfMemberId && id !== selfMemberId) {
+    if (!hasParentPermissions && selfMemberId && memberIdParam && memberIdParam !== selfMemberId) {
       router.replace({
-        pathname: "/profile/[id]",
+        pathname: "/profiles/[id]",
         params: { id: selfMemberId },
       });
     }
-  }, [hasParentPermissions, selfMemberId, id]);
+  }, [hasParentPermissions, selfMemberId, memberIdParam]);
+
+  useEffect(() => {
+    if (!hasParentPermissions || isRouteDrivenProfile) return;
+
+    setSelectedKidId((currentId) => {
+      if (currentId && switcherKids.some((kid: any) => kid.id === currentId)) {
+        return currentId;
+      }
+
+      return fallbackParentMemberId;
+    });
+  }, [fallbackParentMemberId, hasParentPermissions, isRouteDrivenProfile, switcherKids]);
 
   // ✅ member being viewed (for points card)
   const current = memberList.find((m: any) => m.id === viewedMemberId);
   const points = (current as any)?.points ?? 0;
+  const profileTitle = current ? `${memberDisplayName(current)}'s Profile` : "Profile";
+
+  useAppHeader({
+    title: profileTitle,
+    hiddenTitle: isKidMode,
+  });
 
   // 🔄 Always refetch members when entering this screen or switching profile
   useEffect(() => {
@@ -179,19 +210,6 @@ export default function MemberProfile() {
     }
   };
 
-  // Redirect parent away from their own profile page
-  useEffect(() => {
-    if (!current) return;
-
-    if (current.role === "MOM" || current.role === "DAD") {
-      const firstKid = memberList.find((m) => m.role === "CHILD" || m.role === "TEEN");
-
-      if (firstKid) {
-        router.replace({ pathname: "/profile/[id]", params: { id: firstKid.id } });
-      }
-    }
-  }, [current, memberList]);
-
   if (!activeFamilyId) {
     return (
       <ScreenList edges={["bottom", "left", "right"]} withBackground>
@@ -244,13 +262,10 @@ export default function MemberProfile() {
 
   return (
     <>
-      <SplitScreen
+      <ScreenList
         edges={["bottom", "left", "right"]}
         withBackground
-        left={<MemberSidebar />}
-        contentPadding={16}
-        contentStyle={{ paddingLeft: 20, paddingRight: 16 }}
-        gap="md"
+        contentStyle={styles.contentContainer}
       >
         {hasParentPermissions && (
           <View style={{ flexDirection: "row", gap: 10, width: "100%", maxWidth: 400 }}>
@@ -284,6 +299,39 @@ export default function MemberProfile() {
               onPress={() => router.push("/getting-started")}
               leftIcon={<MaterialCommunityIcons name="play-circle-outline" size={20} />}
             />
+          </View>
+        )}
+
+        {hasParentPermissions && switcherKids.length > 0 && (
+          <View style={styles.profileTabs}>
+            {switcherKids.map((kid: any) => {
+              const isActive = kid.id === viewedMemberId;
+
+              return (
+                <Pressable
+                  key={kid.id}
+                  style={styles.profileTab}
+                  onPress={() => {
+                    if (isRouteDrivenProfile) {
+                      router.replace({
+                        pathname: "/profiles/[id]",
+                        params: { id: kid.id },
+                      });
+                      return;
+                    }
+
+                    setSelectedKidId(kid.id);
+                  }}
+                >
+                  <View style={[styles.profileAvatarWrap, isActive && styles.profileAvatarWrapActive]}>
+                    <MemberAvatar memberId={kid.id} size="md" />
+                  </View>
+                  <Text style={[styles.profileTabText, isActive && styles.profileTabTextActive]}>
+                    {memberDisplayName(kid)}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         )}
 
@@ -417,13 +465,25 @@ export default function MemberProfile() {
             </View>
           )}
         </View>
-      </SplitScreen>
+      </ScreenList>
     </>
   );
 
 }
 
+export default function MemberProfileRoute() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+
+  return <MemberProfileScreen memberIdParam={id} />;
+}
+
 const styles = StyleSheet.create({
+  contentContainer: {
+    gap: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 24,
+  },
   centerOnly: {
     alignItems: "center",
     justifyContent: "center",
@@ -435,6 +495,40 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "800",
     color: "#0f172a",
+  },
+  profileTabs: {
+    width: "100%",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    columnGap: 10,
+    rowGap: 12,
+  },
+  profileTab: {
+    alignItems: "center",
+    width: "18%",
+    maxWidth: 60,
+    gap: 7,
+  },
+  profileAvatarWrap: {
+    padding: 4,
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  profileAvatarWrapActive: {
+    borderColor: "#60a5fa",
+    backgroundColor: "#dbeafe",
+  },
+  profileTabText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#475569",
+    textAlign: "center",
+  },
+  profileTabTextActive: {
+    color: "#1d4ed8",
   },
   subtitle: {
     fontSize: 14,

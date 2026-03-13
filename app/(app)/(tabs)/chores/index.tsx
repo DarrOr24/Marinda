@@ -887,7 +887,7 @@ export default function Chores() {
             backgroundColor="#eef2ff"
             round
             hitSlop={8}
-            onPress={() => router.push('/chores-info')}
+            onPress={() => router.push('/chores/info')}
             leftIcon={<Ionicons name="information-circle-outline" size={18} />}
           />
 
@@ -898,7 +898,7 @@ export default function Chores() {
               backgroundColor="#eef2ff"
               round
               hitSlop={8}
-              onPress={() => router.push('/chores-settings')}
+              onPress={() => router.push('/chores/settings')}
               leftIcon={<Ionicons name="settings-outline" size={18} />}
             />
           )}

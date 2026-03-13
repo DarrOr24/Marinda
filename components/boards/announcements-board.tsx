@@ -316,7 +316,7 @@ export default function AnnouncementsBoard() {
               backgroundColor="#eef2ff"
               round
               hitSlop={8}
-              onPress={() => router.push('/boards/announcements-info')}
+              onPress={() => router.push('/announcements/info')}
               leftIcon={<Ionicons name="information-circle-outline" size={20} />}
             />
 
@@ -327,7 +327,7 @@ export default function AnnouncementsBoard() {
                 backgroundColor="#eef2ff"
                 round
                 hitSlop={8}
-                onPress={() => router.push('/boards/announcements-settings')}
+                onPress={() => router.push('/announcements/settings')}
                 leftIcon={<Ionicons name="settings-outline" size={20} />}
               />
             )}

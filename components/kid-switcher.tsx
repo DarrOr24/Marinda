@@ -19,6 +19,8 @@ type KidSwitcherProps = {
   triggerVariant?: "button" | "avatarOnly";
   buttonLabel?: string;
   buttonIconName?: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+  showChevron?: boolean;
+  dropdownAlign?: "left" | "right";
 };
 
 export function KidSwitcher({
@@ -28,6 +30,8 @@ export function KidSwitcher({
   triggerVariant = "button",
   buttonLabel = "Switch Kid/Teen",
   buttonIconName = "account-switch",
+  showChevron = false,
+  dropdownAlign = "left",
 }: KidSwitcherProps) {
   const [open, setOpen] = useState(false);
 
@@ -44,8 +48,23 @@ export function KidSwitcher({
       {triggerVariant === "avatarOnly" ? (
         <Pressable style={styles.avatarOnlyButton} onPress={() => setOpen((p) => !p)}>
           <View style={styles.avatarOnlyAvatarBox}>
-            <MemberAvatar memberId={activeKid.id} size="md" />
+            {activeKid?.id ? (
+              <MemberAvatar memberId={activeKid.id} size="md" />
+            ) : (
+              <MaterialCommunityIcons
+                name={buttonIconName}
+                size={18}
+                color="#334155"
+              />
+            )}
           </View>
+          {showChevron && (
+            <MaterialCommunityIcons
+              name={open ? "chevron-up" : "chevron-down"}
+              size={22}
+              color="#64748b"
+            />
+          )}
         </Pressable>
       ) : (
         <Pressable style={styles.button} onPress={() => setOpen((p) => !p)}>
@@ -70,7 +89,7 @@ export function KidSwitcher({
       <View
         style={[
           styles.dropdown,
-          styles.dropdownForButton,
+          dropdownAlign === "right" ? styles.dropdownAlignRight : styles.dropdownAlignLeft,
           !open && styles.dropdownHidden, // hide when closed
         ]}
         pointerEvents={open ? "auto" : "none"}
@@ -123,11 +142,12 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   avatarOnlyButton: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    width: 40,
-    height: 40,
+    gap: 10,
     borderRadius: 999,
+    paddingVertical: 2,
   },
   avatarOnlyAvatarBox: {
     width: 40,
@@ -160,9 +180,14 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
   },
-  dropdownForButton: {
+  dropdownAlignLeft: {
     top: 38,
     left: 0,
+    minWidth: 160,
+  },
+  dropdownAlignRight: {
+    top: 38,
+    right: 0,
     minWidth: 160,
   },
   dropdownHidden: {

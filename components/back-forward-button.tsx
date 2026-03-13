@@ -18,7 +18,6 @@ export function BackForwardButton({ direction, size = 'sm', path, color = '#000'
   }
 
   const router = useRouter()
-
   const icon = direction === 'back' ? 'chevron-back' : 'chevron-forward'
   const iconSize = size === 'sm' ? 22 : size === 'md' ? 24 : size === 'lg' ? 26 : 28
 

@@ -3,7 +3,6 @@ import { useAuthContext } from '@/hooks/use-auth-context'
 import { KidModePickerModal } from '@/components/kid-mode-picker-modal'
 import { useFamily } from '@/lib/families/families.hooks'
 import { useMember } from '@/lib/members/members.hooks'
-import { isKidRole } from '@/utils/validation.utils'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import React, { useState } from 'react'
@@ -16,11 +15,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { MemberAvatar } from '@/components/avatar/member-avatar'
 
 
 export function HeaderProfileButton() {
+  const insets = useSafeAreaInsets()
   const {
     isLoggedIn,
     signOut,
@@ -37,7 +38,9 @@ export function HeaderProfileButton() {
 
   const [open, setOpen] = useState(false)
   const [kidModePickerOpen, setKidModePickerOpen] = useState(false)
-  const kidModeCandidates = (familyMembers.data ?? []).filter(member => isKidRole(member.role))
+  const kidModeCandidates = (familyMembers.data ?? []).filter(
+    member => member.role === 'CHILD' || member.role === 'TEEN',
+  )
 
   const handleLogout = () => {
     Alert.alert('Log out?', 'Are you sure you want to log out?', [
@@ -111,16 +114,16 @@ export function HeaderProfileButton() {
       <View style={styles.headerRight}>
         {isKidMode && (
           <TouchableOpacity style={styles.kidModeButton} onPress={handleExitKidMode}>
-            <MaterialCommunityIcons name="shield-lock-outline" size={16} color="#1d4ed8" />
+            <MaterialCommunityIcons name="shield-lock-outline" size={18} color="#1d4ed8" />
             <Text style={styles.kidModeButtonText}>Exit kid mode</Text>
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity onPress={onPressIcon} style={{ marginInlineStart: 2 }}>
+        <TouchableOpacity onPress={onPressIcon} style={{ marginLeft: 4 }}>
           {effectiveMember?.id && (
             <MemberAvatar
               memberId={effectiveMember.id}
-              size="sm"
+              size="md"
               isUpdatable={false}
             />
           )}
@@ -139,7 +142,7 @@ export function HeaderProfileButton() {
           onPress={() => setOpen(false)}
         />
 
-        <View style={styles.menu}>
+        <View style={[styles.menu, { top: insets.top + 56 }]}>
           <TouchableOpacity
             style={styles.item}
             onPress={() => {
@@ -200,14 +203,14 @@ const styles = StyleSheet.create({
   kidModeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 999,
     backgroundColor: '#dbeafe',
   },
   kidModeButtonText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: '#1d4ed8',
   },

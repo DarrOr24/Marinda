@@ -3,11 +3,8 @@ import { usePathname, useRouter } from 'expo-router'
 import { useEffect } from 'react'
 
 import { useAuthContext } from '@/hooks/use-auth-context'
-import { useFamily } from '@/lib/families/families.hooks'
-import { FamilyMember } from '@/lib/members/members.types'
 import { useProfile } from '@/lib/profiles/profiles.hooks'
 import { type Profile } from '@/lib/profiles/profiles.types'
-import { isKidRole } from '@/utils/validation.utils'
 
 const ENTRY_ROUTES = [
   '/',
@@ -20,9 +17,9 @@ const ENTRY_ROUTES = [
 ]
 
 const KID_MODE_BLOCKED_ROUTES = [
-  '/chores-settings',
-  '/wishlist-settings',
-  '/boards/announcements-settings',
+  '/chores/settings',
+  '/wishlist/settings',
+  '/announcements/settings',
 ]
 
 function isKidModeBlockedRoute(pathname: string) {
@@ -52,16 +49,14 @@ export function AuthRouter() {
   } = useAuthContext()
 
   const profile = useProfile(profileId)
-  const { familyMembers } = useFamily(activeFamilyId ?? undefined)
-
   const isEntryRoute = ENTRY_ROUTES.includes(pathname)
 
   useEffect(() => {
     if (isLoading) return
 
-    // Not logged in: only allow login and invite; redirect /invite -> login so they can sign in
+    // Not logged in: keep only the login screen reachable.
     if (!isLoggedIn) {
-      if (pathname === '/invite') {
+      if (pathname !== '/login') {
         router.replace('/login')
       }
       return
@@ -124,23 +119,14 @@ export function AuthRouter() {
     if (!effectiveMember) return
 
     if (isKidMode && isKidModeBlockedRoute(pathname)) {
-      router.replace(`/profile/${effectiveMember.id}`)
+      router.replace('/profiles')
       return
     }
 
     // 5) If not on an entry route, don't redirect
     if (!isEntryRoute) return
 
-    // 6) Redirect into app home (kid handling)
-    const isKid = isKidRole(effectiveMember.role)
-
-    if (isKid) {
-      const firstKid = familyMembers.data?.find((m: FamilyMember) => isKidRole(m.role))
-      const targetId = firstKid ? firstKid.id : effectiveMember.id
-      router.replace(`/profile/${targetId}`)
-    } else {
-      router.replace(`/profile/${effectiveMember.id}`)
-    }
+    router.replace('/profiles')
   }, [
     isLoading,
     isLoggedIn,
@@ -153,7 +139,6 @@ export function AuthRouter() {
     router,
     profile.isLoading,
     profile.data,
-    familyMembers.data,
   ])
 
   return null
