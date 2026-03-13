@@ -253,7 +253,9 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
                 activeOpacity={0.7}
               >
                 <MaterialCommunityIcons name="shield-lock-outline" size={18} color="#1d4ed8" />
-                <Text style={styles.exitKidModeButtonText}>Exit kid mode</Text>
+                <Text style={styles.exitKidModeButtonText} numberOfLines={1}>
+                  Exit kid mode
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -341,9 +343,9 @@ const styles = StyleSheet.create({
   exitKidModeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderRadius: 999,
     backgroundColor: '#dbeafe',
   },
@@ -351,6 +353,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#1d4ed8',
+    flexShrink: 1,
   },
   centerSlot: {
     position: 'absolute',
