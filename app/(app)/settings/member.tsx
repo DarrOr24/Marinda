@@ -1,42 +1,51 @@
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Alert, StyleSheet, Text, TextInput, View } from 'react-native'
 
-import { Button, Screen } from '@/components/ui'
+import { Button, Screen, ScreenState } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
-
-// TODO: hook/API you’ll likely add:
-// - updateMember (nickname, themeColor, etc)
+import { useMember, useUpdateMember } from '@/lib/members/members.hooks'
 
 export default function MyFamilyMemberSettingsScreen() {
   const { effectiveMember } = useAuthContext() as any
+  const memberQuery = useMember(effectiveMember?.id ?? null)
+  const updateMember = useUpdateMember()
+  const member = memberQuery.data ?? effectiveMember
 
   const [nickname, setNickname] = useState('')
   const [themeColor, setThemeColor] = useState<string>('blue') // placeholder
 
   useEffect(() => {
-    // TODO: load from member row when you have it:
-    // setNickname(effectiveMember?.nickname ?? '')
-    // setThemeColor(effectiveMember?.theme_color ?? 'blue')
-    setNickname(effectiveMember?.nickname ?? '')
-  }, [effectiveMember])
+    setNickname(member?.nickname ?? '')
+  }, [member])
 
-  const hasChanges = nickname !== (effectiveMember?.nickname ?? '') // extend later
+  const hasChanges = nickname.trim() !== (member?.nickname ?? '') // extend later
 
   const onSave = async () => {
+    if (!member?.id) {
+      Alert.alert('Not ready', 'Please try again in a moment.')
+      return
+    }
+
     try {
-      // TODO: call updateMember mutation
+      await updateMember.mutateAsync({
+        memberId: member.id,
+        updates: {
+          nickname: nickname.trim() || null,
+        },
+      })
       Alert.alert('Saved', 'Member settings updated.')
     } catch (e: any) {
       Alert.alert('Save failed', e?.message ?? 'Please try again.')
     }
   }
 
-  if (!effectiveMember) {
+  if (!member && memberQuery.isLoading) {
     return (
-      <Screen>
-        <ActivityIndicator />
-        <Text style={styles.subtitle}>Loading…</Text>
-      </Screen>
+      <ScreenState
+        title="Member settings"
+        description="Loading your family member settings."
+        showActivityIndicator
+      />
     )
   }
 
@@ -54,11 +63,11 @@ export default function MyFamilyMemberSettingsScreen() {
       </View>
 
       <Button
-        title="Save Changes"
+        title={updateMember.isPending ? 'Saving…' : 'Save Changes'}
         type="primary"
         size="lg"
         onPress={onSave}
-        disabled={!hasChanges}
+        disabled={!hasChanges || updateMember.isPending}
         fullWidth
         style={{ marginTop: 12 }}
       />

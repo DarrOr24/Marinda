@@ -1,11 +1,11 @@
 // app/onboarding/details.tsx
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { Alert, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Alert, StyleSheet, Text, TextInput } from 'react-native'
 
 import { ChipSelector } from '@/components/chip-selector'
 import { DatePicker } from '@/components/date-picker'
-import { Button } from '@/components/ui'
+import { Button, Screen } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useProfile, useUpdateProfile } from '@/lib/profiles/profiles.hooks'
 
@@ -74,7 +74,7 @@ export default function OnboardingDetails() {
   }
 
   return (
-    <View style={styles.container}>
+    <Screen withBackground={false}>
       <Text style={styles.title}>Tell us about you</Text>
       <Text style={styles.subtitle}>You can always change this later in settings.</Text>
 
@@ -110,12 +110,11 @@ export default function OnboardingDetails() {
         fullWidth
         bold
       />
-    </View>
+    </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, gap: 14, backgroundColor: '#fff' },
   title: { fontSize: 22, fontWeight: '700', color: '#0f172a' },
   subtitle: { fontSize: 14, color: '#475569' },
   label: { fontSize: 14, fontWeight: '600', color: '#334155' },

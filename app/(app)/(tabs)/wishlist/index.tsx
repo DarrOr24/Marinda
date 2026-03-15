@@ -21,7 +21,7 @@ import type { WishlistItem } from "@/lib/wishlist/wishlist.types";
 
 import { KidSwitcher } from "@/components/kid-switcher";
 import { WishlistCalculator } from "@/components/wishlist-calculator";
-import { Button, SafeFab, Screen } from "@/components/ui";
+import { Button, SafeFab, Screen, ScreenState } from "@/components/ui";
 
 import { useFamilyWishlistSettings } from "@/lib/wishlist/wishlist-settings.hooks";
 import {
@@ -196,40 +196,29 @@ export default function WishList() {
   // -------- loading/error --------
   if (!activeFamilyId) {
     return (
-      <Screen gap="md">
-        <View style={styles.centerScreen}>
-          <Text style={styles.muted}>No family selected yet</Text>
-        </View>
-      </Screen>
+      <ScreenState title="Wish list" description="No family selected yet." />
     );
   }
 
   if (familyMembers.isLoading || wishlistLoading) {
     return (
-      <Screen gap="md">
-        <View style={styles.centerScreen}>
-          <ActivityIndicator />
-          <Text style={styles.muted}>Loading wish list…</Text>
-        </View>
-      </Screen>
+      <ScreenState
+        title="Wish list"
+        description="Loading wish list."
+        showActivityIndicator
+      />
     );
   }
 
   if (familyMembers.isError || wishlistError) {
     return (
-      <Screen gap="md">
-        <View style={styles.centerScreen}>
-          <Text style={styles.muted}>Failed to load wish list.</Text>
-        </View>
-      </Screen>
+      <ScreenState title="Wish list" description="Failed to load wish list." />
     );
   }
 
   return (
     <Screen
-      bottomOffset={56}
-      gap="md"
-      contentStyle={{ paddingTop: 8, paddingHorizontal: 0 }}
+      contentStyle={{ paddingTop: 8, paddingHorizontal: 0, paddingBottom: 56 }}
       overlay={
         <SafeFab bottomOffset={50} rightOffset={16}>
           <Button
@@ -480,12 +469,6 @@ export default function WishList() {
 /* ----------------- styles ----------------- */
 
 const styles = StyleSheet.create({
-  centerScreen: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#ffffff",
-  },
   muted: {
     color: "#64748b",
     fontSize: 14,

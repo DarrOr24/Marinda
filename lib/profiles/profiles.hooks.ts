@@ -33,29 +33,36 @@ export function useUpdateProfile() {
             updates?: Record<string, any>
             avatarFileUri?: string | null
         }) => {
+            let updatedProfile = null
+
             if (avatarFileUri) {
                 await uploadAvatar(profileId, avatarFileUri)
             }
 
             if (updates && Object.keys(updates).length > 0) {
-                await updateProfile(profileId, updates)
+                updatedProfile = await updateProfile(profileId, updates)
             }
+
+            return updatedProfile
         },
 
-        onSuccess: (_, { profileId }) => {
-            // 1️⃣ refetch profile + family
+        onSuccess: (updatedProfile, { profileId }) => {
+            qc.setQueryData(['profile', profileId], (old: any) => {
+                const nextAvatarUrl =
+                    updatedProfile?.avatar_url !== undefined
+                        ? getAvatarPublicUrl(updatedProfile.avatar_url)
+                        : old?.public_avatar_url ?? null
+
+                return {
+                    ...old,
+                    ...updatedProfile,
+                    public_avatar_url: nextAvatarUrl,
+                    avatarCacheBuster: Date.now(),
+                }
+            })
+
             qc.invalidateQueries({ queryKey: ['profile', profileId] })
             qc.invalidateQueries({ queryKey: ['family-members'] })
-
-            // 2️⃣ bump a cache-buster on the profile query so all ProfileAvatar instances update
-            qc.setQueryData(['profile', profileId], (old: any) =>
-                old
-                    ? {
-                        ...old,
-                        avatarCacheBuster: Date.now(),
-                    }
-                    : old
-            )
         },
     })
 }

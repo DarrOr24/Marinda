@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native'
 
-import { Button, Screen } from '@/components/ui'
+import { Button, Screen, ScreenState } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import {
   useBillingState,
@@ -118,25 +118,14 @@ export default function BillingSettingsScreen() {
     )
   }
 
-  if (!familyId) {
-    return (
-      <Screen>
-        <Text style={styles.sectionTitle}>Billing</Text>
-        <Text style={styles.sectionSubtitle}>
-          You are not attached to a family. Join or create a family first.
-        </Text>
-      </Screen>
-    )
-  }
-
   if (family.isLoading && !familyData) {
     return (
-      <Screen>
-        <View style={styles.loadingRow}>
-          <ActivityIndicator />
-          <Text style={styles.loadingText}>Loading…</Text>
-        </View>
-      </Screen>
+      <ScreenState
+        title="Billing"
+        description="Loading your family billing details."
+        showActivityIndicator
+        withBackground={false}
+      />
     )
   }
 
@@ -289,13 +278,6 @@ const styles = StyleSheet.create({
     color: '#64748b',
     marginTop: 4,
   },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 16,
-  },
-  loadingText: { fontSize: 13, color: '#64748b' },
   card: {
     marginTop: 16,
     padding: 16,

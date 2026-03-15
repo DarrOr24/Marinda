@@ -13,7 +13,7 @@ import { FamilyAvatar } from '@/components/avatar/family-avatar'
 import { MemberAvatar } from '@/components/avatar/member-avatar'
 import { ChipSelector } from '@/components/chip-selector'
 import { ShareButton } from '@/components/share-button'
-import { Button, Screen } from '@/components/ui'
+import { Button, Screen, ScreenState } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import {
   useCancelFamilyInvite,
@@ -25,7 +25,6 @@ import {
 import type { FamilyInvite } from '@/lib/families/families.types'
 import { ROLE_OPTIONS, type FamilyMember, type Role } from '@/lib/members/members.types'
 import { memberDisplayName } from '@/utils/format.utils'
-import { isParentRole } from '@/utils/validation.utils'
 
 
 export default function FamilySettingsScreen() {
@@ -48,39 +47,33 @@ export default function FamilySettingsScreen() {
 
   if (!hasParentPermissions) {
     return (
-      <Screen>
-        <Text style={styles.sectionTitle}>Family management</Text>
-        <Text style={styles.sectionSubtitle}>
-          Only parents (Mom or Dad) can manage family settings.
-        </Text>
-        {familyData?.code && (
-          <Text style={[styles.sectionSubtitle, { marginTop: 8 }]}>
-            Ask your parent to share the family code with you to join.
-          </Text>
-        )}
-      </Screen>
+      <ScreenState
+        title="Family management"
+        description={
+          familyData?.code
+            ? 'Only parents can manage family settings. Ask a parent to share the family code with you to join.'
+            : 'Only parents can manage family settings.'
+        }
+      />
     )
   }
 
   if (!familyId) {
     return (
-      <Screen>
-        <Text style={styles.sectionTitle}>Family management</Text>
-        <Text style={styles.sectionSubtitle}>
-          You are not attached to a family yet.
-        </Text>
-      </Screen>
+      <ScreenState
+        title="Family management"
+        description="You are not attached to a family yet."
+      />
     )
   }
 
   if (isLoadingFamily && !familyData) {
     return (
-      <Screen>
-        <View style={styles.loadingRow}>
-          <ActivityIndicator />
-          <Text style={styles.loadingText}>Loading family…</Text>
-        </View>
-      </Screen>
+      <ScreenState
+        title="Family management"
+        description="Loading family details."
+        showActivityIndicator
+      />
     )
   }
 
@@ -279,18 +272,12 @@ export default function FamilySettingsScreen() {
               <View key={m.id} style={styles.memberRow}>
                 {/* avatar */}
                 <View style={styles.memberAvatarWrapper}>
-                  {m.profile_id ? (
+                  {m.profile_id && (
                     <MemberAvatar
                       memberId={m.id}
                       size="md"
                       isUpdatable={true}
                     />
-                  ) : (
-                    <View style={styles.memberAvatarPlaceholder}>
-                      <Text style={styles.memberAvatarPlaceholderText}>
-                        {name.charAt(0)?.toUpperCase() ?? '👤'}
-                      </Text>
-                    </View>
                   )}
                 </View>
 
@@ -305,7 +292,7 @@ export default function FamilySettingsScreen() {
                     )}
                   </View>
                   <Text style={styles.memberMeta}>
-                    Role: {m.role.toLowerCase()}
+                    Role: {m.role.toUpperCase()}
                   </Text>
 
                   <ChipSelector
@@ -383,7 +370,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6b7280',
   },
-
   loadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -393,7 +379,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#4b5563',
   },
-
   memberRow: {
     backgroundColor: '#ffffff',
     borderRadius: 16,

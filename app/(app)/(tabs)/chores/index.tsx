@@ -15,7 +15,7 @@ import {
 import { awardMemberPoints } from '@/lib/families/families.api';
 import { useFamily } from '@/lib/families/families.hooks';
 
-import { Button, ScreenList } from "@/components/ui";
+import { Button, Screen } from "@/components/ui";
 
 import {
   useAddChore,
@@ -864,7 +864,11 @@ export default function Chores() {
   };
 
   return (
-    <ScreenList style={styles.screen} edges={['bottom', 'left', 'right']}>
+    <Screen
+      scroll={false}
+      withBackground={false}
+      contentStyle={styles.screenContent}
+    >
       <View style={styles.header}>
 
         {/* LEFT: Post Chore */}
@@ -1164,12 +1168,12 @@ export default function Chores() {
           defaultDoneById={myFamilyMemberId}
         />
       )}
-    </ScreenList>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F7FBFF' },
+  screenContent: { padding: 0 },
 
   header: {
     flexDirection: 'row',

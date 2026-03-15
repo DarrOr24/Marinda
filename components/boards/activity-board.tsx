@@ -230,9 +230,7 @@ export default function ActivityBoard() {
 
   return (
     <Screen
-      bottomOffset={72}
-      gap="md"
-      contentStyle={{ paddingTop: 8, paddingHorizontal: 0 }}
+      contentStyle={{ paddingTop: 8, paddingHorizontal: 0, paddingBottom: 72 }}
       overlay={
         <SafeFab bottomOffset={18} rightOffset={16}>
           <Button

@@ -1,4 +1,5 @@
 // utils/format.utils.ts
+import { Family } from '@/lib/families/families.types';
 import { FamilyMember } from '@/lib/members/members.types';
 
 
@@ -33,7 +34,11 @@ export function trimOrNull(s: string) {
 export function memberDisplayName(m: FamilyMember, options: { official?: boolean } = {}) {
   const { official } = options
   if (official) {
-    return `${m.profile?.first_name} (${m.nickname})`
+    return `${m.profile?.first_name}${m.nickname ? ' (' + m.nickname + ')' : ''}`
   }
   return m.nickname ?? m.profile?.first_name ?? 'Unknown'
+}
+
+export function familyName(f: Family | undefined) {
+  return f?.name ?? ''
 }

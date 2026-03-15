@@ -2,12 +2,12 @@
 // Explicit accept / reject UI for a pending family invite after login.
 
 import { useState } from 'react'
-import { ActivityIndicator, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { getSupabase } from '@/lib/supabase'
-import { Button } from '@/components/ui'
+import { Button, Screen, ScreenState } from '@/components/ui'
 
 export default function AcceptInviteScreen() {
   const {
@@ -82,14 +82,16 @@ export default function AcceptInviteScreen() {
   if (!pendingInviteToken) {
     // Short-lived while state settles / AuthRouter redirects
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator />
-      </View>
+      <ScreenState
+        description="Checking your invite."
+        showActivityIndicator
+        withBackground={false}
+      />
     )
   }
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 16 }}>
+    <Screen withBackground={false} scroll={false} centerContent>
       <Text style={{ fontSize: 18, fontWeight: '600', textAlign: 'center' }}>
         You’ve been invited to join a family.
       </Text>
@@ -118,6 +120,6 @@ export default function AcceptInviteScreen() {
           disabled={loading}
         />
       </View>
-    </View>
+    </Screen>
   )
 }

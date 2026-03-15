@@ -3,7 +3,6 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Keyboard,
   Platform,
@@ -29,7 +28,7 @@ import {
 
 import { ChipSelector } from '@/components/chip-selector';
 import { StickyNote } from '@/components/sticky-note';
-import { Button, ModalCard, ModalShell, ScreenList, TextInput } from '@/components/ui';
+import { Button, ModalCard, ModalShell, Screen, ScreenState, TextInput } from '@/components/ui';
 import {
   CUSTOM_TAB_TEXT,
   getBulletinStyle,
@@ -258,25 +257,32 @@ export default function AnnouncementsBoard() {
   // --------------------------------------------
   if (!familyId) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.infoText}>Please select a family.</Text>
-      </View>
+      <ScreenState
+        title="Announcements"
+        description="Please select a family."
+        withBackground={false}
+      />
     );
   }
 
   if (isLoading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
+      <ScreenState
+        title="Announcements"
+        description="Loading announcements."
+        showActivityIndicator
+        withBackground={false}
+      />
     );
   }
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error.message}</Text>
-      </View>
+      <ScreenState
+        title="Announcements"
+        description={error.message}
+        withBackground={false}
+      />
     );
   }
 
@@ -284,7 +290,7 @@ export default function AnnouncementsBoard() {
   // MAIN RENDER
   // --------------------------------------------
   return (
-    <ScreenList gap="md">
+    <Screen scroll={false} withBackground={false}>
       <View style={styles.container}>
         {/* ---------------------------------------------- */}
         {/* ROW 1: SORT — BY — INFO */}
@@ -686,7 +692,7 @@ export default function AnnouncementsBoard() {
           </Pressable>
         )}
       </View>
-    </ScreenList>
+    </Screen>
   );
 }
 
@@ -694,11 +700,9 @@ export default function AnnouncementsBoard() {
 // STYLES
 // --------------------------------------------
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingLeft: 20, paddingRight: 16, paddingTop: 16, paddingBottom: 16 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, paddingLeft: 4 },
   emptyList: { flexGrow: 1 },
   infoText: { fontSize: 16, textAlign: 'center', opacity: 0.7 },
-  errorText: { fontSize: 16, textAlign: 'center', color: 'red' },
 
   // --------------------------------------
   // Input overrides (base from TextInput component)

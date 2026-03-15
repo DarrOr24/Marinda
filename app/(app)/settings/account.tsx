@@ -117,9 +117,11 @@ export default function AccountSettingsScreen() {
                 <Text style={styles.familyName} numberOfLines={1}>
                   {fam.name}
                 </Text>
-                <Text style={styles.familyRole}>
-                  {fam.role.toLowerCase()}
-                </Text>
+                {fam.role && (
+                  <Text style={styles.familyRole}>
+                    {fam.role.toLowerCase()}
+                  </Text>
+                )}
               </View>
             )
           })}

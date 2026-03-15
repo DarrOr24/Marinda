@@ -11,7 +11,7 @@ import {
 } from "react-native";
 
 import { DocsPageLayout, DocsSection, docsPageStyles } from "@/components/docs-page-layout";
-import { Button, TextInput } from "@/components/ui";
+import { Button, ScreenState, TextInput } from "@/components/ui";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useParentPermissionGuard } from "@/hooks/use-parent-permission-guard";
 import {
@@ -120,21 +120,22 @@ export default function WishlistSettingsScreen() {
 
     if (isLoading) {
         return (
-            <DocsPageLayout>
-                <View style={styles.center}>
-                    <Text>Loading wishlist settings…</Text>
-                </View>
-            </DocsPageLayout>
+            <ScreenState
+                title="Wishlist settings"
+                description="Loading wishlist settings."
+                showActivityIndicator
+                withBackground={false}
+            />
         );
     }
 
     if (isError) {
         return (
-            <DocsPageLayout>
-                <View style={styles.center}>
-                    <Text>Failed to load wishlist settings.</Text>
-                </View>
-            </DocsPageLayout>
+            <ScreenState
+                title="Wishlist settings"
+                description="Failed to load wishlist settings."
+                withBackground={false}
+            />
         );
     }
 
@@ -259,7 +260,6 @@ export default function WishlistSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-    center: { flex: 1, justifyContent: "center", alignItems: "center" },
     label: { fontSize: 12, fontWeight: "600", color: "#64748b", marginBottom: 4 },
     dropdownBox: { justifyContent: "center" },
     dropdownText: { fontSize: 14, color: "#0f172a" },

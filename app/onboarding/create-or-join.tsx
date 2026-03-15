@@ -3,14 +3,14 @@ import { useAuthContext } from '@/hooks/use-auth-context'
 import { router } from 'expo-router'
 import { StyleSheet, Text, View } from 'react-native'
 
-import { Button } from '@/components/ui'
+import { Button, Screen } from '@/components/ui'
 
 
 export default function OnboardingHub() {
   const { signOut } = useAuthContext()
 
   return (
-    <View style={styles.container}>
+    <Screen withBackground={false}>
       <Text style={styles.title}>Let’s get you started</Text>
       <Text style={styles.sub}>Create a new family or join an existing one.</Text>
 
@@ -51,18 +51,11 @@ export default function OnboardingHub() {
         />
       </View>
 
-    </View>
+    </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    gap: 16,
-    backgroundColor: '#fff',
-    justifyContent: 'flex-start',
-  },
   actionsWrap: {
     flexDirection: 'row',
     gap: 12,

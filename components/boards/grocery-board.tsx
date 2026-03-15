@@ -1,5 +1,5 @@
 import { GroceryItemModal } from "@/components/modals/grocery-item-modal";
-import { Button, MetaRow, ModalCard, ModalShell, ScreenList } from "@/components/ui";
+import { Button, MetaRow, ModalCard, ModalShell, Screen } from "@/components/ui";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
 import {
@@ -327,7 +327,11 @@ export default function Grocery() {
     // RENDER
     // ─────────────────────────────────────────────────────────────
     return (
-        <ScreenList style={styles.screen} edges={['bottom', 'left', 'right']}>
+        <Screen
+            scroll={false}
+            withBackground={false}
+            contentStyle={styles.screenContent}
+        >
 
             <View style={styles.header}>
                 {/* HEADER BUTTONS */}
@@ -594,7 +598,7 @@ export default function Grocery() {
                 </ModalCard>
             </ModalShell>
 
-        </ScreenList>
+        </Screen>
     );
 }
 
@@ -602,7 +606,7 @@ export default function Grocery() {
 // STYLES
 // ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-    screen: { flex: 1, backgroundColor: "#F6FAFF" },
+    screenContent: { padding: 0 },
 
     header: {
         paddingLeft: 20,

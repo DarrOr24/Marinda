@@ -38,24 +38,55 @@ export function useUpdateMember() {
       updates?: Record<string, any>
       avatarFileUri?: string | null
     }) => {
+      let updatedMember = null
+
       if (avatarFileUri) {
         await uploadMemberAvatar(memberId, avatarFileUri)
       }
 
       if (updates && Object.keys(updates).length > 0) {
-        await updateMember(memberId, updates)
+        updatedMember = await updateMember(memberId, updates)
       }
+
+      return updatedMember
     },
 
-    onSuccess: (_, { memberId }) => {
-      // refetch member + member lists
+    onSuccess: (updatedMember, { memberId }) => {
+      const nextAvatarUrl =
+        updatedMember?.avatar_url !== undefined
+          ? getMemberAvatarPublicUrl(updatedMember.avatar_url)
+          : null
+
+      qc.setQueryData<FamilyMember>(['member', memberId], (old) => {
+        const baseMember = updatedMember ?? old
+
+        if (!baseMember) return old
+
+        return {
+          ...baseMember,
+          public_avatar_url: nextAvatarUrl ?? baseMember.public_avatar_url ?? null,
+          avatarCacheBuster: Date.now(),
+        }
+      })
+
+      qc.setQueriesData<FamilyMember[]>(
+        { queryKey: ['family-members'] },
+        (old) =>
+          old?.map((member) =>
+            member.id === memberId
+              ? {
+                ...member,
+                ...updatedMember,
+                public_avatar_url:
+                  nextAvatarUrl ?? member.public_avatar_url ?? null,
+                avatarCacheBuster: Date.now(),
+              }
+              : member,
+          ) ?? old,
+      )
+
       qc.invalidateQueries({ queryKey: ['member', memberId] })
       qc.invalidateQueries({ queryKey: ['family-members'] })
-
-      // cache-buster so all MemberAvatar instances refresh
-      qc.setQueryData<FamilyMember>(['member', memberId], (old) =>
-        old ? { ...old, avatarCacheBuster: Date.now() } : old,
-      )
     },
   })
 }

@@ -1,9 +1,9 @@
 // app/onboarding/create.tsx
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
-import { Alert, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Alert, StyleSheet, Text, TextInput } from 'react-native'
 
-import { Button } from '@/components/ui'
+import { Button, Screen } from '@/components/ui'
 import { useCreateFamily } from '@/lib/families/families.hooks'
 import { trimOrNull } from '@/utils/format.utils'
 
@@ -29,7 +29,7 @@ export default function CreateFamilyScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <Screen withBackground={false}>
       <Text style={styles.title}>Create Family</Text>
 
       <TextInput
@@ -63,12 +63,11 @@ export default function CreateFamilyScreen() {
         fullWidth
         bold
       />
-    </View>
+    </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, gap: 12, backgroundColor: '#fff' },
   title: { fontSize: 22, fontWeight: '700' },
   input: {
     borderWidth: 1,

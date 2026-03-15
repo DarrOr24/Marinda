@@ -143,7 +143,7 @@ export function useFamily(familyId?: string | null) {
   usePostgresChangesInvalidate(invitesRt);
   usePostgresChangesInvalidate(subscriptionRt);
 
-  const family = useQuery({
+  const family = useQuery<Family>({
     queryKey: ["family", familyId],
     queryFn: async () => {
       const f = await fetchFamily(familyId!);

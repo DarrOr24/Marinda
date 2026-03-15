@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native'
 
-import { Button } from '@/components/ui'
+import { Button, Screen, ScreenState } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import {
   useOfferings,
@@ -46,15 +46,17 @@ export default function ChoosePlanScreen() {
 
   if (!activeFamilyId) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>Loading…</Text>
-      </View>
+      <ScreenState
+        title="Choose a plan"
+        description="Loading your family setup."
+        showActivityIndicator
+        withBackground={false}
+      />
     )
   }
 
   return (
-    <View style={styles.container}>
+    <Screen withBackground={false}>
       <Text style={styles.title}>Congratulations! Your family has been created successfully</Text>
       <Text style={styles.subtitle}>
         Start on Basic for free or upgrade to Pro.
@@ -123,18 +125,11 @@ export default function ChoosePlanScreen() {
         )}
       </View>
 
-    </View>
+    </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    gap: 16,
-    backgroundColor: '#fff',
-  },
-  loadingText: { fontSize: 14, color: '#64748b', marginTop: 8 },
   title: { fontSize: 24, fontWeight: '700', color: '#0f172a' },
   subtitle: { fontSize: 15, color: '#64748b', marginBottom: 8 },
   planCard: {

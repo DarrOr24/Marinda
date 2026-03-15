@@ -1,7 +1,8 @@
 import { Stack, useSegments } from 'expo-router'
+import { View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { StepsBar } from '@/components/onboarding/steps-bar'
-import { View } from 'react-native'
 
 
 const STEPS_TOTAL = 4
@@ -23,18 +24,20 @@ export default function OnboardingLayout() {
             : null
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: '#fff' }}>
       {step ? <StepsBar step={step} total={STEPS_TOTAL} /> : null}
 
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#fff' } }}>
-        <Stack.Screen name="details" />
-        <Stack.Screen name="select-family" />
-        <Stack.Screen name="create-or-join" />
-        <Stack.Screen name="create" />
-        <Stack.Screen name="choose-plan" />
-        <Stack.Screen name="join" />
-        <Stack.Screen name="accept-invite" />
-      </Stack>
-    </View>
+      <View style={{ flex: 1, backgroundColor: '#fff' }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#fff' } }}>
+          <Stack.Screen name="details" />
+          <Stack.Screen name="select-family" />
+          <Stack.Screen name="create-or-join" />
+          <Stack.Screen name="create" />
+          <Stack.Screen name="choose-plan" />
+          <Stack.Screen name="join" />
+          <Stack.Screen name="accept-invite" />
+        </Stack>
+      </View>
+    </SafeAreaView>
   )
 }

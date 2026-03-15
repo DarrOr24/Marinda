@@ -2,7 +2,6 @@
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { Href, useRouter } from 'expo-router'
 import {
-  ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
@@ -11,7 +10,7 @@ import {
 } from 'react-native'
 
 import { FamilyAvatar } from '@/components/avatar/family-avatar'
-import { Button } from '@/components/ui'
+import { Button, Screen, ScreenState } from '@/components/ui'
 
 export default function SelectFamilyScreen() {
   const { memberships, setActiveFamilyId, isLoading } = useAuthContext()
@@ -19,15 +18,17 @@ export default function SelectFamilyScreen() {
 
   if (isLoading || !memberships) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-        <Text style={styles.loadingText}>Loading your families…</Text>
-      </View>
+      <ScreenState
+        title="Choose your family"
+        description="Loading your families."
+        showActivityIndicator
+        withBackground={false}
+      />
     )
   }
 
   return (
-    <View style={styles.container}>
+    <Screen withBackground={false} scroll={false} gap="no">
       <Text style={styles.title}>Choose your family</Text>
 
       <FlatList
@@ -63,27 +64,11 @@ export default function SelectFamilyScreen() {
         }
         style={styles.list}
       />
-    </View>
+    </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  loadingText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#64748b',
-  },
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#fff',
-  },
   title: {
     fontSize: 22,
     fontWeight: '700',

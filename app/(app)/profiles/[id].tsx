@@ -6,7 +6,6 @@ import {
   Alert,
   Keyboard,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View
@@ -16,7 +15,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppHeader } from "@/components/app-header";
 import { MemberAvatar } from "@/components/avatar/member-avatar";
 import { ChipSelector } from "@/components/chip-selector";
-import { Button, ScreenList, TextInput } from "@/components/ui";
+import { Button, Screen, ScreenState, TextInput } from "@/components/ui";
 import WeeklyPointsChart from "@/components/weekly-points-chart";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useFamily } from "@/lib/families/families.hooks";
@@ -26,6 +25,7 @@ import {
   type PointsEntry,
 } from "@/lib/points/points.api";
 import { memberDisplayName } from "@/utils/format.utils";
+import { familyName } from "@/utils/format.utils";
 
 type MemberProfileScreenProps = {
   memberIdParam?: string;
@@ -38,7 +38,7 @@ export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps)
     hasParentPermissions,
     isKidMode,
   } = useAuthContext() as any;
-  const { familyMembers } = useFamily(activeFamilyId);
+  const { family, familyMembers } = useFamily(activeFamilyId);
 
   const [history, setHistory] = useState<PointsEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -58,6 +58,7 @@ export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps)
   const memberList = familyMembers.data ?? [];
   const selfMemberId: string | undefined = (effectiveMember as any)?.id;
   const switcherKids = memberList.filter((member: any) => member.role === "CHILD" || member.role === "TEEN");
+  const hasKidsInFamily = switcherKids.length > 0;
   const fallbackParentMemberId = switcherKids[0]?.id ?? selfMemberId;
   const isRouteDrivenProfile = Boolean(memberIdParam);
   const resolvedMemberId = hasParentPermissions
@@ -217,32 +218,66 @@ export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps)
 
   if (!activeFamilyId) {
     return (
-      <ScreenList edges={["bottom", "left", "right"]} withBackground>
-        <View style={[styles.centerOnly, { flex: 1 }]}>
-          <Text style={styles.subtitle}>No family selected yet</Text>
-        </View>
-      </ScreenList>
+      <ScreenState
+        title="Profile"
+        description="No family selected yet."
+      />
     );
   }
 
   if (familyMembers.isLoading) {
     return (
-      <ScreenList edges={["bottom", "left", "right"]} withBackground>
-        <View style={[styles.centerOnly, { flex: 1 }]}>
-          <ActivityIndicator />
-          <Text style={styles.subtitle}>Loading family…</Text>
-        </View>
-      </ScreenList>
+      <ScreenState
+        title="Profile"
+        description="Loading family members."
+        showActivityIndicator
+      />
     );
   }
 
   if (familyMembers.isError) {
     return (
-      <ScreenList edges={["bottom", "left", "right"]} withBackground>
-        <View style={[styles.centerOnly, { flex: 1 }]}>
-          <Text style={styles.subtitle}>Failed to load members</Text>
+      <ScreenState
+        title="Profile"
+        description="Failed to load family members."
+      />
+    );
+  }
+
+  if (!hasKidsInFamily) {
+    return (
+      <Screen withBackground scroll={false} centerContent>
+        <View style={styles.emptyStateContent}>
+          <View style={styles.emptyStateCard}>
+            <Text style={styles.emptyStateTitle}>The {familyName(family.data)} family has been successfully created!</Text>
+            <Text style={styles.emptyStateBody}>
+              To start tracking points, chores, and activities, add your kids to the family.
+            </Text>
+          </View>
+
+          <View style={styles.emptyStateButtons}>
+            <Button
+              title="Add family members"
+              type="primary"
+              size="lg"
+              showShadow
+              fullWidth
+              bold
+              onPress={() => router.push("/settings/family")}
+              leftIcon={<MaterialCommunityIcons name="account-group-outline" size={20} />}
+            />
+            <Button
+              title="Get started"
+              type="outline"
+              size="lg"
+              fullWidth
+              bold
+              onPress={() => router.push("/getting-started")}
+              leftIcon={<MaterialCommunityIcons name="play-circle-outline" size={20} />}
+            />
+          </View>
         </View>
-      </ScreenList>
+      </Screen>
     );
   }
 
@@ -266,217 +301,164 @@ export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps)
   };
 
   return (
-    <>
-      <ScreenList
-        edges={["bottom", "left", "right"]}
-        withBackground
-        contentStyle={styles.contentContainer}
-      >
-        {/* Fixed header – buttons + avatars */}
-        <View style={styles.fixedHeader}>
-          {!isKidMode && hasParentPermissions && (
-            <View style={{ flexDirection: "row", gap: 10, width: "100%", maxWidth: 400 }}>
-              <Button
-                title="Get started"
-                type="primary"
-                size="md"
-                showShadow
-                onPress={() => router.push("/getting-started")}
-                leftIcon={<MaterialCommunityIcons name="play-circle-outline" size={20} />}
-                style={{ flex: 1 }}
-              />
-              <Button
-                title="My family"
-                type="primary"
-                size="md"
-                showShadow
-                onPress={() => router.push("/settings/family")}
-                leftIcon={<MaterialCommunityIcons name="cog-outline" size={20} />}
-                style={{ flex: 1 }}
-              />
-            </View>
-          )}
-          {!isKidMode && !hasParentPermissions && (
-            <View style={{ alignSelf: "flex-start" }}>
-              <Button
-                title="Get started"
-                type="primary"
-                size="md"
-                showShadow
-                onPress={() => router.push("/getting-started")}
-                leftIcon={<MaterialCommunityIcons name="play-circle-outline" size={20} />}
-              />
-            </View>
-          )}
+    <Screen
+      withBackground
+      fixedHeader={
+        hasParentPermissions && switcherKids.length > 0 ? (
+          <View style={styles.profileTabs}>
+            {switcherKids.map((kid: any) => {
+              const isActive = kid.id === viewedMemberId;
 
-          {hasParentPermissions && switcherKids.length > 0 && (
-            <View style={styles.profileTabs}>
-              {switcherKids.map((kid: any) => {
-                const isActive = kid.id === viewedMemberId;
+              return (
+                <Pressable
+                  key={kid.id}
+                  style={styles.profileTab}
+                  onPress={() => {
+                    if (isRouteDrivenProfile) {
+                      router.replace({
+                        pathname: "/profiles/[id]",
+                        params: { id: kid.id },
+                      });
+                      return;
+                    }
 
-                return (
-                  <Pressable
-                    key={kid.id}
-                    style={styles.profileTab}
-                    onPress={() => {
-                      if (isRouteDrivenProfile) {
-                        router.replace({
-                          pathname: "/profiles/[id]",
-                          params: { id: kid.id },
-                        });
-                        return;
-                      }
+                    setSelectedKidId(kid.id);
+                  }}
+                >
+                  <View style={[styles.profileAvatarWrap, isActive && styles.profileAvatarWrapActive]}>
+                    <MemberAvatar memberId={kid.id} size="md" />
+                  </View>
+                  <Text style={[styles.profileTabText, isActive && styles.profileTabTextActive]}>
+                    {memberDisplayName(kid)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null
+      }
+    >
+      <View style={styles.pointsCard}>
+        <Text style={styles.pointsLabel}>Points</Text>
+        <Text style={styles.pointsValue}>{points}</Text>
+      </View>
 
-                      setSelectedKidId(kid.id);
-                    }}
-                  >
-                    <View style={[styles.profileAvatarWrap, isActive && styles.profileAvatarWrapActive]}>
-                      <MemberAvatar memberId={kid.id} size="md" />
-                    </View>
-                    <Text style={[styles.profileTabText, isActive && styles.profileTabTextActive]}>
-                      {memberDisplayName(kid)}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
-        </View>
+      {hasParentPermissions && (
+        <View style={styles.adjustCard}>
+          <Text style={styles.adjustTitle}>Adjust points manually</Text>
+          <Text style={styles.adjustHelp}>
+            Add or subtract points for this member. Use this for bonuses, corrections,
+            or special rewards.
+          </Text>
 
-        {/* Scrollable content */}
-        <ScrollView
-          style={styles.scrollArea}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-        {/* Points card – everyone sees current points */}
-        <View style={styles.pointsCard}>
-          <Text style={styles.pointsLabel}>Points</Text>
-          <Text style={styles.pointsValue}>{points}</Text>
-        </View>
+          <TextInput
+            label="Points change"
+            value={adjustDelta}
+            onChangeText={setAdjustDelta}
+            keyboardType="number-pad"
+            placeholder="e.g. 10 or -5"
+            returnKeyType="done"
+            onSubmitEditing={() => Keyboard.dismiss()}
+          />
 
-        {/* Manual adjust – parents only */}
-        {hasParentPermissions && (
-          <View style={styles.adjustCard}>
-            <Text style={styles.adjustTitle}>Adjust points manually</Text>
-            <Text style={styles.adjustHelp}>
-              Add or subtract points for this member. Use this for bonuses, corrections,
-              or special rewards.
-            </Text>
+          <TextInput
+            label="Reason"
+            value={adjustReason}
+            onChangeText={setAdjustReason}
+            placeholder="Reason for adjustment"
+            multiline
+            containerStyle={{ marginTop: 8 }}
+            returnKeyType="done"
+            onSubmitEditing={() => Keyboard.dismiss()}
+          />
 
-            <TextInput
-              label="Points change"
-              value={adjustDelta}
-              onChangeText={setAdjustDelta}
-              keyboardType="number-pad"
-              placeholder="e.g. 10 or -5"
-              returnKeyType="done"
-              onSubmitEditing={() => Keyboard.dismiss()}
+          <View style={styles.adjustButtonsRow}>
+            <Button
+              title="Clear"
+              type="secondary"
+              size="md"
+              fullWidth
+              onPress={() => {
+                setAdjustDelta("");
+                setAdjustReason("");
+              }}
+              disabled={adjustSaving}
+              style={{ flex: 1 }}
             />
-
-            <TextInput
-              label="Reason"
-              value={adjustReason}
-              onChangeText={setAdjustReason}
-              placeholder="Reason for adjustment"
-              multiline
-              containerStyle={{ marginTop: 8 }}
-              returnKeyType="done"
-              onSubmitEditing={() => Keyboard.dismiss()}
+            <Button
+              title={adjustSaving ? "Saving…" : "Save change"}
+              type="primary"
+              size="md"
+              fullWidth
+              onPress={handleAdjustPoints}
+              disabled={adjustSaving}
+              style={{ flex: 1 }}
             />
+          </View>
+        </View>
+      )}
 
-            <View style={styles.adjustButtonsRow}>
-              <Button
-                title="Clear"
-                type="secondary"
-                size="md"
-                fullWidth
-                onPress={() => {
-                  setAdjustDelta("");
-                  setAdjustReason("");
-                }}
-                disabled={adjustSaving}
-                style={{ flex: 1 }}
-              />
-              <Button
-                title={adjustSaving ? "Saving…" : "Save change"}
-                type="primary"
-                size="md"
-                fullWidth
-                onPress={handleAdjustPoints}
-                disabled={adjustSaving}
-                style={{ flex: 1 }}
-              />
-            </View>
+      <WeeklyPointsChart history={history} />
+
+      <View style={styles.card}>
+        <Text style={styles.historyTitle}>Recent points activity</Text>
+
+        <ChipSelector
+          value={String(historyRangeDays)}
+          onChange={(v) => v && setHistoryRangeDays(Number(v))}
+          options={[
+            { label: "Past week", value: "7" },
+            { label: "Past month", value: "30" },
+            { label: "Past 3 months", value: "90" },
+          ]}
+          style={{ marginBottom: 12 }}
+        />
+
+        {historyLoading && (
+          <View style={styles.historyEmpty}>
+            <ActivityIndicator size="small" />
+            <Text style={styles.historyEmptyText}>Loading points…</Text>
           </View>
         )}
 
-        {/* Weekly points chart */}
-        <WeeklyPointsChart history={history} />
+        {!historyLoading && historyError && (
+          <View style={styles.historyEmpty}>
+            <Text style={styles.historyEmptyText}>{historyError}</Text>
+          </View>
+        )}
 
-        {/* Recent points activity */}
-        <View style={styles.card}>
-          <Text style={styles.historyTitle}>Recent points activity</Text>
+        {!historyLoading && !historyError && history.length === 0 && (
+          <View style={styles.historyEmpty}>
+            <Text style={styles.historyEmptyText}>
+              No points activity yet for this member.
+            </Text>
+          </View>
+        )}
 
-          <ChipSelector
-            value={String(historyRangeDays)}
-            onChange={(v) => v && setHistoryRangeDays(Number(v))}
-            options={[
-              { label: "Past week", value: "7" },
-              { label: "Past month", value: "30" },
-              { label: "Past 3 months", value: "90" },
-            ]}
-            style={{ marginBottom: 12 }}
-          />
-
-          {historyLoading && (
-            <View style={styles.historyEmpty}>
-              <ActivityIndicator size="small" />
-              <Text style={styles.historyEmptyText}>Loading points…</Text>
-            </View>
-          )}
-
-          {!historyLoading && historyError && (
-            <View style={styles.historyEmpty}>
-              <Text style={styles.historyEmptyText}>{historyError}</Text>
-            </View>
-          )}
-
-          {!historyLoading && !historyError && history.length === 0 && (
-            <View style={styles.historyEmpty}>
-              <Text style={styles.historyEmptyText}>
-                No points activity yet for this member.
-              </Text>
-            </View>
-          )}
-
-          {!historyLoading && !historyError && history.length > 0 && (
-            <View style={styles.historyList}>
-              {history.map((entry) => (
-                <View key={entry.id} style={styles.historyRow}>
-                  <Text
-                    style={[
-                      styles.historyDelta,
-                      entry.delta > 0 ? styles.historyDeltaPositive : styles.historyDeltaNegative,
-                    ]}
-                  >
-                    {entry.delta > 0 ? `+${entry.delta}` : entry.delta}
+        {!historyLoading && !historyError && history.length > 0 && (
+          <View style={styles.historyList}>
+            {history.map((entry) => (
+              <View key={entry.id} style={styles.historyRow}>
+                <Text
+                  style={[
+                    styles.historyDelta,
+                    entry.delta > 0 ? styles.historyDeltaPositive : styles.historyDeltaNegative,
+                  ]}
+                >
+                  {entry.delta > 0 ? `+${entry.delta}` : entry.delta}
+                </Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.historyReason}>{entry.reason || "Points update"}</Text>
+                  <Text style={styles.historyMeta}>
+                    {humanKind(entry.kind)} • {formatEntryDate(entry.created_at)}
                   </Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.historyReason}>{entry.reason || "Points update"}</Text>
-                    <Text style={styles.historyMeta}>
-                      {humanKind(entry.kind)} • {formatEntryDate(entry.created_at)}
-                    </Text>
-                  </View>
                 </View>
-              ))}
-            </View>
-          )}
-        </View>
-        </ScrollView>
-      </ScreenList>
-    </>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    </Screen>
   );
 
 }
@@ -488,25 +470,47 @@ export default function MemberProfileRoute() {
 }
 
 const styles = StyleSheet.create({
-  contentContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    gap: 16,
+  emptyStateContent: {
+    width: "100%",
+    gap: 18,
   },
-  fixedHeader: {
-    gap: 16,
+  emptyStateCard: {
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "#dbeafe",
+    padding: 22,
+    alignItems: "flex-start",
+    gap: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
-  scrollArea: {
-    flex: 1,
-  },
-  scrollContent: {
-    gap: 16,
-    paddingBottom: 24,
-  },
-  centerOnly: {
+  emptyStateIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#dbeafe",
+  },
+  emptyStateTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#0f172a",
+  },
+  emptyStateBody: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: "#475569",
+  },
+  emptyStateButtons: {
+    gap: 12,
+    width: "100%",
+    maxWidth: 360,
+    alignSelf: "center",
   },
   profileTabs: {
     width: "100%",

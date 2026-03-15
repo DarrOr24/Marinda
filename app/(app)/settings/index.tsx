@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { MemberAvatar } from '@/components/avatar/member-avatar'
 import { Screen } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
+import { useProfile } from '@/lib/profiles/profiles.hooks'
 
 
 type Item = {
@@ -65,9 +66,14 @@ const ITEMS: Item[] = [
 export default function SettingsIndex() {
   const router = useRouter()
   const { effectiveMember, hasParentPermissions } = useAuthContext()
+  const profileId = effectiveMember?.profile_id ?? null
+  const { data: profile } = useProfile(profileId)
   const visibleItems = hasParentPermissions
     ? ITEMS
     : ITEMS.filter(item => item.key !== 'kid-mode-pin')
+
+  const firstName = profile?.first_name ?? effectiveMember?.profile?.first_name ?? ''
+  const lastName = profile?.last_name ?? effectiveMember?.profile?.last_name ?? ''
 
   return (
     <Screen>
@@ -79,7 +85,7 @@ export default function SettingsIndex() {
             isUpdatable={true}
           />
         ) : null}
-        <Text style={styles.avatarName}>{effectiveMember?.profile?.first_name}{'\n'}{effectiveMember?.profile?.last_name}</Text>
+        <Text style={styles.avatarName}>{firstName}{'\n'}{lastName}</Text>
       </View>
 
       <View style={styles.card}>
