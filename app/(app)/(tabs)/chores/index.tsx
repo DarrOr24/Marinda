@@ -198,13 +198,17 @@ export default function Chores() {
           ? new Date(r.expires_at).getTime()
           : undefined;
 
-        // Created by
+        // Created by (member id supports kid mode; created_by is auth.users id)
         let createdByMemberId: string | undefined;
         let createdByName: string | undefined;
 
-        if (r.created_by) {
+        if (r.created_by_member_id) {
+          createdByMemberId = r.created_by_member_id as string;
+          createdByName = nameForId(createdByMemberId);
+        } else if (r.created_by) {
           const creator = rawMembers.find(
             (m: any) =>
+              m?.id === r.created_by ||
               m?.user_id === r.created_by ||
               m?.profile?.id === r.created_by ||
               m?.profile_id === r.created_by
@@ -384,6 +388,7 @@ export default function Chores() {
           audioDescriptionUrl: audioUrl,
           audioDescriptionDuration: audioDuration,
           expiresAt: expiresAt ?? null,
+          createdByMemberId: myFamilyMemberId ?? null,
         },
       });
 
@@ -416,7 +421,8 @@ export default function Chores() {
         audioDescriptionDuration:
           row.audio_description_duration ?? audioDuration ?? undefined,
 
-        createdByMemberId: myFamilyMemberId,
+        createdByMemberId:
+          (row as any).created_by_member_id ?? myFamilyMemberId,
         createdByName: myFamilyMemberId ? nameForId(myFamilyMemberId) : 'You',
       };
 
@@ -789,7 +795,10 @@ export default function Chores() {
           text: 'Duplicate',
           onPress: async () => {
             try {
-              const row = await duplicateChoreMutation.mutateAsync(id);
+              const row = await duplicateChoreMutation.mutateAsync({
+                choreId: id,
+                createdByMemberId: myFamilyMemberId ?? null,
+              });
 
               // --- ASSIGNEES (PLURAL ONLY) ---
               const assignedToIds: string[] =
@@ -822,7 +831,8 @@ export default function Chores() {
                 audioDescriptionDuration:
                   row.audio_description_duration ?? undefined,
 
-                createdByMemberId: myFamilyMemberId,
+                createdByMemberId:
+                  (row as any).created_by_member_id ?? myFamilyMemberId,
                 createdByName: myFamilyMemberId
                   ? nameForId(myFamilyMemberId)
                   : 'You',

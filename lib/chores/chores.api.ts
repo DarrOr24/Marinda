@@ -160,6 +160,8 @@ export async function addChore(
     audioDescriptionUrl?: string | null;
     audioDescriptionDuration?: number | null;
     expiresAt?: string | null;
+    /** Effective family member (kid in kid mode, or logged-in member). */
+    createdByMemberId?: string | null;
   }
 ) {
   const user = (await supabase.auth.getUser()).data.user;
@@ -172,6 +174,7 @@ export async function addChore(
       points: chore.points,
       assignee_member_ids: chore.assigned_to_ids ?? [],
       created_by: user?.id ?? null,
+      created_by_member_id: chore.createdByMemberId ?? null,
       status: 'OPEN',
 
       audio_description_url: chore.audioDescriptionUrl ?? null,
@@ -276,7 +279,10 @@ export async function deleteChore(choreId: string) {
   return true;
 }
 
-export async function duplicateChore(choreId: string) {
+export async function duplicateChore(
+  choreId: string,
+  createdByMemberId?: string | null
+) {
   const { data: src, error: selErr } = await supabase
     .from('chores')
     .select('family_id, title, points, assignee_member_ids')
@@ -295,6 +301,7 @@ export async function duplicateChore(choreId: string) {
       assignee_member_ids: src.assignee_member_ids ?? [],
       status: 'OPEN',
       created_by: user?.id ?? null,
+      created_by_member_id: createdByMemberId ?? null,
     })
     .select()
     .single();

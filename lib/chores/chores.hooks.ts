@@ -51,7 +51,13 @@ export function useDeleteChore(familyId?: string) {
 export function useDuplicateChore(familyId?: string) {
     const qc = useQueryClient()
     return useMutation({
-        mutationFn: duplicateChore,
+        mutationFn: ({
+            choreId,
+            createdByMemberId,
+        }: {
+            choreId: string
+            createdByMemberId?: string | null
+        }) => duplicateChore(choreId, createdByMemberId),
         onSuccess: () => qc.invalidateQueries({ queryKey: choresKey(familyId) }),
     })
 }
