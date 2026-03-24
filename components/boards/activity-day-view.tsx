@@ -428,7 +428,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     marginBottom: 12,
-    paddingRight: 4,
     flexShrink: 0,
   },
   weekBackBtn: {
@@ -437,6 +436,8 @@ const styles = StyleSheet.create({
     gap: 2,
     flexShrink: 0,
     paddingVertical: 4,
+    /** Align leading edge with hour / “All-day” label column (icon has built-in side bearing). */
+    marginLeft: -4,
   },
   weekBackText: {
     fontSize: 16,
@@ -455,6 +456,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     flexShrink: 0,
+    marginRight: -2,
   },
   dayBody: {
     flex: 1,
