@@ -9,6 +9,8 @@ import {
   View,
 } from "react-native";
 
+import { ActivityBoardHeaderNav } from "@/components/boards/activity-board-header-nav";
+import { ActivityDayView } from "@/components/boards/activity-day-view";
 import { ActivityDetailModal } from "@/components/modals/activity-detail-modal";
 import AddActivityModal, { type NewActivityForm } from "@/components/modals/add-activity-modal";
 import { Button, SafeFab, Screen } from "@/components/ui";
@@ -87,6 +89,8 @@ export default function ActivityBoard() {
   const [editOpen, setEditOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [detailActivity, setDetailActivity] = useState<Activity | null>(null);
+  /** Full-screen hour timeline for one day (within the visible week). */
+  const [dayViewDate, setDayViewDate] = useState<Date | null>(null);
 
   const startOfThisWeek = useMemo(() => getStartOfWeek(today), [today]);
   const visibleWeekStart = useMemo(
@@ -240,9 +244,37 @@ export default function ActivityBoard() {
 
   const todayKey = toDateKey(today);
 
+  const dayViewDayKey = dayViewDate ? toDateKey(dayViewDate) : null;
+  const dayViewIndex =
+    dayViewDate != null
+      ? visibleWeekDays.findIndex((d) => toDateKey(d) === dayViewDayKey)
+      : -1;
+  const dayViewActivities =
+    dayViewDayKey && byDate[dayViewDayKey] ? byDate[dayViewDayKey] : [];
+
+  function openDayView(d: Date) {
+    setDayViewDate(new Date(d.getTime()));
+  }
+
+  function closeDayView() {
+    setDayViewDate(null);
+  }
+
+  function shiftDayView(delta: number) {
+    if (dayViewIndex < 0) return;
+    const next = dayViewIndex + delta;
+    if (next < 0 || next > 6) return;
+    setDayViewDate(new Date(visibleWeekDays[next].getTime()));
+  }
+
+  const addModalInitialDateStr = dayViewDate
+    ? toDateKey(dayViewDate)
+    : today.toISOString().split("T")[0];
+
   return (
     <Screen
-      contentStyle={{ paddingTop: 8, paddingHorizontal: 0, paddingBottom: 72 }}
+      scroll={false}
+      contentStyle={{ paddingTop: 8, paddingHorizontal: 0, paddingBottom: 0 }}
       overlay={
         <SafeFab bottomOffset={18} rightOffset={16}>
           <Button
@@ -256,44 +288,44 @@ export default function ActivityBoard() {
       }
     >
       <View style={styles.center}>
+        {dayViewDate ? (
+          <ActivityDayView
+            day={dayViewDate}
+            activities={dayViewActivities}
+            onClose={closeDayView}
+            onPrevDay={() => shiftDayView(-1)}
+            onNextDay={() => shiftDayView(1)}
+            canPrevDay={dayViewIndex > 0}
+            canNextDay={dayViewIndex >= 0 && dayViewIndex < 6}
+            onActivityPress={showDetails}
+            activityColor={creatorColor}
+            activityColorStyle={activityColor}
+            formatTimeRange={formatTimeRange}
+          />
+        ) : (
+          <>
         {/* Header w/ week navigation */}
-        <View style={styles.headerRow}>
-          <TouchableOpacity
-            onPress={() =>
-              !pastCapped && setWeekOffset((o) => Math.max(MIN_PAST_WEEKS, o - 1))
+        <ActivityBoardHeaderNav
+          title={weekOffset === 0 ? "This week" : rangeLabel}
+          onPrev={() => {
+            if (!pastCapped) {
+              setWeekOffset((o) => Math.max(MIN_PAST_WEEKS, o - 1));
             }
-            style={[styles.navBtn, pastCapped && styles.navBtnDisabled]}
-            disabled={pastCapped}
-            accessibilityRole="button"
-            accessibilityLabel="Previous week"
-          >
-            <MaterialCommunityIcons
-              name="chevron-left"
-              size={26}
-              color={pastCapped ? "#94a3b8" : "#0f172a"}
-            />
-          </TouchableOpacity>
+          }}
+          onNext={() => setWeekOffset((o) => o + 1)}
+          canPrev={!pastCapped}
+          canNext
+          prevAccessibilityLabel="Previous week"
+          nextAccessibilityLabel="Next week"
+          titleVariant="week"
+        />
 
-          <View style={styles.headerTitleWrap}>
-            <Text style={styles.title}>
-              {weekOffset === 0 ? "This week" : rangeLabel}
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            onPress={() => setWeekOffset((o) => o + 1)}
-            style={styles.navBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Next week"
-          >
-            <MaterialCommunityIcons name="chevron-right" size={26} color="#0f172a" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Weekly list */}
+        {/* Weekly list — scrolls; week nav header stays fixed (Screen scroll off) */}
         <ScrollView
+          style={[styles.weekScroll, isPastWeek ? { opacity: 0.6 } : undefined]}
           contentContainerStyle={styles.weekList}
-          style={isPastWeek ? { opacity: 0.6 } : undefined}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator
         >
           {visibleWeekDays.map((d, i) => {
             const isToday = toDateKey(d) === todayKey && weekOffset === 0;
@@ -302,14 +334,28 @@ export default function ActivityBoard() {
 
             return (
               <View key={i} style={[styles.dayRow, isToday && styles.dayRowToday]}>
-                <View style={styles.dayHeader}>
+                <TouchableOpacity
+                  style={styles.dayHeader}
+                  onPress={() => openDayView(d)}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Day view for ${DAY_NAMES[d.getDay()]} ${d.getDate()}`}
+                >
+                  <MaterialCommunityIcons
+                    name="arrow-expand"
+                    size={18}
+                    color={isToday ? "#3b82f6" : "#94a3b8"}
+                    style={styles.dayHeaderExpandIcon}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
+                  />
                   <Text style={[styles.dayName, isToday && styles.dayNameToday]}>
                     {DAY_NAMES[d.getDay()]}
                   </Text>
                   <Text style={[styles.dayDate, isToday && styles.dayDateToday]}>
                     {d.getDate()}
                   </Text>
-                </View>
+                </TouchableOpacity>
 
                 <View style={styles.dayContent}>
                   {isLoading && items.length === 0 ? (
@@ -415,6 +461,8 @@ export default function ActivityBoard() {
             );
           })}
         </ScrollView>
+          </>
+        )}
       </View>
 
       {/* Create Activity */}
@@ -422,7 +470,7 @@ export default function ActivityBoard() {
         visible={addOpen}
         onClose={() => setAddOpen(false)}
         onSave={handleSaveActivity}
-        initialDateStr={today.toISOString().split("T")[0]}
+        initialDateStr={addModalInitialDateStr}
         mode="create"
         submitLabel="Save"
         initial={{
@@ -528,28 +576,12 @@ const styles = StyleSheet.create({
 
   center: { flex: 1, paddingLeft: 20, paddingRight: 16, paddingTop: 0, gap: 12 },
 
-  headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  headerTitleWrap: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 6,
-  },
-  navBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  navBtnDisabled: { backgroundColor: "#f8fafc", borderColor: "#e2e8f0" },
-  title: { fontSize: 18, fontWeight: "800", color: "#0f172a" },
   subtitle: { marginTop: 2, fontSize: 13, color: "#475569" },
 
-  weekList: { gap: 10, paddingBottom: 24 },
+  /** Fills space below sticky week header so only the day list scrolls. */
+  weekScroll: { flex: 1, minHeight: 0 },
+  /** Scroll padding so last cards clear the FAB; Screen no longer uses a large bottom pad. */
+  weekList: { gap: 10, paddingBottom: 100 },
 
   dayRow: {
     flexDirection: "row",
@@ -569,6 +601,14 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: "#e2e8f0",
     paddingVertical: 10,
+    paddingHorizontal: 4,
+    position: "relative",
+  },
+  /** Corner hint: open full-day timeline (same tap target as the column). */
+  dayHeaderExpandIcon: {
+    position: "absolute",
+    top: 6,
+    right: 4,
   },
   dayName: { fontWeight: "700", color: "#334155" },
   dayNameToday: { color: "#2563eb" },
