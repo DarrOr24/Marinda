@@ -15,10 +15,37 @@ import type { Activity, ActivityStatus } from "@/lib/activities/activities.types
 const PX_PER_MINUTE = 1.35;
 /** Space above the first visible block when scrolling to an activity. */
 const SCROLL_TOP_MARGIN = 24;
-/** First hour row shown (local time) */
-export const TIMELINE_START_HOUR = 6;
-/** Hour after which the grid ends (exclusive) */
-export const TIMELINE_END_HOUR = 22;
+/** Full local day: midnight → next midnight (hour 24 exclusive = end of day). */
+export const TIMELINE_START_HOUR = 0;
+/** Hour after which the grid ends (exclusive). 24 = midnight next day. */
+export const TIMELINE_END_HOUR = 24;
+/** Overlapping columns won’t shrink below this % of the grid (readable cards; may clip if many overlap). */
+const MIN_COLUMN_WIDTH_PCT = 24;
+/** Treat segment as “all day” on this date if it covers local midnight through end-of-day (±1 min). */
+const ALL_DAY_EDGE_TOLERANCE_MS = 60_000;
+
+function localDayBoundsMs(day: Date) {
+  const y = day.getFullYear();
+  const m = day.getMonth();
+  const d = day.getDate();
+  const start = new Date(y, m, d, 0, 0, 0, 0).getTime();
+  const end = new Date(y, m, d, 23, 59, 59, 999).getTime();
+  return { dayStartMs: start, dayEndMs: end };
+}
+
+/** True when this activity’s overlap with `day` is effectively the full local calendar day (Google-style “all day”). */
+export function isActivityAllDayOnLocalDay(day: Date, a: Activity): boolean {
+  const { dayStartMs, dayEndMs } = localDayBoundsMs(day);
+  const startMs = new Date(a.start_at).getTime();
+  const endMs = new Date(a.end_at).getTime();
+  const segStart = Math.max(startMs, dayStartMs);
+  const segEnd = Math.min(endMs, dayEndMs);
+  if (segEnd <= segStart) return false;
+
+  const coversStart = segStart <= dayStartMs + ALL_DAY_EDGE_TOLERANCE_MS;
+  const coversEnd = segEnd >= dayEndMs - ALL_DAY_EDGE_TOLERANCE_MS;
+  return coversStart && coversEnd;
+}
 
 type Props = {
   day: Date;
@@ -39,6 +66,7 @@ type Props = {
 
 function minutesSinceDayHour(day: Date, hour: number) {
   const t = new Date(day);
+  // hour 24 rolls to next calendar day 00:00 (end-of-day boundary)
   t.setHours(hour, 0, 0, 0);
   return t.getTime();
 }
@@ -165,8 +193,19 @@ export function ActivityDayView({
       );
   }, [activities, dayStartMs, dayEndMs]);
 
+  const allDayActivities = useMemo(
+    () => sortedForDay.filter((a) => isActivityAllDayOnLocalDay(day, a)),
+    [sortedForDay, day],
+  );
+
+  const timedActivities = useMemo(
+    () =>
+      sortedForDay.filter((a) => !isActivityAllDayOnLocalDay(day, a)),
+    [sortedForDay, day],
+  );
+
   const layoutSegments = useMemo(() => {
-    const raw = sortedForDay.map((activity) => {
+    const raw = timedActivities.map((activity) => {
       const startMs = new Date(activity.start_at).getTime();
       const endMs = new Date(activity.end_at).getTime();
       const segStart = Math.max(startMs, dayStartMs);
@@ -186,7 +225,7 @@ export function ActivityDayView({
       return { activity, segStart, segEnd, top, height };
     });
     return layoutOverlappingSegments(raw);
-  }, [sortedForDay, dayStartMs, dayEndMs, timelineHeight]);
+  }, [timedActivities, dayStartMs, dayEndMs, timelineHeight]);
 
   const hours = useMemo(() => {
     const h: number[] = [];
@@ -256,12 +295,45 @@ export function ActivityDayView({
         </View>
       </View>
 
-      <ScrollView
-        ref={scrollRef}
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator
-      >
+      <View style={styles.dayBody}>
+        {allDayActivities.length > 0 ? (
+          <View style={styles.allDaySection}>
+            <View style={styles.allDayRowLayout}>
+              <View style={styles.allDayLabelCol}>
+                <Text style={styles.allDayLabelText}>All-day</Text>
+              </View>
+              <View style={styles.allDayList}>
+                {allDayActivities.map((a) => {
+                  const color = activityColor(a);
+                  const base = activityColorStyle(a.status, color);
+                  return (
+                    <Pressable
+                      key={a.id}
+                      onPress={() => onActivityPress(a)}
+                      style={[styles.allDayCard, base]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${a.title}, all day`}
+                    >
+                      <Text numberOfLines={2} style={styles.allDayCardTitle}>
+                        {a.title}
+                      </Text>
+                      <Text style={styles.allDayCardMeta} numberOfLines={1}>
+                        {formatTimeRange(a.start_at, a.end_at)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        ) : null}
+
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator
+        >
         {sortedForDay.length === 0 ? (
           <Text style={styles.empty}>No activities this day</Text>
         ) : null}
@@ -299,7 +371,10 @@ export function ActivityDayView({
               const color = activityColor(activity);
               const base = activityColorStyle(activity.status, color);
               const leftPct = maxCol > 0 ? (column / maxCol) * 100 : 0;
-              const widthPct = maxCol > 0 ? 100 / maxCol : 100;
+              const widthPct =
+                maxCol > 0
+                  ? Math.max(100 / maxCol, MIN_COLUMN_WIDTH_PCT)
+                  : 100;
 
               return (
                 <Pressable
@@ -328,7 +403,8 @@ export function ActivityDayView({
             })}
           </View>
         </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </View>
   );
 }
@@ -380,6 +456,56 @@ const styles = StyleSheet.create({
     gap: 4,
     flexShrink: 0,
   },
+  dayBody: {
+    flex: 1,
+    minHeight: 0,
+    flexDirection: "column",
+  },
+  allDaySection: {
+    flexShrink: 0,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#e2e8f0",
+    paddingBottom: 0,
+  },
+  allDayRowLayout: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  allDayLabelCol: {
+    width: 52,
+    paddingTop: 6,
+    alignItems: "flex-start",
+  },
+  allDayLabelText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#64748b",
+    textAlign: "left",
+    lineHeight: 13,
+  },
+  allDayList: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
+  },
+  allDayCard: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 2,
+  },
+  allDayCardTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  allDayCardMeta: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#64748b",
+    marginTop: 2,
+  },
   scroll: { flex: 1, minHeight: 0 },
   scrollContent: { paddingBottom: 100 },
   empty: {
@@ -409,6 +535,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1,
     borderLeftColor: "#e2e8f0",
     paddingHorizontal: 4,
+    overflow: "hidden",
   },
   gridLine: {
     position: "absolute",
