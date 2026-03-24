@@ -17,12 +17,8 @@ import {
   TextInput,
   useModalScrollMaxHeight,
 } from "@/components/ui";
+import { formatActivityTimeRange } from "@/lib/activities/activities.format";
 import type { Activity } from "@/lib/activities/activities.types";
-
-function formatTimeFromIso(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-}
 
 function sameDay(a: Date, b: Date) {
   return (
@@ -166,7 +162,7 @@ export function ActivityDetailModal({
   const dateLine = sameDayRange
     ? startDateLabel
     : `${startDateLabel} → ${endDateLabel}`;
-  const timeLine = `${formatTimeFromIso(activity.start_at)}–${formatTimeFromIso(activity.end_at)}`;
+  const timeLine = formatActivityTimeRange(activity.start_at, activity.end_at);
 
   const statusLabel =
     activity.status === "APPROVED"

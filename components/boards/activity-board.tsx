@@ -21,6 +21,12 @@ import {
   useFamilyActivities,
   useUpdateActivity,
 } from "@/lib/activities/activities.hooks";
+import {
+  collectLocalDateKeysOverlappingRange,
+  endOfLocalDay,
+  formatActivityTimeRange,
+  toLocalDateKey,
+} from "@/lib/activities/activities.format";
 import type {
   Activity,
   ActivityInsert,
@@ -59,23 +65,9 @@ function formatRangeLabel(start: Date) {
     })} ${start.getDate()}–${end.getDate()}`
     : `${fmt(start)} – ${fmt(end)}`;
 }
-function toDateKey(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-    2,
-    "0"
-  )}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 function formatTimeFromIso(iso: string) {
   const d = new Date(iso);
   return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-}
-
-function formatTimeRange(startIso: string, endIso: string) {
-  const start = formatTimeFromIso(startIso);
-  const end = formatTimeFromIso(endIso);
-  if (start === end) return start;
-  return `${start}–${end}`;
 }
 
 export default function ActivityBoard() {
@@ -109,7 +101,7 @@ export default function ActivityBoard() {
     activeFamilyId,
     {
       from: visibleWeekDays[0],
-      to: visibleWeekDays[6],
+      to: endOfLocalDay(visibleWeekDays[6]),
     }
   );
 
@@ -162,12 +154,22 @@ export default function ActivityBoard() {
     setDetailActivity(a);
   }
 
-  // Group activities by start date (local)
+  // Group by each local calendar day the activity overlaps (multi-day → card on each day).
   const byDate = useMemo(() => {
     const map: Record<string, Activity[]> = {};
     for (const a of activities) {
-      const key = toDateKey(new Date(a.start_at));
-      (map[key] ??= []).push(a);
+      for (const key of collectLocalDateKeysOverlappingRange(
+        a.start_at,
+        a.end_at,
+      )) {
+        (map[key] ??= []).push(a);
+      }
+    }
+    for (const k of Object.keys(map)) {
+      map[k].sort(
+        (x, y) =>
+          new Date(x.start_at).getTime() - new Date(y.start_at).getTime(),
+      );
     }
     return map;
   }, [activities]);
@@ -242,12 +244,12 @@ export default function ActivityBoard() {
     setEditOpen(false);
   }
 
-  const todayKey = toDateKey(today);
+  const todayKey = toLocalDateKey(today);
 
-  const dayViewDayKey = dayViewDate ? toDateKey(dayViewDate) : null;
+  const dayViewDayKey = dayViewDate ? toLocalDateKey(dayViewDate) : null;
   const dayViewIndex =
     dayViewDate != null
-      ? visibleWeekDays.findIndex((d) => toDateKey(d) === dayViewDayKey)
+      ? visibleWeekDays.findIndex((d) => toLocalDateKey(d) === dayViewDayKey)
       : -1;
   const dayViewActivities =
     dayViewDayKey && byDate[dayViewDayKey] ? byDate[dayViewDayKey] : [];
@@ -268,7 +270,7 @@ export default function ActivityBoard() {
   }
 
   const addModalInitialDateStr = dayViewDate
-    ? toDateKey(dayViewDate)
+    ? toLocalDateKey(dayViewDate)
     : today.toISOString().split("T")[0];
 
   return (
@@ -300,7 +302,7 @@ export default function ActivityBoard() {
             onActivityPress={showDetails}
             activityColor={creatorColor}
             activityColorStyle={activityColor}
-            formatTimeRange={formatTimeRange}
+            formatTimeRange={formatActivityTimeRange}
           />
         ) : (
           <>
@@ -328,8 +330,8 @@ export default function ActivityBoard() {
           showsVerticalScrollIndicator
         >
           {visibleWeekDays.map((d, i) => {
-            const isToday = toDateKey(d) === todayKey && weekOffset === 0;
-            const key = toDateKey(d);
+            const isToday = toLocalDateKey(d) === todayKey && weekOffset === 0;
+            const key = toLocalDateKey(d);
             const items = byDate[key] || [];
 
             return (
@@ -441,7 +443,7 @@ export default function ActivityBoard() {
                             {a.start_at ? (
                               <View style={styles.itemLine2}>
                                 <Text style={styles.itemTime}>
-                                  {formatTimeRange(a.start_at, a.end_at)}
+                                  {formatActivityTimeRange(a.start_at, a.end_at)}
                                 </Text>
                                 <View style={styles.itemLine2Spacer} />
                                 {badgeIcons.length > 0 ? (
@@ -538,7 +540,7 @@ export default function ActivityBoard() {
           if (!activity) return null;
 
           const start = new Date(activity.start_at);
-          const activityDateStr = toDateKey(start);
+          const activityDateStr = toLocalDateKey(start);
 
           return (
             <AddActivityModal

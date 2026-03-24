@@ -81,12 +81,17 @@ export async function fetchFamilyActivities(
     .eq('family_id', familyId)
     .order('start_at', { ascending: true })
 
-  if (params?.from) {
-    q = q.gte('start_at', params.from.toISOString())
-  }
-
-  if (params?.to) {
+  if (params?.from && params?.to) {
+    // Overlap with [from, to]: activity intersects the visible range (multi-day spans).
     q = q.lte('start_at', params.to.toISOString())
+    q = q.gte('end_at', params.from.toISOString())
+  } else {
+    if (params?.from) {
+      q = q.gte('start_at', params.from.toISOString())
+    }
+    if (params?.to) {
+      q = q.lte('start_at', params.to.toISOString())
+    }
   }
 
   const { data, error } = await q

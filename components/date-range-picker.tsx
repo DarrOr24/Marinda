@@ -1,7 +1,7 @@
 // components/date-range-picker.tsx
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native'
 
 import {
   getShortMonthFromDateString,
@@ -87,6 +87,17 @@ function formatEndLabel(range: Range) {
   return `${day} ${month} ${formatTimeLabel(range.end_at)}`
 }
 
+function applyFullCalendarDays(range: Range): Range {
+  const s = new Date(range.start_at)
+  const e = new Date(range.end_at)
+  const start = new Date(s.getFullYear(), s.getMonth(), s.getDate(), 0, 0, 0, 0)
+  const end = new Date(e.getFullYear(), e.getMonth(), e.getDate(), 23, 59, 59, 999)
+  return {
+    start_at: start.toISOString(),
+    end_at: end.toISOString(),
+  }
+}
+
 export function DateRangePicker({
   baseDateStr,
   initialStartAt,
@@ -98,9 +109,11 @@ export function DateRangePicker({
     createInitialRange(baseDateStr, initialStartAt, initialEndAt)
   )
   const [pickerMode, setPickerMode] = useState<'start' | 'end' | null>(null)
+  const [fullDays, setFullDays] = useState(false)
 
   useEffect(() => {
     setRange(createInitialRange(baseDateStr, initialStartAt, initialEndAt))
+    setFullDays(false)
   }, [baseDateStr, initialStartAt, initialEndAt])
 
   useEffect(() => {
@@ -117,13 +130,15 @@ export function DateRangePicker({
       const newStart = new Date(iso)
       const newEnd = new Date(newStart.getTime() + delta)
 
-      setRange({
+      let next: Range = {
         start_at: newStart.toISOString(),
         end_at: newEnd.toISOString(),
-      })
+      }
+      if (fullDays) next = applyFullCalendarDays(next)
+      setRange(next)
       setPickerMode(null)
     },
-    [range]
+    [range, fullDays]
   )
 
   const handleEndConfirm = useCallback(
@@ -132,13 +147,17 @@ export function DateRangePicker({
       const candidateEnd = new Date(iso)
       const finalEnd = candidateEnd < start ? start : candidateEnd
 
-      setRange(prev => ({
-        ...prev,
-        end_at: finalEnd.toISOString(),
-      }))
+      setRange(prev => {
+        let next: Range = {
+          ...prev,
+          end_at: finalEnd.toISOString(),
+        }
+        if (fullDays) next = applyFullCalendarDays(next)
+        return next
+      })
       setPickerMode(null)
     },
-    [range.start_at]
+    [range.start_at, fullDays]
   )
 
   const startLabel = useMemo(() => formatStartLabel(range), [range])
@@ -150,6 +169,22 @@ export function DateRangePicker({
   return (
     <View>
       {!hideLabel && <Text style={styles.label}>When *</Text>}
+
+      <View style={styles.fullDaysRow}>
+        <View style={styles.fullDaysTextCol}>
+          <Text style={styles.fullDaysLabel}>Full calendar days</Text>
+          <Text style={styles.fullDaysHint}>
+            Start/end at midnight so the trip shows on each day in the week list
+          </Text>
+        </View>
+        <Switch
+          value={fullDays}
+          onValueChange={(v) => {
+            setFullDays(v)
+            if (v) setRange((prev) => applyFullCalendarDays(prev))
+          }}
+        />
+      </View>
 
       <View style={styles.row}>
         <TouchableOpacity
@@ -207,6 +242,28 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 4,
     fontWeight: '700',
+  },
+  fullDaysRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 10,
+    paddingVertical: 4,
+  },
+  fullDaysTextCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  fullDaysLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  fullDaysHint: {
+    fontSize: 11,
+    color: '#64748b',
+    marginTop: 2,
   },
   row: {
     flexDirection: 'row',
