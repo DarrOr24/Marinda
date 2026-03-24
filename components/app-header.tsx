@@ -244,13 +244,21 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
     <AppHeaderContext.Provider value={value}>
       <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={styles.header}>
-          <View style={[styles.leftSlot, isKidMode && styles.leftSlotWithKidMode]}>
+          <View
+            style={[
+              styles.leftSlot,
+              !isKidMode && styles.leftSlotFixedWidth,
+              isKidMode && styles.leftSlotKidMode,
+            ]}
+          >
             {showBackButton ? <BackForwardButton direction="back" size="sm" /> : null}
             {isKidMode && (
               <TouchableOpacity
                 style={styles.exitKidModeButton}
                 onPress={() => exitKidMode?.()}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Exit kid mode"
               >
                 <MaterialCommunityIcons name="shield-lock-outline" size={18} color="#1d4ed8" />
                 <Text style={styles.exitKidModeButtonText} numberOfLines={1}>
@@ -261,7 +269,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
           </View>
 
           {!config.hiddenTitle && (
-            <View style={[styles.centerSlot, isKidMode && styles.centerSlotWithKidMode]} pointerEvents="none">
+            <View style={styles.centerSlot} pointerEvents="none">
               {config.icon ? (
                 <View style={styles.titleRow}>
                   <MaterialCommunityIcons
@@ -330,30 +338,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   leftSlot: {
-    width: 56,
     alignItems: 'flex-start',
     justifyContent: 'center',
   },
-  leftSlotWithKidMode: {
-    width: undefined,
+  /** Balances the header when not in kid mode (matches right avatar tap area). */
+  leftSlotFixedWidth: {
+    width: 56,
+  },
+  leftSlotKidMode: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 0,
   },
   exitKidModeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 999,
     backgroundColor: '#dbeafe',
+    flexShrink: 0,
   },
   exitKidModeButtonText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#1d4ed8',
-    flexShrink: 1,
+    flexShrink: 0,
   },
   centerSlot: {
     position: 'absolute',
@@ -361,10 +373,6 @@ const styles = StyleSheet.create({
     right: 72,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  centerSlotWithKidMode: {
-    left: 0,
-    right: 0,
   },
   rightSlot: {
     marginLeft: 'auto',
