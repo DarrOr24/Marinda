@@ -69,6 +69,13 @@ function formatTimeFromIso(iso: string) {
   return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
+function formatTimeRange(startIso: string, endIso: string) {
+  const start = formatTimeFromIso(startIso);
+  const end = formatTimeFromIso(endIso);
+  if (start === end) return start;
+  return `${start}–${end}`;
+}
+
 export default function ActivityBoard() {
   const today = new Date();
   const { effectiveMember, activeFamilyId, hasParentPermissions } = useAuthContext() as any;
@@ -359,42 +366,45 @@ export default function ActivityBoard() {
                               a.status === "PENDING" && styles.itemPending,
                             ]}
                           >
-                            <View
-                              style={[styles.colorDot, { backgroundColor: color }]}
-                            />
-                            <Text numberOfLines={1} style={styles.itemTitle}>
-                              {a.title}
-                              {a.start_at ? ` — ${formatTimeFromIso(a.start_at)}` : ""}
-                            </Text>
-                            {badgeIcons.length > 0 ? (
-                              <View style={styles.badgeIcons}>
-                                {badgeIcons}
+                            <View style={styles.itemLine1}>
+                              <View
+                                style={[styles.colorDot, { backgroundColor: color }]}
+                              />
+                              <Text numberOfLines={2} style={styles.itemTitle}>
+                                {a.title}
+                              </Text>
+                              <View style={styles.participantsCol}>
+                                {top3.map((m: any) => (
+                                  <View
+                                    key={m.id}
+                                    style={[
+                                      styles.partDot,
+                                      {
+                                        backgroundColor:
+                                          (m as any).color || "#94a3b8",
+                                      },
+                                    ]}
+                                  />
+                                ))}
+                                {more > 0 ? (
+                                  <Text style={styles.partMore}>+{more}</Text>
+                                ) : null}
+                              </View>
+                            </View>
+
+                            {a.start_at ? (
+                              <View style={styles.itemLine2}>
+                                <Text style={styles.itemTime}>
+                                  {formatTimeRange(a.start_at, a.end_at)}
+                                </Text>
+                                <View style={styles.itemLine2Spacer} />
+                                {badgeIcons.length > 0 ? (
+                                  <View style={styles.badgeIconsRow}>
+                                    {badgeIcons}
+                                  </View>
+                                ) : null}
                               </View>
                             ) : null}
-
-                            <View
-                              style={{
-                                flexDirection: "row",
-                                alignItems: "center",
-                                gap: 4,
-                              }}
-                            >
-                              {top3.map((m: any) => (
-                                <View
-                                  key={m.id}
-                                  style={[
-                                    styles.partDot,
-                                    {
-                                      backgroundColor:
-                                        (m as any).color || "#94a3b8",
-                                    },
-                                  ]}
-                                />
-                              ))}
-                              {more > 0 ? (
-                                <Text style={styles.partMore}>+{more}</Text>
-                              ) : null}
-                            </View>
                           </Pressable>
                         );
                       })}
@@ -568,19 +578,60 @@ const styles = StyleSheet.create({
   placeholder: { color: "#94a3b8", fontStyle: "italic" },
 
   itemRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+    flexDirection: "column",
+    gap: 6,
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderWidth: 2,
     borderRadius: 10,
     backgroundColor: "#fff",
   },
   itemPending: {},
-  colorDot: { width: 8, height: 8, borderRadius: 999 },
-  itemTitle: { flex: 1, color: "#0f172a", fontWeight: "700" },
-  badgeIcons: { flexDirection: "row", alignItems: "center", gap: 6 },
+  itemLine1: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  colorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    flexShrink: 0,
+  },
+  itemTitle: {
+    flex: 1,
+    minWidth: 0,
+    color: "#0f172a",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+  itemLine2: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingLeft: 16,
+    gap: 8,
+  },
+  itemTime: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  itemLine2Spacer: {
+    flex: 1,
+    minWidth: 4,
+  },
+  badgeIconsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 0,
+  },
+  participantsCol: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 0,
+  },
 
   partDot: { width: 8, height: 8, borderRadius: 999 },
   partMore: { fontSize: 12, color: "#334155", marginLeft: 2 },
