@@ -15,6 +15,7 @@ import { Button, SafeFab, Screen } from "@/components/ui";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import {
   useCreateActivity,
+  useDeleteActivity,
   useFamilyActivities,
   useUpdateActivity,
 } from "@/lib/activities/activities.hooks";
@@ -103,6 +104,7 @@ export default function ActivityBoard() {
 
   const createMut = useCreateActivity(activeFamilyId);
   const updateMut = useUpdateActivity(activeFamilyId);
+  const deleteMut = useDeleteActivity(activeFamilyId);
 
   // Fast lookup for members (for dots and names)
   const memberById = useMemo(() => {
@@ -192,7 +194,10 @@ export default function ActivityBoard() {
   function handleUpdateActivity(form: NewActivityForm) {
     if (!editingId) return;
 
-    const patch: Partial<ActivityInsert> & { status?: ActivityStatus } = {
+    const patch: Partial<ActivityInsert> & {
+      status?: ActivityStatus;
+      rejection_reason?: string | null;
+    } = {
       title: form.title,
       start_at: form.start_at,
       end_at: form.end_at,
@@ -424,9 +429,33 @@ export default function ActivityBoard() {
           updateMut.mutate({ id, patch: { status: "APPROVED" } });
           setDetailActivity(null);
         }}
-        onReject={(id) => {
-          updateMut.mutate({ id, patch: { status: "NOT_APPROVED" } });
+        onReject={(id, reason) => {
+          updateMut.mutate({
+            id,
+            patch: {
+              status: "NOT_APPROVED",
+              rejection_reason: reason.trim() ? reason.trim() : null,
+            },
+          });
           setDetailActivity(null);
+        }}
+        onRevertToPending={(id) => {
+          updateMut.mutate(
+            { id, patch: { status: "PENDING" } },
+            {
+              onSuccess: (updated) => {
+                setDetailActivity(updated);
+              },
+            },
+          );
+        }}
+        onDelete={(id) => {
+          deleteMut.mutate(
+            { id },
+            {
+              onSuccess: () => setDetailActivity(null),
+            },
+          );
         }}
         onEdit={(id) => {
           setDetailActivity(null);

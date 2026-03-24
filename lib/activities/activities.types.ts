@@ -29,6 +29,8 @@ export interface Activity {
   participants: ActivityParticipant[]
   notes: string | null
   status: ActivityStatus
+  /** Set when a parent rejects. Cleared when approved or back to pending. */
+  rejection_reason?: string | null
   created_by: FamilyMember
   created_at: string
 }
@@ -48,6 +50,12 @@ export type ActivityInsert = {
 }
 
 export type ActivityUpdate = Partial<Omit<ActivityInsert, 'family_id'>> & { id: string }
+
+/** Fields allowed in update_activity_with_participants patch */
+export type ActivityPatch = Partial<ActivityInsert> & {
+  status?: ActivityStatus
+  rejection_reason?: string | null
+}
 
 export type ActivityParticipantUpsert = {
   member_id: string

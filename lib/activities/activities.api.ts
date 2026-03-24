@@ -5,7 +5,7 @@ import type {
   Activity,
   ActivityInsert,
   ActivityParticipantUpsert,
-  ActivityStatus,
+  ActivityPatch,
 } from './activities.types'
 
 const supabase = getSupabase()
@@ -32,7 +32,7 @@ export async function rpcCreateActivity(
 
 export async function rpcUpdateActivity(
   id: string,
-  patch: Partial<ActivityInsert> & { status?: ActivityStatus },
+  patch: ActivityPatch,
   participants?: ActivityParticipantUpsert[] | null,
   replaceParticipants = false
 ): Promise<Activity> {
@@ -45,6 +45,13 @@ export async function rpcUpdateActivity(
   if (error) throw new Error(error.message)
 
   return fetchActivityById(id)
+}
+
+export async function rpcDeleteActivity(id: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_activity', {
+    p_activity_id: id,
+  })
+  if (error) throw new Error(error.message)
 }
 
 export async function fetchFamilyActivities(
@@ -66,6 +73,7 @@ export async function fetchFamilyActivities(
       babysitter_needed,
       notes,
       status,
+      rejection_reason,
       created_at,
       created_by:family_members!activities_created_by_fkey (${MEMBER_WITH_PROFILE_SELECT}),
       participants:activity_participants (*)
@@ -103,6 +111,7 @@ export async function fetchActivityById(id: string): Promise<Activity> {
       babysitter_needed,
       notes,
       status,
+      rejection_reason,
       created_at,
       created_by:family_members!activities_created_by_fkey (${MEMBER_WITH_PROFILE_SELECT}),
       participants:activity_participants (*)

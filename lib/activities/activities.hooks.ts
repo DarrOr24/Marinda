@@ -3,13 +3,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchFamilyActivities,
   rpcCreateActivity,
+  rpcDeleteActivity,
   rpcUpdateActivity,
 } from './activities.api';
 import type {
   Activity,
   ActivityInsert,
   ActivityParticipantUpsert,
-  ActivityStatus,
+  ActivityPatch,
 } from './activities.types';
 
 const activitiesKey = (
@@ -75,7 +76,7 @@ export function useUpdateActivity(familyId?: string) {
   return useMutation({
     mutationFn: (args: {
       id: string
-      patch: Partial<ActivityInsert> & { status?: ActivityStatus }
+      patch: ActivityPatch
       participants?: ActivityParticipantUpsert[] | null
       replaceParticipants?: boolean
     }) =>
@@ -92,6 +93,21 @@ export function useUpdateActivity(familyId?: string) {
 
     onError: (err: any) => {
       console.error('[updateActivity] error:', err)
+    },
+  })
+}
+
+export function useDeleteActivity(familyId?: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (args: { id: string }) => rpcDeleteActivity(args.id),
+
+    onSuccess: () => {
+      invalidateFamilyActivities(qc, familyId)
+    },
+
+    onError: (err: any) => {
+      console.error('[deleteActivity] error:', err)
     },
   })
 }

@@ -1,7 +1,8 @@
 // components/modals/activity-detail-modal.tsx
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Linking,
   Pressable,
   ScrollView,
@@ -9,7 +10,13 @@ import {
   Text,
   View,
 } from "react-native";
-import { Button, ModalCard, ModalShell, useModalScrollMaxHeight } from "@/components/ui";
+import {
+  Button,
+  ModalCard,
+  ModalShell,
+  TextInput,
+  useModalScrollMaxHeight,
+} from "@/components/ui";
 import type { Activity } from "@/lib/activities/activities.types";
 
 function formatTimeFromIso(iso: string) {
@@ -48,7 +55,7 @@ function DetailRow({
       {label ? (
         <Text style={styles.rowLabel}>{label}</Text>
       ) : null}
-      <Text style={[styles.rowContent, onPress && styles.rowContentLink]} numberOfLines={2}>
+      <Text style={[styles.rowContent, onPress && styles.rowContentLink]} numberOfLines={4}>
         {content}
       </Text>
     </>
@@ -90,8 +97,13 @@ type Props = {
   activity: Activity | null;
   onClose: () => void;
   onApprove: (id: string) => void;
-  onReject: (id: string) => void;
+  /** Parent rejects; optional note stored for the family. */
+  onReject: (id: string, reason: string) => void;
+  /** Parent moves approved or rejected activity back to pending. */
+  onRevertToPending: (id: string) => void;
   onEdit: (id: string) => void;
+  /** Creator only; shows confirmation before calling. */
+  onDelete?: (id: string) => void;
   memberById: Map<string, any>;
   creatorName: (a: Activity) => string;
   isParent: boolean;
@@ -104,13 +116,24 @@ export function ActivityDetailModal({
   onClose,
   onApprove,
   onReject,
+  onRevertToPending,
   onEdit,
+  onDelete,
   memberById,
   creatorName,
   isParent,
   isCreator,
 }: Props) {
-  const scrollMaxHeight = useModalScrollMaxHeight(120);
+  const scrollMaxHeight = useModalScrollMaxHeight(160);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+
+  useEffect(() => {
+    if (!visible) {
+      setRejectOpen(false);
+      setRejectReason("");
+    }
+  }, [visible]);
 
   if (!activity) return null;
 
@@ -151,6 +174,34 @@ export function ActivityDetailModal({
       : activity.status === "NOT_APPROVED"
         ? "Not approved"
         : "Pending approval";
+
+  const parentCanDecide =
+    isParent &&
+    (activity.status === "PENDING" ||
+      activity.status === "APPROVED" ||
+      activity.status === "NOT_APPROVED");
+
+  function confirmDelete() {
+    if (!onDelete) return;
+    Alert.alert(
+      "Delete activity?",
+      "This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => onDelete(activity.id),
+        },
+      ],
+    );
+  }
+
+  function submitReject() {
+    onReject(activity.id, rejectReason.trim());
+    setRejectOpen(false);
+    setRejectReason("");
+  }
 
   return (
     <ModalShell visible={visible} onClose={onClose}>
@@ -240,6 +291,14 @@ export function ActivityDetailModal({
                   : "#f59e0b"
             }
           />
+          {activity.status === "NOT_APPROVED" &&
+            activity.rejection_reason?.trim() ? (
+              <DetailRow
+                icon="message-text-outline"
+                label="Note from parent"
+                content={activity.rejection_reason.trim()}
+              />
+            ) : null}
           <DetailRow
             icon="account-outline"
             label="Created by"
@@ -247,34 +306,107 @@ export function ActivityDetailModal({
           />
         </ScrollView>
 
-        <View style={styles.buttons}>
-          {isCreator && (
-            <Button
-              type="outline"
-              size="sm"
-              title="Edit"
-              leftIcon={<MaterialCommunityIcons name="pencil-outline" size={18} />}
-              onPress={() => onEdit(activity.id)}
+        {rejectOpen && isParent && activity.status === "PENDING" ? (
+          <View style={styles.rejectBox}>
+            <TextInput
+              label="Why not approved? (optional)"
+              multiline
+              placeholder="Add a short note for the family…"
+              value={rejectReason}
+              onChangeText={setRejectReason}
+              containerStyle={styles.rejectInput}
             />
-          )}
-          {isParent && activity.status === "PENDING" && (
-            <>
+            <View style={styles.rejectActions}>
+              <Button
+                type="secondary"
+                size="sm"
+                title="Back"
+                onPress={() => {
+                  setRejectOpen(false);
+                  setRejectReason("");
+                }}
+              />
               <Button
                 type="danger"
                 size="sm"
-                title="Reject"
+                title="Confirm reject"
                 leftIcon={<MaterialCommunityIcons name="close" size={18} />}
-                onPress={() => onReject(activity.id)}
+                onPress={submitReject}
               />
+            </View>
+          </View>
+        ) : null}
+
+        <View style={styles.buttons}>
+          {isCreator && (
+            <>
               <Button
-                type="primary"
+                type="outline"
                 size="sm"
-                title="Approve"
-                leftIcon={<MaterialCommunityIcons name="check" size={18} />}
-                onPress={() => onApprove(activity.id)}
+                title="Edit"
+                leftIcon={<MaterialCommunityIcons name="pencil-outline" size={18} />}
+                onPress={() => onEdit(activity.id)}
               />
+              {onDelete ? (
+                <Button
+                  type="danger"
+                  size="sm"
+                  title="Delete"
+                  leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
+                  onPress={confirmDelete}
+                />
+              ) : null}
             </>
           )}
+          {parentCanDecide && !(rejectOpen && activity.status === "PENDING") ? (
+            <>
+              {activity.status === "PENDING" && (
+                <>
+                  <Button
+                    type="danger"
+                    size="sm"
+                    title="Reject"
+                    leftIcon={<MaterialCommunityIcons name="close" size={18} />}
+                    onPress={() => setRejectOpen(true)}
+                  />
+                  <Button
+                    type="primary"
+                    size="sm"
+                    title="Approve"
+                    leftIcon={<MaterialCommunityIcons name="check" size={18} />}
+                    onPress={() => onApprove(activity.id)}
+                  />
+                </>
+              )}
+              {activity.status === "APPROVED" && (
+                <Button
+                  type="outline"
+                  size="sm"
+                  title="Change decision"
+                  leftIcon={<MaterialCommunityIcons name="undo" size={18} />}
+                  onPress={() => onRevertToPending(activity.id)}
+                />
+              )}
+              {activity.status === "NOT_APPROVED" && (
+                <>
+                  <Button
+                    type="primary"
+                    size="sm"
+                    title="Approve"
+                    leftIcon={<MaterialCommunityIcons name="check" size={18} />}
+                    onPress={() => onApprove(activity.id)}
+                  />
+                  <Button
+                    type="outline"
+                    size="sm"
+                    title="Change decision"
+                    leftIcon={<MaterialCommunityIcons name="undo" size={18} />}
+                    onPress={() => onRevertToPending(activity.id)}
+                  />
+                </>
+              )}
+            </>
+          ) : null}
           <Button
             type="secondary"
             size="sm"
@@ -349,6 +481,20 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
   linkPressed: { opacity: 0.7 },
+  rejectBox: {
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+    gap: 10,
+  },
+  rejectInput: { marginBottom: 0 },
+  rejectActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    justifyContent: "flex-end",
+  },
   buttons: {
     flexDirection: "row",
     flexWrap: "wrap",
