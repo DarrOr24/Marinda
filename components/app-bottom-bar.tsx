@@ -35,7 +35,7 @@ export function AppBottomBar() {
         label: 'Chores',
         path: '/chores',
         icon: 'clipboard-check-outline',
-        color: '#ef4444',
+        color: '#7c3aed',
         activePrefixes: ['/chores'],
       },
       {

@@ -51,7 +51,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
       return {
         title: 'Chores',
         icon: 'clipboard-check-outline',
-        color: '#ef4444',
+        color: '#7c3aed',
         hiddenTitle,
       }
     }
@@ -169,7 +169,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
       return {
         title: 'How chore game works',
         icon: 'clipboard-check-outline',
-        color: '#2563eb',
+        color: '#7c3aed',
         hiddenTitle,
       }
     }
@@ -178,7 +178,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
       return {
         title: 'Chore Game Settings',
         icon: 'clipboard-check-outline',
-        color: '#2563eb',
+        color: '#7c3aed',
         hiddenTitle,
       }
     }
