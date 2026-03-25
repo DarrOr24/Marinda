@@ -877,8 +877,10 @@ export default function Chores() {
     <Screen
       scroll={false}
       withBackground={false}
+      gap="no"
       contentStyle={styles.screenContent}
     >
+      <View style={styles.page}>
       <View style={styles.header}>
 
         {/* LEFT: Post Chore */}
@@ -953,7 +955,8 @@ export default function Chores() {
       </View>
 
       <FlatList
-        contentContainerStyle={{ paddingLeft: 20, paddingRight: 16, paddingTop: 16, paddingBottom: 32, gap: 12 }}
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
         data={dataForTab}
         keyExtractor={(c) => c.id}
         ListEmptyComponent={
@@ -1127,6 +1130,7 @@ export default function Chores() {
           );
         }}
       />
+      </View>
 
       {/* create */}
       <ChorePostModal
@@ -1183,7 +1187,42 @@ export default function Chores() {
 }
 
 const styles = StyleSheet.create({
-  screenContent: { padding: 0 },
+  /**
+   * Same Screen insets as boards. Default Screen `gap` is md — that adds space between *every* child,
+   * including between the list and each modal, which reads as a dead band above the tab bar.
+   */
+  screenContent: {
+    flex: 1,
+    minHeight: 0,
+    paddingTop: 8,
+    paddingHorizontal: 0,
+    paddingBottom: 0,
+  },
+
+  /** One flex column for header + tabs + list (modals stay siblings on Screen, like grocery-board). */
+  page: {
+    flex: 1,
+    minHeight: 0,
+  },
+
+  /** Same flex pattern as grocery-board listScroll / activity-board weekScroll. */
+  list: {
+    flex: 1,
+    minHeight: 0,
+  },
+
+  /**
+   * flexGrow: 1 — when there are few chores, content still fills the list viewport (no blue hole).
+   * paddingBottom clears the bottom tab bar (same as boards lists).
+   */
+  listContent: {
+    flexGrow: 1,
+    paddingLeft: 20,
+    paddingRight: 16,
+    paddingTop: 16,
+    paddingBottom: 100,
+    gap: 12,
+  },
 
   header: {
     flexDirection: 'row',
