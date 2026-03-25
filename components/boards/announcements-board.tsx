@@ -3,6 +3,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Keyboard,
   Platform,
@@ -10,6 +11,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 
@@ -57,7 +59,7 @@ const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 6)}` : '—');
 export default function AnnouncementsBoard() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const INPUT_BAR_HEIGHT = 78;
+  const INPUT_BAR_HEIGHT = 72;
 
   const { activeFamilyId, effectiveMember, family, members, hasParentPermissions } = useAuthContext() as any;
   const familyId = activeFamilyId ?? undefined;
@@ -291,11 +293,13 @@ export default function AnnouncementsBoard() {
   // --------------------------------------------
   return (
     <Screen scroll={false} withBackground={false}>
-      <View style={styles.container}>
-        {/* ---------------------------------------------- */}
-        {/* ROW 1: SORT — BY — INFO */}
-        {/* ---------------------------------------------- */}
-        <View style={styles.sortInfoRow}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={styles.tapToDismiss}>
+          <View style={styles.container}>
+            {/* ---------------------------------------------- */}
+            {/* ROW 1: SORT — BY — INFO */}
+            {/* ---------------------------------------------- */}
+            <View style={styles.sortInfoRow}>
           <View style={styles.sortByGroup}>
             <Button
               type="outline"
@@ -349,6 +353,9 @@ export default function AnnouncementsBoard() {
             placeholder="Search bulletin…"
             value={search}
             onChangeText={setSearch}
+            returnKeyType="done"
+            onSubmitEditing={() => Keyboard.dismiss()}
+            blurOnSubmit
           />
 
           {search.length > 0 && (
@@ -421,25 +428,44 @@ export default function AnnouncementsBoard() {
             { paddingBottom: Platform.OS === 'android' ? 24 : 0 },
           ]}
         >
-          <TextInput
-            style={styles.textInputMultiline}
-            placeholder={activeTab.placeholder}
-            value={newText}
-            onChangeText={setNewText}
-            multiline
-            numberOfLines={1}
-            returnKeyType="done"
-            onSubmitEditing={() => Keyboard.dismiss()}
-          />
+          <View style={styles.noteInputWrapper}>
+            <TextInput
+              style={[styles.textInputMultiline, styles.textInputMultilineWithCheck]}
+              placeholder={activeTab.placeholder}
+              value={newText}
+              onChangeText={setNewText}
+              multiline
+              numberOfLines={1}
+              submitBehavior="newline"
+              returnKeyType="default"
+            />
 
-          <Button
-            title={createMutation.isPending ? '...' : 'Add'}
-            type="primary"
-            size="sm"
-            onPress={handleAdd}
-            disabled={!newText.trim() || createMutation.isPending}
-            style={styles.addButton}
-          />
+            <Pressable
+              style={({ pressed }) => [
+                styles.noteCheckBtn,
+                (!newText.trim() || createMutation.isPending) && styles.noteCheckBtnDisabled,
+                pressed &&
+                  newText.trim() &&
+                  !createMutation.isPending &&
+                  styles.noteCheckBtnPressed,
+              ]}
+              onPress={handleAdd}
+              disabled={!newText.trim() || createMutation.isPending}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Add note"
+            >
+              {createMutation.isPending ? (
+                <ActivityIndicator size="small" color="#2563eb" />
+              ) : (
+                <Ionicons
+                  name="checkmark-circle"
+                  size={28}
+                  color={!newText.trim() ? '#cbd5e1' : '#2563eb'}
+                />
+              )}
+            </Pressable>
+          </View>
         </View>
 
         {/* ---------------------------------------------- */}
@@ -456,7 +482,7 @@ export default function AnnouncementsBoard() {
             },
           ]}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={Platform.OS === 'ios' ? 'on-drag' : 'none'}
+          keyboardDismissMode="on-drag"
           onScrollBeginDrag={Keyboard.dismiss}
         >
           <StickyNote
@@ -698,7 +724,9 @@ export default function AnnouncementsBoard() {
             </Pressable>
           </Pressable>
         )}
-      </View>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
     </Screen>
   );
 }
@@ -708,6 +736,7 @@ export default function AnnouncementsBoard() {
 // --------------------------------------------
 const styles = StyleSheet.create({
   container: { flex: 1, paddingLeft: 4 },
+  tapToDismiss: { flex: 1 },
   emptyList: { flexGrow: 1 },
   infoText: { fontSize: 16, textAlign: 'center', opacity: 0.7 },
 
@@ -724,6 +753,29 @@ const styles = StyleSheet.create({
     paddingRight: 36,
   },
 
+  textInputMultilineWithCheck: {
+    paddingRight: 48,
+  },
+
+  noteInputWrapper: {
+    position: 'relative',
+    width: '100%',
+  },
+
+  noteCheckBtn: {
+    position: 'absolute',
+    right: 6,
+    bottom: 6,
+    padding: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noteCheckBtnPressed: {
+    opacity: 0.75,
+  },
+  noteCheckBtnDisabled: {
+    opacity: 0.55,
+  },
 
   // --------------------------------------
   // ROW 1: SORT — BY — INFO
@@ -802,10 +854,6 @@ const styles = StyleSheet.create({
   inputBar: {
     paddingTop: 8,
     marginTop: 0,
-  },
-  addButton: {
-    alignSelf: 'flex-end',
-    marginTop: 10,
   },
 
   // --------------------------------------
