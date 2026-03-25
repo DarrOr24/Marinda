@@ -32,7 +32,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
+  PixelRatio,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View
@@ -873,6 +876,19 @@ export default function Chores() {
     archived: 'Past',
   };
 
+  /** Badge only: sublinear growth + less inner padding at large Dynamic Type. Tab pill padding stays fixed (styles.tab). */
+  const choreTabBadgeScale = Math.min(Math.max(PixelRatio.getFontScale(), 1), 2.2);
+  const choreTabOverscale = Math.max(0, choreTabBadgeScale - 1);
+  const choreTabBadgeGrowth = 1 + choreTabOverscale * 0.4;
+  const choreTabBadgeSize = Math.round(23 * choreTabBadgeGrowth);
+  const choreTabBadgeRadius = Math.round(choreTabBadgeSize / 2);
+  const choreTabBadgePadH = Math.max(2, Math.round(4 - 1.75 * choreTabOverscale));
+  /** Corner badge: larger circles must shift further up/right so they stay on the pill rim, not over the label. */
+  const choreTabBadgeBaseSize = 23;
+  const choreTabBadgeCornerPush = Math.max(0, (choreTabBadgeSize - choreTabBadgeBaseSize) / 2);
+  const choreTabBadgeTop = Math.round(-6 - choreTabBadgeCornerPush * 0.9);
+  const choreTabBadgeRight = Math.round(-4 - choreTabBadgeCornerPush * 0.9);
+
   return (
     <Screen
       scroll={false}
@@ -925,8 +941,14 @@ export default function Chores() {
 
 
 
-      {/* tabs */}
-      <View style={styles.tabsRow}>
+      {/* tabs — horizontal scroll + intrinsic width so large font doesn’t break labels mid-word */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabsScroll}
+        contentContainerStyle={styles.tabsScrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
         {(['open', 'pending', 'approved', 'archived'] as TabKey[]).map((key) => (
           <Pressable
             key={key}
@@ -935,7 +957,7 @@ export default function Chores() {
           >
             <Text
               style={[styles.tabLabel, tab === key && styles.tabLabelActive]}
-              numberOfLines={2}
+              numberOfLines={1}
             >
               {humanTabLabel[key]}
             </Text>
@@ -945,14 +967,37 @@ export default function Chores() {
                 style={[
                   styles.countBubble,
                   tab === key && styles.countBubbleActive,
+                  {
+                    minWidth: choreTabBadgeSize,
+                    height: choreTabBadgeSize,
+                    borderRadius: choreTabBadgeRadius,
+                    paddingHorizontal: choreTabBadgePadH,
+                    top: choreTabBadgeTop,
+                    right: choreTabBadgeRight,
+                  },
                 ]}
               >
-                <Text style={styles.countText}>{grouped[key].length}</Text>
+                <Text
+                  style={[
+                    styles.countText,
+                    {
+                      fontSize: Math.round(12 * choreTabBadgeGrowth),
+                      textAlign: 'center',
+                    },
+                    Platform.OS === 'android'
+                      ? { includeFontPadding: false, textAlignVertical: 'center' }
+                      : null,
+                  ]}
+                  allowFontScaling={false}
+                  numberOfLines={1}
+                >
+                  {grouped[key].length}
+                </Text>
               </View>
             )}
           </Pressable>
         ))}
-      </View>
+      </ScrollView>
 
       <FlatList
         style={styles.list}
@@ -1239,24 +1284,32 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
-  tabsRow: {
+  tabsScroll: {
+    flexGrow: 0,
+  },
+  tabsScrollContent: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     paddingLeft: 20,
     paddingRight: 16,
-    paddingTop: 12,
-    gap: 8,
+    paddingTop: 16,
+    paddingBottom: 8,
+    flexGrow: 1,
   },
   tab: {
-    flex: 1,
+    flexShrink: 0,
     minHeight: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: '#e5e7eb',
     backgroundColor: '#f9fafb',
     position: 'relative',
+    overflow: 'visible',
   },
   tabActive: {
     backgroundColor: '#2563eb15',
@@ -1267,7 +1320,6 @@ const styles = StyleSheet.create({
     color: '#4b5563',
     fontWeight: '600',
     textAlign: 'center',
-    paddingHorizontal: 4,
   },
   tabLabelActive: {
     color: '#1d4ed8',
@@ -1338,8 +1390,6 @@ const styles = StyleSheet.create({
   },
   countBubble: {
     position: 'absolute',
-    top: -4,
-    right: -4,
     backgroundColor: '#d1d5db',
     minWidth: 18,
     height: 18,
