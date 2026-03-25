@@ -14,7 +14,6 @@ import { Image, StyleSheet, Text, View } from 'react-native'
 import { BackForwardButton } from '@/components/back-forward-button'
 import { HeaderProfileButton } from '@/components/header-profile-button'
 import { useAuthContext } from '@/hooks/use-auth-context'
-import { appIconSource } from '@/lib/app-images'
 
 type HeaderIconName = React.ComponentProps<typeof MaterialCommunityIcons>['name']
 
@@ -278,7 +277,6 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
                     style={[styles.title, styles.titleInRow, { color: config.color ?? '#0f172a' }]}
                     numberOfLines={2}
                     ellipsizeMode="tail"
-                    textAlign="center"
                   >
                     {config.title}
                   </Text>
@@ -295,7 +293,6 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
                     style={[styles.title, styles.titleInRow, { color: config.color ?? '#0f172a' }]}
                     numberOfLines={2}
                     ellipsizeMode="tail"
-                    textAlign="center"
                   >
                     {config.title}
                   </Text>
@@ -305,7 +302,6 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
                   style={[styles.title, styles.titlePlain]}
                   numberOfLines={2}
                   ellipsizeMode="tail"
-                  textAlign="center"
                 >
                   {config.title}
                 </Text>
@@ -403,11 +399,13 @@ const styles = StyleSheet.create({
   titlePlain: {
     maxWidth: '82%',
     alignSelf: 'center',
+    textAlign: 'center',
   },
   /** Icon + title row: shrink/wrap for long titles without stretching across the full header (keeps the block visually centered). */
   titleInRow: {
     flexShrink: 1,
     minWidth: 0,
+    textAlign: 'center',
   },
   content: {
     flex: 1,
