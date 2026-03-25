@@ -6,6 +6,7 @@ import {
   Alert,
   Keyboard,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View
@@ -305,7 +306,13 @@ export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps)
       withBackground
       fixedHeader={
         hasParentPermissions && switcherKids.length > 0 ? (
-          <View style={styles.profileTabs}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.profileTabsScroll}
+            contentContainerStyle={styles.profileTabsContent}
+            keyboardShouldPersistTaps="handled"
+          >
             {switcherKids.map((kid: any) => {
               const isActive = kid.id === viewedMemberId;
 
@@ -328,13 +335,17 @@ export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps)
                   <View style={[styles.profileAvatarWrap, isActive && styles.profileAvatarWrapActive]}>
                     <MemberAvatar memberId={kid.id} size="md" />
                   </View>
-                  <Text style={[styles.profileTabText, isActive && styles.profileTabTextActive]}>
+                  <Text
+                    style={[styles.profileTabText, isActive && styles.profileTabTextActive]}
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
+                  >
                     {memberDisplayName(kid)}
                   </Text>
                 </Pressable>
               );
             })}
-          </View>
+          </ScrollView>
         ) : null
       }
     >
@@ -512,23 +523,28 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     alignSelf: "center",
   },
-  profileTabs: {
+  profileTabsScroll: {
     width: "100%",
+    flexGrow: 0,
+  },
+  profileTabsContent: {
     flexDirection: "row",
-    flexWrap: "wrap",
     alignItems: "flex-start",
     justifyContent: "center",
-    columnGap: 10,
-    rowGap: 12,
+    flexGrow: 1,
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+    gap: 6,
   },
   profileTab: {
     alignItems: "center",
-    width: "18%",
-    maxWidth: 60,
-    gap: 7,
+    flexShrink: 0,
+    minWidth: 68,
+    maxWidth: 152,
+    gap: 4,
   },
   profileAvatarWrap: {
-    padding: 4,
+    padding: 3,
     borderRadius: 999,
     borderWidth: 2,
     borderColor: "transparent",

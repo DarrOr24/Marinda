@@ -276,13 +276,24 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
                     name={config.icon}
                     size={22}
                     color={config.color ?? '#0f172a'}
+                    style={styles.titleIcon}
                   />
-                  <Text style={[styles.title, { color: config.color ?? '#0f172a' }]} numberOfLines={1}>
+                  <Text
+                    style={[styles.title, styles.titleInRow, { color: config.color ?? '#0f172a' }]}
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
+                    textAlign="center"
+                  >
                     {config.title}
                   </Text>
                 </View>
               ) : (
-                <Text style={styles.title} numberOfLines={1}>
+                <Text
+                  style={styles.title}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                  textAlign="center"
+                >
                   {config.title}
                 </Text>
               )}
@@ -384,11 +395,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     maxWidth: '100%',
+    justifyContent: 'center',
+  },
+  titleIcon: {
+    flexShrink: 0,
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
     color: '#0f172a',
+    lineHeight: 24,
+  },
+  /** Icon + title row: title may shrink/wrap so long names work with large accessibility font sizes. */
+  titleInRow: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
   },
   content: {
     flex: 1,
