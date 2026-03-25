@@ -333,7 +333,6 @@ export default function Grocery() {
             gap="no"
             contentStyle={styles.screenContent}
         >
-            <View style={styles.screenInner}>
                 <View style={styles.page}>
                     <View style={styles.header}>
                         <View style={styles.actions}>
@@ -391,9 +390,8 @@ export default function Grocery() {
                         </View>
                     </View>
 
-                    <View style={styles.listScrollHost}>
                     <ScrollView
-                        style={styles.listScrollFill}
+                        style={styles.listScroll}
                         contentContainerStyle={styles.listContent}
                         keyboardShouldPersistTaps="handled"
                         showsVerticalScrollIndicator
@@ -555,7 +553,6 @@ export default function Grocery() {
                                   </Pressable>
                               ))}
                     </ScrollView>
-                    </View>
                 </View>
 
             <GroceryItemModal
@@ -598,7 +595,6 @@ export default function Grocery() {
                     )}
                 </ModalCard>
             </ModalShell>
-            </View>
 
         </Screen>
     );
@@ -608,23 +604,20 @@ export default function Grocery() {
 // STYLES
 // ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-    /** Match activity-board Screen: no default padding/gap, fill tab scene. */
-    screenContent: { flex: 1, padding: 0 },
+    /** Same Screen insets as activity-board (horizontal padding lives on `page`). */
+    screenContent: { paddingTop: 8, paddingHorizontal: 0, paddingBottom: 0 },
 
-    screenInner: {
-        flex: 1,
-        minHeight: 0,
-    },
-
-    /** Fixed actions + flex scroll (same idea as week header + weekScroll on activity board). */
+    /** Mirrors activity-board `center`: fixed header row + flex ScrollView below. */
     page: {
         flex: 1,
         minHeight: 0,
+        paddingLeft: 20,
+        paddingRight: 16,
+        paddingTop: 0,
+        gap: 12,
     },
 
     header: {
-        paddingLeft: 20,
-        paddingRight: 16,
         paddingTop: 12,
         paddingBottom: 8,
     },
@@ -637,26 +630,16 @@ const styles = StyleSheet.create({
         gap: 10,
     },
 
-    /** Take remaining height; ScrollView fills via absolute fill (no flex:1 on ScrollView). */
-    listScrollHost: {
+    /** Same as activity-board `weekScroll`. */
+    listScroll: {
         flex: 1,
         minHeight: 0,
-        position: "relative",
-    },
-    listScrollFill: {
-        position: "absolute",
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
     },
 
+    /** Same as activity-board `weekList`: gap between blocks; paddingBottom so the last row can scroll above the bottom tab bar (activities also need this for the FAB). */
     listContent: {
-        paddingLeft: 20,
-        paddingRight: 16,
-        paddingTop: 16,
-        paddingBottom: 0,
-        gap: 0,
+        gap: 12,
+        paddingBottom: 100,
     },
 
     group: {
@@ -664,7 +647,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: "#e5e7eb",
         borderRadius: 16,
-        marginBottom: 12,
         overflow: "hidden",
     },
 
