@@ -244,32 +244,37 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
     <AppHeaderContext.Provider value={value}>
       <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={styles.header}>
-          <View
-            style={[
-              styles.leftSlot,
-              !isKidMode && styles.leftSlotFixedWidth,
-              isKidMode && styles.leftSlotKidMode,
-            ]}
-          >
-            {showBackButton ? <BackForwardButton direction="back" size="sm" /> : null}
-            {isKidMode && (
-              <TouchableOpacity
-                style={styles.exitKidModeButton}
-                onPress={() => exitKidMode?.()}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Exit kid mode"
-              >
-                <MaterialCommunityIcons name="shield-lock-outline" size={18} color="#1d4ed8" />
-                <Text style={styles.exitKidModeButtonText} numberOfLines={1}>
-                  Exit kid mode
-                </Text>
-              </TouchableOpacity>
-            )}
+          <View style={styles.headerBalancedRow}>
+            <View
+              style={[
+                styles.headerSide,
+                isKidMode && styles.leftSlotKidMode,
+              ]}
+            >
+              {showBackButton ? <BackForwardButton direction="back" size="sm" /> : null}
+              {isKidMode && (
+                <TouchableOpacity
+                  style={styles.exitKidModeButton}
+                  onPress={() => exitKidMode?.()}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Exit kid mode"
+                >
+                  <MaterialCommunityIcons name="shield-lock-outline" size={18} color="#1d4ed8" />
+                  <Text style={styles.exitKidModeButtonText} numberOfLines={1}>
+                    Exit kid mode
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={[styles.headerSide, styles.headerSideEnd]}>
+              <HeaderProfileButton />
+            </View>
           </View>
 
           {!config.hiddenTitle && (
-            <View style={styles.centerSlot} pointerEvents="none">
+            <View style={styles.headerTitleLayer} pointerEvents="none">
               {config.icon ? (
                 <View style={styles.titleRow}>
                   <MaterialCommunityIcons
@@ -289,7 +294,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
                 </View>
               ) : (
                 <Text
-                  style={styles.title}
+                  style={[styles.title, styles.titlePlain]}
                   numberOfLines={2}
                   ellipsizeMode="tail"
                   textAlign="center"
@@ -299,10 +304,6 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
               )}
             </View>
           )}
-
-          <View style={styles.rightSlot}>
-            <HeaderProfileButton />
-          </View>
         </View>
       </SafeAreaView>
 
@@ -343,18 +344,25 @@ const styles = StyleSheet.create({
   header: {
     minHeight: 60,
     paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    position: 'relative',
+    justifyContent: 'center',
     backgroundColor: '#fff',
   },
-  leftSlot: {
-    alignItems: 'flex-start',
-    justifyContent: 'center',
+  /** Equal-width columns so back/avatar sit in mirrored slots; title is centered on screen in `headerTitleLayer`. */
+  headerBalancedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
   },
-  /** Balances the header when not in kid mode (matches right avatar tap area). */
-  leftSlotFixedWidth: {
-    width: 56,
+  headerSide: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    minWidth: 0,
+  },
+  headerSideEnd: {
+    justifyContent: 'flex-end',
   },
   leftSlotKidMode: {
     flexDirection: 'row',
@@ -378,23 +386,16 @@ const styles = StyleSheet.create({
     color: '#1d4ed8',
     flexShrink: 0,
   },
-  centerSlot: {
-    position: 'absolute',
-    left: 72,
-    right: 72,
+  headerTitleLayer: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rightSlot: {
-    marginLeft: 'auto',
-    alignItems: 'flex-end',
     justifyContent: 'center',
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    maxWidth: '100%',
+    maxWidth: '82%',
     justifyContent: 'center',
   },
   titleIcon: {
@@ -406,9 +407,12 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     lineHeight: 24,
   },
-  /** Icon + title row: title may shrink/wrap so long names work with large accessibility font sizes. */
+  titlePlain: {
+    maxWidth: '82%',
+    alignSelf: 'center',
+  },
+  /** Icon + title row: shrink/wrap for long titles without stretching across the full header (keeps the block visually centered). */
   titleInRow: {
-    flex: 1,
     flexShrink: 1,
     minWidth: 0,
   },
