@@ -14,6 +14,7 @@ import { Image, StyleSheet, Text, View } from 'react-native'
 import { BackForwardButton } from '@/components/back-forward-button'
 import { HeaderProfileButton } from '@/components/header-profile-button'
 import { useAuthContext } from '@/hooks/use-auth-context'
+import { appIconSource } from '@/lib/app-images'
 
 type HeaderIconName = React.ComponentProps<typeof MaterialCommunityIcons>['name']
 
