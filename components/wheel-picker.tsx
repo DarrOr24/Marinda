@@ -9,12 +9,9 @@ import {
   StyleProp,
   StyleSheet,
   Text,
-  useColorScheme,
   View,
   ViewStyle,
 } from "react-native";
-
-import { Colors } from "@/config/colors";
 
 
 type WheelItem = { value: string; label: string };
@@ -38,8 +35,8 @@ export function WheelPicker({
   style,
   playSound = true,
 }: Props) {
-  const scheme = useColorScheme();
-  const theme = scheme === 'dark' ? Colors.dark : Colors.light;
+  /** Wheel is only ever on a white sheet; dark-mode `ghostText` is white → invisible. */
+  const selectedLabelColor = "#0f172a";
 
   const listRef = useRef<FlatList<WheelItem>>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
@@ -250,7 +247,7 @@ export function WheelPicker({
                   },
                   isCenter && [
                     styles.textSelected,
-                    { color: theme.ghostText ?? "#0f172a", opacity: 1, transform: [{ scale: 1 }] },
+                    { color: selectedLabelColor, opacity: 1, transform: [{ scale: 1 }] },
                   ],
                 ]}
               >

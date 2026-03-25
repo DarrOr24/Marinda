@@ -240,6 +240,7 @@ export function DateTimeWheelPicker({
               type="ghost"
               size="xl"
               uppercase
+              titleColor="#475569"
               onPress={() => {
                 onCancel();
               }}
@@ -250,6 +251,7 @@ export function DateTimeWheelPicker({
               type="ghost"
               size="xl"
               uppercase
+              titleColor="#2563eb"
               onPress={() => {
                 onConfirm(buildSelectedDate().toISOString());
               }}
@@ -281,6 +283,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 20,
     marginTop: 16,
+    color: "#0f172a",
   },
   pickersRow: {
     flexDirection: "row",
