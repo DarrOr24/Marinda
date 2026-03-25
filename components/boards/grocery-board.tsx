@@ -14,8 +14,8 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
 import {
     Alert,
-    FlatList,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -330,232 +330,233 @@ export default function Grocery() {
         <Screen
             scroll={false}
             withBackground={false}
+            gap="no"
             contentStyle={styles.screenContent}
         >
+            <View style={styles.screenInner}>
+                <View style={styles.page}>
+                    <View style={styles.header}>
+                        <View style={styles.actions}>
+                            <Button
+                                type="outline"
+                                size="sm"
+                                title="Add"
+                                onPress={startAdd}
+                                leftIcon={<MaterialCommunityIcons name="plus" size={18} />}
+                            />
 
-            <View style={styles.header}>
-                {/* HEADER BUTTONS */}
-                <View style={styles.actions}>
-                    <Button
-                        type="outline"
-                        size="sm"
-                        title="Add"
-                        onPress={startAdd}
-                        leftIcon={<MaterialCommunityIcons name="plus" size={18} />}
-                    />
+                            <Button
+                                type="outline"
+                                size="sm"
+                                title="Delete Checked"
+                                onPress={deleteChecked}
+                                leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
+                                backgroundColor="#fff5f5"
+                                style={{ borderColor: "#fecaca" }}
+                                leftIconColor="#b91c1c"
+                            />
 
-                    <Button
-                        type="outline"
-                        size="sm"
-                        title="Delete Checked"
-                        onPress={deleteChecked}
-                        leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
-                        backgroundColor="#fff5f5"
-                        style={{ borderColor: "#fecaca" }}
-                        leftIconColor="#b91c1c"
-                    />
-
-                    <View style={{ position: "relative" }}>
-                        <Button
-                            type="outline"
-                            size="sm"
-                            title="View"
-                            onPress={() => setViewMenuOpen(v => !v)}
-                            rightIcon={<MaterialCommunityIcons name="menu-down" size={18} />}
-                        />
-                        {/* keep your dropdown as-is */}
-                        {viewMenuOpen && (
-                            <View style={styles.viewMenu}>
-                                <Pressable
-                                    style={styles.viewOption}
-                                    onPress={() => {
-                                        setViewMode("category");
-                                        setViewMenuOpen(false);
-                                    }}
-                                >
-                                    <Text style={styles.viewOptionText}>By Category</Text>
-                                </Pressable>
-
-                                <Pressable
-                                    style={styles.viewOption}
-                                    onPress={() => {
-                                        setViewMode("all");
-                                        setViewMenuOpen(false);
-                                    }}
-                                >
-                                    <Text style={styles.viewOptionText}>All Items (A → Z)</Text>
-                                </Pressable>
-                            </View>
-                        )}
-
-                    </View>
-                </View>
-            </View>
-
-            {/* LIST — SWITCHES BASED ON viewMode */}
-            {viewMode === "category" ? (
-                <FlatList
-                    data={grouped}
-                    keyExtractor={([cat]) => cat}
-                    contentContainerStyle={styles.listContent}
-                    renderItem={({ item: [cat, arr] }) => (
-                        <View style={styles.group}>
-                            <Text style={styles.groupTitle}>{cat}</Text>
-
-                            {arr.map(it => (
-                                <Pressable
-                                    key={it.id}
-                                    onLongPress={() => showItemInfo(it)}
-                                    onPress={() => toggleChecked(it.id)}
-                                    style={[styles.row, it.is_checked && styles.rowChecked]}
-                                >
-                                    <TouchableOpacity
-                                        onPress={e => {
-                                            e.stopPropagation();
-                                            toggleChecked(it.id);
-                                        }}
-                                    >
-                                        <MaterialCommunityIcons
-                                            name={
-                                                it.is_checked
-                                                    ? "checkbox-marked"
-                                                    : "checkbox-blank-outline"
-                                            }
-                                            size={22}
-                                            color={it.is_checked ? "#2563eb" : "#64748b"}
-                                        />
-                                    </TouchableOpacity>
-
-                                    <View style={styles.rowLine}>
-                                        <Text
-                                            numberOfLines={1}
-                                            style={[
-                                                styles.rowText,
-                                                it.is_checked && styles.rowTextDone,
-                                            ]}
-                                        >
-                                            {it.name}
-                                        </Text>
-
-                                        {it.amount && (
-                                            <View style={styles.amountPill}>
-                                                <Text style={styles.amountPillText}>
-                                                    {it.amount}
-                                                </Text>
-                                            </View>
-                                        )}
-                                    </View>
-
-                                    {/* edit */}
-                                    <Button
-                                        type="ghost"
-                                        size="sm"
-                                        round
-                                        hitSlop={10}
-                                        leftIcon={<MaterialCommunityIcons name="pencil-outline" size={20} />}
-                                        leftIconColor="#0f172a"
-                                        onPress={(e) => {
-                                            e?.stopPropagation?.();
-                                            startEdit(it);
-                                        }}
-                                    />
-
-                                    {/* info */}
-                                    <Button
-                                        type="ghost"
-                                        size="sm"
-                                        round
-                                        hitSlop={10}
-                                        leftIcon={<MaterialCommunityIcons name="information-outline" size={20} />}
-                                        leftIconColor="#475569"
-                                        onPress={(e) => {
-                                            e?.stopPropagation?.();
-                                            showItemInfo(it);
-                                        }}
-                                    />
-
-                                </Pressable>
-                            ))}
-                        </View>
-                    )}
-                />
-            ) : (
-                // FLAT LIST MODE
-                <FlatList
-                    data={allSorted}
-                    keyExtractor={it => it.id}
-                    contentContainerStyle={styles.listContent}
-                    renderItem={({ item: it }) => (
-                        <Pressable
-                            onLongPress={() => showItemInfo(it)}
-                            onPress={() => toggleChecked(it.id)}
-                            style={[styles.row, it.is_checked && styles.rowChecked]}
-                        >
-                            <TouchableOpacity
-                                onPress={e => {
-                                    e.stopPropagation();
-                                    toggleChecked(it.id);
-                                }}
-                            >
-                                <MaterialCommunityIcons
-                                    name={
-                                        it.is_checked
-                                            ? "checkbox-marked"
-                                            : "checkbox-blank-outline"
-                                    }
-                                    size={22}
-                                    color={it.is_checked ? "#2563eb" : "#64748b"}
+                            <View style={{ position: "relative" }}>
+                                <Button
+                                    type="outline"
+                                    size="sm"
+                                    title="View"
+                                    onPress={() => setViewMenuOpen(v => !v)}
+                                    rightIcon={<MaterialCommunityIcons name="menu-down" size={18} />}
                                 />
-                            </TouchableOpacity>
+                                {viewMenuOpen && (
+                                    <View style={styles.viewMenu}>
+                                        <Pressable
+                                            style={styles.viewOption}
+                                            onPress={() => {
+                                                setViewMode("category");
+                                                setViewMenuOpen(false);
+                                            }}
+                                        >
+                                            <Text style={styles.viewOptionText}>By Category</Text>
+                                        </Pressable>
 
-                            <View style={styles.rowLine}>
-                                <Text
-                                    numberOfLines={1}
-                                    style={[
-                                        styles.rowText,
-                                        it.is_checked && styles.rowTextDone,
-                                    ]}
-                                >
-                                    {it.name}
-                                </Text>
-
-                                {it.amount && (
-                                    <View style={styles.amountPill}>
-                                        <Text style={styles.amountPillText}>{it.amount}</Text>
+                                        <Pressable
+                                            style={styles.viewOption}
+                                            onPress={() => {
+                                                setViewMode("all");
+                                                setViewMenuOpen(false);
+                                            }}
+                                        >
+                                            <Text style={styles.viewOptionText}>All Items (A → Z)</Text>
+                                        </Pressable>
                                     </View>
                                 )}
                             </View>
+                        </View>
+                    </View>
 
-                            <Button
-                                type="ghost"
-                                size="sm"
-                                round
-                                hitSlop={10}
-                                leftIcon={<MaterialCommunityIcons name="pencil-outline" size={20} />}
-                                leftIconColor="#0f172a"
-                                onPress={(e) => {
-                                    e?.stopPropagation?.();
-                                    startEdit(it);
-                                }}
-                            />
+                    <View style={styles.listScrollHost}>
+                    <ScrollView
+                        style={styles.listScrollFill}
+                        contentContainerStyle={styles.listContent}
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator
+                    >
+                        {viewMode === "category"
+                            ? grouped.map(([cat, arr]) => (
+                                  <View key={cat} style={styles.group}>
+                                      <Text style={styles.groupTitle}>{cat}</Text>
 
-                            <Button
-                                type="ghost"
-                                size="sm"
-                                round
-                                hitSlop={10}
-                                leftIcon={<MaterialCommunityIcons name="information-outline" size={20} />}
-                                leftIconColor="#475569"
-                                onPress={(e) => {
-                                    e?.stopPropagation?.();
-                                    showItemInfo(it);
-                                }}
-                            />
+                                      {arr.map((it) => (
+                                          <Pressable
+                                              key={it.id}
+                                              onLongPress={() => showItemInfo(it)}
+                                              onPress={() => toggleChecked(it.id)}
+                                              style={[styles.row, it.is_checked && styles.rowChecked]}
+                                          >
+                                              <TouchableOpacity
+                                                  onPress={(e) => {
+                                                      e.stopPropagation();
+                                                      toggleChecked(it.id);
+                                                  }}
+                                              >
+                                                  <MaterialCommunityIcons
+                                                      name={
+                                                          it.is_checked
+                                                              ? "checkbox-marked"
+                                                              : "checkbox-blank-outline"
+                                                      }
+                                                      size={22}
+                                                      color={it.is_checked ? "#2563eb" : "#64748b"}
+                                                  />
+                                              </TouchableOpacity>
 
-                        </Pressable>
-                    )}
-                />
-            )}
+                                              <View style={styles.rowLine}>
+                                                  <Text
+                                                      numberOfLines={1}
+                                                      style={[
+                                                          styles.rowText,
+                                                          it.is_checked && styles.rowTextDone,
+                                                      ]}
+                                                  >
+                                                      {it.name}
+                                                  </Text>
+
+                                                  {it.amount && (
+                                                      <View style={styles.amountPill}>
+                                                          <Text style={styles.amountPillText}>
+                                                              {it.amount}
+                                                          </Text>
+                                                      </View>
+                                                  )}
+                                              </View>
+
+                                              <Button
+                                                  type="ghost"
+                                                  size="sm"
+                                                  round
+                                                  hitSlop={10}
+                                                  leftIcon={
+                                                      <MaterialCommunityIcons name="pencil-outline" size={20} />
+                                                  }
+                                                  leftIconColor="#0f172a"
+                                                  onPress={(e) => {
+                                                      e?.stopPropagation?.();
+                                                      startEdit(it);
+                                                  }}
+                                              />
+
+                                              <Button
+                                                  type="ghost"
+                                                  size="sm"
+                                                  round
+                                                  hitSlop={10}
+                                                  leftIcon={
+                                                      <MaterialCommunityIcons
+                                                          name="information-outline"
+                                                          size={20}
+                                                      />
+                                                  }
+                                                  leftIconColor="#475569"
+                                                  onPress={(e) => {
+                                                      e?.stopPropagation?.();
+                                                      showItemInfo(it);
+                                                  }}
+                                              />
+                                          </Pressable>
+                                      ))}
+                                  </View>
+                              ))
+                            : allSorted.map((it) => (
+                                  <Pressable
+                                      key={it.id}
+                                      onLongPress={() => showItemInfo(it)}
+                                      onPress={() => toggleChecked(it.id)}
+                                      style={[styles.row, it.is_checked && styles.rowChecked]}
+                                  >
+                                      <TouchableOpacity
+                                          onPress={(e) => {
+                                              e.stopPropagation();
+                                              toggleChecked(it.id);
+                                          }}
+                                      >
+                                          <MaterialCommunityIcons
+                                              name={
+                                                  it.is_checked
+                                                      ? "checkbox-marked"
+                                                      : "checkbox-blank-outline"
+                                              }
+                                              size={22}
+                                              color={it.is_checked ? "#2563eb" : "#64748b"}
+                                          />
+                                      </TouchableOpacity>
+
+                                      <View style={styles.rowLine}>
+                                          <Text
+                                              numberOfLines={1}
+                                              style={[
+                                                  styles.rowText,
+                                                  it.is_checked && styles.rowTextDone,
+                                              ]}
+                                          >
+                                              {it.name}
+                                          </Text>
+
+                                          {it.amount && (
+                                              <View style={styles.amountPill}>
+                                                  <Text style={styles.amountPillText}>{it.amount}</Text>
+                                              </View>
+                                          )}
+                                      </View>
+
+                                      <Button
+                                          type="ghost"
+                                          size="sm"
+                                          round
+                                          hitSlop={10}
+                                          leftIcon={<MaterialCommunityIcons name="pencil-outline" size={20} />}
+                                          leftIconColor="#0f172a"
+                                          onPress={(e) => {
+                                              e?.stopPropagation?.();
+                                              startEdit(it);
+                                          }}
+                                      />
+
+                                      <Button
+                                          type="ghost"
+                                          size="sm"
+                                          round
+                                          hitSlop={10}
+                                          leftIcon={
+                                              <MaterialCommunityIcons name="information-outline" size={20} />
+                                          }
+                                          leftIconColor="#475569"
+                                          onPress={(e) => {
+                                              e?.stopPropagation?.();
+                                              showItemInfo(it);
+                                          }}
+                                      />
+                                  </Pressable>
+                              ))}
+                    </ScrollView>
+                    </View>
+                </View>
 
             <GroceryItemModal
                 visible={addOpen}
@@ -597,6 +598,7 @@ export default function Grocery() {
                     )}
                 </ModalCard>
             </ModalShell>
+            </View>
 
         </Screen>
     );
@@ -606,25 +608,55 @@ export default function Grocery() {
 // STYLES
 // ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-    screenContent: { padding: 0 },
+    /** Match activity-board Screen: no default padding/gap, fill tab scene. */
+    screenContent: { flex: 1, padding: 0 },
+
+    screenInner: {
+        flex: 1,
+        minHeight: 0,
+    },
+
+    /** Fixed actions + flex scroll (same idea as week header + weekScroll on activity board). */
+    page: {
+        flex: 1,
+        minHeight: 0,
+    },
 
     header: {
         paddingLeft: 20,
         paddingRight: 16,
         paddingTop: 12,
+        paddingBottom: 8,
     },
     actions: {
+        width: "100%",
         flexDirection: "row",
         flexWrap: "wrap",
         alignItems: "center",
+        justifyContent: "center",
         gap: 10,
+    },
+
+    /** Take remaining height; ScrollView fills via absolute fill (no flex:1 on ScrollView). */
+    listScrollHost: {
+        flex: 1,
+        minHeight: 0,
+        position: "relative",
+    },
+    listScrollFill: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
     },
 
     listContent: {
         paddingLeft: 20,
         paddingRight: 16,
-        paddingTop: 12,
-        paddingBottom: 32,
+        paddingTop: 16,
+        paddingBottom: 0,
+        gap: 0,
     },
 
     group: {

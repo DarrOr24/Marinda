@@ -289,7 +289,7 @@ export default function ActivityBoard() {
         </SafeFab>
       }
     >
-      <View style={styles.center}>
+      <View style={[styles.center, dayViewDate && styles.centerDayTimeline]}>
         {dayViewDate ? (
           <ActivityDayView
             day={dayViewDate}
@@ -577,6 +577,8 @@ export default function ActivityBoard() {
 const styles = StyleSheet.create({
 
   center: { flex: 1, paddingLeft: 20, paddingRight: 16, paddingTop: 0, gap: 12 },
+  /** Tighter horizontal inset so the day timeline & time column use narrow phone width. */
+  centerDayTimeline: { paddingLeft: 10, paddingRight: 10, gap: 0 },
 
   subtitle: { marginTop: 2, fontSize: 13, color: "#475569" },
 

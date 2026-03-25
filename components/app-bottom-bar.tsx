@@ -24,7 +24,7 @@ export function AppBottomBar() {
     () => [
       {
         key: 'profile',
-        label: 'Kids Profiles',
+        label: 'Kids',
         path: '/profiles',
         icon: 'account-outline',
         color: '#2563eb',

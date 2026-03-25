@@ -1,5 +1,12 @@
 import React, { useMemo, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native'
 
 import ActivityBoard from '@/components/boards/activity-board'
 import AnnouncementsBoard from '@/components/boards/announcements-board'
@@ -18,8 +25,22 @@ const BOARD_TABS: BoardTab[] = [
   { key: 'activity', label: 'Activities' },
 ]
 
+/** Extra horizontal space vs a ~340pt phone; scales gap and padding on larger widths. */
+function tabBarSpacing(windowWidth: number) {
+  const excess = Math.max(0, windowWidth - 340)
+  const gap = Math.min(26, 8 + Math.round(excess / 16))
+  const paddingHorizontal = Math.min(28, 12 + Math.round(excess / 20))
+  return { gap, paddingHorizontal }
+}
+
 export default function BoardsTabScreen() {
   const [activeBoard, setActiveBoard] = useState<BoardKey>('grocery')
+  const { width: windowWidth } = useWindowDimensions()
+
+  const topTabsScrollMetrics = useMemo(
+    () => tabBarSpacing(windowWidth),
+    [windowWidth],
+  )
 
   const content = useMemo(() => {
     if (activeBoard === 'announcements') return <AnnouncementsBoard />
@@ -29,22 +50,35 @@ export default function BoardsTabScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.topTabs}>
-        {BOARD_TABS.map((tab) => {
-          const isActive = tab.key === activeBoard
+      <View style={styles.topTabsBar}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          bounces={false}
+          contentContainerStyle={[
+            styles.topTabsScrollContent,
+            topTabsScrollMetrics,
+          ]}
+        >
+          {BOARD_TABS.map((tab) => {
+            const isActive = tab.key === activeBoard
 
-          return (
-            <Pressable
-              key={tab.key}
-              style={[styles.topTab, isActive && styles.topTabActive]}
-              onPress={() => setActiveBoard(tab.key)}
-            >
-              <Text style={[styles.topTabText, isActive && styles.topTabTextActive]}>
-                {tab.label}
-              </Text>
-            </Pressable>
-          )
-        })}
+            return (
+              <Pressable
+                key={tab.key}
+                style={[styles.topTab, isActive && styles.topTabActive]}
+                onPress={() => setActiveBoard(tab.key)}
+              >
+                <Text
+                  style={[styles.topTabText, isActive && styles.topTabTextActive]}
+                  numberOfLines={1}
+                >
+                  {tab.label}
+                </Text>
+              </Pressable>
+            )
+          })}
+        </ScrollView>
       </View>
 
       <View style={styles.content}>{content}</View>
@@ -56,19 +90,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  topTabs: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 10,
+  topTabsBar: {
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
   },
+  topTabsScrollContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 14,
+    paddingBottom: 10,
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
   topTab: {
-    paddingHorizontal: 18,
+    flexShrink: 0,
+    paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 999,
     backgroundColor: '#f1f5f9',
@@ -77,7 +114,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#dbeafe',
   },
   topTabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#475569',
   },

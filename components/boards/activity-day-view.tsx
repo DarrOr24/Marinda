@@ -233,6 +233,9 @@ export function ActivityDayView({
     return h;
   }, []);
 
+  /** Wide enough for the longest localized hour label on one line (not a fixed 52px). */
+  const timeGutterMinWidth = useMemo(() => timeGutterMinWidthPx(), []);
+
   const dayKey = useMemo(() => {
     const d = new Date(day);
     return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -299,7 +302,9 @@ export function ActivityDayView({
         {allDayActivities.length > 0 ? (
           <View style={styles.allDaySection}>
             <View style={styles.allDayRowLayout}>
-              <View style={styles.allDayLabelCol}>
+              <View
+                style={[styles.allDayLabelCol, { minWidth: timeGutterMinWidth }]}
+              >
                 <Text style={styles.allDayLabelText}>All-day</Text>
               </View>
               <View style={styles.allDayList}>
@@ -339,7 +344,7 @@ export function ActivityDayView({
         ) : null}
 
         <View style={styles.timelineRow}>
-          <View style={styles.hourLabels}>
+          <View style={[styles.hourLabels, { minWidth: timeGutterMinWidth }]}>
             {hours.map((hh) => (
               <View
                 key={hh}
@@ -348,7 +353,7 @@ export function ActivityDayView({
                   { height: 60 * PX_PER_MINUTE },
                 ]}
               >
-                <Text style={styles.hourLabelText}>
+                <Text style={styles.hourLabelText} numberOfLines={1}>
                   {formatHourLabel(hh)}
                 </Text>
               </View>
@@ -415,12 +420,26 @@ function formatHourLabel(h: number) {
   return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
+/**
+ * Derives gutter width from the longest hour string for the current locale (~px tallies for 11px semibold).
+ * Keeps “10:00 a.m.” style strings on one line without hard-coding 52px.
+ */
+function timeGutterMinWidthPx(): number {
+  let widest = "All-day";
+  for (let hh = TIMELINE_START_HOUR; hh < TIMELINE_END_HOUR; hh++) {
+    const label = formatHourLabel(hh);
+    if (label.length > widest.length) widest = label;
+  }
+  const approxCharPx = 7;
+  return Math.min(112, Math.max(72, Math.ceil(widest.length * approxCharPx + 8)));
+}
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
     minHeight: 0,
-    paddingLeft: 16,
-    paddingRight: 12,
+    paddingLeft: 8,
+    paddingRight: 8,
     paddingTop: 4,
   },
   topBar: {
@@ -475,7 +494,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   allDayLabelCol: {
-    width: 52,
+    flexShrink: 0,
     paddingTop: 6,
     alignItems: "flex-start",
   },
@@ -521,10 +540,14 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 8,
   },
-  hourLabels: { width: 52 },
+  hourLabels: {
+    flexShrink: 0,
+    alignItems: "flex-start",
+  },
   hourLabelCell: {
     justifyContent: "flex-start",
     paddingTop: 0,
+    width: "100%",
   },
   hourLabelText: {
     fontSize: 11,
