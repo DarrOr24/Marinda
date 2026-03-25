@@ -242,7 +242,7 @@ export default function AnnouncementsBoard() {
       return;
     }
 
-    Alert.alert('Delete announcement?', 'This cannot be undone.', [
+    Alert.alert('Delete item?', 'This cannot be undone.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -258,7 +258,7 @@ export default function AnnouncementsBoard() {
   if (!familyId) {
     return (
       <ScreenState
-        title="Announcements"
+        title="Bulletin"
         description="Please select a family."
         withBackground={false}
       />
@@ -268,8 +268,8 @@ export default function AnnouncementsBoard() {
   if (isLoading) {
     return (
       <ScreenState
-        title="Announcements"
-        description="Loading announcements."
+        title="Bulletin"
+        description="Loading…"
         showActivityIndicator
         withBackground={false}
       />
@@ -279,7 +279,7 @@ export default function AnnouncementsBoard() {
   if (error) {
     return (
       <ScreenState
-        title="Announcements"
+        title="Bulletin"
         description={error.message}
         withBackground={false}
       />
@@ -346,7 +346,7 @@ export default function AnnouncementsBoard() {
         <View style={styles.searchWrapper}>
           <TextInput
             style={styles.textInputWithRightIcon}
-            placeholder="Search announcements..."
+            placeholder="Search bulletin…"
             value={search}
             onChangeText={setSearch}
           />
@@ -524,7 +524,7 @@ export default function AnnouncementsBoard() {
           keyboardOffset={0}
         >
           <ModalCard>
-            <Text style={styles.modalTitle}>Edit Announcement</Text>
+            <Text style={styles.modalTitle}>Edit item</Text>
 
             <TextInput
               style={styles.textInputMultiline}

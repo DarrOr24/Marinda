@@ -5,7 +5,7 @@ import { Text } from 'react-native';
 
 export default function AnnouncementsInfoScreen() {
     return (
-        <DocsPageLayout intro="The Announcements Board is a shared family space where everyone can post notes, requests, and reminders.">
+        <DocsPageLayout intro="The bulletin board is a shared family space where everyone can add notes, requests, and reminders.">
             <DocsSection title="1. What Each Tab Means">
                 <DocsBullet>
                     <Text style={docsPageStyles.highlight}>Notes:</Text> A free-flow sticky
@@ -22,22 +22,22 @@ export default function AnnouncementsInfoScreen() {
                 </DocsBullet>
             </DocsSection>
 
-            <DocsSection title="2. Creating Announcements">
-                <DocsBullet>Anyone in the family can post or share something.</DocsBullet>
+            <DocsSection title="2. Adding to the bulletin">
+                <DocsBullet>Anyone in the family can add or share something.</DocsBullet>
                 <DocsBullet>
-                    Posts show the name of the family member who wrote them.
+                    Each item shows the name of the family member who wrote it.
                 </DocsBullet>
                 <DocsBullet>
-                    Each post automatically records the date and time it was created.
+                    Each item automatically records the date and time it was created.
                 </DocsBullet>
             </DocsSection>
 
             <DocsSection title="3. Editing & Deleting">
                 <DocsBullet>
-                    Only the person who created a post can edit or delete it.
+                    Only the person who created an item can edit or delete it.
                 </DocsBullet>
                 <DocsBullet>
-                    Parents can also edit or delete any post in case something needs to
+                    Parents can also edit or delete any item in case something needs to
                     be corrected.
                 </DocsBullet>
                 <DocsBullet>
@@ -58,10 +58,10 @@ export default function AnnouncementsInfoScreen() {
                     Parents can create <Text style={docsPageStyles.highlight}>custom tabs</Text> to organize the board in a way that fits your family — such as "Holidays," "Signatures," "Chores," or anything else.
                 </DocsBullet>
                 <DocsBullet>
-                    Custom tabs can be <Text style={docsPageStyles.highlight}>added, renamed, or deleted</Text> at any time from the Announcement Settings page.
+                    Custom tabs can be <Text style={docsPageStyles.highlight}>added, renamed, or deleted</Text> at any time from the bulletin settings page.
                 </DocsBullet>
                 <DocsBullet>
-                    Kids and teens can view and post inside custom tabs, but only parents can modify the tabs themselves.
+                    Kids and teens can view and add items inside custom tabs, but only parents can modify the tabs themselves.
                 </DocsBullet>
             </DocsSection>
         </DocsPageLayout>

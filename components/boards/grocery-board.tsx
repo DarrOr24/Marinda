@@ -335,27 +335,41 @@ export default function Grocery() {
         >
                 <View style={styles.page}>
                     <View style={styles.header}>
-                        <View style={styles.actions}>
-                            <Button
-                                type="outline"
-                                size="sm"
-                                title="Add"
-                                onPress={startAdd}
-                                leftIcon={<MaterialCommunityIcons name="plus" size={18} />}
-                            />
+                        <View style={styles.actionsRow}>
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                style={styles.actionsScroll}
+                                contentContainerStyle={styles.actionsScrollContent}
+                                keyboardShouldPersistTaps="handled"
+                            >
+                                <Button
+                                    type="outline"
+                                    size="sm"
+                                    title="Add"
+                                    onPress={startAdd}
+                                    style={styles.actionChip}
+                                    leftIcon={<MaterialCommunityIcons name="plus" size={18} />}
+                                />
 
-                            <Button
-                                type="outline"
-                                size="sm"
-                                title="Delete Checked"
-                                onPress={deleteChecked}
-                                leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
-                                backgroundColor="#fff5f5"
-                                style={{ borderColor: "#fecaca" }}
-                                leftIconColor="#b91c1c"
-                            />
+                                <Button
+                                    type="outline"
+                                    size="sm"
+                                    title="Delete"
+                                    onPress={deleteChecked}
+                                    style={[styles.actionChip, { borderColor: "#fecaca" }]}
+                                    leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
+                                    rightIcon={
+                                        <MaterialCommunityIcons name="checkbox-multiple-marked" size={18} />
+                                    }
+                                    backgroundColor="#fff5f5"
+                                    leftIconColor="#b91c1c"
+                                    rightIconColor="#b91c1c"
+                                    titleColor="#b91c1c"
+                                />
+                            </ScrollView>
 
-                            <View style={{ position: "relative" }}>
+                            <View style={styles.viewMenuHost}>
                                 <Button
                                     type="outline"
                                     size="sm"
@@ -620,14 +634,31 @@ const styles = StyleSheet.create({
     header: {
         paddingTop: 12,
         paddingBottom: 8,
+        zIndex: 2,
     },
-    actions: {
+    actionsRow: {
         width: "100%",
         flexDirection: "row",
-        flexWrap: "wrap",
-        alignItems: "center",
-        justifyContent: "center",
+        alignItems: "flex-start",
         gap: 10,
+    },
+    actionsScroll: {
+        flex: 1,
+        minWidth: 0,
+    },
+    actionsScrollContent: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        paddingRight: 2,
+        flexGrow: 0,
+    },
+    actionChip: {
+        flexShrink: 0,
+    },
+    viewMenuHost: {
+        position: "relative",
+        flexShrink: 0,
     },
 
     /** Same as activity-board `weekScroll`. */
