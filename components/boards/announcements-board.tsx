@@ -363,6 +363,7 @@ export default function AnnouncementsBoard() {
         {/* ---------------------------------------------- */}
         <View style={styles.tabsContainer}>
           <ChipSelector
+            horizontal
             value={isSearching ? null : activeKind}
             onChange={(val) => {
               if (!val) return;
@@ -393,7 +394,13 @@ export default function AnnouncementsBoard() {
                 hitSlop={8}
                 title=""
                 leftIcon={<Ionicons name="add" size={16} />}
-                style={{ width: 28, height: 28, minWidth: 28, minHeight: 28 }}
+                style={{
+                  width: 28,
+                  height: 28,
+                  minWidth: 28,
+                  minHeight: 28,
+                  alignSelf: 'center',
+                }}
                 onPress={() => {
                   setNewTabLabel('');
                   setNewTabPlaceholder('');
