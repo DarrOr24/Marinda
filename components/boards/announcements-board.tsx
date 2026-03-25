@@ -919,13 +919,21 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     flexGrow: 0,
   },
+  /**
+   * Wide phones: Sort/By vs icons separated with space-between.
+   * `gap` enforces a minimum strip between groups — without it, scroll-wrapped rows (big fonts)
+   * can shrink-wrap to content width and space-between adds zero space, so pills touch the icons.
+   */
   collapsedToolbarScrollContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 14,
     paddingRight: 4,
     minHeight: 32,
     paddingVertical: 2,
+    minWidth: '100%',
+    flexGrow: 1,
+    justifyContent: 'space-between',
   },
   searchExpandedScrollContent: {
     flexDirection: 'row',

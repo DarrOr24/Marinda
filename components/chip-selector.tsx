@@ -34,6 +34,8 @@ interface MultiSelectProps {
 type ChipSelectorProps = (SingleSelectProps | MultiSelectProps) & {
   options: ChipOption[]
   style?: StyleProp<ViewStyle>
+  /** Merged after defaults when `horizontal` is true (e.g. `justifyContent: 'center'`, `minWidth: '100%'`). */
+  horizontalContentContainerStyle?: StyleProp<ViewStyle>
   renderOption?: (opt: ChipOption, active: boolean) => ReactNode
   chipStyle?: (active: boolean, opt: ChipOption) => ViewStyle
   chipTextStyle?: (active: boolean, opt: ChipOption) => TextStyle
@@ -47,6 +49,7 @@ export function ChipSelector(props: ChipSelectorProps) {
   const {
     options,
     style,
+    horizontalContentContainerStyle,
     renderOption,
     chipStyle,
     chipTextStyle,
@@ -110,7 +113,10 @@ export function ChipSelector(props: ChipSelectorProps) {
         horizontal
         showsHorizontalScrollIndicator={false}
         style={[styles.horizontalScroll, style]}
-        contentContainerStyle={styles.horizontalScrollContent}
+        contentContainerStyle={[
+          styles.horizontalScrollContent,
+          horizontalContentContainerStyle,
+        ]}
         keyboardShouldPersistTaps="handled"
       >
         {chips}
