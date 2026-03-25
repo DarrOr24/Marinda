@@ -356,7 +356,7 @@ export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps)
 
       {hasParentPermissions && (
         <View style={styles.adjustCard}>
-          <Text style={styles.adjustTitle}>Adjust points manually</Text>
+          <Text style={styles.adjustTitle}>Adjust points</Text>
           <Text style={styles.adjustHelp}>
             Add or subtract points for this member. Use this for bonuses, corrections,
             or special rewards.
@@ -397,7 +397,7 @@ export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps)
               style={{ flex: 1 }}
             />
             <Button
-              title={adjustSaving ? "Saving…" : "Save change"}
+              title={adjustSaving ? "Saving…" : "Save"}
               type="primary"
               size="md"
               fullWidth
