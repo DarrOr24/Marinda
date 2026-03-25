@@ -94,15 +94,15 @@ export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps)
   const current = memberList.find((m: any) => m.id === viewedMemberId);
   const points = (current as any)?.points ?? 0;
   const profileTitle = current
-    ? isKidMode
-      ? memberDisplayName(current)
-      : `${memberDisplayName(current)}'s Profile`
+    ? `${memberDisplayName(current)}'s Profile`
     : "Profile";
+  const useMarindaHeader = isKidMode || hasParentPermissions;
 
-  useAppHeader({
-    title: profileTitle,
-    hiddenTitle: false,
-  });
+  useAppHeader(
+    useMarindaHeader
+      ? { title: "Marinda", appBrand: true, hiddenTitle: false }
+      : { title: profileTitle, hiddenTitle: false },
+  );
 
   // 🔄 Always refetch members when entering this screen or switching profile
   useEffect(() => {
@@ -351,10 +351,25 @@ export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps)
         ) : null
       }
     >
-      <View style={styles.pointsCard}>
-        <Text style={styles.pointsLabel}>Points</Text>
-        <Text style={styles.pointsValue}>{points}</Text>
-      </View>
+      {isKidMode && current ? (
+        <View style={styles.kidPointsRow}>
+          <View style={styles.nameCard}>
+            <Text style={styles.nameCardLabel}>Playing as</Text>
+            <Text style={styles.nameCardValue} numberOfLines={2}>
+              {memberDisplayName(current)}
+            </Text>
+          </View>
+          <View style={[styles.pointsCard, styles.pointsCardInRow]}>
+            <Text style={styles.pointsLabel}>Points</Text>
+            <Text style={styles.pointsValue}>{points}</Text>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.pointsCard}>
+          <Text style={styles.pointsLabel}>Points</Text>
+          <Text style={styles.pointsValue}>{points}</Text>
+        </View>
+      )}
 
       {hasParentPermissions && (
         <View style={styles.adjustCard}>
@@ -577,6 +592,33 @@ const styles = StyleSheet.create({
     borderColor: "#e5e7eb",
   },
 
+  kidPointsRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 12,
+    width: "100%",
+  },
+  nameCard: {
+    flex: 1,
+    minWidth: 0,
+    padding: 16,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    justifyContent: "center",
+  },
+  nameCardLabel: {
+    fontSize: 14,
+    color: "#475569",
+    fontWeight: "600",
+  },
+  nameCardValue: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#0f172a",
+    marginTop: 6,
+  },
   pointsCard: {
     padding: 16,
     backgroundColor: "#fff",
@@ -585,6 +627,11 @@ const styles = StyleSheet.create({
     borderColor: "#e2e8f0",
     alignSelf: "flex-start",
     minWidth: 150,
+  },
+  pointsCardInRow: {
+    flex: 1,
+    minWidth: 0,
+    alignSelf: "stretch",
   },
   pointsLabel: {
     fontSize: 14,

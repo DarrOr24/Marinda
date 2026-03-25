@@ -9,7 +9,7 @@ import React, {
   useState,
 } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Image, StyleSheet, Text, View } from 'react-native'
 
 import { BackForwardButton } from '@/components/back-forward-button'
 import { HeaderProfileButton } from '@/components/header-profile-button'
@@ -20,6 +20,8 @@ type HeaderIconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'
 type AppHeaderConfig = {
   title?: string
   icon?: HeaderIconName
+  /** Show Marinda title with the app mark (kid mode roots + parent profile). */
+  appBrand?: boolean
   color?: string
   hiddenTitle?: boolean
 }
@@ -34,7 +36,7 @@ const AppHeaderContext = createContext<AppHeaderContextValue | null>(null)
 
 export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { profile, isKidMode, exitKidMode } = useAuthContext()
+  const { profile, isKidMode } = useAuthContext()
   const [override, setOverride] = useState<AppHeaderConfig | null>(null)
 
   const firstName =
@@ -46,6 +48,14 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
   const defaultConfig = useMemo<AppHeaderConfig>(() => {
     const hiddenTitle = isKidMode
+
+    if (isKidMode && ROOT_APP_PATHS.includes(pathname)) {
+      return {
+        title: 'Marinda',
+        appBrand: true,
+        hiddenTitle: false,
+      }
+    }
 
     if (pathname === '/chores') {
       return {
@@ -236,6 +246,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
     ...defaultConfig,
     ...override,
     hiddenTitle: override?.hiddenTitle ?? defaultConfig.hiddenTitle,
+    appBrand: override?.appBrand ?? defaultConfig.appBrand,
   }
 
   const showBackButton = !ROOT_APP_PATHS.includes(pathname)
@@ -245,27 +256,8 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
       <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={styles.header}>
           <View style={styles.headerBalancedRow}>
-            <View
-              style={[
-                styles.headerSide,
-                isKidMode && styles.leftSlotKidMode,
-              ]}
-            >
+            <View style={styles.headerSide}>
               {showBackButton ? <BackForwardButton direction="back" size="sm" /> : null}
-              {isKidMode && (
-                <TouchableOpacity
-                  style={styles.exitKidModeButton}
-                  onPress={() => exitKidMode?.()}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel="Exit kid mode"
-                >
-                  <MaterialCommunityIcons name="shield-lock-outline" size={18} color="#1d4ed8" />
-                  <Text style={styles.exitKidModeButtonText} numberOfLines={1}>
-                    Exit kid mode
-                  </Text>
-                </TouchableOpacity>
-              )}
             </View>
 
             <View style={[styles.headerSide, styles.headerSideEnd]}>
@@ -275,7 +267,22 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
           {!config.hiddenTitle && (
             <View style={styles.headerTitleLayer} pointerEvents="none">
-              {config.icon ? (
+              {config.appBrand ? (
+                <View style={styles.titleRow}>
+                  <Image
+                    source={require('../assets/images/app-icon.png')}
+                    style={styles.titleAppIcon}
+                  />
+                  <Text
+                    style={[styles.title, styles.titleInRow, { color: config.color ?? '#0f172a' }]}
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
+                    textAlign="center"
+                  >
+                    {config.title}
+                  </Text>
+                </View>
+              ) : config.icon ? (
                 <View style={styles.titleRow}>
                   <MaterialCommunityIcons
                     name={config.icon}
@@ -321,6 +328,7 @@ export function useAppHeader(config: AppHeaderConfig | null) {
 
   const title = config?.title
   const icon = config?.icon
+  const appBrand = config?.appBrand
   const color = config?.color
   const hiddenTitle = config?.hiddenTitle
 
@@ -331,7 +339,7 @@ export function useAppHeader(config: AppHeaderConfig | null) {
       return () => {
         context.setOverride(null)
       }
-    }, [color, context, hiddenTitle, icon, title]),
+    }, [appBrand, color, context, hiddenTitle, icon, title]),
   )
 }
 
@@ -364,28 +372,6 @@ const styles = StyleSheet.create({
   headerSideEnd: {
     justifyContent: 'flex-end',
   },
-  leftSlotKidMode: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexShrink: 0,
-  },
-  exitKidModeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: '#dbeafe',
-    flexShrink: 0,
-  },
-  exitKidModeButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1d4ed8',
-    flexShrink: 0,
-  },
   headerTitleLayer: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
@@ -399,6 +385,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   titleIcon: {
+    flexShrink: 0,
+  },
+  titleAppIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
     flexShrink: 0,
   },
   title: {

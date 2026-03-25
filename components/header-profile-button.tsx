@@ -18,6 +18,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { MemberAvatar } from '@/components/avatar/member-avatar'
+import type { FamilyMember } from '@/lib/members/members.types'
+import { memberDisplayName } from '@/utils/format.utils'
 
 
 export function HeaderProfileButton() {
@@ -30,6 +32,7 @@ export function HeaderProfileButton() {
     effectiveMember,
     isKidMode,
     enterKidMode,
+    exitKidMode,
     hasParentPermissions,
   } = useAuthContext()
   const { familyMembers } = useFamily(activeFamilyId)
@@ -171,12 +174,33 @@ export function HeaderProfileButton() {
                 </TouchableOpacity>
               )}
 
-              <TouchableOpacity style={styles.item} onPress={handleLogout}>
-                <MaterialCommunityIcons name="logout" size={20} color="#dc2626" />
-                <Text style={[styles.itemText, { color: '#dc2626' }]}>
-                  Log out
-                </Text>
-              </TouchableOpacity>
+              {isKidMode && effectiveMember && (
+                <>
+                  <View style={styles.kidMenuIdentity}>
+                    <Text style={styles.kidMenuLabel}>Playing as</Text>
+                    <Text style={styles.kidMenuName} numberOfLines={2}>
+                      {memberDisplayName(effectiveMember as FamilyMember)}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.item}
+                    onPress={() => {
+                      setOpen(false)
+                      void exitKidMode?.()
+                    }}
+                  >
+                    <MaterialCommunityIcons name="shield-lock-outline" size={20} color="#1d4ed8" />
+                    <Text style={[styles.itemText, { color: '#1d4ed8' }]}>Exit kid mode</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {!isKidMode && (
+                <TouchableOpacity style={styles.item} onPress={handleLogout}>
+                  <MaterialCommunityIcons name="logout" size={20} color="#dc2626" />
+                  <Text style={[styles.itemText, { color: '#dc2626' }]}>Log out</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
@@ -208,10 +232,27 @@ const styles = StyleSheet.create({
     zIndex: 2,
     elevation: 8,
   },
+  kidMenuIdentity: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e2e8f0',
+  },
+  kidMenuLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  kidMenuName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
   menu: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    width: 160,
+    width: 200,
     paddingVertical: 8,
     elevation: 6,
     zIndex: 3,
