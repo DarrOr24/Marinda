@@ -157,7 +157,18 @@ export function ActivityDayView({
   activityColorStyle,
   formatTimeRange,
 }: Props) {
+  /** Short weekday + month avoids a two-line title and layout jumps (e.g. Tue, Mar 24). */
   const dayLabel = useMemo(
+    () =>
+      day.toLocaleDateString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      }),
+    [day],
+  );
+
+  const dayTitleA11yLabel = useMemo(
     () =>
       day.toLocaleDateString(undefined, {
         weekday: "long",
@@ -278,7 +289,11 @@ export function ActivityDayView({
           <Text style={styles.weekBackText}>Week</Text>
         </Pressable>
 
-        <Text style={styles.dayTitle} numberOfLines={2}>
+        <Text
+          style={styles.dayTitle}
+          numberOfLines={1}
+          accessibilityLabel={dayTitleA11yLabel}
+        >
           {dayLabel}
         </Text>
 
