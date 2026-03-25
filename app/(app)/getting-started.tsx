@@ -79,7 +79,7 @@ export default function GettingStartedScreen() {
           Activities – Kids post their own activities, plan their time, and see how it fits with the family schedule.
         </DocsBullet>
         <DocsBullet>
-          Announcements – Share news and updates with the family.
+          Bulletin – Share notes, requests, and reminders with the family.
         </DocsBullet>
         <DocsBullet>
           Groceries – Collaborative shopping lists.

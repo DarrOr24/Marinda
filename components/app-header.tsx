@@ -58,7 +58,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/wishlist') {
       return {
-        title: 'Wishlist',
+        title: 'Wishes',
         icon: 'gift-outline',
         color: '#22c55e',
         hiddenTitle,
@@ -167,7 +167,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/chores/info') {
       return {
-        title: 'How chore game works',
+        title: 'Chores info',
         icon: 'clipboard-check-outline',
         color: '#7c3aed',
         hiddenTitle,
@@ -176,7 +176,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/chores/settings') {
       return {
-        title: 'Chore Game Settings',
+        title: 'Chores settings',
         icon: 'clipboard-check-outline',
         color: '#7c3aed',
         hiddenTitle,
@@ -185,25 +185,25 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/wishlist/info') {
       return {
-        title: 'How Wishlist Works',
+        title: 'Wishes info',
         icon: 'gift-outline',
-        color: '#db2777',
+        color: '#22c55e',
         hiddenTitle,
       }
     }
 
     if (pathname === '/wishlist/settings') {
       return {
-        title: 'Wishlist Settings',
+        title: 'Wishes settings',
         icon: 'gift-outline',
-        color: '#db2777',
+        color: '#22c55e',
         hiddenTitle,
       }
     }
 
     if (pathname === '/announcements/info') {
       return {
-        title: 'How announcements work',
+        title: 'Bulletin info',
         icon: 'bullhorn-outline',
         color: '#f59e0b',
         hiddenTitle,
@@ -212,7 +212,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/announcements/settings') {
       return {
-        title: 'Announcements Settings',
+        title: 'Bulletin settings',
         icon: 'bullhorn-outline',
         color: '#f59e0b',
         hiddenTitle,

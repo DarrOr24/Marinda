@@ -24,7 +24,7 @@ const CURRENCIES = ["CAD", "USD", "EUR", "GBP", "ILS"];
 export default function WishlistSettingsScreen() {
     const { activeFamilyId } = useAuthContext() as any;
     const { hasParentPermissions, requireParent } = useParentPermissionGuard({
-        message: "Only parents can change wishlist settings.",
+        message: "Only parents can change wishes settings.",
     });
 
     const {
@@ -121,8 +121,8 @@ export default function WishlistSettingsScreen() {
     if (isLoading) {
         return (
             <ScreenState
-                title="Wishlist settings"
-                description="Loading wishlist settings."
+                title="Wishes settings"
+                description="Loading wishes settings."
                 showActivityIndicator
                 withBackground={false}
             />
@@ -132,8 +132,8 @@ export default function WishlistSettingsScreen() {
     if (isError) {
         return (
             <ScreenState
-                title="Wishlist settings"
-                description="Failed to load wishlist settings."
+                title="Wishes settings"
+                description="Failed to load wishes settings."
                 withBackground={false}
             />
         );

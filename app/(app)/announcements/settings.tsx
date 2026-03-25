@@ -22,7 +22,7 @@ export default function AnnouncementSettingsScreen() {
 
     const { activeFamilyId } = useAuthContext() as any;
     const { hasParentPermissions, requireParent } = useParentPermissionGuard({
-        message: 'Only parents can add, edit, or delete announcement tabs.',
+        message: 'Only parents can add, edit, or delete bulletin tabs.',
     });
 
     const { data: tabs } = useFamilyAnnouncementTabs(activeFamilyId);
@@ -132,13 +132,10 @@ export default function AnnouncementSettingsScreen() {
     const customTabs = tabs ?? [];
 
     return (
-        <DocsPageLayout
-            title="Announcement Tabs Settings"
-            subtext="Organize which tabs appear in your announcement board."
-        >
+        <DocsPageLayout intro="Choose which tabs appear on your bulletin board.">
             <DocsSection title="Custom tabs">
                 <Text style={docsPageStyles.description}>
-                    Creating custom tabs helps you organize your family’s announcements in the way that works best for you.
+                    Creating custom tabs helps you organize your family’s bulletin in the way that works best for you.
                 </Text>
 
                 {!hasParentPermissions && (
@@ -217,7 +214,7 @@ export default function AnnouncementSettingsScreen() {
                             placeholder={
                                 editing.label
                                     ? `Write a new ${editing.label.toLowerCase()}...`
-                                    : 'Write a new announcement...'
+                                    : 'Write a new note...'
                             }
                             containerStyle={{ marginTop: 10 }}
                         />

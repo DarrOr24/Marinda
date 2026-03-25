@@ -25,7 +25,7 @@ export default function WishlistInfoScreen() {
                     (for example: <Text style={docsPageStyles.highlight}>10 points = $1</Text>).
                 </DocsBullet>
                 <DocsBullet>
-                    The conversion rate and currency are set by parents in Wishlist Settings.
+                    The conversion rate and currency are set by parents in Wishes settings.
                 </DocsBullet>
                 <DocsBullet>
                     Kids can see how many points a wish costs before saving or fulfilling it.
@@ -59,7 +59,7 @@ export default function WishlistInfoScreen() {
                     Some wishes may be fulfilled directly by the child, encouraging independence and trust.
                 </DocsBullet>
                 <DocsBullet>
-                    Parents control this by setting a maximum price for self-fulfilled wishes in Wishlist Settings.
+                    Parents control this by setting a maximum price for self-fulfilled wishes in Wishes settings.
                 </DocsBullet>
             </DocsSection>
 
