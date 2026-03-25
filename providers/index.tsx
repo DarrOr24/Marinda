@@ -1,4 +1,5 @@
 // app/providers.tsx
+import { Fredoka_700Bold, useFonts } from '@expo-google-fonts/fredoka'
 import NetInfo from '@react-native-community/netinfo'
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native'
 import {
@@ -54,6 +55,7 @@ function useAudioModeForSilentIOS() {
 
 export default function Providers({ children }: PropsWithChildren) {
   const colorScheme = useColorScheme()
+  useFonts({ Fredoka_700Bold })
   useReactQuerySync()
   useAudioModeForSilentIOS()
 

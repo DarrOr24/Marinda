@@ -9,7 +9,7 @@ import React, {
   useState,
 } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Image, StyleSheet, Text, View } from 'react-native'
+import { Image, Platform, StyleSheet, Text, View } from 'react-native'
 
 import { BackForwardButton } from '@/components/back-forward-button'
 import { HeaderProfileButton } from '@/components/header-profile-button'
@@ -31,6 +31,12 @@ type AppHeaderContextValue = {
 }
 
 const ROOT_APP_PATHS = ['/profiles', '/chores', '/wishlist', '/boards']
+
+/** Header “Marinda” wordmark — blue tuned to sit with the app icon. */
+const APP_BRAND_TITLE_COLOR = '#1570dc'
+
+/** Rounded, friendly face from `@expo-google-fonts/fredoka` (loaded in `providers`). */
+const BRAND_TITLE_FONT = 'Fredoka_700Bold'
 
 const AppHeaderContext = createContext<AppHeaderContextValue | null>(null)
 
@@ -266,15 +272,28 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
           </View>
 
           {!config.hiddenTitle && (
-            <View style={styles.headerTitleLayer} pointerEvents="none">
+            <View
+              style={[
+                styles.headerTitleLayer,
+                config.appBrand && [
+                  styles.headerTitleLayerBrand,
+                  { paddingLeft: showBackButton ? 48 : 16 },
+                ],
+              ]}
+              pointerEvents="none"
+            >
               {config.appBrand ? (
-                <View style={styles.titleRow}>
+                <View style={[styles.titleRow, styles.titleRowBrand]}>
                   <Image
                     source={require('../assets/images/app-icon.png')}
                     style={styles.titleAppIcon}
                   />
                   <Text
-                    style={[styles.title, styles.titleInRow, { color: config.color ?? '#0f172a' }]}
+                    style={[
+                      styles.titleBrandText,
+                      styles.titleBrand,
+                      styles.titleInRowBrand,
+                    ]}
                     numberOfLines={2}
                     ellipsizeMode="tail"
                   >
@@ -374,12 +393,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  headerTitleLayerBrand: {
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     maxWidth: '82%',
     justifyContent: 'center',
+  },
+  titleRowBrand: {
+    maxWidth: '78%',
+    justifyContent: 'flex-start',
   },
   titleIcon: {
     flexShrink: 0,
@@ -396,6 +423,19 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     lineHeight: 24,
   },
+  /**
+   * Brand line uses a single Bold TTF — do not stack `fontWeight: '700'` (Android falls back to system font).
+   */
+  titleBrandText: {
+    fontSize: 20,
+    lineHeight: Platform.OS === 'android' ? 26 : 24,
+    fontWeight: 'normal',
+  },
+  titleBrand: {
+    color: APP_BRAND_TITLE_COLOR,
+    fontFamily: BRAND_TITLE_FONT,
+    letterSpacing: -0.3,
+  },
   titlePlain: {
     maxWidth: '82%',
     alignSelf: 'center',
@@ -406,6 +446,11 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     minWidth: 0,
     textAlign: 'center',
+  },
+  titleInRowBrand: {
+    flexShrink: 1,
+    minWidth: 0,
+    textAlign: 'left',
   },
   content: {
     flex: 1,
