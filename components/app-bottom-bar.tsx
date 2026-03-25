@@ -40,7 +40,7 @@ export function AppBottomBar() {
       },
       {
         key: 'wishlist',
-        label: 'Wishlist',
+        label: 'Wishes',
         path: '/wishlist',
         icon: 'gift-outline',
         color: '#22c55e',
