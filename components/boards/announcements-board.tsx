@@ -1,7 +1,7 @@
 // app/boards/announcements.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,7 +12,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput as RNTextInput,
   TouchableWithoutFeedback,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -60,6 +62,7 @@ const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 6)}` : '—');
 export default function AnnouncementsBoard() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
 
   const { activeFamilyId, effectiveMember, family, members, hasParentPermissions } = useAuthContext() as any;
   const familyId = activeFamilyId ?? undefined;
@@ -70,6 +73,29 @@ export default function AnnouncementsBoard() {
 
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showAuthorMenu, setShowAuthorMenu] = useState(false);
+  const [searchExpanded, setSearchExpanded] = useState(false);
+  const bulletinSearchRef = useRef<RNTextInput>(null);
+
+  /** Check: collapse toolbar; keep query and filtered results. */
+  const applyBulletinSearch = () => {
+    setSearchExpanded(false);
+    Keyboard.dismiss();
+  };
+
+  /** X: clear query and leave search mode. */
+  const discardBulletinSearch = () => {
+    setSearch('');
+    setSearchExpanded(false);
+    Keyboard.dismiss();
+  };
+
+  useEffect(() => {
+    if (!searchExpanded) return;
+    const id = requestAnimationFrame(() => {
+      bulletinSearchRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [searchExpanded]);
 
   // --------------------------------------------
   // Load Members
@@ -293,6 +319,8 @@ export default function AnnouncementsBoard() {
   // --------------------------------------------
   /** Space under last scrolled item — tab bar sits outside this screen; keep small to avoid a dead gap. */
   const scrollBottomPad = 12 + insets.bottom
+  /** Wide enough to type comfortably; horizontal scroll when fonts (or labels) grow. */
+  const bulletinSearchFieldMinW = Math.max(200, Math.round(windowWidth * 0.62))
 
   return (
     <Screen scroll={false} withBackground={false} contentStyle={{ paddingBottom: 0 }}>
@@ -300,81 +328,130 @@ export default function AnnouncementsBoard() {
         <View style={styles.boardInner}>
           <View style={styles.container}>
             {/*
-              Tap-to-dismiss must NOT wrap ScrollView — on iOS that often steals pans and breaks scrolling.
+              Do not wrap horizontal toolbars in TouchableWithoutFeedback — it steals pans.
+              Tap-to-dismiss only the chip row + note composer.
             */}
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-              <View style={styles.headerBlock}>
+            <View style={styles.headerBlock}>
             {/* ---------------------------------------------- */}
-            {/* ROW 1: SORT — BY — INFO */}
+            {/* SORT / BY / SEARCH — expanded search covers this row */}
             {/* ---------------------------------------------- */}
-            <View style={styles.sortInfoRow}>
-          <View style={styles.sortByGroup}>
-            <Button
-              type="outline"
-              size="sm"
-              backgroundColor="#eef2ff"
-              onPress={() => setShowSortMenu(true)}
-              title={`Sort: ${sortBy}`}
-            />
+            {searchExpanded ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator
+                keyboardShouldPersistTaps="handled"
+                style={styles.toolbarHScroll}
+                contentContainerStyle={styles.searchExpandedScrollContent}
+              >
+                <Pressable
+                  onPress={discardBulletinSearch}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear search and close"
+                  style={styles.toolbarIconBtn}
+                >
+                  <Ionicons name="close" size={20} color="#64748b" />
+                </Pressable>
+                <Pressable
+                  onPress={applyBulletinSearch}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Done searching"
+                  style={styles.toolbarIconBtn}
+                >
+                  <Ionicons name="checkmark" size={22} color="#2563eb" />
+                </Pressable>
+                <View style={[styles.searchFieldWrap, { minWidth: bulletinSearchFieldMinW }]}>
+                  <TextInput
+                    ref={bulletinSearchRef}
+                    style={styles.toolbarSearchInput}
+                    placeholder="Search bulletin…"
+                    value={search}
+                    onChangeText={setSearch}
+                    returnKeyType="search"
+                    onSubmitEditing={applyBulletinSearch}
+                    blurOnSubmit
+                    {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
+                  />
+                  {search.length > 0 ? (
+                    <Pressable
+                      style={styles.clearSearchBtnInline}
+                      onPress={() => setSearch('')}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel="Clear search text"
+                    >
+                      <Ionicons name="close-circle" size={18} color="#999" />
+                    </Pressable>
+                  ) : null}
+                </View>
+              </ScrollView>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator
+                keyboardShouldPersistTaps="handled"
+                style={styles.toolbarHScroll}
+                contentContainerStyle={styles.collapsedToolbarScrollContent}
+              >
+                <View style={styles.sortByGroup}>
+                  <Button
+                    type="outline"
+                    size="sm"
+                    backgroundColor="#eef2ff"
+                    onPress={() => setShowSortMenu(true)}
+                    title={`Sort: ${sortBy}`}
+                  />
 
-            <Button
-              type="outline"
-              size="sm"
-              backgroundColor="#eef2ff"
-              onPress={() => setShowAuthorMenu(true)}
-              title={`By: ${filterAuthor === 'all' ? 'All' : filterAuthor}`}
-            />
+                  <Button
+                    type="outline"
+                    size="sm"
+                    backgroundColor="#eef2ff"
+                    onPress={() => setShowAuthorMenu(true)}
+                    title={`By: ${filterAuthor === 'all' ? 'All' : filterAuthor}`}
+                  />
+                </View>
 
-          </View>
+                <View style={styles.iconGroup}>
+                  <Button
+                    type="outline"
+                    size="sm"
+                    backgroundColor="#eef2ff"
+                    round
+                    hitSlop={8}
+                    title=""
+                    onPress={() => setSearchExpanded(true)}
+                    leftIcon={<Ionicons name="search-outline" size={20} />}
+                    accessibilityLabel="Search bulletin"
+                  />
 
-          <View style={styles.iconGroup}>
-            <Button
-              type="outline"
-              size="sm"
-              backgroundColor="#eef2ff"
-              round
-              hitSlop={8}
-              onPress={() => router.push('/announcements/info')}
-              leftIcon={<Ionicons name="information-circle-outline" size={20} />}
-            />
+                  <Button
+                    type="outline"
+                    size="sm"
+                    backgroundColor="#eef2ff"
+                    round
+                    hitSlop={8}
+                    onPress={() => router.push('/announcements/info')}
+                    leftIcon={<Ionicons name="information-circle-outline" size={20} />}
+                  />
 
-            {hasParentPermissions && (
-              <Button
-                type="outline"
-                size="sm"
-                backgroundColor="#eef2ff"
-                round
-                hitSlop={8}
-                onPress={() => router.push('/announcements/settings')}
-                leftIcon={<Ionicons name="settings-outline" size={20} />}
-              />
+                  {hasParentPermissions && (
+                    <Button
+                      type="outline"
+                      size="sm"
+                      backgroundColor="#eef2ff"
+                      round
+                      hitSlop={8}
+                      onPress={() => router.push('/announcements/settings')}
+                      leftIcon={<Ionicons name="settings-outline" size={20} />}
+                    />
+                  )}
+                </View>
+              </ScrollView>
             )}
-          </View>
-        </View>
 
         {/* ---------------------------------------------- */}
-        {/* ROW 2: SEARCH BAR WITH "X" CLEAR */}
-        {/* ---------------------------------------------- */}
-        <View style={styles.searchWrapper}>
-          <TextInput
-            style={styles.textInputWithRightIcon}
-            placeholder="Search bulletin…"
-            value={search}
-            onChangeText={setSearch}
-            returnKeyType="done"
-            onSubmitEditing={() => Keyboard.dismiss()}
-            blurOnSubmit
-          />
-
-          {search.length > 0 && (
-            <Pressable style={styles.clearSearchBtn} onPress={() => setSearch('')}>
-              <Ionicons name="close-circle" size={20} color="#999" />
-            </Pressable>
-          )}
-        </View>
-
-        {/* ---------------------------------------------- */}
-        {/* ROW 3: TABS + ADD (flows right after last tab when space allows) */}
+        {/* TABS + ADD (flows right after last tab when space allows) */}
         {/* ---------------------------------------------- */}
         <View style={styles.tabsContainer}>
           <ChipSelector
@@ -428,8 +505,9 @@ export default function AnnouncementsBoard() {
 
 
         {/* ---------------------------------------------- */}
-        {/* ADD ANNOUNCEMENT INPUT */}
+        {/* ADD ANNOUNCEMENT INPUT (tap blank composer chrome to dismiss keyboard) */}
         {/* ---------------------------------------------- */}
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <View
           style={[
             styles.inputBar,
@@ -475,8 +553,8 @@ export default function AnnouncementsBoard() {
             </Pressable>
           </View>
         </View>
-              </View>
-            </TouchableWithoutFeedback>
+        </TouchableWithoutFeedback>
+            </View>
 
         {/* ---------------------------------------------- */}
         {/* LIST — One sticky note per tab */}
@@ -785,7 +863,7 @@ const styles = StyleSheet.create({
   boardInner: { flex: 1, minHeight: 0 },
   container: { flex: 1, minHeight: 0, paddingLeft: 4 },
   tapToDismiss: { flex: 1, minHeight: 0 },
-  /** Fixed chrome above the note list (tap outside inputs to dismiss keyboard). */
+  /** Toolbar + tap area for dismissing keyboard (tabs + composer only). */
   headerBlock: { width: '100%' },
   noteScroll: { flex: 1, minHeight: 0 },
   emptyStateBox: {
@@ -808,11 +886,6 @@ const styles = StyleSheet.create({
     minHeight: 44,
     maxHeight: 120,
     textAlignVertical: 'top',
-  },
-
-  // used when you need space for the clear "X"
-  textInputWithRightIcon: {
-    paddingRight: 36,
   },
 
   textInputMultilineWithCheck: {
@@ -840,43 +913,77 @@ const styles = StyleSheet.create({
   },
 
   // --------------------------------------
-  // ROW 1: SORT — BY — INFO
+  // TOOLBAR (Sort / By / search — horizontal scroll for large fonts)
   // --------------------------------------
-  sortInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  toolbarHScroll: {
     marginBottom: 12,
-    width: '100%',
+    flexGrow: 0,
+  },
+  collapsedToolbarScrollContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingRight: 4,
+    minHeight: 32,
+    paddingVertical: 2,
+  },
+  searchExpandedScrollContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingRight: 4,
+    minHeight: 32,
+    paddingVertical: 2,
   },
   sortByGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 0,
   },
-
-
   iconGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 0,
   },
-
-  // --------------------------------------
-  // SEARCH BAR WITH CLEAR X
-  // --------------------------------------
-  searchWrapper: {
+  toolbarIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eef2ff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    flexShrink: 0,
+  },
+  searchFieldWrap: {
+    flexShrink: 0,
     position: 'relative',
-    marginBottom: 12,
+    justifyContent: 'center',
+    alignSelf: 'center',
   },
-
-
-  clearSearchBtn: {
+  /** Matches outline `sm` pills (~32pt); grows slightly if Dynamic Type needs it. */
+  toolbarSearchInput: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    paddingRight: 34,
+    minHeight: 32,
+    fontSize: 12,
+    color: '#0f172a',
+    backgroundColor: '#fff',
+  },
+  clearSearchBtnInline: {
     position: 'absolute',
-    right: 10,
-    top: '50%',
-    transform: [{ translateY: -10 }],
-    padding: 4,
+    right: 8,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
   },
 
   // --------------------------------------
