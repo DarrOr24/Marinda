@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Keyboard,
+  PixelRatio,
   Platform,
   Pressable,
   ScrollView,
@@ -59,7 +60,6 @@ const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 6)}` : '—');
 export default function AnnouncementsBoard() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const INPUT_BAR_HEIGHT = 72;
 
   const { activeFamilyId, effectiveMember, family, members, hasParentPermissions } = useAuthContext() as any;
   const familyId = activeFamilyId ?? undefined;
@@ -291,11 +291,19 @@ export default function AnnouncementsBoard() {
   // --------------------------------------------
   // MAIN RENDER
   // --------------------------------------------
+  /** Space under last scrolled item — tab bar sits outside this screen; keep small to avoid a dead gap. */
+  const scrollBottomPad = 12 + insets.bottom
+
   return (
-    <Screen scroll={false} withBackground={false}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <View style={styles.tapToDismiss}>
+    <Screen scroll={false} withBackground={false} contentStyle={{ paddingBottom: 0 }}>
+      <View style={styles.tapToDismiss}>
+        <View style={styles.boardInner}>
           <View style={styles.container}>
+            {/*
+              Tap-to-dismiss must NOT wrap ScrollView — on iOS that often steals pans and breaks scrolling.
+            */}
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <View style={styles.headerBlock}>
             {/* ---------------------------------------------- */}
             {/* ROW 1: SORT — BY — INFO */}
             {/* ---------------------------------------------- */}
@@ -467,30 +475,50 @@ export default function AnnouncementsBoard() {
             </Pressable>
           </View>
         </View>
+              </View>
+            </TouchableWithoutFeedback>
 
         {/* ---------------------------------------------- */}
         {/* LIST — One sticky note per tab */}
         {/* ---------------------------------------------- */}
         <ScrollView
-          style={{ flex: 1, overflow: 'visible' }}
-          contentContainerStyle={[
-            filteredAnnouncements.length === 0 ? styles.emptyList : undefined,
-            {
-              paddingTop: 0,
-              paddingBottom: INPUT_BAR_HEIGHT + insets.bottom + 16,
-              overflow: 'visible',
-            },
-          ]}
+          style={styles.noteScroll}
+          contentContainerStyle={{
+            paddingTop: 0,
+            paddingBottom: scrollBottomPad,
+            flexGrow: 0,
+          }}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           onScrollBeginDrag={Keyboard.dismiss}
+          nestedScrollEnabled={Platform.OS === 'android'}
+          {...(Platform.OS === 'ios'
+            ? { contentInsetAdjustmentBehavior: 'never' as const }
+            : {})}
         >
           <StickyNote
             backgroundColor={getBulletinStyle(activeKind).backgroundColor}
             borderLeftColor={getBulletinStyle(activeKind).borderLeftColor}
           >
             {filteredAnnouncements.length === 0 ? (
-              <Text style={styles.infoText}>{activeTab.emptyText}</Text>
+              <View
+                style={[
+                  styles.emptyStateBox,
+                  {
+                    paddingVertical: Math.max(
+                      10,
+                      Math.round(8 * Math.min(PixelRatio.getFontScale(), 2.2)),
+                    ),
+                  },
+                ]}
+              >
+                <Text
+                  style={styles.infoText}
+                  {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
+                >
+                  {activeTab.emptyText}
+                </Text>
+              </View>
             ) : (
               filteredAnnouncements.map((item, idx) => (
                 <View
@@ -501,19 +529,37 @@ export default function AnnouncementsBoard() {
                   ]}
                 >
                   <View style={styles.itemTextContainer}>
-                    <Text style={styles.itemMeta}>
+                    <Text
+                      style={styles.itemMeta}
+                      {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
+                    >
                       {item.created_by_name} • {new Date(item.created_at).toLocaleString()}
                     </Text>
 
                     {item.created_at !== item.updated_at && (
-                      <Text style={styles.itemMeta}>
+                      <Text
+                        style={styles.itemMeta}
+                        {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
+                      >
                         (edited • {new Date(item.updated_at).toLocaleString()})
                       </Text>
                     )}
 
-                    <Text style={styles.itemText}>{item.text}</Text>
+                    <Text
+                      style={styles.itemText}
+                      {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
+                    >
+                      {item.text}
+                    </Text>
 
-                    {item.completed && <Text style={styles.itemMeta}>✓ Completed</Text>}
+                    {item.completed && (
+                      <Text
+                        style={styles.itemMeta}
+                        {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
+                      >
+                        ✓ Completed
+                      </Text>
+                    )}
                   </View>
 
                   <View style={styles.cardActions}>
@@ -726,7 +772,7 @@ export default function AnnouncementsBoard() {
         )}
           </View>
         </View>
-      </TouchableWithoutFeedback>
+      </View>
     </Screen>
   );
 }
@@ -735,10 +781,26 @@ export default function AnnouncementsBoard() {
 // STYLES
 // --------------------------------------------
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingLeft: 4 },
-  tapToDismiss: { flex: 1 },
-  emptyList: { flexGrow: 1 },
-  infoText: { fontSize: 16, textAlign: 'center', opacity: 0.7 },
+  /** `minHeight: 0` lets the nested vertical ScrollView size correctly inside flex parents (avoids jumpy scroll / clipped content). */
+  boardInner: { flex: 1, minHeight: 0 },
+  container: { flex: 1, minHeight: 0, paddingLeft: 4 },
+  tapToDismiss: { flex: 1, minHeight: 0 },
+  /** Fixed chrome above the note list (tap outside inputs to dismiss keyboard). */
+  headerBlock: { width: '100%' },
+  noteScroll: { flex: 1, minHeight: 0 },
+  emptyStateBox: {
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+    alignSelf: 'stretch',
+  },
+  infoText: {
+    fontSize: 16,
+    textAlign: 'center',
+    opacity: 0.7,
+    flexShrink: 0,
+  },
 
   // --------------------------------------
   // Input overrides (base from TextInput component)
@@ -821,7 +883,7 @@ const styles = StyleSheet.create({
   // TABS
   // --------------------------------------
   tabsContainer: {
-    marginBottom: 8,
+    marginBottom: 4,
     width: '100%',
   },
 
@@ -839,9 +901,14 @@ const styles = StyleSheet.create({
   itemRowLast: {
     borderBottomWidth: 0,
   },
-  itemTextContainer: { flex: 1 },
+  itemTextContainer: { flex: 1, minWidth: 0 },
   itemText: { fontSize: 16 },
-  itemMeta: { fontSize: 12, opacity: 0.6, marginTop: 2 },
+  itemMeta: {
+    fontSize: 12,
+    opacity: 0.6,
+    marginTop: 2,
+    flexShrink: 0,
+  },
   cardActions: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -852,8 +919,9 @@ const styles = StyleSheet.create({
   // ADD ANNOUNCEMENT
   // --------------------------------------
   inputBar: {
-    paddingTop: 8,
+    paddingTop: 4,
     marginTop: 0,
+    marginBottom: 0,
   },
 
   // --------------------------------------

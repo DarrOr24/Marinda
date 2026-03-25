@@ -105,7 +105,8 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   contentWithFixedHeader: { paddingTop: 0 },
   scrollCenteredContent: { flexGrow: 1, justifyContent: "center", alignItems: "center" },
-  staticContent: { flex: 1 },
+  /** Helps nested `ScrollView` + `flex: 1` children size and scroll reliably. */
+  staticContent: { flex: 1, minHeight: 0 },
   staticCenteredContent: { justifyContent: "center", alignItems: "center" },
   fixedHeader: {
     paddingHorizontal: 16,
