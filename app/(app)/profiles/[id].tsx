@@ -304,6 +304,8 @@ export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps)
   return (
     <Screen
       withBackground
+      keyboardDismissMode="none"
+      keyboardShouldPersistTaps="handled"
       fixedHeader={
         hasParentPermissions && switcherKids.length > 0 ? (
           <ScrollView

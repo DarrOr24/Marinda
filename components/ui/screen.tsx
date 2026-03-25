@@ -1,6 +1,12 @@
 // components/ui/screen.tsx
 import React from "react";
-import { ScrollView, StyleSheet, View, ViewStyle } from "react-native";
+import {
+  ScrollView,
+  ScrollViewProps,
+  StyleSheet,
+  View,
+  ViewStyle,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CheckerboardBackground from "../checkerboard-background";
 
@@ -17,6 +23,9 @@ type Props = {
   // optional override for content padding (e.g. paddingTop to reduce space below nav header)
   contentStyle?: ViewStyle;
   scroll?: boolean;
+  /** Passed to ScrollView; use `none` when the user should scroll without dismissing the keyboard. */
+  keyboardDismissMode?: ScrollViewProps["keyboardDismissMode"];
+  keyboardShouldPersistTaps?: ScrollViewProps["keyboardShouldPersistTaps"];
 };
 
 export function Screen({
@@ -28,6 +37,8 @@ export function Screen({
   overlay,
   contentStyle,
   scroll = true,
+  keyboardDismissMode = "on-drag",
+  keyboardShouldPersistTaps = "handled",
 }: Props) {
   const gapStyle =
     gap === "no" ? 0 : gap === "sm" ? 8 : gap === "md" ? 16 : gap === "lg" ? 24 : 16;
@@ -56,9 +67,9 @@ export function Screen({
               { gap: gapStyle },
               contentStyle,
             ]}
-            keyboardShouldPersistTaps="handled"
+            keyboardShouldPersistTaps={keyboardShouldPersistTaps}
             showsVerticalScrollIndicator={false}
-            keyboardDismissMode="on-drag"
+            keyboardDismissMode={keyboardDismissMode}
           >
             {children}
           </ScrollView>
