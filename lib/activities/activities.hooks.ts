@@ -1,16 +1,23 @@
 // lib/activities/activities.hooks.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import {
   fetchFamilyActivities,
   rpcCreateActivity,
   rpcDeleteActivity,
   rpcUpdateActivity,
 } from './activities.api';
+import { mergeActivitiesWithSeriesOccurrences } from './activities.recurrence';
+import {
+  createActivitySeriesWithParticipants,
+  fetchFamilyActivitySeries,
+} from './activities.series.api';
 import type {
   Activity,
   ActivityInsert,
   ActivityParticipantUpsert,
   ActivityPatch,
+  ActivitySeriesInsert,
 } from './activities.types';
 
 const activitiesKey = (
@@ -23,6 +30,9 @@ const activitiesKey = (
     params?.from ? params.from.toISOString() : null,
     params?.to ? params.to.toISOString() : null,
   ] as const
+
+const activitySeriesKey = (familyId: string | undefined) =>
+  ['activity_series', familyId ?? null] as const
 
 const invalidateFamilyActivities = (
   qc: ReturnType<typeof useQueryClient>,
@@ -38,6 +48,17 @@ const invalidateFamilyActivities = (
   })
 }
 
+export function invalidateActivitySeries(
+  qc: ReturnType<typeof useQueryClient>,
+  familyId?: string
+) {
+  if (!familyId) return
+  qc.invalidateQueries({
+    queryKey: activitySeriesKey(familyId),
+    refetchType: 'active',
+  })
+}
+
 export function useFamilyActivities(
   familyId: string | undefined,
   params?: { from?: Date; to?: Date }
@@ -47,6 +68,48 @@ export function useFamilyActivities(
     queryFn: () => fetchFamilyActivities(familyId!, params),
     enabled: !!familyId,
   })
+}
+
+/**
+ * One-off activities plus recurring series expanded into virtual `Activity` rows for the given range.
+ */
+export function useFamilyCalendarActivities(
+  familyId: string | undefined,
+  params?: { from?: Date; to?: Date }
+) {
+  const qActivities = useQuery<Activity[]>({
+    queryKey: activitiesKey(familyId, params),
+    queryFn: () => fetchFamilyActivities(familyId!, params),
+    enabled: !!familyId,
+  })
+
+  const qSeries = useQuery({
+    queryKey: activitySeriesKey(familyId),
+    queryFn: () => fetchFamilyActivitySeries(familyId!),
+    enabled: !!familyId,
+  })
+
+  const data = useMemo(() => {
+    if (!qActivities.data) return undefined
+    if (!qSeries.data?.length) return qActivities.data
+    if (params?.from && params?.to) {
+      return mergeActivitiesWithSeriesOccurrences(
+        qActivities.data,
+        qSeries.data,
+        params.from,
+        params.to
+      )
+    }
+    return qActivities.data
+  }, [qActivities.data, qSeries.data, params?.from, params?.to])
+
+  return {
+    ...qActivities,
+    data,
+    isLoading: qActivities.isLoading || qSeries.isLoading,
+    isFetching: qActivities.isFetching || qSeries.isFetching,
+    error: qActivities.error ?? qSeries.error,
+  }
 }
 
 export function useCreateActivity(familyId?: string) {
@@ -67,6 +130,25 @@ export function useCreateActivity(familyId?: string) {
 
     onError: (err: any) => {
       console.error('[createActivity] error:', err)
+    },
+  })
+}
+
+export function useCreateActivitySeries(familyId?: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (args: {
+      series: ActivitySeriesInsert
+      participants: ActivityParticipantUpsert[]
+    }) =>
+      createActivitySeriesWithParticipants(args.series, args.participants),
+
+    onSuccess: () => {
+      invalidateActivitySeries(qc, familyId)
+    },
+
+    onError: (err: any) => {
+      console.error('[createActivitySeries] error:', err)
     },
   })
 }

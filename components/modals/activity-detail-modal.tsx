@@ -133,6 +133,8 @@ export function ActivityDetailModal({
 
   if (!activity) return null;
 
+  const isVirtualSeries = activity.seriesOccurrence != null;
+
   const participantIds = activity.participants?.map((p) => p.member_id) ?? [];
   const names = participantIds
     .map((id: string) => {
@@ -213,6 +215,9 @@ export function ActivityDetailModal({
           nestedScrollEnabled
         >
           <Text style={styles.detailTitle}>{activity.title}</Text>
+          {isVirtualSeries ? (
+            <Text style={styles.recurringHint}>Recurring series</Text>
+          ) : null}
 
           <DetailRow
             icon="calendar"
@@ -302,7 +307,7 @@ export function ActivityDetailModal({
           />
         </ScrollView>
 
-        {rejectOpen && isParent && activity.status === "PENDING" ? (
+        {rejectOpen && isParent && activity.status === "PENDING" && !isVirtualSeries ? (
           <View style={styles.rejectBox}>
             <TextInput
               label="Why not approved? (optional)"
@@ -334,7 +339,7 @@ export function ActivityDetailModal({
         ) : null}
 
         <View style={styles.buttons}>
-          {isCreator && (
+          {isCreator && !isVirtualSeries ? (
             <>
               <Button
                 type="outline"
@@ -353,8 +358,8 @@ export function ActivityDetailModal({
                 />
               ) : null}
             </>
-          )}
-          {parentCanDecide && !(rejectOpen && activity.status === "PENDING") ? (
+          ) : null}
+          {parentCanDecide && !isVirtualSeries && !(rejectOpen && activity.status === "PENDING") ? (
             <>
               {activity.status === "PENDING" && (
                 <>
@@ -432,6 +437,12 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     gap: 2,
     flexGrow: 0,
+  },
+  recurringHint: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6366f1",
+    marginBottom: 8,
   },
   detailTitle: {
     fontSize: 17,

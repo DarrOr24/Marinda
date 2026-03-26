@@ -17,8 +17,9 @@ import { Button, SafeFab, Screen } from "@/components/ui";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import {
   useCreateActivity,
+  useCreateActivitySeries,
   useDeleteActivity,
-  useFamilyActivities,
+  useFamilyCalendarActivities,
   useUpdateActivity,
 } from "@/lib/activities/activities.hooks";
 import {
@@ -32,6 +33,7 @@ import type {
   ActivityInsert,
   ActivityParticipantUpsert,
   ActivityStatus,
+  ActivitySeriesInsert,
 } from "@/lib/activities/activities.types";
 import { useFamily } from "@/lib/families/families.hooks";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -97,7 +99,7 @@ export default function ActivityBoard() {
   const pastCapped = weekOffset <= MIN_PAST_WEEKS;
   const isPastWeek = weekOffset < 0;
 
-  const { data: activities = [], isLoading } = useFamilyActivities(
+  const { data: activities = [], isLoading } = useFamilyCalendarActivities(
     activeFamilyId,
     {
       from: visibleWeekDays[0],
@@ -106,6 +108,7 @@ export default function ActivityBoard() {
   );
 
   const createMut = useCreateActivity(activeFamilyId);
+  const createSeriesMut = useCreateActivitySeries(activeFamilyId);
   const updateMut = useUpdateActivity(activeFamilyId);
   const deleteMut = useDeleteActivity(activeFamilyId);
 
@@ -178,6 +181,33 @@ export default function ActivityBoard() {
   function handleSaveActivity(form: NewActivityForm) {
     if (!activeFamilyId || !effectiveMember?.id) return;
 
+    const participants: ActivityParticipantUpsert[] = (
+      form.participants_member_ids ?? []
+    ).map((id) => ({
+      member_id: id,
+      response: id === effectiveMember.id ? "YES" : "MAYBE",
+      is_creator: id === effectiveMember.id,
+    }));
+
+    if (form.recurrence) {
+      const series: ActivitySeriesInsert = {
+        family_id: activeFamilyId,
+        title: form.title,
+        location: form.location ?? null,
+        money: form.money ?? null,
+        ride_needed: !!form.ride_needed,
+        present_needed: !!form.present_needed,
+        babysitter_needed: !!form.babysitter_needed,
+        notes: form.notes ?? null,
+        created_by: effectiveMember.id,
+        first_start_at: form.start_at,
+        first_end_at: form.end_at,
+        recurrence: form.recurrence,
+      };
+      createSeriesMut.mutate({ series, participants });
+      return;
+    }
+
     const activity: ActivityInsert = {
       family_id: activeFamilyId,
       title: form.title,
@@ -191,14 +221,6 @@ export default function ActivityBoard() {
       notes: form.notes ?? null,
       created_by: effectiveMember.id,
     };
-
-    const participants: ActivityParticipantUpsert[] = (
-      form.participants_member_ids ?? []
-    ).map((id) => ({
-      member_id: id,
-      response: id === effectiveMember.id ? "YES" : "MAYBE",
-      is_creator: id === effectiveMember.id,
-    }));
 
     createMut.mutate({ activity, participants });
   }

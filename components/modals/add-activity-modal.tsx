@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -11,12 +12,39 @@ import {
 
 import { ChipSelector } from "@/components/chip-selector";
 import { DateRangePicker } from "@/components/date-range-picker";
+import { DateTimeWheelPicker } from "@/components/date-time-wheel-picker";
 import { ModalCard, ModalShell, useModalScrollMaxHeight } from "@/components/ui";
+import { buildRecurrenceRule } from "@/lib/activities/activities.recurrence";
+import type { RecurrenceFreq, RecurrenceRule } from "@/lib/activities/activities.types";
 import { MembersSelector } from "../members-selector";
 import { Button } from "../ui/button";
 import { TextInput } from "../ui/text-input";
 
 const ICON_SIZE = 20;
+
+type RecurrenceEndMode = "never" | "count" | "until";
+
+function endOfLocalDayIso(d: Date): string {
+  const end = new Date(
+    d.getFullYear(),
+    d.getMonth(),
+    d.getDate(),
+    23,
+    59,
+    59,
+    999
+  );
+  return end.toISOString();
+}
+
+function formatShortDateFromIso(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 function FormFieldRow({
   icon,
@@ -57,6 +85,8 @@ export type NewActivityForm = {
   babysitter_needed?: boolean;
   participants_member_ids?: string[];
   notes?: string;
+  /** When set, creates an `activity_series` row instead of a one-off activity. */
+  recurrence?: RecurrenceRule;
 };
 
 type Props = {
@@ -89,6 +119,15 @@ export default function AddActivityModal({
     null
   );
 
+  const [repeatEnabled, setRepeatEnabled] = useState(false);
+  const [recurrenceFreq, setRecurrenceFreq] =
+    useState<RecurrenceFreq>("WEEKLY");
+  const [intervalStr, setIntervalStr] = useState("1");
+  const [endMode, setEndMode] = useState<RecurrenceEndMode>("never");
+  const [countStr, setCountStr] = useState("10");
+  const [untilEndIso, setUntilEndIso] = useState<string | null>(null);
+  const [untilPickerOpen, setUntilPickerOpen] = useState(false);
+
   // keep defaults in sync when modal opens with different initial / edit
   useEffect(() => {
     if (!visible) return;
@@ -114,10 +153,45 @@ export default function AddActivityModal({
         ? { start_at: initial.start_at, end_at: initial.end_at }
         : null
     );
+
+    setRepeatEnabled(false);
+    setRecurrenceFreq("WEEKLY");
+    setIntervalStr("1");
+    setEndMode("never");
+    setCountStr("10");
+    setUntilEndIso(null);
+    setUntilPickerOpen(false);
   }, [visible, initialDateStr, initial]);
 
-  const scrollMaxHeight = useModalScrollMaxHeight(140);
-  const canSave = title.trim().length > 0 && !!range?.start_at;
+  useEffect(() => {
+    if (!visible || !range?.start_at || endMode !== "until") return;
+    setUntilEndIso((prev) => {
+      if (prev != null) return prev;
+      const s = new Date(range.start_at);
+      s.setDate(s.getDate() + 30);
+      return endOfLocalDayIso(s);
+    });
+  }, [visible, range?.start_at, endMode]);
+
+  const scrollMaxHeight = useModalScrollMaxHeight(200);
+  const firstStartMs = range ? new Date(range.start_at).getTime() : 0;
+  const untilMs = untilEndIso ? new Date(untilEndIso).getTime() : 0;
+  const intervalN = parseInt(intervalStr, 10) || 0;
+  const countN = parseInt(countStr, 10) || 0;
+
+  const recurrenceValid =
+    mode !== "create" ||
+    !repeatEnabled ||
+    (intervalN >= 1 &&
+      intervalN <= 999 &&
+      (endMode === "never" ||
+        (endMode === "count" && countN >= 1) ||
+        (endMode === "until" &&
+          !!untilEndIso &&
+          untilMs >= firstStartMs)));
+
+  const canSave =
+    title.trim().length > 0 && !!range?.start_at && recurrenceValid;
 
   function reset() {
     setTitle("");
@@ -127,10 +201,37 @@ export default function AddActivityModal({
     setSelectedIds([]);
     setNotes("");
     setRange(null);
+    setRepeatEnabled(false);
+    setRecurrenceFreq("WEEKLY");
+    setIntervalStr("1");
+    setEndMode("never");
+    setCountStr("10");
+    setUntilEndIso(null);
+    setUntilPickerOpen(false);
   }
 
   function handleSave() {
     if (!canSave || !range) return;
+
+    let recurrence: RecurrenceRule | undefined;
+    if (mode === "create" && repeatEnabled) {
+      const firstStart = new Date(range.start_at);
+      const end =
+        endMode === "never"
+          ? ({ type: "never" } as const)
+          : endMode === "count"
+            ? ({ type: "count", count: countN } as const)
+            : ({
+                type: "until",
+                untilIso: untilEndIso!,
+              } as const);
+      recurrence = buildRecurrenceRule(
+        recurrenceFreq,
+        intervalN || 1,
+        firstStart,
+        end
+      );
+    }
 
     const payload: NewActivityForm = {
       title: title.trim(),
@@ -145,6 +246,7 @@ export default function AddActivityModal({
 
       participants_member_ids: selectedIds.length ? selectedIds : undefined,
       notes: notes.trim() || undefined,
+      ...(recurrence ? { recurrence } : {}),
     };
 
     onSave(payload);
@@ -182,6 +284,109 @@ export default function AddActivityModal({
               hideLabel
             />
           </FormFieldRow>
+
+          {mode === "create" ? (
+            <View style={styles.formRow}>
+              <View style={styles.labelRow}>
+                <View style={styles.iconCol}>
+                  <MaterialCommunityIcons
+                    name="calendar-sync"
+                    size={ICON_SIZE}
+                    color="#64748b"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={styles.repeatHeaderRow}>
+                    <Text style={styles.label}>Repeat</Text>
+                    <Switch
+                      value={repeatEnabled}
+                      onValueChange={setRepeatEnabled}
+                      trackColor={{ false: "#d1d5db", true: "#93c5fd" }}
+                      thumbColor={repeatEnabled ? "#2563eb" : "#f4f4f5"}
+                    />
+                  </View>
+                  <Text style={styles.repeatHint}>
+                    Never ends, or stop after a number of times, or on a date
+                    (like Google Calendar).
+                  </Text>
+                </View>
+              </View>
+
+              {repeatEnabled ? (
+                <View style={styles.recurrenceBlock}>
+                  <Text style={styles.subLabel}>Every</Text>
+                  <View style={styles.everyRow}>
+                    <TextInput
+                      placeholder="1"
+                      keyboardType="number-pad"
+                      value={intervalStr}
+                      onChangeText={setIntervalStr}
+                      style={styles.intervalInput}
+                    />
+                    <ChipSelector
+                      value={recurrenceFreq}
+                      onChange={(v) => v && setRecurrenceFreq(v as RecurrenceFreq)}
+                      options={[
+                        { label: "Day", value: "DAILY" },
+                        { label: "Week", value: "WEEKLY" },
+                        { label: "Month", value: "MONTHLY" },
+                      ]}
+                      horizontal
+                      horizontalContentContainerStyle={{
+                        justifyContent: "flex-start",
+                      }}
+                    />
+                  </View>
+
+                  <Text style={styles.subLabel}>Ends</Text>
+                  <ChipSelector
+                    value={endMode}
+                    onChange={(v) => v && setEndMode(v as RecurrenceEndMode)}
+                    options={[
+                      { label: "Never", value: "never" },
+                      { label: "After", value: "count" },
+                      { label: "On date", value: "until" },
+                    ]}
+                    horizontal
+                    horizontalContentContainerStyle={{
+                      justifyContent: "flex-start",
+                    }}
+                  />
+
+                  {endMode === "count" ? (
+                    <View style={styles.countRow}>
+                      <TextInput
+                        placeholder="10"
+                        keyboardType="number-pad"
+                        value={countStr}
+                        onChangeText={setCountStr}
+                        style={styles.countInput}
+                      />
+                      <Text style={styles.countSuffix}>occurrences</Text>
+                    </View>
+                  ) : null}
+
+                  {endMode === "until" ? (
+                    <TouchableOpacity
+                      style={styles.untilTap}
+                      onPress={() => setUntilPickerOpen(true)}
+                    >
+                      <MaterialCommunityIcons
+                        name="calendar"
+                        size={18}
+                        color="#2563eb"
+                      />
+                      <Text style={styles.untilTapText}>
+                        {untilEndIso
+                          ? formatShortDateFromIso(untilEndIso)
+                          : "Choose end date"}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              ) : null}
+            </View>
+          ) : null}
 
           <FormFieldRow icon="format-title">
             <Text style={styles.label}>Title *</Text>
@@ -284,6 +489,16 @@ export default function AddActivityModal({
           />
         </View>
       </ModalCard>
+
+      <DateTimeWheelPicker
+        visible={untilPickerOpen}
+        initialAt={untilEndIso ?? range?.start_at}
+        onCancel={() => setUntilPickerOpen(false)}
+        onConfirm={(iso) => {
+          setUntilEndIso(endOfLocalDayIso(new Date(iso)));
+          setUntilPickerOpen(false);
+        }}
+      />
     </ModalShell>
   );
 }
@@ -315,6 +530,76 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   formRowFirst: { marginTop: 0 },
+  repeatHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  repeatHint: {
+    fontSize: 12,
+    color: "#94a3b8",
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  recurrenceBlock: {
+    marginTop: 10,
+    marginLeft: 36,
+    gap: 8,
+  },
+  subLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#64748b",
+    marginTop: 4,
+  },
+  everyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  intervalInput: {
+    width: 52,
+    minHeight: 40,
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  countRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  countInput: {
+    width: 56,
+    minHeight: 40,
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  countSuffix: {
+    fontSize: 14,
+    color: "#475569",
+    fontWeight: "600",
+  },
+  untilTap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: "#f1f5f9",
+    alignSelf: "flex-start",
+  },
+  untilTapText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0f172a",
+  },
   labelRow: {
     flexDirection: "row",
     alignItems: "center",
