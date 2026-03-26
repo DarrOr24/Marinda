@@ -35,14 +35,12 @@ function DetailRow({
   icon,
   label,
   content,
-  yesNo,
   iconColor = "#64748b",
   onPress,
 }: {
   icon: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
   label?: string;
   content: string;
-  yesNo?: boolean;
   iconColor?: string;
   onPress?: () => void;
 }) {
@@ -75,15 +73,6 @@ function DetailRow({
           contentNode
         )}
       </View>
-      {yesNo !== undefined && (
-        <View style={styles.rightCol}>
-          <MaterialCommunityIcons
-            name={yesNo ? "check-circle" : "close-circle"}
-            size={ICON_SIZE}
-            color={yesNo ? "#16a34a" : "#94a3b8"}
-          />
-        </View>
-      )}
     </View>
   );
 }
@@ -253,19 +242,16 @@ export function ActivityDetailModal({
             icon="car-outline"
             label="Ride"
             content={activity.ride_needed ? "Yes" : "No"}
-            yesNo={!!activity.ride_needed}
           />
           <DetailRow
             icon="gift-outline"
             label="Present"
             content={activity.present_needed ? "Yes" : "No"}
-            yesNo={!!activity.present_needed}
           />
           <DetailRow
             icon="baby-face-outline"
             label="Babysitter"
             content={activity.babysitter_needed ? "Yes" : "No"}
-            yesNo={!!activity.babysitter_needed}
           />
 
           <DetailRow
@@ -470,11 +456,6 @@ const styles = StyleSheet.create({
   contentCol: {
     flex: 1,
     minWidth: 0,
-  },
-  rightCol: {
-    width: ICON_SIZE + 4,
-    alignItems: "center",
-    justifyContent: "center",
   },
   rowLabel: {
     fontSize: 12,
