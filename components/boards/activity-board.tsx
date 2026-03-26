@@ -896,9 +896,10 @@ export default function ActivityBoard() {
 
 const styles = StyleSheet.create({
 
-  center: { flex: 1, paddingLeft: 20, paddingRight: 16, paddingTop: 0, gap: 12 },
-  /** Tighter horizontal inset so the day timeline & time column use narrow phone width. */
-  centerDayTimeline: { paddingLeft: 10, paddingRight: 10, gap: 8 },
+  /** Same horizontal inset as day view so chips / header don’t shift when switching. */
+  center: { flex: 1, paddingLeft: 10, paddingRight: 10, paddingTop: 0, gap: 12 },
+  /** Slightly tighter vertical gap between filter row and day timeline than week stack. */
+  centerDayTimeline: { gap: 8 },
 
   subtitle: { marginTop: 2, fontSize: 13, color: "#475569" },
 
