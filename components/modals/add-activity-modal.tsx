@@ -17,7 +17,10 @@ import {
 import { ChipSelector } from "@/components/chip-selector";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { ModalCard, ModalShell, useModalScrollMaxHeight } from "@/components/ui";
-import { buildRecurrenceRule } from "@/lib/activities/activities.recurrence";
+import {
+  buildRecurrenceRule,
+  recurrenceRuleToEditFields,
+} from "@/lib/activities/activities.recurrence";
 import type { RecurrenceFreq, RecurrenceRule } from "@/lib/activities/activities.types";
 import { MembersSelector } from "../members-selector";
 import { Button } from "../ui/button";
@@ -101,6 +104,12 @@ type Props = {
   mode?: "create" | "edit";
   submitLabel?: string;
   initial?: Partial<NewActivityForm>;
+  /**
+   * When set in `edit` mode: show repeat / end options for a recurring series
+   * ("This and future events"). Omit for "This event only" (exception) edits.
+   * `null` = use default repeat controls if fetch failed.
+   */
+  seriesRecurrenceInitial?: RecurrenceRule | null;
 };
 
 export default function AddActivityModal({
@@ -111,6 +120,7 @@ export default function AddActivityModal({
   mode = "create",
   submitLabel,
   initial,
+  seriesRecurrenceInitial,
 }: Props) {
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
@@ -164,7 +174,25 @@ export default function AddActivityModal({
     setCountStr("10");
     setUntilEndIso(null);
     setUntilPickerOpen(false);
-  }, [visible, initialDateStr, initial]);
+
+    if (mode === "edit" && seriesRecurrenceInitial !== undefined) {
+      setRepeatEnabled(true);
+      if (seriesRecurrenceInitial) {
+        const u = recurrenceRuleToEditFields(seriesRecurrenceInitial);
+        setRecurrenceFreq(u.freq);
+        setIntervalStr(u.intervalStr);
+        setEndMode(u.endMode);
+        setCountStr(u.countStr);
+        setUntilEndIso(u.untilIso);
+      } else {
+        setRecurrenceFreq("WEEKLY");
+        setIntervalStr("1");
+        setEndMode("never");
+        setCountStr("10");
+        setUntilEndIso(null);
+      }
+    }
+  }, [visible, initialDateStr, initial, mode, seriesRecurrenceInitial]);
 
   useEffect(() => {
     if (!visible || !range?.start_at || endMode !== "until") return;
@@ -182,9 +210,11 @@ export default function AddActivityModal({
   const intervalN = parseInt(intervalStr, 10) || 0;
   const countN = parseInt(countStr, 10) || 0;
 
+  const editSeriesRecurrence =
+    mode === "edit" && seriesRecurrenceInitial !== undefined;
+
   const recurrenceValid =
-    mode !== "create" ||
-    !repeatEnabled ||
+    (!repeatEnabled && !editSeriesRecurrence) ||
     (intervalN >= 1 &&
       intervalN <= 999 &&
       (endMode === "never" ||
@@ -217,7 +247,7 @@ export default function AddActivityModal({
     if (!canSave || !range) return;
 
     let recurrence: RecurrenceRule | undefined;
-    if (mode === "create" && repeatEnabled) {
+    if ((mode === "create" && repeatEnabled) || editSeriesRecurrence) {
       const firstStart = new Date(range.start_at);
       const end =
         endMode === "never"
@@ -288,7 +318,7 @@ export default function AddActivityModal({
             />
           </FormFieldRow>
 
-          {mode === "create" ? (
+          {mode === "create" || editSeriesRecurrence ? (
             <View style={styles.formRow}>
               <View style={styles.labelRow}>
                 <View style={styles.iconCol}>
@@ -300,22 +330,27 @@ export default function AddActivityModal({
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={styles.repeatHeaderRow}>
-                    <Text style={styles.label}>Repeat</Text>
-                    <Switch
-                      value={repeatEnabled}
-                      onValueChange={setRepeatEnabled}
-                      trackColor={{ false: "#d1d5db", true: "#93c5fd" }}
-                      thumbColor={repeatEnabled ? "#2563eb" : "#f4f4f5"}
-                    />
+                    <Text style={styles.label}>
+                      {editSeriesRecurrence ? "Repeat (series)" : "Repeat"}
+                    </Text>
+                    {editSeriesRecurrence ? null : (
+                      <Switch
+                        value={repeatEnabled}
+                        onValueChange={setRepeatEnabled}
+                        trackColor={{ false: "#d1d5db", true: "#93c5fd" }}
+                        thumbColor={repeatEnabled ? "#2563eb" : "#f4f4f5"}
+                      />
+                    )}
                   </View>
                   <Text style={styles.repeatHint}>
-                    Never ends, or stop after a number of times, or on a date
-                    (like Google Calendar).
+                    {editSeriesRecurrence
+                      ? "Changes here apply to this series from this occurrence forward (end date, count, or frequency)."
+                      : "Never ends, or stop after a number of times, or on a date (like Google Calendar)."}
                   </Text>
                 </View>
               </View>
 
-              {repeatEnabled ? (
+              {(repeatEnabled || editSeriesRecurrence) ? (
                 <View style={styles.recurrenceBlock}>
                   <Text style={styles.subLabel}>Every</Text>
                   <View style={styles.everyRow}>

@@ -50,6 +50,7 @@ import type {
   ActivityParticipantUpsert,
   ActivitySeriesInsert,
   ActivityStatus,
+  RecurrenceRule,
 } from "@/lib/activities/activities.types";
 import { useFamily } from "@/lib/families/families.hooks";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -101,6 +102,10 @@ export default function ActivityBoard() {
   const [seriesEditScope, setSeriesEditScope] = useState<"single" | "forward" | null>(
     null,
   );
+  /** Loaded rule when editing "This and future" — `undefined` = not series / single-occurrence edit. */
+  const [seriesRecurrenceForEdit, setSeriesRecurrenceForEdit] = useState<
+    RecurrenceRule | null | undefined
+  >(undefined);
   const [detailActivity, setDetailActivity] = useState<Activity | null>(null);
   const queryClient = useQueryClient();
   /** Full-screen hour timeline for one day (within the visible week). */
@@ -302,9 +307,11 @@ export default function ActivityBoard() {
               familyId: activeFamilyId,
             });
           } else {
-            const nextRule = continuationRecurrenceRule(
-              normalizeRecurrenceRule(series.recurrence),
-            );
+            const nextRule = form.recurrence
+              ? normalizeRecurrenceRule(form.recurrence)
+              : continuationRecurrenceRule(
+                  normalizeRecurrenceRule(series.recurrence),
+                );
             const newSeries: ActivitySeriesInsert = {
               family_id: activeFamilyId,
               title: form.title,
@@ -729,16 +736,31 @@ export default function ActivityBoard() {
                     setDetailActivity(null);
                     setEditingActivity(activity);
                     setSeriesEditScope("single");
+                    setSeriesRecurrenceForEdit(undefined);
                     setEditOpen(true);
                   },
                 },
                 {
                   text: "This and future events",
                   onPress: () => {
-                    setDetailActivity(null);
-                    setEditingActivity(activity);
-                    setSeriesEditScope("forward");
-                    setEditOpen(true);
+                    void (async () => {
+                      setDetailActivity(null);
+                      setEditingActivity(activity);
+                      setSeriesEditScope("forward");
+                      try {
+                        const series = await fetchActivitySeriesById(
+                          activity.seriesOccurrence!.seriesId,
+                        );
+                        setSeriesRecurrenceForEdit(
+                          series
+                            ? normalizeRecurrenceRule(series.recurrence)
+                            : null,
+                        );
+                      } catch {
+                        setSeriesRecurrenceForEdit(null);
+                      }
+                      setEditOpen(true);
+                    })();
                   },
                 },
               ],
@@ -769,6 +791,7 @@ export default function ActivityBoard() {
             setEditOpen(false);
             setEditingActivity(null);
             setSeriesEditScope(null);
+            setSeriesRecurrenceForEdit(undefined);
           }}
           onSave={handleUpdateActivity}
           initialDateStr={toLocalDateKey(new Date(editingActivity.start_at))}
@@ -787,6 +810,9 @@ export default function ActivityBoard() {
               editingActivity.participants?.map((p) => p.member_id) ?? [],
             notes: editingActivity.notes ?? undefined,
           }}
+          seriesRecurrenceInitial={
+            seriesEditScope === "forward" ? seriesRecurrenceForEdit : undefined
+          }
         />
       ) : null}
     </Screen>

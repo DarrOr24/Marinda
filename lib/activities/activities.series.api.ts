@@ -257,6 +257,8 @@ export async function updateEntireSeriesFromForm(params: {
     present_needed?: boolean
     babysitter_needed?: boolean
     notes?: string | null
+    /** When set (e.g. user edited repeat / end), replaces the series rule. */
+    recurrence?: RecurrenceRule
   }
   participants: ActivityParticipantUpsert[]
   familyId: string
@@ -264,6 +266,11 @@ export async function updateEntireSeriesFromForm(params: {
   const { seriesId, form, participants, familyId } = params
   const series = await fetchActivitySeriesById(seriesId)
   if (!series) throw new Error('Series not found')
+
+  const recurrence =
+    form.recurrence != null
+      ? normalizeRecurrenceRule(form.recurrence)
+      : normalizeRecurrenceRule(series.recurrence)
 
   await patchActivitySeries(seriesId, {
     title: form.title,
@@ -275,7 +282,7 @@ export async function updateEntireSeriesFromForm(params: {
     notes: form.notes ?? null,
     first_start_at: form.start_at,
     first_end_at: form.end_at,
-    recurrence: normalizeRecurrenceRule(series.recurrence),
+    recurrence,
   })
   await replaceActivitySeriesParticipants(seriesId, familyId, participants)
 }

@@ -16,6 +16,38 @@ export type RecurrenceEndInput =
   | { type: 'count'; count: number }
   | { type: 'until'; untilIso: string }
 
+export type RecurrenceEndModeUi = 'never' | 'count' | 'until'
+
+/** Hydrate repeat controls from a stored `RecurrenceRule` (edit series). */
+export function recurrenceRuleToEditFields(rule: RecurrenceRule): {
+  freq: RecurrenceFreq
+  intervalStr: string
+  endMode: RecurrenceEndModeUi
+  countStr: string
+  untilIso: string | null
+} {
+  const intervalStr = String(
+    Math.max(1, Math.min(999, Math.floor(rule.interval) || 1))
+  )
+  let endMode: RecurrenceEndModeUi = 'never'
+  let countStr = '10'
+  let untilIso: string | null = null
+  if (rule.count != null && rule.count > 0) {
+    endMode = 'count'
+    countStr = String(rule.count)
+  } else if (rule.until) {
+    endMode = 'until'
+    untilIso = rule.until
+  }
+  return {
+    freq: rule.freq,
+    intervalStr,
+    endMode,
+    countStr,
+    untilIso,
+  }
+}
+
 /** Builds a stored rule (Google-style: never / count / until are mutually exclusive). */
 export function buildRecurrenceRule(
   freq: RecurrenceFreq,
