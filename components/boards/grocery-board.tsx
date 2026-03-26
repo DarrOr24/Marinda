@@ -406,11 +406,30 @@ export default function Grocery() {
 
                     <ScrollView
                         style={styles.listScroll}
-                        contentContainerStyle={styles.listContent}
+                        contentContainerStyle={[
+                            styles.listContent,
+                            items.length === 0 && styles.listContentEmpty,
+                        ]}
                         keyboardShouldPersistTaps="handled"
                         showsVerticalScrollIndicator
                     >
-                        {viewMode === "category"
+                        {items.length === 0 ? (
+                            <View
+                                style={styles.emptyState}
+                                accessibilityLabel="Nothing on the list yet. Tap Add to add your first item."
+                            >
+                                <MaterialCommunityIcons
+                                    name="cart-outline"
+                                    size={44}
+                                    color="#cbd5e1"
+                                    style={styles.emptyIcon}
+                                />
+                                <Text style={styles.emptyTitle}>Nothing on the list yet</Text>
+                                <Text style={styles.emptyHint}>
+                                    Tap Add to add your first item.
+                                </Text>
+                            </View>
+                        ) : viewMode === "category"
                             ? grouped.map(([cat, arr]) => (
                                   <View key={cat} style={styles.group}>
                                       <Text style={styles.groupTitle}>{cat}</Text>
@@ -671,6 +690,33 @@ const styles = StyleSheet.create({
     listContent: {
         gap: 12,
         paddingBottom: 100,
+    },
+    listContentEmpty: {
+        flexGrow: 1,
+        justifyContent: "center",
+        minHeight: 280,
+    },
+
+    emptyState: {
+        alignItems: "center",
+        paddingHorizontal: 24,
+        paddingVertical: 32,
+    },
+    emptyIcon: {
+        marginBottom: 12,
+    },
+    emptyTitle: {
+        fontSize: 17,
+        fontWeight: "700",
+        color: "#475569",
+        textAlign: "center",
+        marginBottom: 6,
+    },
+    emptyHint: {
+        fontSize: 15,
+        color: "#94a3b8",
+        textAlign: "center",
+        lineHeight: 22,
     },
 
     group: {
