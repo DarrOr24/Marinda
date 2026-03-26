@@ -125,6 +125,42 @@ export function makeSeriesOccurrenceActivityId(
   return `rec:${seriesId}:${occurrenceStartMs}`
 }
 
+function mergeOverrideDataIntoSeries(
+  series: ActivitySeriesWithRelations,
+  data: Record<string, unknown> | null | undefined
+): ActivitySeriesWithRelations {
+  if (!data || typeof data !== 'object') return series
+  const t = typeof data.title === 'string' ? data.title : series.title
+  const loc =
+    data.location !== undefined
+      ? (data.location as string | null)
+      : series.location
+  const money =
+    typeof data.money === 'number' ? data.money : series.money
+  return {
+    ...series,
+    title: t,
+    location: loc,
+    money,
+    ride_needed:
+      typeof data.ride_needed === 'boolean'
+        ? data.ride_needed
+        : series.ride_needed,
+    present_needed:
+      typeof data.present_needed === 'boolean'
+        ? data.present_needed
+        : series.present_needed,
+    babysitter_needed:
+      typeof data.babysitter_needed === 'boolean'
+        ? data.babysitter_needed
+        : series.babysitter_needed,
+    notes:
+      data.notes !== undefined
+        ? (data.notes as string | null)
+        : series.notes,
+  }
+}
+
 function buildVirtualActivity(
   series: ActivitySeriesWithRelations,
   startIso: string,
@@ -199,11 +235,12 @@ export function expandSeriesToVirtualActivities(
     }
 
     if (ex?.exception_type === 'modified' && ex.override_start_at && ex.override_end_at) {
+      const mergedSeries = mergeOverrideDataIntoSeries(series, ex.override_data ?? null)
       const startIso = ex.override_start_at
       const endIso = ex.override_end_at
       if (timeRangesOverlap(startIso, endIso, rangeFrom, rangeTo)) {
         out.push(
-          buildVirtualActivity(series, startIso, endIso, {
+          buildVirtualActivity(mergedSeries, startIso, endIso, {
             seriesId: series.id,
             occurrenceStart: ex.occurrence_start,
           })

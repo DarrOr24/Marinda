@@ -34,10 +34,10 @@ const activitiesKey = (
 const activitySeriesKey = (familyId: string | undefined) =>
   ['activity_series', familyId ?? null] as const
 
-const invalidateFamilyActivities = (
+export function invalidateFamilyActivities(
   qc: ReturnType<typeof useQueryClient>,
   familyId?: string
-) => {
+) {
   if (!familyId) return
   qc.invalidateQueries({
     predicate: (q) => {

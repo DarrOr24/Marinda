@@ -95,6 +95,8 @@ export interface ActivitySeriesExceptionRow {
   exception_type: 'cancelled' | 'modified'
   override_start_at: string | null
   override_end_at: string | null
+  /** Merged over the series row for this instance when `exception_type === 'modified'`. */
+  override_data?: Record<string, unknown> | null
   created_at: string
 }
 

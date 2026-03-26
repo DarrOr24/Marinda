@@ -1,6 +1,8 @@
 // app/boards/activity.tsx
+import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,12 +18,25 @@ import AddActivityModal, { type NewActivityForm } from "@/components/modals/add-
 import { Button, SafeFab, Screen } from "@/components/ui";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import {
+  invalidateActivitySeries,
+  invalidateFamilyActivities,
   useCreateActivity,
   useCreateActivitySeries,
   useDeleteActivity,
   useFamilyCalendarActivities,
   useUpdateActivity,
 } from "@/lib/activities/activities.hooks";
+import {
+  cancelSeriesOccurrence,
+  continuationRecurrenceRule,
+  fetchActivitySeriesById,
+  patchActivitySeries,
+  splitSeriesForFutureEdits,
+  truncateSeriesFromOccurrence,
+  updateEntireSeriesFromForm,
+  upsertSeriesOccurrenceModified,
+} from "@/lib/activities/activities.series.api";
+import { normalizeRecurrenceRule } from "@/lib/activities/activities.recurrence";
 import {
   collectLocalDateKeysOverlappingRange,
   endOfLocalDay,
@@ -32,8 +47,8 @@ import type {
   Activity,
   ActivityInsert,
   ActivityParticipantUpsert,
-  ActivityStatus,
   ActivitySeriesInsert,
+  ActivityStatus,
 } from "@/lib/activities/activities.types";
 import { useFamily } from "@/lib/families/families.hooks";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -81,8 +96,12 @@ export default function ActivityBoard() {
   const [addOpen, setAddOpen] = useState(false);
 
   const [editOpen, setEditOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [seriesEditScope, setSeriesEditScope] = useState<"single" | "forward" | null>(
+    null,
+  );
   const [detailActivity, setDetailActivity] = useState<Activity | null>(null);
+  const queryClient = useQueryClient();
   /** Full-screen hour timeline for one day (within the visible week). */
   const [dayViewDate, setDayViewDate] = useState<Date | null>(null);
 
@@ -111,6 +130,11 @@ export default function ActivityBoard() {
   const createSeriesMut = useCreateActivitySeries(activeFamilyId);
   const updateMut = useUpdateActivity(activeFamilyId);
   const deleteMut = useDeleteActivity(activeFamilyId);
+
+  function refreshCalendarData() {
+    invalidateFamilyActivities(queryClient, activeFamilyId);
+    invalidateActivitySeries(queryClient, activeFamilyId);
+  }
 
   // Fast lookup for members (for dots and names)
   const memberById = useMemo(() => {
@@ -225,9 +249,93 @@ export default function ActivityBoard() {
     createMut.mutate({ activity, participants });
   }
 
-  // Edit (patch+participants)
-  function handleUpdateActivity(form: NewActivityForm) {
-    if (!editingId) return;
+  // Edit (patch+participants, or recurring series exception / split)
+  async function handleUpdateActivity(form: NewActivityForm) {
+    if (!editingActivity || !activeFamilyId || !effectiveMember?.id) return;
+
+    const participants: ActivityParticipantUpsert[] = (
+      form.participants_member_ids ?? []
+    ).map((id) => ({
+      member_id: id,
+      response: id === effectiveMember.id ? "YES" : "MAYBE",
+      is_creator: id === effectiveMember.id,
+    }));
+
+    const meta = editingActivity.seriesOccurrence;
+
+    if (meta && seriesEditScope) {
+      try {
+        if (seriesEditScope === "single") {
+          await upsertSeriesOccurrenceModified({
+            seriesId: meta.seriesId,
+            familyId: activeFamilyId,
+            occurrenceStart: meta.occurrenceStart,
+            overrideStartAt: form.start_at,
+            overrideEndAt: form.end_at,
+            overrideData: {
+              title: form.title,
+              location: form.location ?? null,
+              money: form.money ?? null,
+              ride_needed: !!form.ride_needed,
+              present_needed: !!form.present_needed,
+              babysitter_needed: !!form.babysitter_needed,
+              notes: form.notes ?? null,
+            },
+          });
+        } else {
+          const series = await fetchActivitySeriesById(meta.seriesId);
+          if (!series) {
+            setEditingActivity(null);
+            setSeriesEditScope(null);
+            setEditOpen(false);
+            return;
+          }
+          const occMs = new Date(meta.occurrenceStart).getTime();
+          const firstMs = new Date(series.first_start_at).getTime();
+          const isFirst = Math.abs(occMs - firstMs) < 2000;
+
+          if (isFirst) {
+            await updateEntireSeriesFromForm({
+              seriesId: meta.seriesId,
+              form,
+              participants,
+              familyId: activeFamilyId,
+            });
+          } else {
+            const nextRule = continuationRecurrenceRule(
+              normalizeRecurrenceRule(series.recurrence),
+            );
+            const newSeries: ActivitySeriesInsert = {
+              family_id: activeFamilyId,
+              title: form.title,
+              location: form.location ?? null,
+              money: form.money ?? null,
+              ride_needed: !!form.ride_needed,
+              present_needed: !!form.present_needed,
+              babysitter_needed: !!form.babysitter_needed,
+              notes: form.notes ?? null,
+              created_by: series.created_by.id,
+              first_start_at: form.start_at,
+              first_end_at: form.end_at,
+              recurrence: nextRule,
+            };
+            await splitSeriesForFutureEdits({
+              oldSeriesId: meta.seriesId,
+              occurrenceStart: meta.occurrenceStart,
+              newSeries,
+              participants,
+            });
+          }
+        }
+        refreshCalendarData();
+      } catch (e) {
+        console.error("[handleUpdateActivity series]", e);
+      }
+      setEditingActivity(null);
+      setSeriesEditScope(null);
+      setEditOpen(false);
+      return;
+    }
 
     const patch: Partial<ActivityInsert> & {
       status?: ActivityStatus;
@@ -242,27 +350,23 @@ export default function ActivityBoard() {
       present_needed: !!form.present_needed,
       babysitter_needed: !!form.babysitter_needed,
       notes: form.notes ?? null,
-      // only kid edits require re-approval; parent edits keep current status
       ...(hasParentPermissions ? {} : { status: "PENDING" as ActivityStatus }),
     };
 
-    // For updates we let the DB preserve existing `response` & `is_creator`
-    // for existing rows; new rows get default MAYBE.
-    const participants: ActivityParticipantUpsert[] = (
+    const participantsUpdate: ActivityParticipantUpsert[] = (
       form.participants_member_ids ?? []
     ).map((id) => ({
       member_id: id,
-      // no response / is_creator here → handled in SQL via coalesce + join
     }));
 
     updateMut.mutate({
-      id: editingId,
+      id: editingActivity.id,
       patch,
-      participants,
+      participants: participantsUpdate,
       replaceParticipants: true,
     });
 
-    setEditingId(null);
+    setEditingActivity(null);
     setEditOpen(false);
   }
 
@@ -507,13 +611,43 @@ export default function ActivityBoard() {
         visible={!!detailActivity}
         activity={detailActivity}
         onClose={() => setDetailActivity(null)}
-        onApprove={(id) => {
-          updateMut.mutate({ id, patch: { status: "APPROVED" } });
+        onApprove={(activity) => {
+          if (activity.seriesOccurrence) {
+            void (async () => {
+              try {
+                await patchActivitySeries(activity.seriesOccurrence!.seriesId, {
+                  status: "APPROVED",
+                  rejection_reason: null,
+                });
+                refreshCalendarData();
+              } catch (e) {
+                console.error(e);
+              }
+              setDetailActivity(null);
+            })();
+            return;
+          }
+          updateMut.mutate({ id: activity.id, patch: { status: "APPROVED" } });
           setDetailActivity(null);
         }}
-        onReject={(id, reason) => {
+        onReject={(activity, reason) => {
+          if (activity.seriesOccurrence) {
+            void (async () => {
+              try {
+                await patchActivitySeries(activity.seriesOccurrence!.seriesId, {
+                  status: "NOT_APPROVED",
+                  rejection_reason: reason.trim() ? reason.trim() : null,
+                });
+                refreshCalendarData();
+              } catch (e) {
+                console.error(e);
+              }
+              setDetailActivity(null);
+            })();
+            return;
+          }
           updateMut.mutate({
-            id,
+            id: activity.id,
             patch: {
               status: "NOT_APPROVED",
               rejection_reason: reason.trim() ? reason.trim() : null,
@@ -521,9 +655,24 @@ export default function ActivityBoard() {
           });
           setDetailActivity(null);
         }}
-        onRevertToPending={(id) => {
+        onRevertToPending={(activity) => {
+          if (activity.seriesOccurrence) {
+            void (async () => {
+              try {
+                await patchActivitySeries(activity.seriesOccurrence!.seriesId, {
+                  status: "PENDING",
+                  rejection_reason: null,
+                });
+                refreshCalendarData();
+              } catch (e) {
+                console.error(e);
+              }
+              setDetailActivity(null);
+            })();
+            return;
+          }
           updateMut.mutate(
-            { id, patch: { status: "PENDING" } },
+            { id: activity.id, patch: { status: "PENDING" } },
             {
               onSuccess: (updated) => {
                 setDetailActivity(updated);
@@ -531,17 +680,98 @@ export default function ActivityBoard() {
             },
           );
         }}
-        onDelete={(id) => {
-          deleteMut.mutate(
-            { id },
+        onDelete={(activity) => {
+          if (activity.seriesOccurrence) {
+            Alert.alert(
+              "Delete recurring event",
+              "What should be deleted?",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "This event only",
+                  onPress: () => {
+                    void (async () => {
+                      try {
+                        await cancelSeriesOccurrence({
+                          seriesId: activity.seriesOccurrence!.seriesId,
+                          familyId: activeFamilyId!,
+                          occurrenceStart: activity.seriesOccurrence!.occurrenceStart,
+                        });
+                        refreshCalendarData();
+                      } catch (e) {
+                        console.error(e);
+                      }
+                      setDetailActivity(null);
+                    })();
+                  },
+                },
+                {
+                  text: "This and future events",
+                  style: "destructive",
+                  onPress: () => {
+                    void (async () => {
+                      try {
+                        await truncateSeriesFromOccurrence({
+                          seriesId: activity.seriesOccurrence!.seriesId,
+                          occurrenceStart: activity.seriesOccurrence!.occurrenceStart,
+                        });
+                        refreshCalendarData();
+                      } catch (e) {
+                        console.error(e);
+                      }
+                      setDetailActivity(null);
+                    })();
+                  },
+                },
+              ],
+            );
+            return;
+          }
+          Alert.alert("Delete activity?", "This cannot be undone.", [
+            { text: "Cancel", style: "cancel" },
             {
-              onSuccess: () => setDetailActivity(null),
+              text: "Delete",
+              style: "destructive",
+              onPress: () =>
+                deleteMut.mutate(
+                  { id: activity.id },
+                  { onSuccess: () => setDetailActivity(null) },
+                ),
             },
-          );
+          ]);
         }}
-        onEdit={(id) => {
+        onEdit={(activity) => {
+          if (activity.seriesOccurrence) {
+            Alert.alert(
+              "Edit recurring event",
+              "What should be updated?",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "This event only",
+                  onPress: () => {
+                    setDetailActivity(null);
+                    setEditingActivity(activity);
+                    setSeriesEditScope("single");
+                    setEditOpen(true);
+                  },
+                },
+                {
+                  text: "This and future events",
+                  onPress: () => {
+                    setDetailActivity(null);
+                    setEditingActivity(activity);
+                    setSeriesEditScope("forward");
+                    setEditOpen(true);
+                  },
+                },
+              ],
+            );
+            return;
+          }
           setDetailActivity(null);
-          setEditingId(id);
+          setEditingActivity(activity);
+          setSeriesEditScope(null);
           setEditOpen(true);
         }}
         memberById={memberById}
@@ -556,41 +786,33 @@ export default function ActivityBoard() {
       />
 
       {/* Edit Activity */}
-      {editingId &&
-        (() => {
-          const activity = activities.find((x) => x.id === editingId);
-          if (!activity) return null;
-
-          const start = new Date(activity.start_at);
-          const activityDateStr = toLocalDateKey(start);
-
-          return (
-            <AddActivityModal
-              visible={editOpen}
-              onClose={() => {
-                setEditOpen(false);
-                setEditingId(null);
-              }}
-              onSave={handleUpdateActivity}
-              initialDateStr={activityDateStr}
-              mode="edit"
-              submitLabel="Update"
-              initial={{
-                title: activity.title,
-                start_at: activity.start_at,
-                end_at: activity.end_at,
-                location: activity.location ?? undefined,
-                money: activity.money ?? undefined,
-                ride_needed: !!activity.ride_needed,
-                present_needed: !!activity.present_needed,
-                babysitter_needed: !!activity.babysitter_needed,
-                participants_member_ids:
-                  activity.participants?.map((p) => p.member_id) ?? [],
-                notes: activity.notes ?? undefined,
-              }}
-            />
-          );
-        })()}
+      {editingActivity ? (
+        <AddActivityModal
+          visible={editOpen}
+          onClose={() => {
+            setEditOpen(false);
+            setEditingActivity(null);
+            setSeriesEditScope(null);
+          }}
+          onSave={handleUpdateActivity}
+          initialDateStr={toLocalDateKey(new Date(editingActivity.start_at))}
+          mode="edit"
+          submitLabel="Update"
+          initial={{
+            title: editingActivity.title,
+            start_at: editingActivity.start_at,
+            end_at: editingActivity.end_at,
+            location: editingActivity.location ?? undefined,
+            money: editingActivity.money ?? undefined,
+            ride_needed: !!editingActivity.ride_needed,
+            present_needed: !!editingActivity.present_needed,
+            babysitter_needed: !!editingActivity.babysitter_needed,
+            participants_member_ids:
+              editingActivity.participants?.map((p) => p.member_id) ?? [],
+            notes: editingActivity.notes ?? undefined,
+          }}
+        />
+      ) : null}
     </Screen>
   );
 

@@ -92,14 +92,14 @@ type Props = {
   visible: boolean;
   activity: Activity | null;
   onClose: () => void;
-  onApprove: (id: string) => void;
+  onApprove: (activity: Activity) => void;
   /** Parent rejects; optional note stored for the family. */
-  onReject: (id: string, reason: string) => void;
+  onReject: (activity: Activity, reason: string) => void;
   /** Parent moves approved or rejected activity back to pending. */
-  onRevertToPending: (id: string) => void;
-  onEdit: (id: string) => void;
-  /** Creator only; shows confirmation before calling. */
-  onDelete?: (id: string) => void;
+  onRevertToPending: (activity: Activity) => void;
+  onEdit: (activity: Activity) => void;
+  /** Creator only; one-off shows a confirm alert; recurring is handled by the parent (scope). */
+  onDelete?: (activity: Activity) => void;
   memberById: Map<string, any>;
   creatorName: (a: Activity) => string;
   isParent: boolean;
@@ -181,6 +181,10 @@ export function ActivityDetailModal({
 
   function confirmDelete() {
     if (!onDelete) return;
+    if (isVirtualSeries) {
+      onDelete(activity);
+      return;
+    }
     Alert.alert(
       "Delete activity?",
       "This cannot be undone.",
@@ -189,14 +193,14 @@ export function ActivityDetailModal({
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => onDelete(activity.id),
+          onPress: () => onDelete(activity),
         },
       ],
     );
   }
 
   function submitReject() {
-    onReject(activity.id, rejectReason.trim());
+    onReject(activity, rejectReason.trim());
     setRejectOpen(false);
     setRejectReason("");
   }
@@ -307,7 +311,7 @@ export function ActivityDetailModal({
           />
         </ScrollView>
 
-        {rejectOpen && isParent && activity.status === "PENDING" && !isVirtualSeries ? (
+        {rejectOpen && isParent && activity.status === "PENDING" ? (
           <View style={styles.rejectBox}>
             <TextInput
               label="Why not approved? (optional)"
@@ -339,14 +343,14 @@ export function ActivityDetailModal({
         ) : null}
 
         <View style={styles.buttons}>
-          {isCreator && !isVirtualSeries ? (
+          {isCreator ? (
             <>
               <Button
                 type="outline"
                 size="sm"
                 title="Edit"
                 leftIcon={<MaterialCommunityIcons name="pencil-outline" size={18} />}
-                onPress={() => onEdit(activity.id)}
+                onPress={() => onEdit(activity)}
               />
               {onDelete ? (
                 <Button
@@ -359,7 +363,7 @@ export function ActivityDetailModal({
               ) : null}
             </>
           ) : null}
-          {parentCanDecide && !isVirtualSeries && !(rejectOpen && activity.status === "PENDING") ? (
+          {parentCanDecide && !(rejectOpen && activity.status === "PENDING") ? (
             <>
               {activity.status === "PENDING" && (
                 <>
@@ -375,7 +379,7 @@ export function ActivityDetailModal({
                     size="sm"
                     title="Approve"
                     leftIcon={<MaterialCommunityIcons name="check" size={18} />}
-                    onPress={() => onApprove(activity.id)}
+                    onPress={() => onApprove(activity)}
                   />
                 </>
               )}
@@ -385,7 +389,7 @@ export function ActivityDetailModal({
                   size="sm"
                   title="Change decision"
                   leftIcon={<MaterialCommunityIcons name="undo" size={18} />}
-                  onPress={() => onRevertToPending(activity.id)}
+                  onPress={() => onRevertToPending(activity)}
                 />
               )}
               {activity.status === "NOT_APPROVED" && (
@@ -395,14 +399,14 @@ export function ActivityDetailModal({
                     size="sm"
                     title="Approve"
                     leftIcon={<MaterialCommunityIcons name="check" size={18} />}
-                    onPress={() => onApprove(activity.id)}
+                    onPress={() => onApprove(activity)}
                   />
                   <Button
                     type="outline"
                     size="sm"
                     title="Change decision"
                     leftIcon={<MaterialCommunityIcons name="undo" size={18} />}
-                    onPress={() => onRevertToPending(activity.id)}
+                    onPress={() => onRevertToPending(activity)}
                   />
                 </>
               )}
