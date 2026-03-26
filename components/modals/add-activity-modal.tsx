@@ -10,9 +10,12 @@ import {
   View,
 } from "react-native";
 
+import {
+  CalendarDateModal,
+  toLocalYmdFromIso,
+} from "@/components/calendar-date-modal";
 import { ChipSelector } from "@/components/chip-selector";
 import { DateRangePicker } from "@/components/date-range-picker";
-import { DateTimeWheelPicker } from "@/components/date-time-wheel-picker";
 import { ModalCard, ModalShell, useModalScrollMaxHeight } from "@/components/ui";
 import { buildRecurrenceRule } from "@/lib/activities/activities.recurrence";
 import type { RecurrenceFreq, RecurrenceRule } from "@/lib/activities/activities.types";
@@ -490,12 +493,16 @@ export default function AddActivityModal({
         </View>
       </ModalCard>
 
-      <DateTimeWheelPicker
+      <CalendarDateModal
         visible={untilPickerOpen}
+        title="Repeat until"
         initialAt={untilEndIso ?? range?.start_at}
+        minDateYmd={
+          range?.start_at ? toLocalYmdFromIso(range.start_at) : undefined
+        }
         onCancel={() => setUntilPickerOpen(false)}
-        onConfirm={(iso) => {
-          setUntilEndIso(endOfLocalDayIso(new Date(iso)));
+        onConfirm={(endOfLocalDayIso) => {
+          setUntilEndIso(endOfLocalDayIso);
           setUntilPickerOpen(false);
         }}
       />
