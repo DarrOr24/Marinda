@@ -13,7 +13,6 @@ import {
 } from "react-native";
 
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useAppHeader } from "@/components/app-header";
 import { MemberAvatar } from "@/components/avatar/member-avatar";
 import { ChipSelector } from "@/components/chip-selector";
 import { Button, Screen, ScreenState, TextInput } from "@/components/ui";
@@ -93,17 +92,6 @@ export function MemberProfileScreen({ memberIdParam }: MemberProfileScreenProps)
   // ✅ member being viewed (for points card)
   const current = memberList.find((m: any) => m.id === viewedMemberId);
   const points = (current as any)?.points ?? 0;
-  const profileTitle = current
-    ? `${memberDisplayName(current)}'s Profile`
-    : "Profile";
-  const useMarindaHeader = isKidMode || hasParentPermissions;
-
-  useAppHeader(
-    useMarindaHeader
-      ? { title: "Marinda", appBrand: true, hiddenTitle: false }
-      : { title: profileTitle, hiddenTitle: false },
-  );
-
   // 🔄 Always refetch members when entering this screen or switching profile
   useEffect(() => {
     if (activeFamilyId && familyMembers?.refetch) {

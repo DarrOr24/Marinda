@@ -13,14 +13,13 @@ import { Image, Platform, StyleSheet, Text, View } from 'react-native'
 
 import { BackForwardButton } from '@/components/back-forward-button'
 import { HeaderProfileButton } from '@/components/header-profile-button'
-import { useAuthContext } from '@/hooks/use-auth-context'
 
 type HeaderIconName = React.ComponentProps<typeof MaterialCommunityIcons>['name']
 
 type AppHeaderConfig = {
   title?: string
   icon?: HeaderIconName
-  /** Show Marinda title with the app mark (kid mode roots + parent profile). */
+  /** Show Marinda title with the app mark (profile routes, or per-screen override). */
   appBrand?: boolean
   color?: string
   hiddenTitle?: boolean
@@ -42,26 +41,11 @@ const AppHeaderContext = createContext<AppHeaderContextValue | null>(null)
 
 export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { profile, isKidMode } = useAuthContext()
   const [override, setOverride] = useState<AppHeaderConfig | null>(null)
 
-  const firstName =
-    profile?.first_name ||
-    profile?.last_name ||
-    'Account'
-
-  const accountTitle = `${firstName}'s Account`
-
   const defaultConfig = useMemo<AppHeaderConfig>(() => {
-    const hiddenTitle = isKidMode
-
-    if (isKidMode && ROOT_APP_PATHS.includes(pathname)) {
-      return {
-        title: 'Marinda',
-        appBrand: true,
-        hiddenTitle: false,
-      }
-    }
+    /** Kid mode uses the same per-route titles as parents (Chores, Wishes, Boards, …). */
+    const hiddenTitle = false
 
     if (pathname === '/chores') {
       return {
@@ -90,17 +74,11 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    if (pathname === '/profiles') {
+    if (pathname === '/profiles' || pathname.startsWith('/profiles/')) {
       return {
-        title: accountTitle,
-        hiddenTitle,
-      }
-    }
-
-    if (pathname.startsWith('/profiles/')) {
-      return {
-        title: 'Profile',
-        hiddenTitle,
+        title: 'Marinda',
+        appBrand: true,
+        hiddenTitle: false,
       }
     }
 
@@ -239,7 +217,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
       title: '',
       hiddenTitle,
     }
-  }, [accountTitle, isKidMode, pathname])
+  }, [pathname])
 
   const value = useMemo<AppHeaderContextValue>(
     () => ({
