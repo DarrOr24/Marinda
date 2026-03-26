@@ -36,6 +36,7 @@ import {
   updateEntireSeriesFromForm,
   upsertSeriesOccurrenceModified,
 } from "@/lib/activities/activities.series.api";
+import { getActivityRowAccentColor } from "@/lib/activities/activities.accent-color";
 import { normalizeRecurrenceRule } from "@/lib/activities/activities.recurrence";
 import {
   collectLocalDateKeysOverlappingRange,
@@ -172,9 +173,8 @@ export default function ActivityBoard() {
     return m?.name ?? m?.user?.email ?? "Someone";
   }
 
-  function creatorColor(a: Activity) {
-    const m = a.created_by?.id ? memberById.get(a.created_by.id) : undefined;
-    return m?.color?.hex ?? m?.color ?? "#2563eb";
+  function rowAccentColor(a: Activity) {
+    return getActivityRowAccentColor(a, memberById);
   }
 
   function showDetails(a: Activity) {
@@ -426,7 +426,7 @@ export default function ActivityBoard() {
             canPrevDay={dayViewIndex > 0}
             canNextDay={dayViewIndex >= 0 && dayViewIndex < 6}
             onActivityPress={showDetails}
-            activityColor={creatorColor}
+            activityColor={rowAccentColor}
             activityColorStyle={activityColor}
             formatTimeRange={formatActivityTimeRange}
           />
@@ -493,7 +493,7 @@ export default function ActivityBoard() {
                   ) : (
                     <View style={{ gap: 8 }}>
                       {items.map((a) => {
-                        const color = creatorColor(a);
+                        const color = rowAccentColor(a);
                         const base = activityColor(a.status, color);
 
                         const badgeIcons = [
@@ -523,13 +523,6 @@ export default function ActivityBoard() {
                           ),
                         ].filter(Boolean);
 
-                        const goingMembers = (a.participants ?? [])
-                          .map((p) => memberById.get(p.member_id))
-                          .filter(Boolean) as any[];
-
-                        const top3 = goingMembers.slice(0, 3);
-                        const more = goingMembers.length - top3.length;
-
                         return (
                           <Pressable
                             key={a.id}
@@ -547,23 +540,6 @@ export default function ActivityBoard() {
                               <Text numberOfLines={2} style={styles.itemTitle}>
                                 {a.title}
                               </Text>
-                              <View style={styles.participantsCol}>
-                                {top3.map((m: any) => (
-                                  <View
-                                    key={m.id}
-                                    style={[
-                                      styles.partDot,
-                                      {
-                                        backgroundColor:
-                                          (m as any).color || "#94a3b8",
-                                      },
-                                    ]}
-                                  />
-                                ))}
-                                {more > 0 ? (
-                                  <Text style={styles.partMore}>+{more}</Text>
-                                ) : null}
-                              </View>
                             </View>
 
                             {a.start_at ? (
@@ -914,13 +890,4 @@ const styles = StyleSheet.create({
     gap: 8,
     flexShrink: 0,
   },
-  participantsCol: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    flexShrink: 0,
-  },
-
-  partDot: { width: 8, height: 8, borderRadius: 999 },
-  partMore: { fontSize: 12, color: "#334155", marginLeft: 2 },
 });
