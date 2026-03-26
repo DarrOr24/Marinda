@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 
+import { ActivityCalendarAttendeeFilter } from "@/components/boards/activity-calendar-attendee-filter";
 import { ActivityBoardHeaderNav } from "@/components/boards/activity-board-header-nav";
 import { ActivityDayView } from "@/components/boards/activity-day-view";
 import { ActivityDetailModal } from "@/components/modals/activity-detail-modal";
@@ -36,6 +37,7 @@ import {
   updateEntireSeriesFromForm,
   upsertSeriesOccurrenceModified,
 } from "@/lib/activities/activities.series.api";
+import { filterActivitiesByAttendees } from "@/lib/activities/activities.attendee-filter";
 import { getActivityRowAccentColor } from "@/lib/activities/activities.accent-color";
 import { normalizeRecurrenceRule } from "@/lib/activities/activities.recurrence";
 import {
@@ -53,6 +55,7 @@ import type {
   RecurrenceRule,
 } from "@/lib/activities/activities.types";
 import { useFamily } from "@/lib/families/families.hooks";
+import type { FamilyMember } from "@/lib/members/members.types";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -91,7 +94,8 @@ function formatTimeFromIso(iso: string) {
 
 export default function ActivityBoard() {
   const today = new Date();
-  const { effectiveMember, activeFamilyId, hasParentPermissions } = useAuthContext() as any;
+  const { effectiveMember, activeFamilyId, hasParentPermissions } =
+    useAuthContext() as any;
   const { familyMembers } = useFamily(activeFamilyId);
 
   const [weekOffset, setWeekOffset] = useState<number>(0);
@@ -114,6 +118,14 @@ export default function ActivityBoard() {
   const queryClient = useQueryClient();
   /** Full-screen hour timeline for one day (within the visible week). */
   const [dayViewDate, setDayViewDate] = useState<Date | null>(null);
+  /** Parent: filter by participant member ids; empty = everyone. */
+  const [attendeeFilterMemberIds, setAttendeeFilterMemberIds] = useState<string[]>(
+    [],
+  );
+  /** Kid profile: all family events vs only events where the kid is a participant. */
+  const [kidEventsScope, setKidEventsScope] = useState<"family" | "mine">(
+    "family",
+  );
 
   const startOfThisWeek = useMemo(() => getStartOfWeek(today), [today]);
   const visibleWeekStart = useMemo(
@@ -135,6 +147,27 @@ export default function ActivityBoard() {
       to: endOfLocalDay(visibleWeekDays[6]),
     }
   );
+
+  const filteredActivities = useMemo(() => {
+    if (!effectiveMember?.id) return activities;
+    if (!hasParentPermissions) {
+      return filterActivitiesByAttendees(activities, {
+        kind: "kid",
+        scope: kidEventsScope,
+        selfMemberId: effectiveMember.id,
+      });
+    }
+    return filterActivitiesByAttendees(activities, {
+      kind: "parent",
+      memberIds: attendeeFilterMemberIds,
+    });
+  }, [
+    activities,
+    hasParentPermissions,
+    kidEventsScope,
+    effectiveMember?.id,
+    attendeeFilterMemberIds,
+  ]);
 
   const createMut = useCreateActivity(activeFamilyId);
   const createSeriesMut = useCreateActivitySeries(activeFamilyId);
@@ -193,7 +226,7 @@ export default function ActivityBoard() {
   // Group by each local calendar day the activity overlaps (multi-day → card on each day).
   const byDate = useMemo(() => {
     const map: Record<string, Activity[]> = {};
-    for (const a of activities) {
+    for (const a of filteredActivities) {
       for (const key of collectLocalDateKeysOverlappingRange(
         a.start_at,
         a.end_at,
@@ -208,7 +241,7 @@ export default function ActivityBoard() {
       );
     }
     return map;
-  }, [activities]);
+  }, [filteredActivities]);
 
   // Create
   function handleSaveActivity(form: NewActivityForm) {
@@ -410,6 +443,18 @@ export default function ActivityBoard() {
     ? toLocalDateKey(dayViewDate)
     : today.toISOString().split("T")[0];
 
+  const attendeeFilter = (
+    <ActivityCalendarAttendeeFilter
+      members={(familyMembers.data ?? []) as FamilyMember[]}
+      loading={familyMembers.isLoading || familyMembers.isFetching}
+      mode={!hasParentPermissions ? "kid" : "parent"}
+      parentSelectedIds={attendeeFilterMemberIds}
+      onParentSelectedIdsChange={setAttendeeFilterMemberIds}
+      kidScope={kidEventsScope}
+      onKidScopeChange={setKidEventsScope}
+    />
+  );
+
   return (
     <Screen
       scroll={false}
@@ -428,21 +473,26 @@ export default function ActivityBoard() {
     >
       <View style={[styles.center, dayViewDate && styles.centerDayTimeline]}>
         {dayViewDate ? (
-          <ActivityDayView
-            day={dayViewDate}
-            activities={dayViewActivities}
-            onClose={closeDayView}
-            onPrevDay={() => shiftDayView(-1)}
-            onNextDay={() => shiftDayView(1)}
-            canPrevDay={dayViewIndex > 0}
-            canNextDay={dayViewIndex >= 0 && dayViewIndex < 6}
-            onActivityPress={showDetails}
-            activityColor={rowAccentColor}
-            activityColorStyle={activityColor}
-            formatTimeRange={formatActivityTimeRange}
-          />
+          <>
+            {attendeeFilter}
+            <ActivityDayView
+              day={dayViewDate}
+              activities={dayViewActivities}
+              onClose={closeDayView}
+              onPrevDay={() => shiftDayView(-1)}
+              onNextDay={() => shiftDayView(1)}
+              canPrevDay={dayViewIndex > 0}
+              canNextDay={dayViewIndex >= 0 && dayViewIndex < 6}
+              onActivityPress={showDetails}
+              activityColor={rowAccentColor}
+              activityColorStyle={activityColor}
+              formatTimeRange={formatActivityTimeRange}
+            />
+          </>
         ) : (
           <>
+        {attendeeFilter}
+
         {/* Header w/ week navigation */}
         <ActivityBoardHeaderNav
           title={weekOffset === 0 ? "This week" : rangeLabel}
@@ -848,7 +898,7 @@ const styles = StyleSheet.create({
 
   center: { flex: 1, paddingLeft: 20, paddingRight: 16, paddingTop: 0, gap: 12 },
   /** Tighter horizontal inset so the day timeline & time column use narrow phone width. */
-  centerDayTimeline: { paddingLeft: 10, paddingRight: 10, gap: 0 },
+  centerDayTimeline: { paddingLeft: 10, paddingRight: 10, gap: 8 },
 
   subtitle: { marginTop: 2, fontSize: 13, color: "#475569" },
 
