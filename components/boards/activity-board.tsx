@@ -106,6 +106,10 @@ export default function ActivityBoard() {
   const [seriesRecurrenceForEdit, setSeriesRecurrenceForEdit] = useState<
     RecurrenceRule | null | undefined
   >(undefined);
+  /** Read-only rule for "This event only" — `undefined` = not that flow. */
+  const [seriesRecurrenceReadOnly, setSeriesRecurrenceReadOnly] = useState<
+    RecurrenceRule | null | undefined
+  >(undefined);
   const [detailActivity, setDetailActivity] = useState<Activity | null>(null);
   const queryClient = useQueryClient();
   /** Full-screen hour timeline for one day (within the visible week). */
@@ -733,11 +737,25 @@ export default function ActivityBoard() {
                 {
                   text: "This event only",
                   onPress: () => {
-                    setDetailActivity(null);
-                    setEditingActivity(activity);
-                    setSeriesEditScope("single");
-                    setSeriesRecurrenceForEdit(undefined);
-                    setEditOpen(true);
+                    void (async () => {
+                      setDetailActivity(null);
+                      setEditingActivity(activity);
+                      setSeriesEditScope("single");
+                      setSeriesRecurrenceForEdit(undefined);
+                      try {
+                        const series = await fetchActivitySeriesById(
+                          activity.seriesOccurrence!.seriesId,
+                        );
+                        setSeriesRecurrenceReadOnly(
+                          series
+                            ? normalizeRecurrenceRule(series.recurrence)
+                            : null,
+                        );
+                      } catch {
+                        setSeriesRecurrenceReadOnly(null);
+                      }
+                      setEditOpen(true);
+                    })();
                   },
                 },
                 {
@@ -747,6 +765,7 @@ export default function ActivityBoard() {
                       setDetailActivity(null);
                       setEditingActivity(activity);
                       setSeriesEditScope("forward");
+                      setSeriesRecurrenceReadOnly(undefined);
                       try {
                         const series = await fetchActivitySeriesById(
                           activity.seriesOccurrence!.seriesId,
@@ -770,6 +789,7 @@ export default function ActivityBoard() {
           setDetailActivity(null);
           setEditingActivity(activity);
           setSeriesEditScope(null);
+          setSeriesRecurrenceReadOnly(undefined);
           setEditOpen(true);
         }}
         memberById={memberById}
@@ -792,6 +812,7 @@ export default function ActivityBoard() {
             setEditingActivity(null);
             setSeriesEditScope(null);
             setSeriesRecurrenceForEdit(undefined);
+            setSeriesRecurrenceReadOnly(undefined);
           }}
           onSave={handleUpdateActivity}
           initialDateStr={toLocalDateKey(new Date(editingActivity.start_at))}
@@ -812,6 +833,9 @@ export default function ActivityBoard() {
           }}
           seriesRecurrenceInitial={
             seriesEditScope === "forward" ? seriesRecurrenceForEdit : undefined
+          }
+          seriesRecurrenceReadOnly={
+            seriesEditScope === "single" ? seriesRecurrenceReadOnly : undefined
           }
         />
       ) : null}

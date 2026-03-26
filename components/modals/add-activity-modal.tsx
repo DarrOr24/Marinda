@@ -19,6 +19,7 @@ import { DateRangePicker } from "@/components/date-range-picker";
 import { ModalCard, ModalShell, useModalScrollMaxHeight } from "@/components/ui";
 import {
   buildRecurrenceRule,
+  formatRecurrenceRuleSummary,
   recurrenceRuleToEditFields,
 } from "@/lib/activities/activities.recurrence";
 import type { RecurrenceFreq, RecurrenceRule } from "@/lib/activities/activities.types";
@@ -110,6 +111,11 @@ type Props = {
    * `null` = use default repeat controls if fetch failed.
    */
   seriesRecurrenceInitial?: RecurrenceRule | null;
+  /**
+   * Read-only summary for "This event only" edits (`null` = load failed).
+   * Omit when not editing a single occurrence of a series.
+   */
+  seriesRecurrenceReadOnly?: RecurrenceRule | null;
 };
 
 export default function AddActivityModal({
@@ -121,6 +127,7 @@ export default function AddActivityModal({
   submitLabel,
   initial,
   seriesRecurrenceInitial,
+  seriesRecurrenceReadOnly,
 }: Props) {
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
@@ -317,6 +324,39 @@ export default function AddActivityModal({
               hideLabel
             />
           </FormFieldRow>
+
+          {mode === "edit" && seriesRecurrenceReadOnly !== undefined ? (
+            <View style={styles.readOnlyRepeatBox}>
+              <View style={styles.labelRow}>
+                <View style={styles.iconCol}>
+                  <MaterialCommunityIcons
+                    name="calendar-text-outline"
+                    size={ICON_SIZE}
+                    color="#64748b"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>Series repeat</Text>
+                  {seriesRecurrenceReadOnly ? (
+                    <>
+                      <Text style={styles.readOnlyRepeatSummary}>
+                        {formatRecurrenceRuleSummary(seriesRecurrenceReadOnly)}
+                      </Text>
+                      <Text style={styles.readOnlyRepeatHint}>
+                        This edit only affects this day. To change the repeat rule
+                        or end date for the series, choose “This and future
+                        events” from the activity details.
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={styles.readOnlyRepeatMuted}>
+                      Could not load repeat details.
+                    </Text>
+                  )}
+                </View>
+              </View>
+            </View>
+          ) : null}
 
           {mode === "create" || editSeriesRecurrence ? (
             <View style={styles.formRow}>
@@ -572,6 +612,34 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   formRowFirst: { marginTop: 0 },
+  readOnlyRepeatBox: {
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  readOnlyRepeatSummary: {
+    fontSize: 14,
+    color: "#0f172a",
+    fontWeight: "600",
+    marginTop: 6,
+    lineHeight: 20,
+  },
+  readOnlyRepeatHint: {
+    fontSize: 12,
+    color: "#94a3b8",
+    marginTop: 8,
+    lineHeight: 17,
+  },
+  readOnlyRepeatMuted: {
+    fontSize: 13,
+    color: "#94a3b8",
+    marginTop: 6,
+    fontStyle: "italic",
+  },
   repeatHeaderRow: {
     flexDirection: "row",
     alignItems: "center",

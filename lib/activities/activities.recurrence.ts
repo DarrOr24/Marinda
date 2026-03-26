@@ -48,6 +48,49 @@ export function recurrenceRuleToEditFields(rule: RecurrenceRule): {
   }
 }
 
+const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const
+
+/** One-line summary for read-only UI (e.g. “This event only” edit). */
+export function formatRecurrenceRuleSummary(rule: RecurrenceRule): string {
+  const interval = Math.max(1, Math.min(999, Math.floor(rule.interval) || 1))
+  let freqPart: string
+  switch (rule.freq) {
+    case 'DAILY':
+      freqPart = interval === 1 ? 'Every day' : `Every ${interval} days`
+      break
+    case 'WEEKLY': {
+      const base =
+        interval === 1 ? 'Every week' : `Every ${interval} weeks`
+      const wd = rule.byWeekday?.filter((d) => d >= 0 && d <= 6) ?? []
+      const uniq = [...new Set(wd)].sort((a, b) => a - b)
+      if (uniq.length > 1) {
+        freqPart = `${base} (${uniq.map((d) => WEEKDAY_SHORT[d]).join(', ')})`
+      } else {
+        freqPart = base
+      }
+      break
+    }
+    case 'MONTHLY':
+      freqPart =
+        interval === 1 ? 'Every month' : `Every ${interval} months`
+      break
+  }
+  let endPart: string
+  if (rule.count != null && rule.count > 0) {
+    endPart =
+      rule.count === 1 ? '1 occurrence' : `${rule.count} occurrences`
+  } else if (rule.until) {
+    endPart = `Until ${new Date(rule.until).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })}`
+  } else {
+    endPart = 'Never ends'
+  }
+  return `${freqPart} · ${endPart}`
+}
+
 /** Builds a stored rule (Google-style: never / count / until are mutually exclusive). */
 export function buildRecurrenceRule(
   freq: RecurrenceFreq,
