@@ -59,7 +59,7 @@ export function GroceryItemModal({
     onSubmit,
 }: Props) {
     const scrollMaxHeight = useModalScrollMaxHeight(140);
-    const title = mode === "edit" ? "Edit Grocery Item" : "Add Grocery Item";
+    const title = mode === "edit" ? "Edit Shopping Item" : "Add Shopping Item";
     const submitLabel = mode === "edit" ? "Save" : "Add";
 
     return (

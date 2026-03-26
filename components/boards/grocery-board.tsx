@@ -128,7 +128,7 @@ export default function Grocery() {
                 setItems(mapped);
             } catch (e) {
                 console.error("fetchGroceryItems failed", e);
-                Alert.alert("Error", "Could not load grocery list.");
+                Alert.alert("Error", "Could not load shopping list.");
             }
         })();
 
@@ -222,7 +222,7 @@ export default function Grocery() {
                 resetAddForm();
             } catch (e) {
                 console.error("updateGroceryItem failed", e);
-                Alert.alert("Error", "Could not update grocery item.");
+                Alert.alert("Error", "Could not update shopping item.");
             }
             return;
         }
@@ -254,7 +254,7 @@ export default function Grocery() {
             resetAddForm();
         } catch (e) {
             console.error("addGroceryItem failed", e);
-            Alert.alert("Error", "Could not add grocery item.");
+            Alert.alert("Error", "Could not add shopping item.");
         }
     }
 

@@ -20,7 +20,7 @@ type BoardTab = {
 }
 
 const BOARD_TABS: BoardTab[] = [
-  { key: 'grocery', label: 'Food' },
+  { key: 'grocery', label: 'Shopping' },
   { key: 'announcements', label: 'Bulletin' },
   { key: 'activity', label: 'Events' },
 ]
