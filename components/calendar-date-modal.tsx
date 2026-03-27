@@ -188,6 +188,7 @@ export function CalendarDateModal({
                   onConfirm(endOfLocalDayFromYmd(day.dateString));
                 }}
                 enableSwipeMonths
+                showSixWeeks
                 onMonthChange={(m) => setCurrent(m.dateString)}
                 theme={{
                   todayTextColor: "#2563eb",
