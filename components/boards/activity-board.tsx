@@ -37,6 +37,7 @@ import {
   updateEntireSeriesFromForm,
   upsertSeriesOccurrenceModified,
 } from "@/lib/activities/activities.series.api";
+import { buildBirthdayActivitiesForRange } from "@/lib/activities/activities.birthdays";
 import { filterActivitiesByAttendees } from "@/lib/activities/activities.attendee-filter";
 import { getActivityRowAccentColor } from "@/lib/activities/activities.accent-color";
 import { normalizeRecurrenceRule } from "@/lib/activities/activities.recurrence";
@@ -148,21 +149,34 @@ export default function ActivityBoard() {
     }
   );
 
+  const birthdayActivities = useMemo(() => {
+    if (!activeFamilyId) return [];
+    const members = (familyMembers.data ?? []) as FamilyMember[];
+    return buildBirthdayActivitiesForRange(
+      members,
+      visibleWeekDays[0],
+      endOfLocalDay(visibleWeekDays[6]),
+      activeFamilyId,
+    );
+  }, [activeFamilyId, familyMembers.data, visibleWeekDays]);
+
   const filteredActivities = useMemo(() => {
-    if (!effectiveMember?.id) return activities;
+    const merged = [...activities, ...birthdayActivities];
+    if (!effectiveMember?.id) return merged;
     if (!hasParentPermissions) {
-      return filterActivitiesByAttendees(activities, {
+      return filterActivitiesByAttendees(merged, {
         kind: "kid",
         scope: kidEventsScope,
         selfMemberId: effectiveMember.id,
       });
     }
-    return filterActivitiesByAttendees(activities, {
+    return filterActivitiesByAttendees(merged, {
       kind: "parent",
       memberIds: attendeeFilterMemberIds,
     });
   }, [
     activities,
+    birthdayActivities,
     hasParentPermissions,
     kidEventsScope,
     effectiveMember?.id,
@@ -558,6 +572,14 @@ export default function ActivityBoard() {
                         const base = activityColor(a.status, color);
 
                         const badgeIcons = [
+                          a.isBirthday && (
+                            <MaterialCommunityIcons
+                              key="cake"
+                              name="cake-variant"
+                              size={16}
+                              color="#db2777"
+                            />
+                          ),
                           a.ride_needed && (
                             <MaterialCommunityIcons
                               key="ride"
@@ -606,7 +628,12 @@ export default function ActivityBoard() {
                             {a.start_at ? (
                               <View style={styles.itemLine2}>
                                 <Text style={styles.itemTime}>
-                                  {formatActivityTimeRange(a.start_at, a.end_at)}
+                                  {a.isBirthday
+                                    ? "All day"
+                                    : formatActivityTimeRange(
+                                        a.start_at,
+                                        a.end_at,
+                                      )}
                                 </Text>
                                 <View style={styles.itemLine2Spacer} />
                                 {badgeIcons.length > 0 ? (
@@ -847,7 +874,9 @@ export default function ActivityBoard() {
         isParent={hasParentPermissions}
         isCreator={
           !!(
-            detailActivity?.created_by?.id &&
+            detailActivity &&
+            !detailActivity.isBirthday &&
+            detailActivity.created_by?.id &&
             detailActivity.created_by.id === effectiveMember?.id
           )
         }

@@ -122,6 +122,7 @@ export function ActivityDetailModal({
 
   if (!activity) return null;
 
+  const isBirthday = !!activity.isBirthday;
   const isVirtualSeries = activity.seriesOccurrence != null;
 
   const participantIds = activity.participants?.map((p) => p.member_id) ?? [];
@@ -197,7 +198,7 @@ export function ActivityDetailModal({
   return (
     <ModalShell visible={visible} onClose={onClose}>
       <ModalCard style={styles.card}>
-        <Text style={styles.title}>Activity</Text>
+        <Text style={styles.title}>{isBirthday ? "Birthday" : "Activity"}</Text>
 
         <ScrollView
           style={{ maxHeight: scrollMaxHeight }}
@@ -207,8 +208,21 @@ export function ActivityDetailModal({
           showsVerticalScrollIndicator={true}
           nestedScrollEnabled
         >
-          <Text style={styles.detailTitle}>{activity.title}</Text>
-          {isVirtualSeries ? (
+          {isBirthday ? (
+            <View style={styles.birthdayTitleRow}>
+              <MaterialCommunityIcons
+                name="cake-variant"
+                size={26}
+                color="#db2777"
+              />
+              <Text style={[styles.detailTitle, styles.birthdayDetailTitle]}>
+                {activity.title}
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.detailTitle}>{activity.title}</Text>
+          )}
+          {isVirtualSeries && !isBirthday ? (
             <Text style={styles.recurringHint}>Recurring series</Text>
           ) : null}
 
@@ -218,10 +232,17 @@ export function ActivityDetailModal({
           />
           <DetailRow
             icon="clock-outline"
-            content={timeLine}
+            content={isBirthday ? "All day" : timeLine}
           />
 
-          {activity.location && (
+          {isBirthday ? (
+            <Text style={styles.birthdayHint}>
+              This date comes from the birthday in their profile. Parents can
+              change it in Settings → Family.
+            </Text>
+          ) : null}
+
+          {!isBirthday && activity.location ? (
             <DetailRow
               icon="map-marker-outline"
               content={activity.location}
@@ -230,29 +251,33 @@ export function ActivityDetailModal({
                 Linking.openURL(url);
               }}
             />
-          )}
-          {typeof activity.money === "number" && (
+          ) : null}
+          {!isBirthday && typeof activity.money === "number" ? (
             <DetailRow
               icon="cash"
               content={`$${activity.money.toFixed(2)}`}
             />
-          )}
+          ) : null}
 
-          <DetailRow
-            icon="car-outline"
-            label="Ride"
-            content={activity.ride_needed ? "Yes" : "No"}
-          />
-          <DetailRow
-            icon="gift-outline"
-            label="Present"
-            content={activity.present_needed ? "Yes" : "No"}
-          />
-          <DetailRow
-            icon="baby-face-outline"
-            label="Babysitter"
-            content={activity.babysitter_needed ? "Yes" : "No"}
-          />
+          {!isBirthday ? (
+            <>
+              <DetailRow
+                icon="car-outline"
+                label="Ride"
+                content={activity.ride_needed ? "Yes" : "No"}
+              />
+              <DetailRow
+                icon="gift-outline"
+                label="Present"
+                content={activity.present_needed ? "Yes" : "No"}
+              />
+              <DetailRow
+                icon="baby-face-outline"
+                label="Babysitter"
+                content={activity.babysitter_needed ? "Yes" : "No"}
+              />
+            </>
+          ) : null}
 
           <DetailRow
             icon="account-group-outline"
@@ -260,41 +285,45 @@ export function ActivityDetailModal({
             content={names || "—"}
           />
 
-          {activity.notes && (
+          {!isBirthday && activity.notes ? (
             <DetailRow icon="note-text-outline" content={activity.notes} />
-          )}
+          ) : null}
 
-          <DetailRow
-            icon={
-              activity.status === "APPROVED"
-                ? "check-circle"
-                : activity.status === "NOT_APPROVED"
-                  ? "close-circle"
-                  : "clock-outline"
-            }
-            label="Status"
-            content={statusLabel}
-            iconColor={
-              activity.status === "APPROVED"
-                ? "#16a34a"
-                : activity.status === "NOT_APPROVED"
-                  ? "#dc2626"
-                  : "#f59e0b"
-            }
-          />
-          {activity.status === "NOT_APPROVED" &&
-            activity.rejection_reason?.trim() ? (
+          {!isBirthday ? (
+            <>
               <DetailRow
-                icon="message-text-outline"
-                label="Note from parent"
-                content={activity.rejection_reason.trim()}
+                icon={
+                  activity.status === "APPROVED"
+                    ? "check-circle"
+                    : activity.status === "NOT_APPROVED"
+                      ? "close-circle"
+                      : "clock-outline"
+                }
+                label="Status"
+                content={statusLabel}
+                iconColor={
+                  activity.status === "APPROVED"
+                    ? "#16a34a"
+                    : activity.status === "NOT_APPROVED"
+                      ? "#dc2626"
+                      : "#f59e0b"
+                }
               />
-            ) : null}
-          <DetailRow
-            icon="account-outline"
-            label="Created by"
-            content={creatorName(activity)}
-          />
+              {activity.status === "NOT_APPROVED" &&
+              activity.rejection_reason?.trim() ? (
+                <DetailRow
+                  icon="message-text-outline"
+                  label="Note from parent"
+                  content={activity.rejection_reason.trim()}
+                />
+              ) : null}
+              <DetailRow
+                icon="account-outline"
+                label="Created by"
+                content={creatorName(activity)}
+              />
+            </>
+          ) : null}
         </ScrollView>
 
         {rejectOpen && isParent && activity.status === "PENDING" ? (
@@ -329,7 +358,7 @@ export function ActivityDetailModal({
         ) : null}
 
         <View style={styles.buttons}>
-          {isCreator ? (
+          {!isBirthday && isCreator ? (
             <>
               <Button
                 type="outline"
@@ -349,7 +378,9 @@ export function ActivityDetailModal({
               ) : null}
             </>
           ) : null}
-          {parentCanDecide && !(rejectOpen && activity.status === "PENDING") ? (
+          {!isBirthday &&
+          parentCanDecide &&
+          !(rejectOpen && activity.status === "PENDING") ? (
             <>
               {activity.status === "PENDING" && (
                 <>
@@ -439,6 +470,23 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#0f172a",
     marginBottom: 12,
+  },
+  birthdayTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
+  birthdayDetailTitle: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  birthdayHint: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#64748b",
+    lineHeight: 18,
+    marginBottom: 8,
   },
   row: {
     flexDirection: "row",

@@ -334,11 +334,23 @@ export function ActivityDayView({
                       accessibilityRole="button"
                       accessibilityLabel={`${a.title}, all day`}
                     >
-                      <Text numberOfLines={2} style={styles.allDayCardTitle}>
-                        {a.title}
-                      </Text>
+                      <View style={styles.allDayCardTitleRow}>
+                        {a.isBirthday ? (
+                          <MaterialCommunityIcons
+                            name="cake-variant"
+                            size={16}
+                            color="#db2777"
+                            style={styles.allDayCakeIcon}
+                          />
+                        ) : null}
+                        <Text numberOfLines={2} style={styles.allDayCardTitle}>
+                          {a.title}
+                        </Text>
+                      </View>
                       <Text style={styles.allDayCardMeta} numberOfLines={1}>
-                        {formatTimeRange(a.start_at, a.end_at)}
+                        {a.isBirthday
+                          ? "All day"
+                          : formatTimeRange(a.start_at, a.end_at)}
                       </Text>
                     </Pressable>
                   );
@@ -531,10 +543,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 2,
   },
+  allDayCardTitleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+  },
+  allDayCakeIcon: {
+    marginTop: 1,
+  },
   allDayCardTitle: {
     fontSize: 13,
     fontWeight: "700",
     color: "#0f172a",
+    flex: 1,
+    minWidth: 0,
   },
   allDayCardMeta: {
     fontSize: 11,

@@ -42,6 +42,8 @@ export interface Activity {
   created_at: string
   /** Virtual row from `activity_series` expansion; omit for normal activities. */
   seriesOccurrence?: SeriesOccurrenceMeta
+  /** Client-only; from profile birth dates, not a DB row. */
+  isBirthday?: boolean
 }
 
 export type ActivityInsert = {
