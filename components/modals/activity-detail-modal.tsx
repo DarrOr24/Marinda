@@ -17,6 +17,7 @@ import {
   TextInput,
   useModalScrollMaxHeight,
 } from "@/components/ui";
+import { shareActivityToCalendar } from "@/lib/calendar/share-activity-calendar";
 import { formatActivityTimeRange } from "@/lib/activities/activities.format";
 import type { Activity } from "@/lib/activities/activities.types";
 
@@ -112,11 +113,13 @@ export function ActivityDetailModal({
   const scrollMaxHeight = useModalScrollMaxHeight(160);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [calendarBusy, setCalendarBusy] = useState(false);
 
   useEffect(() => {
     if (!visible) {
       setRejectOpen(false);
       setRejectReason("");
+      setCalendarBusy(false);
     }
   }, [visible]);
 
@@ -124,6 +127,7 @@ export function ActivityDetailModal({
 
   const isBirthday = !!activity.isBirthday;
   const isVirtualSeries = activity.seriesOccurrence != null;
+  const canAddToCalendar = !isVirtualSeries;
 
   const participantIds = activity.participants?.map((p) => p.member_id) ?? [];
   const names = participantIds
@@ -193,6 +197,22 @@ export function ActivityDetailModal({
     onReject(activity, rejectReason.trim());
     setRejectOpen(false);
     setRejectReason("");
+  }
+
+  async function handleAddToCalendar() {
+    if (!activity || calendarBusy) return;
+    try {
+      setCalendarBusy(true);
+      await shareActivityToCalendar(activity);
+    } catch (e) {
+      console.error(e);
+      Alert.alert(
+        "Could not export",
+        "Calendar sharing is not available on this device.",
+      );
+    } finally {
+      setCalendarBusy(false);
+    }
   }
 
   return (
@@ -428,6 +448,18 @@ export function ActivityDetailModal({
                 </>
               )}
             </>
+          ) : null}
+          {canAddToCalendar ? (
+            <Button
+              type="outline"
+              size="sm"
+              title={calendarBusy ? "Preparing…" : "Add to calendar"}
+              disabled={calendarBusy}
+              leftIcon={
+                <MaterialCommunityIcons name="calendar-plus" size={18} />
+              }
+              onPress={() => void handleAddToCalendar()}
+            />
           ) : null}
           <Button
             type="secondary"
