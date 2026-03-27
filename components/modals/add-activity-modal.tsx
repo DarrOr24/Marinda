@@ -1,7 +1,8 @@
 // components/modals/add-activity-modal.tsx
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Pressable,
   ScrollView,
   StyleSheet,
   Switch,
@@ -23,6 +24,7 @@ import {
   recurrenceRuleToEditFields,
 } from "@/lib/activities/activities.recurrence";
 import type { RecurrenceFreq, RecurrenceRule } from "@/lib/activities/activities.types";
+import { fetchPlacesAutocomplete } from "@/lib/places/places-autocomplete.api";
 import { MembersSelector } from "../members-selector";
 import { Button } from "../ui/button";
 import { TextInput } from "../ui/text-input";
@@ -131,6 +133,14 @@ export default function AddActivityModal({
 }: Props) {
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
+  const [placeSuggestions, setPlaceSuggestions] = useState<
+    { description: string; placeId: string }[]
+  >([]);
+  const [placesLoading, setPlacesLoading] = useState(false);
+  const locationDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const locationRequestSeq = useRef(0);
   const [money, setMoney] = useState("");
   const [flags, setFlags] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -268,6 +278,66 @@ export default function AddActivityModal({
     setUntilEndIso(null);
     setUntilPickerOpen(false);
     setByWeekday([]);
+    setPlaceSuggestions([]);
+    setPlacesLoading(false);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (locationDebounceRef.current) {
+        clearTimeout(locationDebounceRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!visible) {
+      setPlaceSuggestions([]);
+      setPlacesLoading(false);
+    }
+  }, [visible]);
+
+  function handleLocationChange(text: string) {
+    setLocation(text);
+    if (locationDebounceRef.current) {
+      clearTimeout(locationDebounceRef.current);
+    }
+
+    if (text.trim().length < 2) {
+      setPlaceSuggestions([]);
+      setPlacesLoading(false);
+      return;
+    }
+
+    locationDebounceRef.current = setTimeout(() => {
+      const query = text.trim();
+      if (query.length < 2) return;
+
+      const seq = ++locationRequestSeq.current;
+      setPlacesLoading(true);
+
+      void (async () => {
+        try {
+          const list = await fetchPlacesAutocomplete(query);
+          if (locationRequestSeq.current !== seq) return;
+          setPlaceSuggestions(list);
+        } finally {
+          if (locationRequestSeq.current === seq) {
+            setPlacesLoading(false);
+          }
+        }
+      })();
+    }, 400);
+  }
+
+  function pickPlaceSuggestion(description: string) {
+    if (locationDebounceRef.current) {
+      clearTimeout(locationDebounceRef.current);
+    }
+    locationRequestSeq.current += 1;
+    setLocation(description);
+    setPlaceSuggestions([]);
+    setPlacesLoading(false);
   }
 
   function handleSave() {
@@ -536,12 +606,43 @@ export default function AddActivityModal({
 
           <FormFieldRow icon="map-marker-outline">
             <Text style={styles.label}>Location</Text>
-            <TextInput
-              placeholder="e.g., Community Center"
-              value={location}
-              onChangeText={setLocation}
-              style={styles.input}
-            />
+            <View style={styles.locationField}>
+              <TextInput
+                placeholder="Search for an address or place"
+                value={location}
+                onChangeText={handleLocationChange}
+                style={styles.input}
+                autoCorrect={false}
+                autoCapitalize="sentences"
+              />
+              {placesLoading ? (
+                <Text style={styles.placesLoadingHint}>Searching…</Text>
+              ) : null}
+              {placeSuggestions.length > 0 ? (
+                <View style={styles.suggestionsBox}>
+                  <ScrollView
+                    nestedScrollEnabled
+                    keyboardShouldPersistTaps="handled"
+                    style={styles.suggestionsScroll}
+                  >
+                    {placeSuggestions.map((s, i) => (
+                      <Pressable
+                        key={`${s.placeId}-${i}`}
+                        onPress={() => pickPlaceSuggestion(s.description)}
+                        style={({ pressed }) => [
+                          styles.suggestionRow,
+                          pressed && styles.suggestionRowPressed,
+                        ]}
+                      >
+                        <Text style={styles.suggestionText} numberOfLines={3}>
+                          {s.description}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              ) : null}
+            </View>
           </FormFieldRow>
 
           <FormFieldRow icon="cash">
@@ -799,6 +900,41 @@ const styles = StyleSheet.create({
   },
 
   input: { flex: 1 },
+
+  locationField: {
+    width: "100%",
+  },
+  placesLoadingHint: {
+    fontSize: 12,
+    color: "#94a3b8",
+    marginTop: 4,
+  },
+  suggestionsBox: {
+    marginTop: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#fff",
+    overflow: "hidden",
+  },
+  suggestionsScroll: {
+    maxHeight: 176,
+  },
+  suggestionRow: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#e2e8f0",
+  },
+  suggestionRowPressed: {
+    backgroundColor: "#f1f5f9",
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: "#0f172a",
+    fontWeight: "500",
+    lineHeight: 20,
+  },
 
   scrollContent: { paddingBottom: 16, gap: 2 },
 

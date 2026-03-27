@@ -411,3 +411,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/revenuecat_billing_webhook/deno.json"
 entrypoint = "./functions/revenuecat_billing_webhook/index.ts"
+
+[functions.places_autocomplete]
+enabled = true
+verify_jwt = true
+import_map = "./functions/places_autocomplete/deno.json"
+entrypoint = "./functions/places_autocomplete/index.ts"
