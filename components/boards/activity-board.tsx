@@ -466,6 +466,7 @@ export default function ActivityBoard() {
       onParentSelectedIdsChange={setAttendeeFilterMemberIds}
       kidScope={kidEventsScope}
       onKidScopeChange={setKidEventsScope}
+      kidSelfMemberId={effectiveMember?.id}
     />
   );
 

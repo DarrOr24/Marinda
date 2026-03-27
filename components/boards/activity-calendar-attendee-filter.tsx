@@ -28,6 +28,8 @@ type Props = {
   /** Kid: whose calendar. */
   kidScope: "family" | "mine";
   onKidScopeChange: (scope: "family" | "mine") => void;
+  /** Kid legend: show "Me" instead of this member’s name (logged-in / effective profile). */
+  kidSelfMemberId?: string | null;
 };
 
 export function ActivityCalendarAttendeeFilter({
@@ -38,11 +40,22 @@ export function ActivityCalendarAttendeeFilter({
   onParentSelectedIdsChange,
   kidScope,
   onKidScopeChange,
+  kidSelfMemberId,
 }: Props) {
   const membersById = useMemo(() => {
     const m: Record<string, FamilyMember> = {};
     for (const x of members) m[x.id] = x;
     return m;
+  }, [members]);
+
+  /** Sorted list for kid-mode color legend (read-only). */
+  const kidLegendMembers = useMemo(() => {
+    return [...members].sort((a, b) => {
+      const na = (a.nickname || a.profile?.first_name || "").toLowerCase();
+      const nb = (b.nickname || b.profile?.first_name || "").toLowerCase();
+      if (na !== nb) return na.localeCompare(nb);
+      return a.id.localeCompare(b.id);
+    });
   }, [members]);
 
   const everyoneActive = parentSelectedIds.length === 0;
@@ -77,7 +90,7 @@ export function ActivityCalendarAttendeeFilter({
 
   if (mode === "kid") {
     return (
-      <View style={styles.wrap}>
+      <View style={[styles.wrap, styles.kidWrap]}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -117,6 +130,31 @@ export function ActivityCalendarAttendeeFilter({
             </Text>
           </Pressable>
         </ScrollView>
+
+        <View
+          accessible
+          accessibilityLabel="Calendar colors by family member"
+        >
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.legendRowContent}
+          >
+            {kidLegendMembers.map((m) => {
+              const firstName = m.nickname || m.profile?.first_name || "Unknown";
+              const label =
+                kidSelfMemberId && m.id === kidSelfMemberId ? "Me" : firstName;
+              const dotColor = m.color?.hex || "#94a3b8";
+              return (
+                <View key={m.id} style={styles.legendPill} pointerEvents="none">
+                  <View style={[styles.dot, { backgroundColor: dotColor }]} />
+                  <Text style={styles.legendName}>{label}</Text>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
       </View>
     );
   }
@@ -178,6 +216,31 @@ const styles = StyleSheet.create({
   wrap: {
     marginBottom: 6,
     paddingHorizontal: 4,
+  },
+  kidWrap: {
+    gap: 8,
+  },
+  legendRowContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingRight: 8,
+  },
+  legendPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: "#f1f5f9",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#e2e8f0",
+  },
+  legendName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#475569",
   },
   loadingRow: {
     paddingVertical: 8,
