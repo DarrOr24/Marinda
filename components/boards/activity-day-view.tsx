@@ -62,6 +62,8 @@ type Props = {
     backgroundColor: string;
   };
   formatTimeRange: (startIso: string, endIso: string) => string;
+  /** Month picker: jump to a day (same as week header calendar). */
+  onCalendarPress?: () => void;
 };
 
 function minutesSinceDayHour(day: Date, hour: number) {
@@ -156,6 +158,7 @@ export function ActivityDayView({
   activityColor,
   activityColorStyle,
   formatTimeRange,
+  onCalendarPress,
 }: Props) {
   /** Short weekday + month avoids a two-line title and layout jumps (e.g. Tue, Mar 24). */
   const dayLabel = useMemo(
@@ -289,13 +292,32 @@ export function ActivityDayView({
           <Text style={styles.weekBackText}>Week</Text>
         </Pressable>
 
-        <Text
-          style={styles.dayTitle}
-          numberOfLines={1}
-          accessibilityLabel={dayTitleA11yLabel}
-        >
-          {dayLabel}
-        </Text>
+        {onCalendarPress ? (
+          <Pressable
+            onPress={onCalendarPress}
+            style={styles.dayTitleWithCalendar}
+            accessibilityRole="button"
+            accessibilityLabel={`${dayTitleA11yLabel}. Choose date, opens calendar`}
+          >
+            <Text style={styles.dayTitleText} numberOfLines={1}>
+              {dayLabel}
+            </Text>
+            <MaterialCommunityIcons
+              name="calendar-month-outline"
+              size={20}
+              color="#2563eb"
+              style={styles.dayCalendarIcon}
+            />
+          </Pressable>
+        ) : (
+          <Text
+            style={styles.dayTitle}
+            numberOfLines={1}
+            accessibilityLabel={dayTitleA11yLabel}
+          >
+            {dayLabel}
+          </Text>
+        )}
 
         <View style={styles.dayNav}>
           <BoardNavChevronButton
@@ -496,6 +518,25 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#0f172a",
     textAlign: "center",
+  },
+  dayTitleWithCalendar: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    minWidth: 0,
+    paddingHorizontal: 4,
+  },
+  dayTitleText: {
+    flexShrink: 1,
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#0f172a",
+    textAlign: "center",
+  },
+  dayCalendarIcon: {
+    flexShrink: 0,
   },
   dayNav: {
     flexDirection: "row",

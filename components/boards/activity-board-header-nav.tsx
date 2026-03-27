@@ -48,6 +48,8 @@ export type ActivityBoardHeaderNavProps = {
   /** "This week" uses larger type; day titles are slightly smaller for long dates. */
   titleVariant?: "week" | "day";
   titleNumberOfLines?: number;
+  /** Opens month picker (title + calendar icon). */
+  onCalendarPress?: () => void;
 };
 
 export function ActivityBoardHeaderNav({
@@ -60,7 +62,40 @@ export function ActivityBoardHeaderNav({
   nextAccessibilityLabel,
   titleVariant = "week",
   titleNumberOfLines = 1,
+  onCalendarPress,
 }: ActivityBoardHeaderNavProps) {
+  const titleEl = onCalendarPress ? (
+    <Pressable
+      onPress={onCalendarPress}
+      style={styles.titleWithCalendar}
+      accessibilityRole="button"
+      accessibilityLabel="Choose date, opens calendar"
+    >
+      <Text
+        style={[
+          titleVariant === "week" ? styles.titleWeek : styles.titleDay,
+          styles.titleInCalendarBtn,
+        ]}
+        numberOfLines={titleNumberOfLines}
+      >
+        {title}
+      </Text>
+      <MaterialCommunityIcons
+        name="calendar-month-outline"
+        size={titleVariant === "week" ? 22 : 20}
+        color="#2563eb"
+        style={styles.calendarIcon}
+      />
+    </Pressable>
+  ) : (
+    <Text
+      style={titleVariant === "week" ? styles.titleWeek : styles.titleDay}
+      numberOfLines={titleNumberOfLines}
+    >
+      {title}
+    </Text>
+  );
+
   return (
     <View style={styles.headerRow}>
       <BoardNavChevronButton
@@ -69,14 +104,7 @@ export function ActivityBoardHeaderNav({
         onPress={onPrev}
         accessibilityLabel={prevAccessibilityLabel}
       />
-      <View style={styles.headerTitleWrap}>
-        <Text
-          style={titleVariant === "week" ? styles.titleWeek : styles.titleDay}
-          numberOfLines={titleNumberOfLines}
-        >
-          {title}
-        </Text>
-      </View>
+      <View style={styles.headerTitleWrap}>{titleEl}</View>
       <BoardNavChevronButton
         direction="right"
         disabled={!canNext}
@@ -98,6 +126,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 6,
+  },
+  titleWithCalendar: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    maxWidth: "100%",
+  },
+  calendarIcon: {
+    flexShrink: 0,
+  },
+  titleInCalendarBtn: {
+    flexShrink: 1,
+    minWidth: 0,
   },
   navBtn: {
     width: BOARD_NAV_BTN_SIZE,

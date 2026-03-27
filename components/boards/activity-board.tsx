@@ -14,6 +14,10 @@ import {
 import { ActivityCalendarAttendeeFilter } from "@/components/boards/activity-calendar-attendee-filter";
 import { ActivityBoardHeaderNav } from "@/components/boards/activity-board-header-nav";
 import { ActivityDayView } from "@/components/boards/activity-day-view";
+import {
+  CalendarDateModal,
+  toLocalYmdFromIso,
+} from "@/components/calendar-date-modal";
 import { ActivityDetailModal } from "@/components/modals/activity-detail-modal";
 import AddActivityModal, { type NewActivityForm } from "@/components/modals/add-activity-modal";
 import { Button, SafeFab, Screen } from "@/components/ui";
@@ -93,6 +97,34 @@ function formatTimeFromIso(iso: string) {
   return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
+/** Stable ISO for calendar `initialAt` (avoids UTC shifting the local date). */
+function noonLocalIso(d: Date): string {
+  return new Date(
+    d.getFullYear(),
+    d.getMonth(),
+    d.getDate(),
+    12,
+    0,
+    0,
+    0,
+  ).toISOString();
+}
+
+/** Weeks from `anchorStartOfWeek` (Sunday 0:00) to the week containing `pickedLocalDay`. */
+function weekOffsetForContainingWeek(
+  anchorStartOfWeek: Date,
+  pickedLocalDay: Date,
+): number {
+  const picked = new Date(
+    pickedLocalDay.getFullYear(),
+    pickedLocalDay.getMonth(),
+    pickedLocalDay.getDate(),
+  );
+  const pickedWeekStart = getStartOfWeek(picked);
+  const ms = pickedWeekStart.getTime() - anchorStartOfWeek.getTime();
+  return Math.round(ms / (7 * 24 * 60 * 60 * 1000));
+}
+
 export default function ActivityBoard() {
   const today = new Date();
   const { effectiveMember, activeFamilyId, hasParentPermissions } =
@@ -127,6 +159,8 @@ export default function ActivityBoard() {
   const [kidEventsScope, setKidEventsScope] = useState<"family" | "mine">(
     "family",
   );
+  /** Month picker: which header opened it (`null` = closed). */
+  const [calendarNav, setCalendarNav] = useState<null | "week" | "day">(null);
 
   const startOfThisWeek = useMemo(() => getStartOfWeek(today), [today]);
   const visibleWeekStart = useMemo(
@@ -140,6 +174,16 @@ export default function ActivityBoard() {
   const rangeLabel = formatRangeLabel(visibleWeekStart);
   const pastCapped = weekOffset <= MIN_PAST_WEEKS;
   const isPastWeek = weekOffset < 0;
+
+  const minCalendarDateYmd = useMemo(
+    () => toLocalDateKey(addWeeks(startOfThisWeek, MIN_PAST_WEEKS)),
+    [startOfThisWeek],
+  );
+
+  const calendarModalInitialAt = useMemo(() => {
+    if (calendarNav === "day" && dayViewDate) return noonLocalIso(dayViewDate);
+    return noonLocalIso(visibleWeekStart);
+  }, [calendarNav, dayViewDate, visibleWeekStart]);
 
   const { data: activities = [], isLoading } = useFamilyCalendarActivities(
     activeFamilyId,
@@ -502,6 +546,7 @@ export default function ActivityBoard() {
               activityColor={rowAccentColor}
               activityColorStyle={activityColor}
               formatTimeRange={formatActivityTimeRange}
+              onCalendarPress={() => setCalendarNav("day")}
             />
           </>
         ) : (
@@ -522,6 +567,7 @@ export default function ActivityBoard() {
           prevAccessibilityLabel="Previous week"
           nextAccessibilityLabel="Next week"
           titleVariant="week"
+          onCalendarPress={() => setCalendarNav("week")}
         />
 
         {/* Weekly list — scrolls; week nav header stays fixed (Screen scroll off) */}
@@ -654,6 +700,31 @@ export default function ActivityBoard() {
           </>
         )}
       </View>
+
+      <CalendarDateModal
+        visible={calendarNav !== null}
+        title={calendarNav === "day" ? "Go to day" : "Go to week"}
+        initialAt={calendarModalInitialAt}
+        minDateYmd={minCalendarDateYmd}
+        onCancel={() => setCalendarNav(null)}
+        onConfirm={(endIso) => {
+          const nav = calendarNav;
+          const ymd = toLocalYmdFromIso(endIso);
+          const parts = ymd.split("-").map(Number);
+          const y = parts[0];
+          const mo = parts[1];
+          const d = parts[2];
+          const localDay = new Date(y, mo - 1, d);
+          const off = weekOffsetForContainingWeek(startOfThisWeek, localDay);
+          setWeekOffset(Math.max(MIN_PAST_WEEKS, off));
+          if (nav === "day") {
+            setDayViewDate(new Date(y, mo - 1, d));
+          } else {
+            setDayViewDate(null);
+          }
+          setCalendarNav(null);
+        }}
+      />
 
       {/* Create Activity */}
       <AddActivityModal
