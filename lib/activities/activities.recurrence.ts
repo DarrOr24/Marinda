@@ -25,6 +25,8 @@ export function recurrenceRuleToEditFields(rule: RecurrenceRule): {
   endMode: RecurrenceEndModeUi
   countStr: string
   untilIso: string | null
+  /** 0–6 Sun–Sat; empty means UI should default from event start. */
+  byWeekday: number[]
 } {
   const intervalStr = String(
     Math.max(1, Math.min(999, Math.floor(rule.interval) || 1))
@@ -39,12 +41,20 @@ export function recurrenceRuleToEditFields(rule: RecurrenceRule): {
     endMode = 'until'
     untilIso = rule.until
   }
+  const byWeekday =
+    rule.freq === 'WEEKLY' && Array.isArray(rule.byWeekday)
+      ? [...new Set(rule.byWeekday.filter((d) => d >= 0 && d <= 6))].sort(
+          (a, b) => a - b
+        )
+      : []
+
   return {
     freq: rule.freq,
     intervalStr,
     endMode,
     countStr,
     untilIso,
+    byWeekday,
   }
 }
 
@@ -96,13 +106,24 @@ export function buildRecurrenceRule(
   freq: RecurrenceFreq,
   interval: number,
   firstStart: Date,
-  end: RecurrenceEndInput
+  end: RecurrenceEndInput,
+  /** WEEKLY only: 0–6 Sun–Sat; omit or empty → first event’s weekday. */
+  byWeekday?: number[] | null
 ): RecurrenceRule {
   const intervalN = Math.max(1, Math.min(999, Math.floor(interval)) || 1)
+  let weeklyDays: number[] | null = null
+  if (freq === 'WEEKLY') {
+    const raw = byWeekday?.length
+      ? [...new Set(byWeekday.filter((d) => d >= 0 && d <= 6))].sort(
+          (a, b) => a - b
+        )
+      : [firstStart.getDay()]
+    weeklyDays = raw.length ? raw : [firstStart.getDay()]
+  }
   const base: RecurrenceRule = {
     freq,
     interval: intervalN,
-    byWeekday: freq === 'WEEKLY' ? [firstStart.getDay()] : null,
+    byWeekday: weeklyDays,
     until: null,
     count: null,
   }
@@ -134,25 +155,94 @@ export function normalizeRecurrenceRule(raw: unknown): RecurrenceRule {
   }
 }
 
-function nextOccurrence(current: Date, rule: RecurrenceRule): Date {
+/** Local Sunday 00:00:00 of the week containing `d` (matches JS getDay() 0 = Sun). */
+function getWeekStartSunday(d: Date): Date {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  const day = x.getDay()
+  x.setDate(x.getDate() - day)
+  x.setHours(0, 0, 0, 0)
+  return x
+}
+
+function addDaysLocal(d: Date, days: number): Date {
+  const x = new Date(d.getTime())
+  x.setDate(x.getDate() + days)
+  return x
+}
+
+function applyTimeFromFirst(source: Date, target: Date): void {
+  target.setHours(
+    source.getHours(),
+    source.getMinutes(),
+    source.getSeconds(),
+    source.getMilliseconds()
+  )
+}
+
+function weeklyDaysFromRule(rule: RecurrenceRule, firstStart: Date): number[] {
+  const raw = (rule.byWeekday ?? []).filter((d) => d >= 0 && d <= 6)
+  const uniq = [...new Set(raw)].sort((a, b) => a - b)
+  return uniq.length ? uniq : [firstStart.getDay()]
+}
+
+const MAX_WEEKS_ITER = 520
+
+/**
+ * Chronological occurrence start times for a series (caps at `MAX_EXPAND_STEPS`).
+ */
+function buildOccurrenceStarts(
+  firstStart: Date,
+  rule: RecurrenceRule
+): Date[] {
   const interval = Math.max(1, rule.interval || 1)
-  switch (rule.freq) {
-    case 'DAILY': {
-      const d = new Date(current.getTime())
-      d.setDate(d.getDate() + interval)
-      return d
+  const until = rule.until ? new Date(rule.until) : null
+  const maxSlots =
+    rule.count != null
+      ? Math.min(Math.max(1, rule.count), MAX_EXPAND_STEPS)
+      : MAX_EXPAND_STEPS
+
+  const out: Date[] = []
+
+  if (rule.freq === 'DAILY') {
+    let cur = new Date(firstStart.getTime())
+    while (out.length < maxSlots) {
+      if (until && cur.getTime() > until.getTime()) break
+      out.push(new Date(cur.getTime()))
+      cur = addDaysLocal(cur, interval)
     }
-    case 'WEEKLY': {
-      const d = new Date(current.getTime())
-      d.setDate(d.getDate() + 7 * interval)
-      return d
+    return out
+  }
+
+  if (rule.freq === 'MONTHLY') {
+    let cur = new Date(firstStart.getTime())
+    while (out.length < maxSlots) {
+      if (until && cur.getTime() > until.getTime()) break
+      out.push(new Date(cur.getTime()))
+      const n = new Date(cur.getTime())
+      n.setMonth(n.getMonth() + interval)
+      cur = n
     }
-    case 'MONTHLY': {
-      const d = new Date(current.getTime())
-      d.setMonth(d.getMonth() + interval)
-      return d
+    return out
+  }
+
+  // WEEKLY — optional multiple weekdays; every `interval` weeks from anchor week
+  const wds = weeklyDaysFromRule(rule, firstStart)
+  const anchorWeekStart = getWeekStartSunday(firstStart)
+
+  for (let weekIndex = 0; weekIndex < MAX_WEEKS_ITER && out.length < maxSlots; weekIndex++) {
+    if (weekIndex % interval !== 0) continue
+    const weekStart = addDaysLocal(anchorWeekStart, 7 * weekIndex)
+    for (const wd of wds) {
+      if (out.length >= maxSlots) break
+      const occ = new Date(weekStart.getTime())
+      occ.setDate(occ.getDate() + wd)
+      applyTimeFromFirst(firstStart, occ)
+      if (occ.getTime() < firstStart.getTime()) continue
+      if (until && occ.getTime() > until.getTime()) return out
+      out.push(occ)
     }
   }
+  return out
 }
 
 function exceptionForOccurrence(
@@ -291,21 +381,17 @@ export function expandSeriesToVirtualActivities(
   if (durationMs <= 0) return []
 
   const until = rule.until ? new Date(rule.until) : null
-  const maxSlots = rule.count ?? Infinity
 
+  const occurrenceStarts = buildOccurrenceStarts(firstStart, rule)
   const out: Activity[] = []
-  let current = new Date(firstStart.getTime())
-  let slot = 0
 
-  while (slot < maxSlots && slot < MAX_EXPAND_STEPS) {
+  for (const current of occurrenceStarts) {
     if (until && current.getTime() > until.getTime()) break
 
     const ex = exceptionForOccurrence(series.exceptions, current)
     const canonicalStartIso = current.toISOString()
 
     if (ex?.exception_type === 'cancelled') {
-      slot++
-      current = nextOccurrence(current, rule)
       continue
     }
 
@@ -321,8 +407,6 @@ export function expandSeriesToVirtualActivities(
           })
         )
       }
-      slot++
-      current = nextOccurrence(current, rule)
       continue
     }
 
@@ -337,9 +421,6 @@ export function expandSeriesToVirtualActivities(
         })
       )
     }
-
-    slot++
-    current = nextOccurrence(current, rule)
   }
 
   return out

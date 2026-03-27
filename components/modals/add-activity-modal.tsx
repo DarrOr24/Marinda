@@ -147,6 +147,8 @@ export default function AddActivityModal({
   const [countStr, setCountStr] = useState("10");
   const [untilEndIso, setUntilEndIso] = useState<string | null>(null);
   const [untilPickerOpen, setUntilPickerOpen] = useState(false);
+  /** WEEKLY only: 0–6 Sun–Sat */
+  const [byWeekday, setByWeekday] = useState<number[]>([]);
 
   // keep defaults in sync when modal opens with different initial / edit
   useEffect(() => {
@@ -181,6 +183,7 @@ export default function AddActivityModal({
     setCountStr("10");
     setUntilEndIso(null);
     setUntilPickerOpen(false);
+    setByWeekday([]);
 
     if (mode === "edit" && seriesRecurrenceInitial !== undefined) {
       setRepeatEnabled(true);
@@ -191,15 +194,27 @@ export default function AddActivityModal({
         setEndMode(u.endMode);
         setCountStr(u.countStr);
         setUntilEndIso(u.untilIso);
+        setByWeekday(u.byWeekday ?? []);
       } else {
         setRecurrenceFreq("WEEKLY");
         setIntervalStr("1");
         setEndMode("never");
         setCountStr("10");
         setUntilEndIso(null);
+        setByWeekday([]);
       }
     }
   }, [visible, initialDateStr, initial, mode, seriesRecurrenceInitial]);
+
+  useEffect(() => {
+    if (recurrenceFreq !== "WEEKLY" || !range?.start_at) return;
+    const d = new Date(range.start_at).getDay();
+    setByWeekday((prev) => {
+      if (prev.length === 0) return [d];
+      if (prev.includes(d)) return prev;
+      return [...prev, d].sort((a, b) => a - b);
+    });
+  }, [recurrenceFreq, range?.start_at]);
 
   useEffect(() => {
     if (!visible || !range?.start_at || endMode !== "until") return;
@@ -220,10 +235,14 @@ export default function AddActivityModal({
   const editSeriesRecurrence =
     mode === "edit" && seriesRecurrenceInitial !== undefined;
 
+  const weeklyDaysValid =
+    recurrenceFreq !== "WEEKLY" || byWeekday.length >= 1;
+
   const recurrenceValid =
     (!repeatEnabled && !editSeriesRecurrence) ||
     (intervalN >= 1 &&
       intervalN <= 999 &&
+      weeklyDaysValid &&
       (endMode === "never" ||
         (endMode === "count" && countN >= 1) ||
         (endMode === "until" &&
@@ -248,6 +267,7 @@ export default function AddActivityModal({
     setCountStr("10");
     setUntilEndIso(null);
     setUntilPickerOpen(false);
+    setByWeekday([]);
   }
 
   function handleSave() {
@@ -269,7 +289,8 @@ export default function AddActivityModal({
         recurrenceFreq,
         intervalN || 1,
         firstStart,
-        end
+        end,
+        recurrenceFreq === "WEEKLY" ? byWeekday : null
       );
     }
 
@@ -415,6 +436,42 @@ export default function AddActivityModal({
                       }}
                     />
                   </View>
+
+                  {recurrenceFreq === "WEEKLY" ? (
+                    <View style={styles.weekdayRow}>
+                      <Text style={styles.subLabel}>On days</Text>
+                      <ChipSelector
+                        multiple
+                        values={byWeekday.map(String)}
+                        onChange={(vals) => {
+                          const nums = vals
+                            .map(Number)
+                            .filter((n) => !Number.isNaN(n))
+                            .sort((a, b) => a - b);
+                          if (nums.length === 0 && range?.start_at) {
+                            setByWeekday([
+                              new Date(range.start_at).getDay(),
+                            ]);
+                          } else {
+                            setByWeekday(nums);
+                          }
+                        }}
+                        options={[
+                          { label: "Sun", value: "0" },
+                          { label: "Mon", value: "1" },
+                          { label: "Tue", value: "2" },
+                          { label: "Wed", value: "3" },
+                          { label: "Thu", value: "4" },
+                          { label: "Fri", value: "5" },
+                          { label: "Sat", value: "6" },
+                        ]}
+                        horizontal
+                        horizontalContentContainerStyle={{
+                          justifyContent: "flex-start",
+                        }}
+                      />
+                    </View>
+                  ) : null}
 
                   <Text style={styles.subLabel}>Ends</Text>
                   <ChipSelector
@@ -668,6 +725,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexWrap: "wrap",
     gap: 8,
+  },
+  weekdayRow: {
+    gap: 6,
+    marginTop: 2,
   },
   intervalInput: {
     width: 52,
