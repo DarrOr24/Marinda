@@ -617,9 +617,6 @@ export default function ActivityBoard() {
                             ]}
                           >
                             <View style={styles.itemLine1}>
-                              <View
-                                style={[styles.colorDot, { backgroundColor: color }]}
-                              />
                               <Text numberOfLines={2} style={styles.itemTitle}>
                                 {a.title}
                               </Text>
@@ -984,13 +981,6 @@ const styles = StyleSheet.create({
   itemLine1: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-  },
-  colorDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-    flexShrink: 0,
   },
   itemTitle: {
     flex: 1,
@@ -1002,7 +992,6 @@ const styles = StyleSheet.create({
   itemLine2: {
     flexDirection: "row",
     alignItems: "center",
-    paddingLeft: 16,
     gap: 8,
   },
   itemTime: {
