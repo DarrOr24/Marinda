@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Modal,
@@ -37,6 +37,10 @@ function todayYmd() {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
+
+/** 3-column year grid row height for FlatList scroll metrics (cells + gap). */
+const YEAR_GRID_ROW_HEIGHT = 70;
+const YEAR_GRID_COLUMNS = 3;
 
 function addYearsYmd(ymd: string, years: number): string {
   const parts = ymd.split("-").map(Number);
@@ -99,11 +103,27 @@ export function CalendarDateModal({
     const start = Number(minDate.slice(0, 4));
     const end = Number(maxDate.slice(0, 4));
     const arr: number[] = [];
-    for (let y = end; y >= start; y--) arr.push(y);
+    for (let y = start; y <= end; y++) arr.push(y);
     return arr;
   }, [minDate, maxDate]);
 
   const selectedYear = Number(current.slice(0, 4));
+
+  const yearListRef = useRef<FlatList<number>>(null);
+
+  useEffect(() => {
+    if (!yearOpen) return;
+    const idx = years.indexOf(selectedYear);
+    if (idx < 0) return;
+    const id = requestAnimationFrame(() => {
+      yearListRef.current?.scrollToIndex({
+        index: idx,
+        animated: false,
+        viewPosition: 0,
+      });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [yearOpen, selectedYear, years]);
 
   function handlePickYear(year: number) {
     const mo = current.slice(5, 7);
@@ -144,12 +164,29 @@ export function CalendarDateModal({
             {yearOpen ? (
               <View style={styles.yearOverlay}>
                 <FlatList
+                  ref={yearListRef}
                   data={years}
                   keyExtractor={(y) => String(y)}
-                  numColumns={3}
+                  numColumns={YEAR_GRID_COLUMNS}
                   columnWrapperStyle={{ gap: 10 }}
                   contentContainerStyle={{ gap: 10, paddingVertical: 8 }}
                   style={{ maxHeight: 260 }}
+                  getItemLayout={(_, index) => ({
+                    length: YEAR_GRID_ROW_HEIGHT,
+                    offset:
+                      YEAR_GRID_ROW_HEIGHT *
+                      Math.floor(index / YEAR_GRID_COLUMNS),
+                    index,
+                  })}
+                  onScrollToIndexFailed={({ index }) => {
+                    requestAnimationFrame(() => {
+                      yearListRef.current?.scrollToIndex({
+                        index,
+                        animated: false,
+                        viewPosition: 0,
+                      });
+                    });
+                  }}
                   renderItem={({ item: y }) => {
                     const active = selectedYear === y;
                     return (
