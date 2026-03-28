@@ -328,10 +328,21 @@ export default function AnnouncementsBoard() {
       }))
       .filter(a => {
         if (isSearching) {
-          return (
-            a.text.toLowerCase().includes(search.toLowerCase()) ||
-            a.created_by_name.toLowerCase().includes(search.toLowerCase())
-          );
+          const q = search.toLowerCase();
+          if (
+            a.text.toLowerCase().includes(q) ||
+            (a.created_by_name ?? '').toLowerCase().includes(q)
+          ) {
+            return true;
+          }
+          const bundle = engagementByItem.get(a.id);
+          if (!bundle?.replies.length) return false;
+          for (const r of bundle.replies) {
+            if (r.text.toLowerCase().includes(q)) return true;
+            const replyAuthor = nameForId(r.member_id);
+            if (replyAuthor && replyAuthor.toLowerCase().includes(q)) return true;
+          }
+          return false;
         }
         return a.kind === activeKind;
       });
