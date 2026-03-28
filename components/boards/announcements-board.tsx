@@ -6,6 +6,7 @@ import EmojiPicker, { type EmojiType } from 'rn-emoji-keyboard';
 import {
   ActivityIndicator,
   Alert,
+  AppState,
   Image,
   Keyboard,
   Modal,
@@ -81,6 +82,9 @@ function formatBulletinDetailTime(iso: string): string {
 
 const NOTE_MENU_WIDTH = 220;
 
+/** Only then enable auto-shrink; shorter placeholders stay at full font size (Android often over-shrinks). */
+const COMPOSER_PLACEHOLDER_SHRINK_MIN_CHARS = 52;
+
 // --------------------------------------------
 // MAIN COMPONENT
 // --------------------------------------------
@@ -122,6 +126,50 @@ export default function AnnouncementsBoard() {
     });
     return () => cancelAnimationFrame(id);
   }, [searchExpanded]);
+
+  /** Recalculate when returning from system Settings (display size / font scale). */
+  const [fontMetricsTick, setFontMetricsTick] = useState(0);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') setFontMetricsTick((n) => n + 1);
+    });
+    return () => sub.remove();
+  }, []);
+
+  /**
+   * Default: one tight row (pre–large-type sizing).
+   * From ~1.08× content-size scale up: grow so one line + descenders fit without a huge box at 1×.
+   */
+  const composerSizing = useMemo(() => {
+    void fontMetricsTick;
+    const fs = Math.max(1, PixelRatio.getFontScale());
+    const border = 1;
+
+    if (fs < 1.08) {
+      const padV = 10;
+      return {
+        minHeight: 48,
+        paddingTop: padV,
+        paddingBottom: padV,
+        placeholderInsetTop: border + padV,
+        placeholderInsetBottom: border + padV,
+      };
+    }
+
+    const padV = Math.round(10 + Math.min(fs - 1, 1.2) * 7);
+    const descenderExtra = Math.round(2 + (fs - 1) * 6);
+    const minH = Math.max(
+      50,
+      Math.ceil(19 * fs + 2 * padV + descenderExtra + 2)
+    );
+    return {
+      minHeight: minH,
+      paddingTop: padV,
+      paddingBottom: padV + descenderExtra,
+      placeholderInsetTop: border + padV,
+      placeholderInsetBottom: border + padV + descenderExtra,
+    };
+  }, [fontMetricsTick]);
 
   // --------------------------------------------
   // Load Members
@@ -214,6 +262,8 @@ export default function AnnouncementsBoard() {
 
   const [activeKind, setActiveKind] = useState<string>('notes');
   const activeTab = ALL_TABS.find(t => t.id === activeKind) ?? ALL_TABS[0];
+  const shrinkComposerPlaceholder =
+    activeTab.placeholder.length >= COMPOSER_PLACEHOLDER_SHRINK_MIN_CHARS;
 
   // If active tab was deleted (or never existed), switch to first tab
   const tabIds = useMemo(() => ALL_TABS.map(t => t.id), [customTabs]);
@@ -595,15 +645,49 @@ export default function AnnouncementsBoard() {
         <View style={styles.inputBar}>
           <View style={styles.noteInputWrapper}>
             <TextInput
-              style={[styles.textInputMultiline, styles.textInputMultilineWithCheck]}
-              placeholder={activeTab.placeholder}
+              style={[
+                styles.textInputMultiline,
+                styles.textInputMultilineWithCheck,
+                styles.noteComposerInput,
+                composerSizing,
+              ]}
+              placeholder=""
               value={newText}
               onChangeText={setNewText}
               multiline
+              multilineCompact
               numberOfLines={1}
               submitBehavior="newline"
               returnKeyType="default"
+              textAlignVertical="center"
+              includeFontPadding={false}
+              accessibilityLabel={newText.trim() ? undefined : activeTab.placeholder}
             />
+            {newText.length === 0 ? (
+              <View
+                style={[
+                  styles.noteComposerPlaceholderWrap,
+                  {
+                    top: composerSizing.placeholderInsetTop,
+                    bottom: composerSizing.placeholderInsetBottom,
+                  },
+                ]}
+                pointerEvents="none"
+              >
+                <Text
+                  style={styles.noteComposerPlaceholderText}
+                  numberOfLines={1}
+                  allowFontScaling
+                  accessible={false}
+                  {...(shrinkComposerPlaceholder
+                    ? { adjustsFontSizeToFit: true as const, minimumFontScale: 0.88 }
+                    : {})}
+                  {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
+                >
+                  {activeTab.placeholder}
+                </Text>
+              </View>
+            ) : null}
 
             <Pressable
               style={({ pressed }) => [
@@ -625,7 +709,7 @@ export default function AnnouncementsBoard() {
               ) : (
                 <MaterialCommunityIcons
                   name="send"
-                  size={26}
+                  size={22}
                   color={!newText.trim() ? '#cbd5e1' : '#2563eb'}
                 />
               )}
@@ -1324,8 +1408,27 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
 
+  /** Single-line-first bulletin composer; vertical size from composerSizing (font scale). */
+  noteComposerInput: {
+    textAlignVertical: 'center',
+    fontSize: 17,
+  },
+
   textInputMultilineWithCheck: {
     paddingRight: 48,
+  },
+
+  /** Horizontal insets: border 1 + paddingHorizontal 12; right 1 + paddingRight 48. Vertical: composerSizing. */
+  noteComposerPlaceholderWrap: {
+    position: 'absolute',
+    left: 13,
+    right: 49,
+    justifyContent: 'center',
+  },
+  noteComposerPlaceholderText: {
+    width: '100%',
+    fontSize: 17,
+    color: '#94a3b8',
   },
 
   noteInputWrapper: {
@@ -1335,11 +1438,12 @@ const styles = StyleSheet.create({
 
   noteCheckBtn: {
     position: 'absolute',
-    right: 6,
-    bottom: 6,
-    padding: 2,
+    right: 4,
+    top: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 4,
   },
   noteCheckBtnPressed: {
     opacity: 0.75,
