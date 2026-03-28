@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -51,6 +52,8 @@ function rowInitial(name: string): string {
   return t[0]!.toUpperCase();
 }
 
+const REPLY_MENU_WIDTH = 220;
+
 export function AnnouncementItemEngagement({
   familyId,
   myFamilyMemberId,
@@ -67,6 +70,7 @@ export function AnnouncementItemEngagement({
   const [editingReply, setEditingReply] = useState<AnnouncementReply | null>(null);
   const [editReplyDraft, setEditReplyDraft] = useState('');
   const [reactionsSheetOpen, setReactionsSheetOpen] = useState(false);
+  const [replyMenuReply, setReplyMenuReply] = useState<AnnouncementReply | null>(null);
 
   const byEmojiGrouped = useMemo(() => {
     const m = new Map<
@@ -127,6 +131,13 @@ export function AnnouncementItemEngagement({
       setReactionsSheetOpen(false);
     }
   }, [reactionsSheetOpen, reactionSummary.length, reactions.length]);
+
+  useEffect(() => {
+    if (!replyMenuReply) return;
+    if (!replies.some(r => r.id === replyMenuReply.id)) {
+      setReplyMenuReply(null);
+    }
+  }, [replies, replyMenuReply]);
 
   const confirmDeleteReply = (id: string) => {
     Alert.alert('Delete reply?', undefined, [
@@ -229,27 +240,18 @@ export function AnnouncementItemEngagement({
                 </Text>
               </View>
               {canModifyReply(r) && (
-                <View style={styles.replyActions}>
-                  <Pressable
-                    hitSlop={8}
-                    onPress={() => {
-                      setEditingReply(r);
-                      setEditReplyDraft(r.text);
-                    }}
-                    style={({ pressed }) => [pressed && { opacity: 0.65 }]}
-                    accessibilityLabel="Edit reply"
-                  >
-                    <MaterialCommunityIcons name="pencil-outline" size={18} color="#475569" />
-                  </Pressable>
-                  <Pressable
-                    hitSlop={8}
-                    onPress={() => confirmDeleteReply(r.id)}
-                    style={({ pressed }) => [pressed && { opacity: 0.65 }]}
-                    accessibilityLabel="Remove reply"
-                  >
-                    <MaterialCommunityIcons name="close" size={20} color="#64748b" />
-                  </Pressable>
-                </View>
+                <Pressable
+                  hitSlop={10}
+                  onPress={() => setReplyMenuReply(r)}
+                  style={({ pressed }) => [
+                    styles.replyMenuIconBtn,
+                    pressed && { opacity: 0.72 },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Reply actions"
+                >
+                  <MaterialCommunityIcons name="dots-vertical" size={20} color="#475569" />
+                </Pressable>
               )}
             </View>
             );
@@ -424,6 +426,56 @@ export function AnnouncementItemEngagement({
         </ModalCard>
       </ModalShell>
 
+      <Modal
+        visible={!!replyMenuReply}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReplyMenuReply(null)}
+      >
+        <View style={styles.replyMenuModalRoot}>
+          <Pressable
+            style={styles.replyMenuModalDismiss}
+            onPress={() => setReplyMenuReply(null)}
+          />
+          <View style={styles.replyMenuModalSheet} pointerEvents="box-none">
+            <View style={styles.replyMenuCard}>
+              {replyMenuReply ? (
+                <>
+                  <Pressable
+                    style={styles.replyMenuRow}
+                    onPress={() => {
+                      const target = replyMenuReply;
+                      setReplyMenuReply(null);
+                      setEditingReply(target);
+                      setEditReplyDraft(target.text);
+                    }}
+                  >
+                    <MaterialCommunityIcons
+                      name="pencil-outline"
+                      size={18}
+                      color="#334155"
+                    />
+                    <Text style={styles.replyMenuRowLabel}>Edit reply</Text>
+                  </Pressable>
+                  <View style={styles.replyMenuDivider} />
+                  <Pressable
+                    style={styles.replyMenuRow}
+                    onPress={() => {
+                      const id = replyMenuReply.id;
+                      setReplyMenuReply(null);
+                      confirmDeleteReply(id);
+                    }}
+                  >
+                    <MaterialCommunityIcons name="close" size={18} color="#b91c1c" />
+                    <Text style={styles.replyMenuRowLabelDestructive}>Delete reply</Text>
+                  </Pressable>
+                </>
+              ) : null}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <ModalShell
         visible={!!editingReply}
         onClose={() => setEditingReply(null)}
@@ -570,12 +622,55 @@ const styles = StyleSheet.create({
   replyMeta: { fontSize: 11, opacity: 0.55, marginBottom: 2 },
   replyMetaByline: { marginTop: 0 },
   replyText: { fontSize: 14, color: '#1e293b' },
-  replyActions: {
+  replyMenuIconBtn: {
+    padding: 4,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  replyMenuModalRoot: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  replyMenuModalDismiss: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15,23,42,0.4)',
+  },
+  replyMenuModalSheet: {
+    width: REPLY_MENU_WIDTH,
+    maxWidth: '92%',
+    zIndex: 1,
+  },
+  replyMenuCard: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  replyMenuRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-    flexShrink: 0,
-    paddingTop: 2,
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  replyMenuRowLabel: { fontSize: 16, color: '#0f172a' },
+  replyMenuRowLabelDestructive: { fontSize: 16, color: '#b91c1c', fontWeight: '500' },
+  replyMenuDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+    marginVertical: 2,
+    marginHorizontal: 10,
   },
   reactionsSheetTitle: {
     fontSize: 17,
