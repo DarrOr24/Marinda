@@ -624,7 +624,7 @@ export default function ActivityBoard() {
                               key="cake"
                               name="cake-variant"
                               size={16}
-                              color="#db2777"
+                              color={color}
                             />
                           ),
                           a.ride_needed && (

@@ -361,7 +361,7 @@ export function ActivityDayView({
                           <MaterialCommunityIcons
                             name="cake-variant"
                             size={16}
-                            color="#db2777"
+                            color={color}
                             style={styles.allDayCakeIcon}
                           />
                         ) : null}

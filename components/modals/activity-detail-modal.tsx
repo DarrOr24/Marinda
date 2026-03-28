@@ -18,8 +18,10 @@ import {
   useModalScrollMaxHeight,
 } from "@/components/ui";
 import { shareActivityToCalendar } from "@/lib/calendar/share-activity-calendar";
+import { getActivityRowAccentColor } from "@/lib/activities/activities.accent-color";
 import { formatActivityTimeRange } from "@/lib/activities/activities.format";
 import type { Activity } from "@/lib/activities/activities.types";
+import type { FamilyMember } from "@/lib/members/members.types";
 
 function sameDay(a: Date, b: Date) {
   return (
@@ -129,6 +131,11 @@ export function ActivityDetailModal({
   const isVirtualSeries = activity.seriesOccurrence != null;
   const canAddToCalendar = !isVirtualSeries;
 
+  const memberMap = memberById as Map<string, FamilyMember>;
+  const birthdayAccentHex = isBirthday
+    ? getActivityRowAccentColor(activity, memberMap)
+    : "#db2777";
+
   const participantIds = activity.participants?.map((p) => p.member_id) ?? [];
   const names = participantIds
     .map((id: string) => {
@@ -233,9 +240,15 @@ export function ActivityDetailModal({
               <MaterialCommunityIcons
                 name="cake-variant"
                 size={26}
-                color="#db2777"
+                color={birthdayAccentHex}
               />
-              <Text style={[styles.detailTitle, styles.birthdayDetailTitle]}>
+              <Text
+                style={[
+                  styles.detailTitle,
+                  styles.birthdayDetailTitle,
+                  { color: birthdayAccentHex },
+                ]}
+              >
                 {activity.title}
               </Text>
             </View>
@@ -254,13 +267,6 @@ export function ActivityDetailModal({
             icon="clock-outline"
             content={isBirthday ? "All day" : timeLine}
           />
-
-          {isBirthday ? (
-            <Text style={styles.birthdayHint}>
-              This date comes from the birthday in their profile. Parents can
-              change it in Settings → Family.
-            </Text>
-          ) : null}
 
           {!isBirthday && activity.location ? (
             <DetailRow
@@ -299,11 +305,13 @@ export function ActivityDetailModal({
             </>
           ) : null}
 
-          <DetailRow
-            icon="account-group-outline"
-            label="Who's going"
-            content={names || "—"}
-          />
+          {!isBirthday ? (
+            <DetailRow
+              icon="account-group-outline"
+              label="Who's going"
+              content={names || "—"}
+            />
+          ) : null}
 
           {!isBirthday && activity.notes ? (
             <DetailRow icon="note-text-outline" content={activity.notes} />
@@ -512,13 +520,6 @@ const styles = StyleSheet.create({
   birthdayDetailTitle: {
     flex: 1,
     marginBottom: 0,
-  },
-  birthdayHint: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#64748b",
-    lineHeight: 18,
-    marginBottom: 8,
   },
   row: {
     flexDirection: "row",

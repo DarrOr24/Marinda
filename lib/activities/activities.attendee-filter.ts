@@ -10,12 +10,16 @@ export function filterActivitiesByAttendees(
 ): Activity[] {
   if (opts.kind === 'kid') {
     if (opts.scope === 'family') return activities
-    return activities.filter((a) =>
-      (a.participants ?? []).some((p) => p.member_id === opts.selfMemberId)
+    return activities.filter(
+      (a) =>
+        !!a.isBirthday ||
+        (a.participants ?? []).some((p) => p.member_id === opts.selfMemberId),
     )
   }
   if (opts.memberIds.length === 0) return activities
-  return activities.filter((a) =>
-    (a.participants ?? []).some((p) => opts.memberIds.includes(p.member_id))
+  return activities.filter(
+    (a) =>
+      !!a.isBirthday ||
+      (a.participants ?? []).some((p) => opts.memberIds.includes(p.member_id)),
   )
 }
