@@ -469,7 +469,71 @@ export default function AnnouncementsBoard() {
   const bulletinSearchFieldMinW = Math.max(200, Math.round(windowWidth * 0.62))
 
   return (
-    <Screen scroll={false} withBackground={false} contentStyle={{ paddingBottom: 0 }}>
+    <Screen
+      scroll={false}
+      withBackground={false}
+      contentStyle={{ paddingBottom: 0 }}
+      overlay={
+        showSortMenu || showAuthorMenu ? (
+          <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+            {showSortMenu ? (
+              <Pressable style={styles.modalOverlay} onPress={() => setShowSortMenu(false)}>
+                <Pressable style={styles.simpleMenu}>
+                  {['newest', 'oldest', 'edited'].map(option => (
+                    <Pressable
+                      key={option}
+                      style={styles.menuItem}
+                      onPress={() => {
+                        setSortBy(option as any);
+                        setShowSortMenu(false);
+                      }}
+                    >
+                      <Text style={styles.menuItemText}>{option}</Text>
+                    </Pressable>
+                  ))}
+                </Pressable>
+              </Pressable>
+            ) : null}
+            {showAuthorMenu ? (
+              <Pressable
+                style={styles.modalOverlay}
+                onPress={() => setShowAuthorMenu(false)}
+              >
+                <Pressable style={styles.simpleMenu}>
+                  <Pressable
+                    style={styles.menuItem}
+                    onPress={() => {
+                      setFilterAuthor('all');
+                      setShowAuthorMenu(false);
+                    }}
+                  >
+                    <Text style={styles.menuItemText}>All</Text>
+                  </Pressable>
+
+                  {rawMembers.map(m => {
+                    const name =
+                      m?.nickname || m?.profile?.first_name || m?.name || shortId(m.id);
+
+                    return (
+                      <Pressable
+                        key={m.id}
+                        style={styles.menuItem}
+                        onPress={() => {
+                          setFilterAuthor(name);
+                          setShowAuthorMenu(false);
+                        }}
+                      >
+                        <Text style={styles.menuItemText}>{name}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </Pressable>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null
+      }
+    >
       <View style={styles.tapToDismiss}>
         <View style={styles.boardInner}>
           <View style={styles.container}>
@@ -1321,68 +1385,6 @@ export default function AnnouncementsBoard() {
             </View>
           </View>
         </Modal>
-
-        {/* ---------------------------------------------- */}
-        {/* SORT MENU */}
-        {/* ---------------------------------------------- */}
-        {showSortMenu && (
-          <Pressable style={styles.modalOverlay} onPress={() => setShowSortMenu(false)}>
-            <Pressable style={styles.simpleMenu}>
-              {['newest', 'oldest', 'edited'].map(option => (
-                <Pressable
-                  key={option}
-                  style={styles.menuItem}
-                  onPress={() => {
-                    setSortBy(option as any);
-                    setShowSortMenu(false);
-                  }}
-                >
-                  <Text style={styles.menuItemText}>{option}</Text>
-                </Pressable>
-              ))}
-            </Pressable>
-          </Pressable>
-        )}
-
-        {/* ---------------------------------------------- */}
-        {/* AUTHOR MENU */}
-        {/* ---------------------------------------------- */}
-        {showAuthorMenu && (
-          <Pressable
-            style={styles.modalOverlay}
-            onPress={() => setShowAuthorMenu(false)}
-          >
-            <Pressable style={styles.simpleMenu}>
-              <Pressable
-                style={styles.menuItem}
-                onPress={() => {
-                  setFilterAuthor('all');
-                  setShowAuthorMenu(false);
-                }}
-              >
-                <Text style={styles.menuItemText}>All</Text>
-              </Pressable>
-
-              {rawMembers.map(m => {
-                const name =
-                  m?.nickname || m?.profile?.first_name || m?.name || shortId(m.id);
-
-                return (
-                  <Pressable
-                    key={m.id}
-                    style={styles.menuItem}
-                    onPress={() => {
-                      setFilterAuthor(name);
-                      setShowAuthorMenu(false);
-                    }}
-                  >
-                    <Text style={styles.menuItemText}>{name}</Text>
-                  </Pressable>
-                );
-              })}
-            </Pressable>
-          </Pressable>
-        )}
           </View>
         </View>
       </View>
