@@ -6,6 +6,7 @@ import EmojiPicker, { type EmojiType } from 'rn-emoji-keyboard';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Keyboard,
   Modal,
   PixelRatio,
@@ -64,6 +65,12 @@ function buildDefaultPlaceholder(label: string) {
 
 // Helper
 const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 6)}` : '—');
+
+function authorRowInitial(name: string): string {
+  const t = name.trim();
+  if (!t) return '?';
+  return t[0]!.toUpperCase();
+}
 
 const NOTE_MENU_WIDTH = 220;
 
@@ -672,6 +679,14 @@ export default function AnnouncementsBoard() {
             ) : (
               filteredAnnouncements.map((item, idx) => {
                 const bucket = engagementByItem.get(item.id);
+                const authorMemberId = item.created_by_member_id;
+                const authorAvatarUrl = authorMemberId
+                  ? avatarUrlForMemberId(authorMemberId)
+                  : null;
+                const authorLabel =
+                  item.created_by_name?.trim() ||
+                  nameForId(authorMemberId) ||
+                  '—';
                 return (
                   <View
                     key={item.id}
@@ -681,12 +696,34 @@ export default function AnnouncementsBoard() {
                     ]}
                   >
                     <View style={styles.itemRowInner}>
+                      <View style={styles.itemAuthorAvatarWrap}>
+                        {authorAvatarUrl ? (
+                          <Image
+                            source={{ uri: authorAvatarUrl }}
+                            style={styles.itemAuthorAvatarImg}
+                            resizeMode="cover"
+                            accessibilityIgnoresInvertColors
+                          />
+                        ) : (
+                          <View style={styles.itemAuthorAvatarPlaceholder}>
+                            <Text
+                              style={styles.itemAuthorAvatarInitial}
+                              selectable={false}
+                              {...(Platform.OS === 'android'
+                                ? { includeFontPadding: false }
+                                : {})}
+                            >
+                              {authorRowInitial(authorLabel)}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                       <View style={styles.itemTextContainer}>
                         <Text
-                          style={styles.itemMeta}
+                          style={[styles.itemMeta, styles.itemMetaByline]}
                           {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
                         >
-                          {item.created_by_name} • {new Date(item.created_at).toLocaleString()}
+                          {authorLabel} • {new Date(item.created_at).toLocaleString()}
                         </Text>
 
                         {item.created_at !== item.updated_at && (
@@ -1317,9 +1354,39 @@ const styles = StyleSheet.create({
   itemRowInner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: 10,
+  },
+  itemAuthorAvatarWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginTop: 1,
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  itemAuthorAvatarImg: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e2e8f0',
+  },
+  itemAuthorAvatarPlaceholder: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  itemAuthorAvatarInitial: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
   },
   itemTextContainer: { flex: 1, minWidth: 0 },
+  itemMetaByline: {
+    marginTop: 0,
+  },
   itemText: { fontSize: 16 },
   itemMeta: {
     fontSize: 12,

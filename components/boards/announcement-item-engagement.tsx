@@ -184,15 +184,37 @@ export function AnnouncementItemEngagement({
 
       {replies.length > 0 && (
         <View style={styles.repliesBlock}>
-          {replies.map(r => (
+          {replies.map(r => {
+            const replyAuthor = nameForId(r.member_id);
+            const replyAvatarUrl = avatarUrlForMemberId?.(r.member_id) ?? null;
+            return (
             <View key={r.id} style={styles.replyRow}>
+              <View style={styles.replyAvatarWrap}>
+                {replyAvatarUrl ? (
+                  <Image
+                    source={{ uri: replyAvatarUrl }}
+                    style={styles.replyAvatarImg}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.replyAvatarPlaceholder}>
+                    <Text
+                      style={styles.replyAvatarInitial}
+                      selectable={false}
+                      {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
+                    >
+                      {rowInitial(replyAuthor)}
+                    </Text>
+                  </View>
+                )}
+              </View>
               <View style={styles.replyBody}>
                 <Text
-                  style={styles.replyMeta}
+                  style={[styles.replyMeta, styles.replyMetaByline]}
                   selectable={false}
                   {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
                 >
-                  {nameForId(r.member_id)} ·{' '}
+                  {replyAuthor} ·{' '}
                   {new Date(r.created_at).toLocaleString(undefined, {
                     dateStyle: 'short',
                     timeStyle: 'short',
@@ -230,7 +252,8 @@ export function AnnouncementItemEngagement({
                 </View>
               )}
             </View>
-          ))}
+            );
+          })}
         </View>
       )}
 
@@ -513,17 +536,46 @@ const styles = StyleSheet.create({
   },
   replyRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  replyAvatarWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    marginTop: 1,
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  replyAvatarImg: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+  },
+  replyAvatarPlaceholder: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 6,
+  },
+  replyAvatarInitial: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#475569',
   },
   replyBody: { flex: 1, minWidth: 0 },
   replyMeta: { fontSize: 11, opacity: 0.55, marginBottom: 2 },
+  replyMetaByline: { marginTop: 0 },
   replyText: { fontSize: 14, color: '#1e293b' },
   replyActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
     flexShrink: 0,
+    paddingTop: 2,
   },
   reactionsSheetTitle: {
     fontSize: 17,
