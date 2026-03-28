@@ -95,10 +95,25 @@ function buildIcs(activity: Activity): string {
 }
 
 /**
+ * expo-sharing rejects concurrent shareAsync on Android ("Another share request…").
+ * Run shares one at a time.
+ */
+let shareQueue: Promise<void> = Promise.resolve();
+
+/**
  * Writes a single-event .ics file and opens the system share sheet so the user can
  * import into Apple Calendar, Google Calendar, etc.
  */
 export async function shareActivityToCalendar(activity: Activity): Promise<void> {
+  const next = shareQueue.then(
+    () => runShareActivityToCalendar(activity),
+    () => runShareActivityToCalendar(activity),
+  );
+  shareQueue = next.catch(() => {});
+  await next;
+}
+
+async function runShareActivityToCalendar(activity: Activity): Promise<void> {
   const base = FileSystem.cacheDirectory;
   if (!base) {
     throw new Error("Cache directory unavailable");

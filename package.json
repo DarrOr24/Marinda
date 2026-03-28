@@ -34,6 +34,7 @@
     "expo": "~54.0.10",
     "expo-auth-session": "~7.0.8",
     "expo-av": "~16.0.7",
+    "expo-calendar": "~15.0.8",
     "expo-constants": "~18.0.9",
     "expo-crypto": "~15.0.8",
     "expo-dev-client": "~6.0.20",

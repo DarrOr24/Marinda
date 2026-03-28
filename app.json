@@ -12,7 +12,11 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.marinda.marinda",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCalendarsUsageDescription": "Marinda can add events you choose to your calendar.",
+        "NSCalendarsFullAccessUsageDescription": "Marinda can add events you choose to your calendar.",
+        "NSRemindersUsageDescription": "Marinda uses calendar access to save family events on your device.",
+        "NSRemindersFullAccessUsageDescription": "Marinda uses calendar access to save family events on your device."
       }
     },
     "android": {
@@ -45,6 +49,13 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Marinda can add events you choose to your calendar.",
+          "remindersPermission": "Marinda uses calendar access to save family events on your device."
+        }
+      ],
       [
         "expo-splash-screen",
         {

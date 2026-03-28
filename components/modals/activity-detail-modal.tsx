@@ -17,7 +17,7 @@ import {
   TextInput,
   useModalScrollMaxHeight,
 } from "@/components/ui";
-import { shareActivityToCalendar } from "@/lib/calendar/share-activity-calendar";
+import { addActivityToCalendar } from "@/lib/calendar/add-activity-to-calendar";
 import { getActivityRowAccentColor } from "@/lib/activities/activities.accent-color";
 import { formatActivityTimeRange } from "@/lib/activities/activities.format";
 import type { Activity } from "@/lib/activities/activities.types";
@@ -210,12 +210,12 @@ export function ActivityDetailModal({
     if (!activity || calendarBusy) return;
     try {
       setCalendarBusy(true);
-      await shareActivityToCalendar(activity);
+      await addActivityToCalendar(activity);
     } catch (e) {
       console.error(e);
       Alert.alert(
-        "Could not export",
-        "Calendar sharing is not available on this device.",
+        "Could not add to calendar",
+        "Calendar isn’t available on this device. Try again or update the app.",
       );
     } finally {
       setCalendarBusy(false);
