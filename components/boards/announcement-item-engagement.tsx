@@ -52,6 +52,13 @@ function rowInitial(name: string): string {
   return t[0]!.toUpperCase();
 }
 
+function formatReplyDetailTime(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+}
+
 const REPLY_MENU_WIDTH = 220;
 
 export function AnnouncementItemEngagement({
@@ -198,6 +205,7 @@ export function AnnouncementItemEngagement({
           {replies.map(r => {
             const replyAuthor = nameForId(r.member_id);
             const replyAvatarUrl = avatarUrlForMemberId?.(r.member_id) ?? null;
+            const replyWasEdited = r.created_at !== r.updated_at;
             return (
             <View key={r.id} style={styles.replyRow}>
               <View style={styles.replyAvatarWrap}>
@@ -230,6 +238,7 @@ export function AnnouncementItemEngagement({
                     dateStyle: 'short',
                     timeStyle: 'short',
                   })}
+                  {replyWasEdited ? ' · edited' : ''}
                 </Text>
                 <Text
                   style={styles.replyText}
@@ -468,6 +477,28 @@ export function AnnouncementItemEngagement({
                   >
                     <MaterialCommunityIcons name="close" size={18} color="#b91c1c" />
                     <Text style={styles.replyMenuRowLabelDestructive}>Delete reply</Text>
+                  </Pressable>
+                  <View style={styles.replyMenuDivider} />
+                  <Pressable
+                    style={styles.replyMenuRow}
+                    onPress={() => {
+                      const r = replyMenuReply;
+                      const wasEdited = r.created_at !== r.updated_at;
+                      setReplyMenuReply(null);
+                      Alert.alert(
+                        'Reply info',
+                        wasEdited
+                          ? `Created: ${formatReplyDetailTime(r.created_at)}\n\nLast edited: ${formatReplyDetailTime(r.updated_at)}`
+                          : `Created: ${formatReplyDetailTime(r.created_at)}`
+                      );
+                    }}
+                  >
+                    <MaterialCommunityIcons
+                      name="information-outline"
+                      size={18}
+                      color="#334155"
+                    />
+                    <Text style={styles.replyMenuRowLabel}>Info</Text>
                   </Pressable>
                 </>
               ) : null}

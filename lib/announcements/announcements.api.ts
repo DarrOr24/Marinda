@@ -91,11 +91,13 @@ export async function updateAnnouncement(
     updates: {
         text?: string;
         weekStart?: string | null;
+        kind?: AnnouncementKind;
     }
 ) {
     const patch: any = {};
     if (updates.text !== undefined) patch.text = updates.text;
     if (updates.weekStart !== undefined) patch.week_start = updates.weekStart;
+    if (updates.kind !== undefined) patch.kind = updates.kind;
 
     const { data, error } = await supabase
         .from('announcement_items')

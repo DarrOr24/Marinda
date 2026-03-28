@@ -72,6 +72,13 @@ function authorRowInitial(name: string): string {
   return t[0]!.toUpperCase();
 }
 
+function formatBulletinDetailTime(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+}
+
 const NOTE_MENU_WIDTH = 220;
 
 // --------------------------------------------
@@ -228,6 +235,7 @@ export default function AnnouncementsBoard() {
   const [newTabPlaceholder, setNewTabPlaceholder] = useState('');
 
   const [noteMenuItem, setNoteMenuItem] = useState<AnnouncementItem | null>(null);
+  const [moveNoteItem, setMoveNoteItem] = useState<AnnouncementItem | null>(null);
   const [replyModalItem, setReplyModalItem] = useState<AnnouncementItem | null>(null);
   const [replyModalDraft, setReplyModalDraft] = useState('');
   const [emojiPickerForItemId, setEmojiPickerForItemId] = useState<string | null>(null);
@@ -687,6 +695,7 @@ export default function AnnouncementsBoard() {
                   item.created_by_name?.trim() ||
                   nameForId(authorMemberId) ||
                   '—';
+                const noteWasEdited = item.created_at !== item.updated_at;
                 return (
                   <View
                     key={item.id}
@@ -724,16 +733,8 @@ export default function AnnouncementsBoard() {
                           {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
                         >
                           {authorLabel} • {new Date(item.created_at).toLocaleString()}
+                          {noteWasEdited ? ' · edited' : ''}
                         </Text>
-
-                        {item.created_at !== item.updated_at && (
-                          <Text
-                            style={styles.itemMeta}
-                            {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
-                          >
-                            (edited • {new Date(item.updated_at).toLocaleString()})
-                          </Text>
-                        )}
 
                         <Text
                           style={styles.itemText}
@@ -1041,6 +1042,8 @@ export default function AnnouncementsBoard() {
                       const canEditNote =
                         item.created_by_member_id === myFamilyMemberId ||
                         hasParentPermissions;
+                      const moveTargets = ALL_TABS.filter(t => t.id !== item.kind);
+                      const noteInfoWasEdited = item.created_at !== item.updated_at;
                       return (
                         <>
                           {canEditNote ? (
@@ -1058,6 +1061,22 @@ export default function AnnouncementsBoard() {
                                 color="#334155"
                               />
                               <Text style={styles.noteMenuRowLabel}>Edit</Text>
+                            </Pressable>
+                          ) : null}
+                          {canEditNote && moveTargets.length > 0 ? (
+                            <Pressable
+                              style={styles.noteMenuRow}
+                              onPress={() => {
+                                setNoteMenuItem(null);
+                                setMoveNoteItem(item);
+                              }}
+                            >
+                              <MaterialCommunityIcons
+                                name="folder-move-outline"
+                                size={18}
+                                color="#334155"
+                              />
+                              <Text style={styles.noteMenuRowLabel}>Move to tab…</Text>
                             </Pressable>
                           ) : null}
                           {canEditNote ? (
@@ -1116,10 +1135,94 @@ export default function AnnouncementsBoard() {
                               <Text style={styles.noteMenuRowLabel}>React</Text>
                             </Pressable>
                           ) : null}
+                          <View style={styles.noteMenuDivider} />
+                          <Pressable
+                            style={styles.noteMenuRow}
+                            onPress={() => {
+                              setNoteMenuItem(null);
+                              Alert.alert(
+                                'Note info',
+                                noteInfoWasEdited
+                                  ? `Created: ${formatBulletinDetailTime(item.created_at)}\n\nLast edited: ${formatBulletinDetailTime(item.updated_at)}`
+                                  : `Created: ${formatBulletinDetailTime(item.created_at)}`
+                              );
+                            }}
+                          >
+                            <MaterialCommunityIcons
+                              name="information-outline"
+                              size={18}
+                              color="#334155"
+                            />
+                            <Text style={styles.noteMenuRowLabel}>Info</Text>
+                          </Pressable>
                         </>
                       );
                     })()
                   : null}
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        <Modal
+          visible={!!moveNoteItem}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setMoveNoteItem(null)}
+        >
+          <View style={styles.noteMenuModalRoot}>
+            <Pressable
+              style={styles.noteMenuModalDismiss}
+              onPress={() => setMoveNoteItem(null)}
+            />
+            <View style={styles.moveTabModalSheet} pointerEvents="box-none">
+              <View style={styles.moveTabModalCard}>
+                <Text style={styles.moveTabModalTitle}>Move to tab</Text>
+                <ScrollView
+                  style={styles.moveTabList}
+                  keyboardShouldPersistTaps="handled"
+                  nestedScrollEnabled
+                >
+                  {moveNoteItem
+                    ? ALL_TABS.filter(t => t.id !== moveNoteItem.kind).map(tab => (
+                        <Pressable
+                          key={tab.id}
+                          style={styles.moveTabRow}
+                          onPress={() => {
+                            const target = moveNoteItem;
+                            updateMutation.mutate(
+                              { id: target.id, updates: { kind: tab.id } },
+                              {
+                                onSuccess: () => {
+                                  setMoveNoteItem(null);
+                                  setActiveKind(tab.id);
+                                },
+                                onError: err =>
+                                  Alert.alert(
+                                    'Error',
+                                    err instanceof Error ? err.message : 'Could not move'
+                                  ),
+                              }
+                            );
+                          }}
+                          disabled={updateMutation.isPending}
+                        >
+                          <Text style={styles.moveTabRowLabel}>{tab.label}</Text>
+                          <MaterialCommunityIcons
+                            name="chevron-right"
+                            size={20}
+                            color="#94a3b8"
+                          />
+                        </Pressable>
+                      ))
+                    : null}
+                </ScrollView>
+                <Pressable
+                  style={styles.moveTabCancelRow}
+                  onPress={() => setMoveNoteItem(null)}
+                >
+                  <Text style={styles.moveTabCancelLabel}>Cancel</Text>
+                </Pressable>
               </View>
             </View>
           </View>
@@ -1462,6 +1565,62 @@ const styles = StyleSheet.create({
     width: NOTE_MENU_WIDTH,
     maxWidth: '92%',
     zIndex: 1,
+  },
+  moveTabModalSheet: {
+    width: Math.max(NOTE_MENU_WIDTH, 260),
+    maxWidth: '92%',
+    zIndex: 1,
+    maxHeight: '70%',
+  },
+  moveTabModalCard: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingTop: 12,
+    paddingBottom: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  moveTabModalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0f172a',
+    paddingHorizontal: 14,
+    marginBottom: 8,
+  },
+  moveTabList: {
+    maxHeight: 280,
+  },
+  moveTabRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(0,0,0,0.06)',
+  },
+  moveTabRowLabel: {
+    fontSize: 16,
+    color: '#0f172a',
+    flex: 1,
+  },
+  moveTabCancelRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginTop: 4,
+    alignItems: 'center',
+  },
+  moveTabCancelLabel: {
+    fontSize: 16,
+    color: '#64748b',
+    fontWeight: '500',
   },
   noteMenuCard: {
     width: '100%',
