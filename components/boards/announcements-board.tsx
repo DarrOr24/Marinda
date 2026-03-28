@@ -42,6 +42,7 @@ import { AnnouncementItemEngagement } from '@/components/boards/announcement-ite
 import { ChipSelector } from '@/components/chip-selector';
 import { StickyNote } from '@/components/sticky-note';
 import { Button, ModalCard, ModalShell, Screen, ScreenState, TextInput } from '@/components/ui';
+import { Colors } from '@/config/colors';
 import {
   CUSTOM_TAB_TEXT,
   getBulletinStyle,
@@ -898,6 +899,7 @@ export default function AnnouncementsBoard() {
                 type="ghost"
                 size="sm"
                 title="Cancel"
+                titleColor={Colors.common.gray600}
                 onPress={() => setEditingItem(null)}
               />
               <Pressable
@@ -963,6 +965,7 @@ export default function AnnouncementsBoard() {
                 type="ghost"
                 size="sm"
                 title="Cancel"
+                titleColor={Colors.common.gray600}
                 onPress={() => {
                   setReplyModalItem(null);
                   setReplyModalDraft('');
@@ -1067,6 +1070,7 @@ export default function AnnouncementsBoard() {
                 type="ghost"
                 size="sm"
                 title="Cancel"
+                titleColor={Colors.common.gray600}
                 onPress={() => setShowAddTabModal(false)}
               />
 

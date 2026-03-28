@@ -10,6 +10,7 @@ import {
 } from 'react-native'
 
 import { Button } from '@/components/ui'
+import { Colors } from '@/config/colors'
 import { isValidEmail } from '@/utils/validation.utils'
 
 
@@ -89,6 +90,7 @@ export function EditEmailModal({
             title="Cancel"
             type="ghost"
             size="lg"
+            titleColor={Colors.common.gray600}
             onPress={() => {
               setDraft(initialEmail)
               onClose()

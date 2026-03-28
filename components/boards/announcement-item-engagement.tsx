@@ -25,6 +25,7 @@ import type {
   AnnouncementReply,
 } from '@/lib/announcements/announcements.types';
 import { Button, ModalCard, ModalShell, TextInput } from '@/components/ui';
+import { Colors } from '@/config/colors';
 
 function normalizeReactionKey(emoji: string): string {
   try {
@@ -526,6 +527,7 @@ export function AnnouncementItemEngagement({
               type="ghost"
               size="sm"
               title="Cancel"
+              titleColor={Colors.common.gray600}
               onPress={() => setEditingReply(null)}
             />
             <Pressable
