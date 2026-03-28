@@ -105,6 +105,8 @@ type Props = {
 
   initialDateStr: string;
   mode?: "create" | "edit";
+  /** Overrides the sheet title (create mode: default "New Activity"). */
+  headerTitle?: string;
   submitLabel?: string;
   initial?: Partial<NewActivityForm>;
   /**
@@ -126,6 +128,7 @@ export default function AddActivityModal({
   onSave,
   initialDateStr,
   mode = "create",
+  headerTitle,
   submitLabel,
   initial,
   seriesRecurrenceInitial,
@@ -390,7 +393,8 @@ export default function AddActivityModal({
       <ModalCard style={styles.sheet} maxHeightPadding={24} bottomPadding={12}>
         <View style={styles.header}>
           <Text style={styles.title}>
-            {mode === "edit" ? "Edit Activity" : "New Activity"}
+            {headerTitle ??
+              (mode === "edit" ? "Edit Activity" : "New Activity")}
           </Text>
           <TouchableOpacity onPress={onClose}>
             <MaterialCommunityIcons name="close" size={22} color="#64748b" />

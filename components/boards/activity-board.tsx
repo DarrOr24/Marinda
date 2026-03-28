@@ -97,6 +97,28 @@ function formatTimeFromIso(iso: string) {
   return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
+/** Pre-fill the create form when duplicating a single (non-series) activity. */
+function duplicateInitialFromActivity(
+  a: Activity,
+  selfMemberId: string | undefined,
+): Partial<NewActivityForm> {
+  const ids = new Set<string>();
+  for (const p of a.participants ?? []) ids.add(p.member_id);
+  if (selfMemberId) ids.add(selfMemberId);
+  return {
+    title: a.title,
+    start_at: a.start_at,
+    end_at: a.end_at,
+    location: a.location ?? undefined,
+    money: a.money ?? undefined,
+    ride_needed: !!a.ride_needed,
+    present_needed: !!a.present_needed,
+    babysitter_needed: !!a.babysitter_needed,
+    participants_member_ids: [...ids],
+    notes: a.notes ?? undefined,
+  };
+}
+
 /** Stable ISO for calendar `initialAt` (avoids UTC shifting the local date). */
 function noonLocalIso(d: Date): string {
   return new Date(
@@ -133,6 +155,8 @@ export default function ActivityBoard() {
 
   const [weekOffset, setWeekOffset] = useState<number>(0);
   const [addOpen, setAddOpen] = useState(false);
+  /** Source activity when opening Add in duplicate mode (single events only). */
+  const [duplicateFrom, setDuplicateFrom] = useState<Activity | null>(null);
 
   const [editOpen, setEditOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
@@ -248,7 +272,13 @@ export default function ActivityBoard() {
   }, [familyMembers.data]);
 
   function openAddModal() {
+    setDuplicateFrom(null);
     setAddOpen(true);
+  }
+
+  function closeAddModal() {
+    setAddOpen(false);
+    setDuplicateFrom(null);
   }
 
   function activityColor(status: ActivityStatus, color: string) {
@@ -729,14 +759,25 @@ export default function ActivityBoard() {
       {/* Create Activity */}
       <AddActivityModal
         visible={addOpen}
-        onClose={() => setAddOpen(false)}
+        onClose={closeAddModal}
         onSave={handleSaveActivity}
-        initialDateStr={addModalInitialDateStr}
+        initialDateStr={
+          duplicateFrom
+            ? toLocalDateKey(new Date(duplicateFrom.start_at))
+            : addModalInitialDateStr
+        }
         mode="create"
+        headerTitle={duplicateFrom ? "Duplicate activity" : undefined}
         submitLabel="Save"
-        initial={{
-          participants_member_ids: effectiveMember?.id ? [effectiveMember.id] : [],
-        }}
+        initial={
+          duplicateFrom
+            ? duplicateInitialFromActivity(duplicateFrom, effectiveMember?.id)
+            : {
+                participants_member_ids: effectiveMember?.id
+                  ? [effectiveMember.id]
+                  : [],
+              }
+        }
       />
 
       {/* Activity Detail Modal */}
@@ -872,6 +913,11 @@ export default function ActivityBoard() {
                 ),
             },
           ]);
+        }}
+        onDuplicate={(activity) => {
+          setDetailActivity(null);
+          setDuplicateFrom(activity);
+          setAddOpen(true);
         }}
         onEdit={(activity) => {
           if (activity.seriesOccurrence) {

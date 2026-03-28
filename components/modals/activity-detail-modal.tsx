@@ -90,6 +90,8 @@ type Props = {
   /** Parent moves approved or rejected activity back to pending. */
   onRevertToPending: (activity: Activity) => void;
   onEdit: (activity: Activity) => void;
+  /** Single (non-recurring) activities only; opens create form pre-filled. */
+  onDuplicate?: (activity: Activity) => void;
   /** Creator only; one-off shows a confirm alert; recurring is handled by the parent (scope). */
   onDelete?: (activity: Activity) => void;
   memberById: Map<string, any>;
@@ -106,6 +108,7 @@ export function ActivityDetailModal({
   onReject,
   onRevertToPending,
   onEdit,
+  onDuplicate,
   onDelete,
   memberById,
   creatorName,
@@ -130,6 +133,8 @@ export function ActivityDetailModal({
   const isBirthday = !!activity.isBirthday;
   const isVirtualSeries = activity.seriesOccurrence != null;
   const canAddToCalendar = !isVirtualSeries;
+  const canDuplicate =
+    !isBirthday && !isVirtualSeries && onDuplicate != null;
 
   const memberMap = memberById as Map<string, FamilyMember>;
   const birthdayAccentHex = isBirthday
@@ -405,6 +410,15 @@ export function ActivityDetailModal({
                 />
               ) : null}
             </>
+          ) : null}
+          {canDuplicate ? (
+            <Button
+              type="outline"
+              size="sm"
+              title="Duplicate"
+              leftIcon={<MaterialCommunityIcons name="content-copy" size={18} />}
+              onPress={() => onDuplicate(activity)}
+            />
           ) : null}
           {!isBirthday &&
           parentCanDecide &&
