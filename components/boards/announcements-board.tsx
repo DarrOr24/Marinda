@@ -592,12 +592,7 @@ export default function AnnouncementsBoard() {
         {/* ADD ANNOUNCEMENT INPUT (tap blank composer chrome to dismiss keyboard) */}
         {/* ---------------------------------------------- */}
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <View
-          style={[
-            styles.inputBar,
-            { paddingBottom: Platform.OS === 'android' ? 24 : 0 },
-          ]}
-        >
+        <View style={styles.inputBar}>
           <View style={styles.noteInputWrapper}>
             <TextInput
               style={[styles.textInputMultiline, styles.textInputMultilineWithCheck]}
@@ -1509,7 +1504,8 @@ const styles = StyleSheet.create({
   inputBar: {
     paddingTop: 4,
     marginTop: 0,
-    marginBottom: 0,
+    /** Space between composer and sticky note (same on iOS and Android). */
+    marginBottom: 10,
   },
 
   // --------------------------------------
