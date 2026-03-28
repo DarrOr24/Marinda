@@ -1,11 +1,13 @@
 // app/boards/announcements.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import EmojiPicker, { type EmojiType } from 'rn-emoji-keyboard';
 import {
   ActivityIndicator,
   Alert,
   Keyboard,
+  Modal,
   PixelRatio,
   Platform,
   Pressable,
@@ -22,15 +24,19 @@ import { useAuthContext } from '@/hooks/use-auth-context';
 import { useFamily } from '@/lib/families/families.hooks';
 
 import {
+  useAddAnnouncementReply,
+  useAnnouncementEngagement,
   useCreateAnnouncement,
   useCreateAnnouncementTab,
   useDeleteAnnouncement,
   useFamilyAnnouncements,
   useFamilyAnnouncementTabs,
+  useSetAnnouncementReaction,
   useUpdateAnnouncement,
 } from '@/lib/announcements/announcements.hooks';
 
 
+import { AnnouncementItemEngagement } from '@/components/boards/announcement-item-engagement';
 import { ChipSelector } from '@/components/chip-selector';
 import { StickyNote } from '@/components/sticky-note';
 import { Button, ModalCard, ModalShell, Screen, ScreenState, TextInput } from '@/components/ui';
@@ -39,9 +45,12 @@ import {
   getBulletinStyle,
   TAB_PILL_TEXT,
 } from '@/lib/announcements/announcements.styles';
+import { getAvatarPublicUrl } from '@/lib/profiles/profiles.api';
 import {
   DEFAULT_ANNOUNCEMENT_TABS,
   type AnnouncementItem,
+  type AnnouncementReaction,
+  type AnnouncementReply,
   type AnnouncementTab,
 } from '@/lib/announcements/announcements.types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -56,6 +65,8 @@ function buildDefaultPlaceholder(label: string) {
 // Helper
 const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 6)}` : '—');
 
+const NOTE_MENU_WIDTH = 220;
+
 // --------------------------------------------
 // MAIN COMPONENT
 // --------------------------------------------
@@ -64,7 +75,8 @@ export default function AnnouncementsBoard() {
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
 
-  const { activeFamilyId, effectiveMember, family, members, hasParentPermissions } = useAuthContext() as any;
+  const { activeFamilyId, effectiveMember, family, members, hasParentPermissions } =
+    useAuthContext() as any;
   const familyId = activeFamilyId ?? undefined;
 
   const [search, setSearch] = useState('');
@@ -128,27 +140,55 @@ export default function AnnouncementsBoard() {
     return (id?: string) => (id ? map[id] || shortId(id) : '—');
   }, [rawMembers]);
 
-  const authUserId: string | undefined =
-    effectiveMember?.profile?.id || effectiveMember?.user_id || effectiveMember?.profile_id;
+  const avatarUrlForMemberId = useMemo(() => {
+    const map: Record<string, string | null> = {};
+    for (const m of rawMembers) {
+      const id = m?.id ?? m?.member_id;
+      if (!id) continue;
+      const pub = m?.public_avatar_url;
+      if (typeof pub === 'string' && pub.length > 0) {
+        map[id] = pub;
+        continue;
+      }
+      const path = m?.profile?.avatar_url ?? m?.avatar_url ?? null;
+      map[id] = path ? getAvatarPublicUrl(path) : null;
+    }
+    return (memberId: string) => map[memberId] ?? null;
+  }, [rawMembers]);
 
-  const myFamilyMemberId: string | undefined = useMemo(() => {
-    const me = rawMembers.find(
-      (m: any) =>
-        m?.user_id === authUserId ||
-        m?.profile?.id === authUserId ||
-        m?.profile_id === authUserId
-    );
-    return me?.id as string | undefined;
-  }, [effectiveMember, rawMembers, authUserId]);
+  /** Kid mode: acting kid's member id; otherwise the logged-in member (matches RLS + proxy policy). */
+  const myFamilyMemberId: string | undefined = effectiveMember?.id;
 
   // --------------------------------------------
   // Load Announcements + Realtime
   // --------------------------------------------
   const { data: announcements, isLoading, error } = useFamilyAnnouncements(familyId);
+  const { data: engagement } = useAnnouncementEngagement(familyId);
+
+  const engagementByItem = useMemo(() => {
+    const map = new Map<
+      string,
+      { replies: AnnouncementReply[]; reactions: AnnouncementReaction[] }
+    >();
+    if (!engagement) return map;
+    for (const r of engagement.replies) {
+      const cur = map.get(r.announcement_item_id) ?? { replies: [], reactions: [] };
+      cur.replies.push(r);
+      map.set(r.announcement_item_id, cur);
+    }
+    for (const r of engagement.reactions) {
+      const cur = map.get(r.announcement_item_id) ?? { replies: [], reactions: [] };
+      cur.reactions.push(r);
+      map.set(r.announcement_item_id, cur);
+    }
+    return map;
+  }, [engagement]);
 
   const createMutation = useCreateAnnouncement(familyId);
   const deleteMutation = useDeleteAnnouncement(familyId);
   const updateMutation = useUpdateAnnouncement(familyId);
+  const addReplyMutation = useAddAnnouncementReply(familyId);
+  const setReactionMutation = useSetAnnouncementReaction(familyId);
 
   // --------------------------------------------
   // Load Custom Tabs
@@ -179,6 +219,35 @@ export default function AnnouncementsBoard() {
   const [showAddTabModal, setShowAddTabModal] = useState(false);
   const [newTabLabel, setNewTabLabel] = useState('');
   const [newTabPlaceholder, setNewTabPlaceholder] = useState('');
+
+  const [noteMenuItem, setNoteMenuItem] = useState<AnnouncementItem | null>(null);
+  const [replyModalItem, setReplyModalItem] = useState<AnnouncementItem | null>(null);
+  const [replyModalDraft, setReplyModalDraft] = useState('');
+  const [emojiPickerForItemId, setEmojiPickerForItemId] = useState<string | null>(null);
+  const emojiPickItemRef = useRef<string | null>(null);
+
+  const onBulletinEmojiPicked = useCallback(
+    (picked: EmojiType) => {
+      const itemId = emojiPickItemRef.current;
+      if (!itemId || !myFamilyMemberId || !familyId) return;
+      const trimmed = picked.emoji.trim().slice(0, 32);
+      if (!trimmed) return;
+      setReactionMutation.mutate(
+        {
+          announcementItemId: itemId,
+          familyId,
+          memberId: myFamilyMemberId,
+          emoji: trimmed,
+        },
+        {
+          onError: e => Alert.alert('Error', e.message),
+        }
+      );
+      emojiPickItemRef.current = null;
+      setEmojiPickerForItemId(null);
+    },
+    [familyId, myFamilyMemberId, setReactionMutation]
+  );
 
   // --------------------------------------------
   // SEARCH LOGIC
@@ -539,14 +608,14 @@ export default function AnnouncementsBoard() {
               disabled={!newText.trim() || createMutation.isPending}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="Add note"
+              accessibilityLabel="Send note"
             >
               {createMutation.isPending ? (
                 <ActivityIndicator size="small" color="#2563eb" />
               ) : (
-                <Ionicons
-                  name="checkmark-circle"
-                  size={28}
+                <MaterialCommunityIcons
+                  name="send"
+                  size={26}
                   color={!newText.trim() ? '#cbd5e1' : '#2563eb'}
                 />
               )}
@@ -566,9 +635,12 @@ export default function AnnouncementsBoard() {
             paddingBottom: scrollBottomPad,
             flexGrow: 0,
           }}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
           keyboardDismissMode="on-drag"
-          onScrollBeginDrag={Keyboard.dismiss}
+          onScrollBeginDrag={() => {
+            Keyboard.dismiss();
+            setNoteMenuItem(null);
+          }}
           nestedScrollEnabled={Platform.OS === 'android'}
           {...(Platform.OS === 'ios'
             ? { contentInsetAdjustmentBehavior: 'never' as const }
@@ -598,78 +670,89 @@ export default function AnnouncementsBoard() {
                 </Text>
               </View>
             ) : (
-              filteredAnnouncements.map((item, idx) => (
-                <View
-                  key={item.id}
-                  style={[
-                    styles.itemRow,
-                    idx === filteredAnnouncements.length - 1 && styles.itemRowLast,
-                  ]}
-                >
-                  <View style={styles.itemTextContainer}>
-                    <Text
-                      style={styles.itemMeta}
-                      {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
-                    >
-                      {item.created_by_name} • {new Date(item.created_at).toLocaleString()}
-                    </Text>
+              filteredAnnouncements.map((item, idx) => {
+                const bucket = engagementByItem.get(item.id);
+                return (
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.itemBlock,
+                      idx === filteredAnnouncements.length - 1 && styles.itemBlockLast,
+                    ]}
+                  >
+                    <View style={styles.itemRowInner}>
+                      <View style={styles.itemTextContainer}>
+                        <Text
+                          style={styles.itemMeta}
+                          {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
+                        >
+                          {item.created_by_name} • {new Date(item.created_at).toLocaleString()}
+                        </Text>
 
-                    {item.created_at !== item.updated_at && (
-                      <Text
-                        style={styles.itemMeta}
-                        {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
-                      >
-                        (edited • {new Date(item.updated_at).toLocaleString()})
-                      </Text>
-                    )}
+                        {item.created_at !== item.updated_at && (
+                          <Text
+                            style={styles.itemMeta}
+                            {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
+                          >
+                            (edited • {new Date(item.updated_at).toLocaleString()})
+                          </Text>
+                        )}
 
-                    <Text
-                      style={styles.itemText}
-                      {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
-                    >
-                      {item.text}
-                    </Text>
+                        <Text
+                          style={styles.itemText}
+                          {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
+                        >
+                          {item.text}
+                        </Text>
 
-                    {item.completed && (
-                      <Text
-                        style={styles.itemMeta}
-                        {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
-                      >
-                        ✓ Completed
-                      </Text>
+                        {item.completed && (
+                          <Text
+                            style={styles.itemMeta}
+                            {...(Platform.OS === 'android' ? { includeFontPadding: false } : {})}
+                          >
+                            ✓ Completed
+                          </Text>
+                        )}
+                      </View>
+
+                      <View style={styles.cardActions}>
+                        {myFamilyMemberId ||
+                        item.created_by_member_id === myFamilyMemberId ||
+                        hasParentPermissions ? (
+                          <Pressable
+                            hitSlop={10}
+                            onPress={() => setNoteMenuItem(item)}
+                            style={({ pressed }) => [
+                              styles.noteMenuIconBtn,
+                              pressed && { opacity: 0.72 },
+                            ]}
+                            accessibilityRole="button"
+                            accessibilityLabel="Note actions"
+                          >
+                            <MaterialCommunityIcons
+                              name="dots-vertical"
+                              size={20}
+                              color="#475569"
+                            />
+                          </Pressable>
+                        ) : null}
+                      </View>
+                    </View>
+
+                    {familyId && (
+                      <AnnouncementItemEngagement
+                        familyId={familyId}
+                        myFamilyMemberId={myFamilyMemberId}
+                        hasParentPermissions={!!hasParentPermissions}
+                        nameForId={nameForId}
+                        avatarUrlForMemberId={avatarUrlForMemberId}
+                        replies={bucket?.replies ?? []}
+                        reactions={bucket?.reactions ?? []}
+                      />
                     )}
                   </View>
-
-                  <View style={styles.cardActions}>
-                    {(item.created_by_member_id === myFamilyMemberId ||
-                      hasParentPermissions) && (
-                      <>
-                        <Button
-                          type="ghost"
-                          size="sm"
-                          round
-                          hitSlop={10}
-                          leftIcon={<MaterialCommunityIcons name="pencil-outline" size={18} />}
-                          leftIconColor="#475569"
-                          onPress={() => {
-                            setEditingItem(item);
-                            setEditText(item.text);
-                          }}
-                        />
-                        <Button
-                          type="ghost"
-                          size="sm"
-                          round
-                          hitSlop={10}
-                          leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
-                          leftIconColor="#b91c1c"
-                          onPress={() => confirmDelete(item)}
-                        />
-                      </>
-                    )}
-                  </View>
-                </View>
-              ))
+                );
+              })
             )}
           </StickyNote>
         </ScrollView>
@@ -700,15 +783,11 @@ export default function AnnouncementsBoard() {
                 title="Cancel"
                 onPress={() => setEditingItem(null)}
               />
-
-              <Button
-                type="primary"
-                size="sm"
-                title={updateMutation.isPending ? '...' : 'Save'}
+              <Pressable
+                hitSlop={10}
                 disabled={!editText.trim() || updateMutation.isPending || !editingItem}
                 onPress={() => {
                   if (!editingItem) return;
-
                   updateMutation.mutate(
                     { id: editingItem.id, updates: { text: editText.trim() } },
                     {
@@ -717,10 +796,124 @@ export default function AnnouncementsBoard() {
                     }
                   );
                 }}
-              />
+                style={({ pressed }) => [
+                  styles.modalSendIconBtn,
+                  (!editText.trim() || updateMutation.isPending) && styles.modalSendIconBtnDisabled,
+                  pressed && editText.trim() && !updateMutation.isPending && { opacity: 0.85 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Save note"
+              >
+                {updateMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#2563eb" />
+                ) : (
+                  <MaterialCommunityIcons
+                    name="send"
+                    size={24}
+                    color={
+                      !editText.trim() || updateMutation.isPending ? '#cbd5e1' : '#2563eb'
+                    }
+                  />
+                )}
+              </Pressable>
             </View>
           </ModalCard>
         </ModalShell>
+
+        {/* ---------------------------------------------- */}
+        {/* REPLY TO NOTE (from ⋯ menu) */}
+        {/* ---------------------------------------------- */}
+        <ModalShell
+          visible={!!replyModalItem}
+          onClose={() => {
+            setReplyModalItem(null);
+            setReplyModalDraft('');
+          }}
+          keyboardOffset={0}
+        >
+          <ModalCard>
+            <Text style={styles.modalTitle}>Reply</Text>
+            <TextInput
+              style={styles.textInputMultiline}
+              multiline
+              value={replyModalDraft}
+              onChangeText={setReplyModalDraft}
+              placeholder="Write a reply…"
+              submitBehavior="newline"
+            />
+            <View style={styles.modalButtons}>
+              <Button
+                type="ghost"
+                size="sm"
+                title="Cancel"
+                onPress={() => {
+                  setReplyModalItem(null);
+                  setReplyModalDraft('');
+                }}
+              />
+              <Pressable
+                hitSlop={10}
+                disabled={
+                  !replyModalDraft.trim() || addReplyMutation.isPending || !replyModalItem
+                }
+                onPress={() => {
+                  if (!replyModalItem || !myFamilyMemberId || !familyId) return;
+                  const t = replyModalDraft.trim();
+                  if (!t) return;
+                  addReplyMutation.mutate(
+                    {
+                      announcementItemId: replyModalItem.id,
+                      familyId,
+                      memberId: myFamilyMemberId,
+                      text: t,
+                    },
+                    {
+                      onSuccess: () => {
+                        setReplyModalItem(null);
+                        setReplyModalDraft('');
+                      },
+                      onError: err => Alert.alert('Error', err.message),
+                    }
+                  );
+                }}
+                style={({ pressed }) => [
+                  styles.modalSendIconBtn,
+                  (!replyModalDraft.trim() || addReplyMutation.isPending) &&
+                    styles.modalSendIconBtnDisabled,
+                  pressed &&
+                    replyModalDraft.trim() &&
+                    !addReplyMutation.isPending && { opacity: 0.85 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Send reply"
+              >
+                {addReplyMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#2563eb" />
+                ) : (
+                  <MaterialCommunityIcons
+                    name="send"
+                    size={24}
+                    color={
+                      !replyModalDraft.trim() || addReplyMutation.isPending
+                        ? '#cbd5e1'
+                        : '#2563eb'
+                    }
+                  />
+                )}
+              </Pressable>
+            </View>
+          </ModalCard>
+        </ModalShell>
+
+        <EmojiPicker
+          open={!!emojiPickerForItemId}
+          onClose={() => {
+            emojiPickItemRef.current = null;
+            setEmojiPickerForItemId(null);
+          }}
+          onEmojiSelected={onBulletinEmojiPicked}
+          enableSearchBar
+        />
 
 
         {/* ---------------------------------------------- */}
@@ -788,6 +981,112 @@ export default function AnnouncementsBoard() {
           </ModalCard>
         </ModalShell>
 
+
+        {/* ---------------------------------------------- */}
+        {/* NOTE: ⋯ menu — centered sheet (reliable vs ScrollView measure) */}
+        {/* ---------------------------------------------- */}
+        <Modal
+          visible={!!noteMenuItem}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setNoteMenuItem(null)}
+        >
+          <View style={styles.noteMenuModalRoot}>
+            <Pressable
+              style={styles.noteMenuModalDismiss}
+              onPress={() => setNoteMenuItem(null)}
+            />
+            <View style={styles.noteMenuModalSheet} pointerEvents="box-none">
+              <View style={styles.noteMenuCard}>
+                {noteMenuItem
+                  ? (() => {
+                      const item = noteMenuItem;
+                      const canEditNote =
+                        item.created_by_member_id === myFamilyMemberId ||
+                        hasParentPermissions;
+                      return (
+                        <>
+                          {canEditNote ? (
+                            <Pressable
+                              style={styles.noteMenuRow}
+                              onPress={() => {
+                                setNoteMenuItem(null);
+                                setEditingItem(item);
+                                setEditText(item.text);
+                              }}
+                            >
+                              <MaterialCommunityIcons
+                                name="pencil-outline"
+                                size={18}
+                                color="#334155"
+                              />
+                              <Text style={styles.noteMenuRowLabel}>Edit</Text>
+                            </Pressable>
+                          ) : null}
+                          {canEditNote ? (
+                            <Pressable
+                              style={styles.noteMenuRow}
+                              onPress={() => {
+                                setNoteMenuItem(null);
+                                confirmDelete(item);
+                              }}
+                            >
+                              <MaterialCommunityIcons
+                                name="close"
+                                size={18}
+                                color="#b91c1c"
+                              />
+                              <Text style={styles.noteMenuRowLabelDestructive}>
+                                Delete
+                              </Text>
+                            </Pressable>
+                          ) : null}
+                          {canEditNote && myFamilyMemberId ? (
+                            <View style={styles.noteMenuDivider} />
+                          ) : null}
+                          {myFamilyMemberId ? (
+                            <Pressable
+                              style={styles.noteMenuRow}
+                              onPress={() => {
+                                setNoteMenuItem(null);
+                                setReplyModalItem(item);
+                                setReplyModalDraft('');
+                              }}
+                            >
+                              <MaterialCommunityIcons
+                                name="reply-outline"
+                                size={18}
+                                color="#334155"
+                              />
+                              <Text style={styles.noteMenuRowLabel}>Reply</Text>
+                            </Pressable>
+                          ) : null}
+                          {myFamilyMemberId ? (
+                            <Pressable
+                              style={styles.noteMenuRow}
+                              onPress={() => {
+                                const id = item.id;
+                                setNoteMenuItem(null);
+                                emojiPickItemRef.current = id;
+                                setEmojiPickerForItemId(id);
+                              }}
+                            >
+                              <MaterialCommunityIcons
+                                name="emoticon-happy-outline"
+                                size={18}
+                                color="#334155"
+                              />
+                              <Text style={styles.noteMenuRowLabel}>React</Text>
+                            </Pressable>
+                          ) : null}
+                        </>
+                      );
+                    })()
+                  : null}
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* ---------------------------------------------- */}
         {/* SORT MENU */}
@@ -1007,16 +1306,18 @@ const styles = StyleSheet.create({
   // --------------------------------------
   // LIST — One sticky note per tab (StickyNote component)
   // --------------------------------------
-  itemRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  itemBlock: {
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(0,0,0,0.08)',
-    gap: 8,
   },
-  itemRowLast: {
+  itemBlockLast: {
     borderBottomWidth: 0,
+  },
+  itemRowInner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
   },
   itemTextContainer: { flex: 1, minWidth: 0 },
   itemText: { fontSize: 16 },
@@ -1079,5 +1380,60 @@ const styles = StyleSheet.create({
   },
   menuItemText: {
     fontSize: 16,
+  },
+
+  noteMenuModalRoot: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noteMenuModalDismiss: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15,23,42,0.4)',
+  },
+  noteMenuModalSheet: {
+    width: NOTE_MENU_WIDTH,
+    maxWidth: '92%',
+    zIndex: 1,
+  },
+  noteMenuCard: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  modalSendIconBtn: {
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalSendIconBtnDisabled: { opacity: 0.5 },
+  noteMenuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  noteMenuRowLabel: { fontSize: 16, color: '#0f172a' },
+  noteMenuRowLabelDestructive: { fontSize: 16, color: '#b91c1c', fontWeight: '500' },
+  noteMenuDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+    marginVertical: 2,
+    marginHorizontal: 10,
+  },
+  noteMenuIconBtn: {
+    padding: 4,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

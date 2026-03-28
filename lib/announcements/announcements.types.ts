@@ -22,6 +22,32 @@ export type AnnouncementItem = {
     created_by_name?: string;
 };
 
+export type AnnouncementReply = {
+    id: string;
+    announcement_item_id: string;
+    family_id: string;
+    member_id: string;
+    text: string;
+    created_at: string;
+    updated_at: string;
+    /** Filled in UI */
+    member_name?: string;
+};
+
+export type AnnouncementReaction = {
+    id: string;
+    announcement_item_id: string;
+    family_id: string;
+    member_id: string;
+    emoji: string;
+    created_at: string;
+};
+
+export type AnnouncementEngagementBundle = {
+    replies: AnnouncementReply[];
+    reactions: AnnouncementReaction[];
+};
+
 // -------------------------------
 // DEFAULT tabs (built into code)
 // -------------------------------

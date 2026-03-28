@@ -2,15 +2,25 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
     addAnnouncement,
+    addAnnouncementReaction,
+    addAnnouncementReply,
     createAnnouncementTab,
     deleteAnnouncement,
+    deleteAnnouncementReaction,
+    deleteAnnouncementReply,
     deleteAnnouncementTab,
+    fetchAnnouncementEngagement,
     fetchAnnouncements,
     fetchAnnouncementTabs,
+    setAnnouncementReaction,
     updateAnnouncement,
+    updateAnnouncementReply,
     updateAnnouncementTab,
 } from './announcements.api'
-import type { AnnouncementItem } from './announcements.types'
+import type {
+    AnnouncementEngagementBundle,
+    AnnouncementItem,
+} from './announcements.types'
 
 const announcementsKey = (familyId?: string) =>
     ['announcements', familyId ?? null] as const
@@ -136,5 +146,90 @@ export function useDeleteAnnouncementTab(familyId?: string) {
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: tabsKey(familyId) })
         },
+    })
+}
+
+// -----------------------------
+// Replies & reactions
+// -----------------------------
+const engagementKey = (familyId?: string) =>
+    ['announcement-engagement', familyId ?? null] as const
+
+export function useAnnouncementEngagement(familyId?: string) {
+    return useQuery<AnnouncementEngagementBundle>({
+        queryKey: engagementKey(familyId),
+        queryFn: () => fetchAnnouncementEngagement(familyId!),
+        enabled: !!familyId,
+    })
+}
+
+function invalidateEngagement(qc: ReturnType<typeof useQueryClient>, familyId?: string) {
+    qc.invalidateQueries({
+        queryKey: engagementKey(familyId),
+        refetchType: 'active',
+    })
+}
+
+export function useAddAnnouncementReply(familyId?: string) {
+    const qc = useQueryClient()
+
+    return useMutation({
+        mutationFn: (args: Parameters<typeof addAnnouncementReply>[0]) =>
+            addAnnouncementReply(args),
+
+        onSuccess: () => invalidateEngagement(qc, familyId),
+    })
+}
+
+export function useDeleteAnnouncementReply(familyId?: string) {
+    const qc = useQueryClient()
+
+    return useMutation({
+        mutationFn: (id: string) => deleteAnnouncementReply(id),
+
+        onSuccess: () => invalidateEngagement(qc, familyId),
+    })
+}
+
+export function useUpdateAnnouncementReply(familyId?: string) {
+    const qc = useQueryClient()
+
+    return useMutation({
+        mutationFn: (args: { id: string; text: string }) =>
+            updateAnnouncementReply(args.id, args.text),
+
+        onSuccess: () => invalidateEngagement(qc, familyId),
+    })
+}
+
+export function useAddAnnouncementReaction(familyId?: string) {
+    const qc = useQueryClient()
+
+    return useMutation({
+        mutationFn: (args: Parameters<typeof addAnnouncementReaction>[0]) =>
+            addAnnouncementReaction(args),
+
+        onSuccess: () => invalidateEngagement(qc, familyId),
+    })
+}
+
+export function useSetAnnouncementReaction(familyId?: string) {
+    const qc = useQueryClient()
+
+    return useMutation({
+        mutationFn: (args: Parameters<typeof setAnnouncementReaction>[0]) =>
+            setAnnouncementReaction(args),
+
+        onSuccess: () => invalidateEngagement(qc, familyId),
+    })
+}
+
+export function useDeleteAnnouncementReaction(familyId?: string) {
+    const qc = useQueryClient()
+
+    return useMutation({
+        mutationFn: (id: string) => deleteAnnouncementReaction(id),
+
+        onSuccess: () => invalidateEngagement(qc, familyId),
     })
 }

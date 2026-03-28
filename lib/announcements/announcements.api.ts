@@ -1,8 +1,11 @@
 // lib/announcements/announcements.api.ts
 import { getSupabase } from '../supabase';
 import type {
+    AnnouncementEngagementBundle,
     AnnouncementItem,
     AnnouncementKind,
+    AnnouncementReaction,
+    AnnouncementReply,
 } from './announcements.types';
 
 const supabase = getSupabase();
@@ -214,4 +217,164 @@ export async function deleteAnnouncementTab(id: string) {
 
     if (error) throw new Error(error.message);
     return true;
+}
+
+/* ---------------------------------------------------------
+   REPLIES & REACTIONS (bulletin engagement)
+--------------------------------------------------------- */
+
+function mapReplyRow(row: any): AnnouncementReply {
+    return {
+        id: row.id,
+        announcement_item_id: row.announcement_item_id,
+        family_id: row.family_id,
+        member_id: row.member_id,
+        text: row.text,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+    };
+}
+
+function mapReactionRow(row: any): AnnouncementReaction {
+    return {
+        id: row.id,
+        announcement_item_id: row.announcement_item_id,
+        family_id: row.family_id,
+        member_id: row.member_id,
+        emoji: row.emoji,
+        created_at: row.created_at,
+    };
+}
+
+export async function fetchAnnouncementEngagement(
+    familyId: string,
+): Promise<AnnouncementEngagementBundle> {
+    const [repliesRes, reactionsRes] = await Promise.all([
+        supabase
+            .from('announcement_replies')
+            .select('*')
+            .eq('family_id', familyId)
+            .order('created_at', { ascending: true }),
+        supabase
+            .from('announcement_reactions')
+            .select('*')
+            .eq('family_id', familyId)
+            .order('created_at', { ascending: true }),
+    ]);
+
+    if (repliesRes.error) throw new Error(repliesRes.error.message);
+    if (reactionsRes.error) throw new Error(reactionsRes.error.message);
+
+    return {
+        replies: (repliesRes.data ?? []).map(mapReplyRow),
+        reactions: (reactionsRes.data ?? []).map(mapReactionRow),
+    };
+}
+
+export async function addAnnouncementReply(params: {
+    announcementItemId: string;
+    familyId: string;
+    memberId: string;
+    text: string;
+}) {
+    const { data, error } = await supabase
+        .from('announcement_replies')
+        .insert({
+            announcement_item_id: params.announcementItemId,
+            family_id: params.familyId,
+            member_id: params.memberId,
+            text: params.text.trim(),
+        })
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+    return mapReplyRow(data);
+}
+
+export async function deleteAnnouncementReply(id: string) {
+    const { error } = await supabase
+        .from('announcement_replies')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw new Error(error.message);
+}
+
+export async function updateAnnouncementReply(id: string, text: string) {
+    const trimmed = text.trim();
+    if (!trimmed) throw new Error('Reply cannot be empty');
+
+    const { error } = await supabase
+        .from('announcement_replies')
+        .update({ text: trimmed })
+        .eq('id', id);
+
+    if (error) throw new Error(error.message);
+}
+
+export async function addAnnouncementReaction(params: {
+    announcementItemId: string;
+    familyId: string;
+    memberId: string;
+    emoji: string;
+}) {
+    const emoji = params.emoji.trim().slice(0, 32);
+    if (!emoji) throw new Error('Emoji required');
+
+    const { data, error } = await supabase
+        .from('announcement_reactions')
+        .insert({
+            announcement_item_id: params.announcementItemId,
+            family_id: params.familyId,
+            member_id: params.memberId,
+            emoji,
+        })
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+    return mapReactionRow(data);
+}
+
+/** Replace any existing reaction from this member on the item with the given emoji. */
+export async function setAnnouncementReaction(params: {
+    announcementItemId: string;
+    familyId: string;
+    memberId: string;
+    emoji: string;
+}) {
+    const emoji = params.emoji.trim().slice(0, 32);
+    if (!emoji) throw new Error('Emoji required');
+
+    const { error: delError } = await supabase
+        .from('announcement_reactions')
+        .delete()
+        .eq('announcement_item_id', params.announcementItemId)
+        .eq('member_id', params.memberId);
+
+    if (delError) throw new Error(delError.message);
+
+    const { data, error } = await supabase
+        .from('announcement_reactions')
+        .insert({
+            announcement_item_id: params.announcementItemId,
+            family_id: params.familyId,
+            member_id: params.memberId,
+            emoji,
+        })
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+    return mapReactionRow(data);
+}
+
+export async function deleteAnnouncementReaction(id: string) {
+    const { error } = await supabase
+        .from('announcement_reactions')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw new Error(error.message);
 }
