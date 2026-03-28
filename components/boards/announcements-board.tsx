@@ -643,6 +643,7 @@ export default function AnnouncementsBoard() {
                   <View style={styles.cardActions}>
                     {(item.created_by_member_id === myFamilyMemberId ||
                       hasParentPermissions) && (
+                      <>
                         <Button
                           type="ghost"
                           size="sm"
@@ -655,16 +656,17 @@ export default function AnnouncementsBoard() {
                             setEditText(item.text);
                           }}
                         />
-                      )}
-                    <Button
-                      type="ghost"
-                      size="sm"
-                      round
-                      hitSlop={10}
-                      leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
-                      leftIconColor="#b91c1c"
-                      onPress={() => confirmDelete(item)}
-                    />
+                        <Button
+                          type="ghost"
+                          size="sm"
+                          round
+                          hitSlop={10}
+                          leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
+                          leftIconColor="#b91c1c"
+                          onPress={() => confirmDelete(item)}
+                        />
+                      </>
+                    )}
                   </View>
                 </View>
               ))
