@@ -181,6 +181,16 @@ export function HeaderProfileButton() {
                     style={styles.item}
                     onPress={() => {
                       setOpen(false)
+                      router.push('/settings')
+                    }}
+                  >
+                    <MaterialCommunityIcons name="cog-outline" size={20} color="#334155" />
+                    <Text style={styles.itemText}>Settings</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.item}
+                    onPress={() => {
+                      setOpen(false)
                       void exitKidMode?.()
                     }}
                   >
