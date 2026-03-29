@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 
-import { AppModal, Button } from "@/components/ui";
+import { Button, ModalDialog } from "@/components/ui";
 import { WheelPicker } from "./wheel-picker";
 
 import {
@@ -163,7 +163,13 @@ export function DateTimeWheelPicker({
   // ───────────────────────────────────────────────────────────────
 
   return (
-    <AppModal visible={visible} onClose={onCancel} type="bottom-sheet" size="xl" avoidKeyboard={false}>
+    <ModalDialog
+      visible={visible}
+      onClose={onCancel}
+      presentation="bottom-sheet"
+      size="xl"
+      avoidKeyboard={false}
+    >
           {/* Header — full date */}
           <Text style={styles.title}>
             {`${getWeekDayFromDateString(selectedDayISO)}, `}
@@ -251,7 +257,7 @@ export function DateTimeWheelPicker({
               }}
             />
           </View>
-    </AppModal>
+    </ModalDialog>
   );
 }
 

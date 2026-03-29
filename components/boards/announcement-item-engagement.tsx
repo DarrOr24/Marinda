@@ -19,11 +19,12 @@ import {
   useDeleteAnnouncementReply,
   useUpdateAnnouncementReply,
 } from '@/lib/announcements/announcements.hooks';
+import { useRefById } from '@/hooks/use-ref-by-id';
 import type {
   AnnouncementReaction,
   AnnouncementReply,
 } from '@/lib/announcements/announcements.types';
-import { AppModal, Button, TextInput } from '@/components/ui';
+import { Button, ModalDialog, ModalPopover, TextInput } from '@/components/ui';
 import { Colors } from '@/config/colors';
 
 function normalizeReactionKey(emoji: string): string {
@@ -76,6 +77,7 @@ export function AnnouncementItemEngagement({
   const [editReplyDraft, setEditReplyDraft] = useState('');
   const [reactionsSheetOpen, setReactionsSheetOpen] = useState(false);
   const [replyMenuReply, setReplyMenuReply] = useState<AnnouncementReply | null>(null);
+  const getReplyMenuAnchorRef = useRefById<View>();
 
   const byEmojiGrouped = useMemo(() => {
     const m = new Map<
@@ -247,18 +249,20 @@ export function AnnouncementItemEngagement({
                 </Text>
               </View>
               {canModifyReply(r) && (
-                <Pressable
-                  hitSlop={10}
-                  onPress={() => setReplyMenuReply(r)}
-                  style={({ pressed }) => [
-                    styles.replyMenuIconBtn,
-                    pressed && { opacity: 0.72 },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Reply actions"
-                >
-                  <MaterialCommunityIcons name="dots-vertical" size={20} color="#475569" />
-                </Pressable>
+                <View ref={getReplyMenuAnchorRef(r.id)} collapsable={false}>
+                  <Pressable
+                    hitSlop={10}
+                    onPress={() => setReplyMenuReply(r)}
+                    style={({ pressed }) => [
+                      styles.replyMenuIconBtn,
+                      pressed && { opacity: 0.72 },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Reply actions"
+                  >
+                    <MaterialCommunityIcons name="dots-vertical" size={20} color="#475569" />
+                  </Pressable>
+                </View>
               )}
             </View>
             );
@@ -266,7 +270,7 @@ export function AnnouncementItemEngagement({
         </View>
       )}
 
-      <AppModal visible={reactionsSheetOpen} onClose={closeReactionsSheet} size="md">
+      <ModalDialog visible={reactionsSheetOpen} onClose={closeReactionsSheet} size="md">
         <View>
           {reactionsSheetOpen ? (
             <>
@@ -431,13 +435,13 @@ export function AnnouncementItemEngagement({
             </>
           ) : null}
         </View>
-      </AppModal>
+      </ModalDialog>
 
-      <AppModal
+      <ModalPopover
         visible={!!replyMenuReply}
         onClose={() => setReplyMenuReply(null)}
-        avoidKeyboard={false}
-        type="menu"
+        anchorRef={getReplyMenuAnchorRef(replyMenuReply?.id ?? '')}
+        position="bottom-right"
       >
         {replyMenuReply ? (
           <>
@@ -493,9 +497,9 @@ export function AnnouncementItemEngagement({
             </Pressable>
           </>
         ) : null}
-      </AppModal>
+      </ModalPopover>
 
-      <AppModal
+      <ModalDialog
         visible={!!editingReply}
         onClose={() => setEditingReply(null)}
         size="md"
@@ -555,7 +559,7 @@ export function AnnouncementItemEngagement({
             </Pressable>
           </View>
         </View>
-      </AppModal>
+      </ModalDialog>
     </View>
   );
 }

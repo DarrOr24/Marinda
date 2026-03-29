@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 
 import { useAuthContext } from '@/hooks/use-auth-context';
+import { useRefById } from '@/hooks/use-ref-by-id';
 import { useFamily } from '@/lib/families/families.hooks';
 
 import {
@@ -40,7 +41,7 @@ import {
 import { AnnouncementItemEngagement } from '@/components/boards/announcement-item-engagement';
 import { ChipSelector } from '@/components/chip-selector';
 import { StickyNote } from '@/components/sticky-note';
-import { AppModal, Button, Screen, ScreenState, TextInput } from '@/components/ui';
+import { Button, ModalDialog, ModalPopover, Screen, ScreenState, TextInput } from '@/components/ui';
 import { Colors } from '@/config/colors';
 import {
   CUSTOM_TAB_TEXT,
@@ -103,6 +104,7 @@ export default function AnnouncementsBoard() {
   const [showAuthorMenu, setShowAuthorMenu] = useState(false);
   const [searchExpanded, setSearchExpanded] = useState(false);
   const bulletinSearchRef = useRef<RNTextInput>(null);
+  const getNoteMenuAnchorRef = useRefById<View>();
 
   /** Check: collapse toolbar; keep query and filtered results. */
   const applyBulletinSearch = () => {
@@ -909,22 +911,24 @@ export default function AnnouncementsBoard() {
                         {myFamilyMemberId ||
                         item.created_by_member_id === myFamilyMemberId ||
                         hasParentPermissions ? (
-                          <Pressable
-                            hitSlop={10}
-                            onPress={() => setNoteMenuItem(item)}
-                            style={({ pressed }) => [
-                              styles.noteMenuIconBtn,
-                              pressed && { opacity: 0.72 },
-                            ]}
-                            accessibilityRole="button"
-                            accessibilityLabel="Note actions"
-                          >
-                            <MaterialCommunityIcons
-                              name="dots-vertical"
-                              size={20}
-                              color="#475569"
-                            />
-                          </Pressable>
+                          <View ref={getNoteMenuAnchorRef(item.id)} collapsable={false}>
+                            <Pressable
+                              hitSlop={10}
+                              onPress={() => setNoteMenuItem(item)}
+                              style={({ pressed }) => [
+                                styles.noteMenuIconBtn,
+                                pressed && { opacity: 0.72 },
+                              ]}
+                              accessibilityRole="button"
+                              accessibilityLabel="Note actions"
+                            >
+                              <MaterialCommunityIcons
+                                name="dots-vertical"
+                                size={20}
+                                color="#475569"
+                              />
+                            </Pressable>
+                          </View>
                         ) : null}
                       </View>
                     </View>
@@ -950,7 +954,7 @@ export default function AnnouncementsBoard() {
         {/* ---------------------------------------------- */}
         {/* EDIT ANNOUNCEMENT MODAL */}
         {/* ---------------------------------------------- */}
-        <AppModal
+        <ModalDialog
           visible={!!editingItem}
           onClose={() => setEditingItem(null)}
           size="md"
@@ -1009,12 +1013,12 @@ export default function AnnouncementsBoard() {
               </Pressable>
             </View>
           </View>
-        </AppModal>
+        </ModalDialog>
 
         {/* ---------------------------------------------- */}
         {/* REPLY TO NOTE (from ⋯ menu) */}
         {/* ---------------------------------------------- */}
-        <AppModal
+        <ModalDialog
           visible={!!replyModalItem}
           onClose={() => {
             setReplyModalItem(null);
@@ -1095,7 +1099,7 @@ export default function AnnouncementsBoard() {
               </Pressable>
             </View>
           </View>
-        </AppModal>
+        </ModalDialog>
 
         <EmojiPicker
           open={!!emojiPickerForItemId}
@@ -1111,7 +1115,7 @@ export default function AnnouncementsBoard() {
         {/* ---------------------------------------------- */}
         {/* ADD TAB MODAL */}
         {/* ---------------------------------------------- */}
-        <AppModal
+        <ModalDialog
           visible={showAddTabModal}
           onClose={() => setShowAddTabModal(false)}
           size="md"
@@ -1172,17 +1176,14 @@ export default function AnnouncementsBoard() {
               />
             </View>
           </View>
-        </AppModal>
+        </ModalDialog>
 
 
-        {/* ---------------------------------------------- */}
-        {/* NOTE: ⋯ menu — centered sheet (reliable vs ScrollView measure) */}
-        {/* ---------------------------------------------- */}
-        <AppModal
+        <ModalPopover
           visible={!!noteMenuItem}
           onClose={() => setNoteMenuItem(null)}
-          avoidKeyboard={false}
-          type="menu"
+          anchorRef={getNoteMenuAnchorRef(noteMenuItem?.id ?? '')}
+          position="bottom-right"
         >
           {noteMenuItem
             ? (() => {
@@ -1307,14 +1308,13 @@ export default function AnnouncementsBoard() {
                 );
               })()
             : null}
-        </AppModal>
+        </ModalPopover>
 
-        <AppModal
+        <ModalDialog
           visible={!!moveNoteItem}
           onClose={() => setMoveNoteItem(null)}
           avoidKeyboard={false}
-          type="menu"
-          size="menu-wide"
+          size="md"
         >
             <View style={styles.moveTabModalSheet}>
               <View style={styles.moveTabMenuContent}>
@@ -1366,7 +1366,7 @@ export default function AnnouncementsBoard() {
                 </Pressable>
               </View>
             </View>
-        </AppModal>
+        </ModalDialog>
           </View>
         </View>
       </View>

@@ -1,6 +1,6 @@
 import { GroceryItemModal } from '@/components/modals/grocery-item-modal';
 import { ChipSelector } from '@/components/chip-selector';
-import { AppModal, Button, MetaRow, Screen, TextInput } from '@/components/ui';
+import { Button, MetaRow, ModalDialog, ModalPopover, Screen, TextInput } from '@/components/ui';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useFamily } from '@/lib/families/families.hooks';
 import { useFocusEffect } from '@react-navigation/native';
@@ -729,7 +729,7 @@ export default function Grocery() {
                 onSubmit={saveItem}
             />
 
-            <AppModal visible={showAddTabModal} onClose={() => setShowAddTabModal(false)} size="md">
+            <ModalDialog visible={showAddTabModal} onClose={() => setShowAddTabModal(false)} size="md">
                 <View>
                     <Text style={styles.addTabTitle}>New shopping list</Text>
 
@@ -761,9 +761,9 @@ export default function Grocery() {
                         />
                     </View>
                 </View>
-            </AppModal>
+            </ModalDialog>
 
-            <AppModal visible={!!infoItem} onClose={() => setInfoItem(null)} size="md">
+            <ModalDialog visible={!!infoItem} onClose={() => setInfoItem(null)} size="md">
                 <View>
                     {infoItem && (
                         <>
@@ -795,16 +795,14 @@ export default function Grocery() {
                         </>
                     )}
                 </View>
-            </AppModal>
+            </ModalDialog>
 
-            <AppModal
+            <ModalPopover
                 visible={viewMenuOpen}
                 onClose={closeViewMenu}
-                avoidKeyboard={false}
-                type="popover"
                 size="menu-wide"
-                position="top-right"
                 anchorRef={viewMenuAnchorRef}
+                position="bottom-right"
             >
                 {isGroceriesList ? (
                     <Pressable
@@ -835,7 +833,7 @@ export default function Grocery() {
                 >
                     <Text style={styles.viewOptionText}>All items (A → Z)</Text>
                 </Pressable>
-            </AppModal>
+            </ModalPopover>
         </Screen>
     );
 }

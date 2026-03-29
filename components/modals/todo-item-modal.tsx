@@ -1,8 +1,8 @@
 import { MembersSelector } from '@/components/members-selector';
-import { AppModal, Button, TextInput, useModalScrollMaxHeight } from '@/components/ui';
+import { Button, ModalDialog, TextInput } from '@/components/ui';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 type Props = {
   visible: boolean;
@@ -28,22 +28,12 @@ export function TodoItemModal({
   onCancel,
   onSubmit,
 }: Props) {
-  const scrollMaxHeight = useModalScrollMaxHeight(112);
   const title = mode === 'edit' ? 'Edit to-do' : 'Add to-do';
   const submitLabel = mode === 'edit' ? 'Save' : 'Add';
 
   return (
-    <AppModal visible={visible} onClose={onCancel} size="lg">
-      <Text style={styles.title}>{title}</Text>
-
-      <ScrollView
-        style={{ maxHeight: scrollMaxHeight }}
-        contentContainerStyle={{ paddingBottom: 16, flexGrow: 0 }}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="none"
-        showsVerticalScrollIndicator={true}
-        nestedScrollEnabled
-      >
+    <ModalDialog visible={visible} onClose={onCancel} size="lg" title={title} scrollable>
+      <View>
         <TextInput
           label="Task"
           value={name}
@@ -70,23 +60,16 @@ export function TodoItemModal({
             />
           </View>
         ) : null}
-      </ScrollView>
-
+      </View>
       <View style={styles.actions}>
         <Button type="outline" size="sm" title="Cancel" onPress={onCancel} />
         <Button type="primary" size="sm" title={submitLabel} onPress={onSubmit} />
       </View>
-    </AppModal>
+    </ModalDialog>
   );
 }
 
 const styles = StyleSheet.create({
-  title: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0f172a',
-    marginBottom: 12,
-  },
   fieldGap: {
     marginTop: 4,
   },

@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native'
 
-import { AppModal, Button } from '@/components/ui'
+import { Button, ModalDialog } from '@/components/ui'
 import { Colors } from '@/config/colors'
 import { isValidEmail } from '@/utils/validation.utils'
 
@@ -39,7 +39,7 @@ export function EditEmailModal({
   const showInvalid = draft.trim().length > 0 && !isValidEmail(draft)
 
   return (
-    <AppModal visible={visible} onClose={onClose} onShow={() => setDraft(initialEmail)} size="md">
+    <ModalDialog visible={visible} onClose={onClose} onShow={() => setDraft(initialEmail)} size="md">
         <Text style={styles.title}>Change email</Text>
         <Text style={styles.subtitle}>
           We’ll send a verification link to the new address.
@@ -88,7 +88,7 @@ export function EditEmailModal({
             fullWidth
           />
         </View>
-    </AppModal>
+    </ModalDialog>
   )
 }
 

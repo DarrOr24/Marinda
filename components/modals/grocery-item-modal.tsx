@@ -1,10 +1,9 @@
-import { AppModal, Button, TextInput, useModalScrollMaxHeight } from '@/components/ui';
+import { Button, ModalDialog, TextInput } from '@/components/ui';
 import type { ShoppingTab } from '@/lib/groceries/shopping.types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import {
     Pressable,
-    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -74,7 +73,6 @@ export function GroceryItemModal({
     onCancel,
     onSubmit,
 }: Props) {
-    const scrollMaxHeight = useModalScrollMaxHeight(112);
     const title = mode === 'edit' ? 'Edit Shopping Item' : 'Add Shopping Item';
     const submitLabel = mode === 'edit' ? 'Save' : 'Add';
 
@@ -82,17 +80,8 @@ export function GroceryItemModal({
         tabs.find((t) => t.id === listKind)?.label ?? 'Choose list';
 
     return (
-        <AppModal visible={visible} onClose={onCancel} size="lg">
-            <Text style={styles.title}>{title}</Text>
-
-            <ScrollView
-                style={{ maxHeight: scrollMaxHeight }}
-                contentContainerStyle={{ paddingBottom: 16, flexGrow: 0 }}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="none"
-                showsVerticalScrollIndicator={true}
-                nestedScrollEnabled
-            >
+        <ModalDialog visible={visible} onClose={onCancel} size="lg" title={title} scrollable>
+            <View>
                 <TextInput
                     label="Item"
                     value={name}
@@ -181,18 +170,16 @@ export function GroceryItemModal({
                     placeholder="e.g., 2, 3 packs, 1kg"
                     containerStyle={styles.label}
                 />
-            </ScrollView>
-
+            </View>
             <View style={styles.actions}>
                 <Button type="outline" size="sm" title="Cancel" onPress={onCancel} />
                 <Button type="primary" size="sm" title={submitLabel} onPress={onSubmit} />
             </View>
-        </AppModal>
+        </ModalDialog>
     );
 }
 
 const styles = StyleSheet.create({
-    title: { fontSize: 18, fontWeight: '800', color: '#0f172a', marginBottom: 12 },
     label: { marginTop: 8 },
     labelText: { fontSize: 12, color: '#475569', marginTop: 8, marginBottom: 4 },
 

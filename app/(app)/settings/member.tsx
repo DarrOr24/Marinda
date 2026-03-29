@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, View } from 'react-native'
 
 import { ChipSelector, type ChipOption } from '@/components/chip-selector'
-import { AppModal, Button, Screen, ScreenState } from '@/components/ui'
+import { Button, ModalDialog, Screen, ScreenState } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useColorPalette, useMember, useUpdateMember } from '@/lib/members/members.hooks'
 import { formatColorName, tint } from '@/utils/color.utils'
@@ -152,7 +152,7 @@ export default function MyFamilyMemberSettingsScreen() {
         />
       </View>
 
-      <AppModal
+      <ModalDialog
         visible={themeModalVisible}
         onClose={() => setThemeModalVisible(false)}
         size="md"
@@ -222,7 +222,7 @@ export default function MyFamilyMemberSettingsScreen() {
               style={{ marginTop: 16, alignSelf: 'flex-end' }}
             />
           </View>
-      </AppModal>
+      </ModalDialog>
     </Screen>
   )
 }

@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { Calendar } from "react-native-calendars";
 
-import { AppModal, Button } from "@/components/ui";
+import { Button, ModalDialog } from "@/components/ui";
 
 export function toLocalYmdFromIso(iso: string): string {
   const d = new Date(iso);
@@ -135,7 +135,7 @@ export function CalendarDateModal({
   }
 
   return (
-    <AppModal visible={visible} onClose={onCancel} size="md">
+    <ModalDialog visible={visible} onClose={onCancel} size="md">
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>{title}</Text>
             <Pressable
@@ -231,7 +231,7 @@ export function CalendarDateModal({
           <View style={styles.actions}>
             <Button type="outline" size="sm" title="Cancel" onPress={onCancel} />
           </View>
-    </AppModal>
+    </ModalDialog>
   );
 }
 

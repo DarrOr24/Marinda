@@ -17,7 +17,7 @@ import {
 } from "@/components/calendar-date-modal";
 import { ChipSelector } from "@/components/chip-selector";
 import { DateRangePicker } from "@/components/date-range-picker";
-import { AppModal } from "@/components/ui";
+import { ModalDialog } from "@/components/ui";
 import {
   buildRecurrenceRule,
   formatRecurrenceRuleSummary,
@@ -391,7 +391,7 @@ export default function AddActivityModal({
 
   return (
     <>
-      <AppModal
+      <ModalDialog
         visible={visible}
         onClose={onClose}
         size="xl"
@@ -689,7 +689,7 @@ export default function AddActivityModal({
         </FormFieldRow>
 
         <FormFieldRow icon="account-group-outline">
-          <Text style={styles.label}>Who's going?</Text>
+          <Text style={styles.label}>Who&apos;s going?</Text>
           <MembersSelector
             values={selectedIds}
             onChange={setSelectedIds}
@@ -717,7 +717,7 @@ export default function AddActivityModal({
             disabled={!canSave}
           />
         </View>
-      </AppModal>
+      </ModalDialog>
       <CalendarDateModal
         visible={untilPickerOpen}
         title="Repeat until"

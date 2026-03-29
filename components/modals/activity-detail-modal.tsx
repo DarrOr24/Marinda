@@ -5,16 +5,14 @@ import {
   Alert,
   Linking,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import {
-  AppModal,
   Button,
+  ModalDialog,
   TextInput,
-  useModalScrollMaxHeight,
 } from "@/components/ui";
 import { addActivityToCalendar } from "@/lib/calendar/add-activity-to-calendar";
 import { getActivityRowAccentColor } from "@/lib/activities/activities.accent-color";
@@ -114,7 +112,6 @@ export function ActivityDetailModal({
   isParent,
   isCreator,
 }: Props) {
-  const scrollMaxHeight = useModalScrollMaxHeight(92);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [calendarBusy, setCalendarBusy] = useState(false);
@@ -228,18 +225,10 @@ export function ActivityDetailModal({
   }
 
   return (
-    <AppModal visible={visible} onClose={onClose} size="lg">
+    <ModalDialog visible={visible} onClose={onClose} size="lg" scrollable>
       <View style={styles.card}>
         <Text style={styles.title}>{isBirthday ? "Birthday" : "Activity"}</Text>
-
-        <ScrollView
-          style={{ maxHeight: scrollMaxHeight }}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="none"
-          showsVerticalScrollIndicator={true}
-          nestedScrollEnabled
-        >
+        <View style={styles.scrollContent}>
           {isBirthday ? (
             <View style={styles.birthdayTitleRow}>
               <MaterialCommunityIcons
@@ -357,7 +346,7 @@ export function ActivityDetailModal({
               />
             </>
           ) : null}
-        </ScrollView>
+        </View>
 
         {rejectOpen && isParent && activity.status === "PENDING" ? (
           <View style={styles.rejectBox}>
@@ -491,7 +480,7 @@ export function ActivityDetailModal({
           />
         </View>
       </View>
-    </AppModal>
+    </ModalDialog>
   );
 }
 
