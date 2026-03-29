@@ -98,19 +98,23 @@ export function ActivityBoardHeaderNav({
 
   return (
     <View style={styles.headerRow}>
-      <BoardNavChevronButton
-        direction="left"
-        disabled={!canPrev}
-        onPress={onPrev}
-        accessibilityLabel={prevAccessibilityLabel}
-      />
+      <View style={styles.navBtnSlot}>
+        <BoardNavChevronButton
+          direction="left"
+          disabled={!canPrev}
+          onPress={onPrev}
+          accessibilityLabel={prevAccessibilityLabel}
+        />
+      </View>
       <View style={styles.headerTitleWrap}>{titleEl}</View>
-      <BoardNavChevronButton
-        direction="right"
-        disabled={!canNext}
-        onPress={onNext}
-        accessibilityLabel={nextAccessibilityLabel}
-      />
+      <View style={styles.navBtnSlot}>
+        <BoardNavChevronButton
+          direction="right"
+          disabled={!canNext}
+          onPress={onNext}
+          accessibilityLabel={nextAccessibilityLabel}
+        />
+      </View>
     </View>
   );
 }
@@ -118,23 +122,27 @@ export function ActivityBoardHeaderNav({
 const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "stretch",
     gap: 10,
+  },
+  /** Keeps 36×36 chevrons vertically centered when the title grows (large accessibility text). */
+  navBtnSlot: {
+    justifyContent: "center",
   },
   headerTitleWrap: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 6,
+    minWidth: 0,
   },
   titleWithCalendar: {
-    flex: 1,
-    minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
     maxWidth: "100%",
+    width: "100%",
   },
   calendarIcon: {
     flexShrink: 0,

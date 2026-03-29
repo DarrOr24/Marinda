@@ -2,6 +2,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useLayoutEffect, useMemo, useRef } from "react";
 import {
+  PixelRatio,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -247,7 +248,7 @@ export function ActivityDayView({
     return h;
   }, []);
 
-  /** Wide enough for the longest localized hour label on one line (not a fixed 52px). */
+  /** Wide enough for the longest localized hour label on one line; scales with accessibility font size. */
   const timeGutterMinWidth = useMemo(() => timeGutterMinWidthPx(), []);
 
   const dayKey = useMemo(() => {
@@ -474,38 +475,43 @@ function formatHourLabel(h: number) {
  * Keeps “10:00 a.m.” style strings on one line without hard-coding 52px.
  */
 function timeGutterMinWidthPx(): number {
+  const fontScale = PixelRatio.getFontScale();
   let widest = "All-day";
   for (let hh = TIMELINE_START_HOUR; hh < TIMELINE_END_HOUR; hh++) {
     const label = formatHourLabel(hh);
     if (label.length > widest.length) widest = label;
   }
   const approxCharPx = 7;
-  return Math.min(112, Math.max(72, Math.ceil(widest.length * approxCharPx + 8)));
+  const estimated = Math.ceil(widest.length * approxCharPx * fontScale + 12 * fontScale);
+  return Math.min(200, Math.max(Math.ceil(72 * fontScale), estimated));
 }
 
 const styles = StyleSheet.create({
+  /**
+   * Horizontal inset comes from `activity-board` `styles.center` (10pt), same as the week list.
+   * Avoid padding here so day mode is not doubly inset vs week mode.
+   */
   root: {
     flex: 1,
     minHeight: 0,
-    paddingLeft: 8,
-    paddingRight: 8,
     paddingTop: 4,
   },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     marginBottom: 12,
     flexShrink: 0,
   },
   weekBackBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
+    gap: 4,
     flexShrink: 0,
     paddingVertical: 4,
-    /** Align leading edge with hour / “All-day” label column (icon has built-in side bearing). */
-    marginLeft: -4,
+    paddingRight: 6,
+    marginLeft: 0,
+    maxWidth: "36%",
   },
   weekBackText: {
     fontSize: 16,
@@ -525,8 +531,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    minWidth: 0,
-    paddingHorizontal: 4,
+    minWidth: 48,
+    paddingHorizontal: 6,
+    overflow: "visible",
   },
   dayTitleText: {
     flexShrink: 1,
@@ -534,6 +541,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#0f172a",
     textAlign: "center",
+    minWidth: 0,
   },
   dayCalendarIcon: {
     flexShrink: 0,
@@ -637,7 +645,10 @@ const styles = StyleSheet.create({
     position: "relative",
     borderLeftWidth: 1,
     borderLeftColor: "#e2e8f0",
-    paddingHorizontal: 4,
+    /** Match day header `dayNav` (`marginRight: -2`): card border aligns with chevron tiles. */
+    paddingLeft: 4,
+    paddingRight: 0,
+    marginRight: -2,
     overflow: "hidden",
   },
   gridLine: {
