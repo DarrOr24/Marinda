@@ -1,7 +1,7 @@
 // components/chore-detail-modal.tsx
 import { ChipSelector } from '@/components/chip-selector';
 import MediaPicker, { PickedMedia } from '@/components/media-picker';
-import { AppModal, Button, MetaRow, TextInput, useModalScrollMaxHeight } from '@/components/ui';
+import { Button, MetaRow, ModalDialog, TextInput } from '@/components/ui';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { ChoreView, Proof } from '@/lib/chores/chores.types';
 import { Audio, ResizeMode, Video } from 'expo-av';
@@ -10,7 +10,6 @@ import {
     Alert,
     Image,
     Keyboard,
-    ScrollView,
     StyleSheet,
     Text,
     View,
@@ -58,7 +57,6 @@ export default function ChoreDetailModal({
     doneByOptions,
     defaultDoneById,
 }: Props) {
-    const scrollMaxHeight = useModalScrollMaxHeight(78);
     const { hasParentPermissions } = useAuthContext();
 
     // 🔹 Normalize assignees: plural-only
@@ -294,25 +292,15 @@ export default function ChoreDetailModal({
     }
 
     return (
-        <AppModal
+        <ModalDialog
             visible={visible}
             onClose={requestClose}
             size="lg"
+            scrollable
         >
             <>
-                {/* HEADER (outside scroll) */}
                 <Text style={s.title}>{chore.title}</Text>
                 <Text style={s.status}>{chore.status.toUpperCase()}</Text>
-
-                {/* SCROLLING BODY */}
-                <ScrollView
-                    style={{ maxHeight: scrollMaxHeight }}
-                    contentContainerStyle={{ paddingBottom: 16, flexGrow: 0 }}
-                    keyboardShouldPersistTaps="handled"
-                    keyboardDismissMode="none"
-                    showsVerticalScrollIndicator={true}
-                    nestedScrollEnabled
-                >
                     {chore.points > 0 && (
                         <Text style={[s.text, { marginTop: 2 }]}>
                             Worth: <Text style={s.bold}>{chore.points} pts</Text>
@@ -573,9 +561,7 @@ export default function ChoreDetailModal({
                             </View>
                         </>
                     )}
-                </ScrollView>
 
-                {/* FOOTER (outside scroll) */}
                 {chore.status === 'open' && (
                     <View style={s.row}>
                         <View style={s.flex1}>
@@ -612,7 +598,7 @@ export default function ChoreDetailModal({
                     </View>
                 )}
             </>
-        </AppModal>
+        </ModalDialog>
     );
 
 }

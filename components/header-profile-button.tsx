@@ -15,7 +15,7 @@ import {
 } from 'react-native'
 
 import { MemberAvatar } from '@/components/avatar/member-avatar'
-import { AppModal } from '@/components/ui'
+import { ModalPopover } from '@/components/ui'
 import type { FamilyMember } from '@/lib/members/members.types'
 import { memberDisplayName } from '@/utils/format.utils'
 
@@ -127,87 +127,85 @@ export function HeaderProfileButton() {
       </View>
 
       {/* Dropdown Modal */}
-      <AppModal
+      <ModalPopover
         visible={open}
         onClose={() => setOpen(false)}
-        avoidKeyboard={false}
-        type="popover"
-        position="top-right"
         anchorRef={menuAnchorRef}
+        position="bottom-right"
       >
-          <View style={styles.menu}>
-              {showParentMenuActions && (
-                <TouchableOpacity
-                  style={styles.item}
-                  onPress={() => {
-                    setOpen(false)
-                    router.push('/getting-started')
-                  }}
-                >
-                  <MaterialCommunityIcons name="play-circle-outline" size={20} color="#2563eb" />
-                  <Text style={[styles.itemText, { color: '#2563eb' }]}>Get started</Text>
-                </TouchableOpacity>
-              )}
+        <View style={styles.menu}>
+          {showParentMenuActions && (
+            <TouchableOpacity
+              style={styles.item}
+              onPress={() => {
+                setOpen(false)
+                router.push('/getting-started')
+              }}
+            >
+              <MaterialCommunityIcons name="play-circle-outline" size={20} color="#2563eb" />
+              <Text style={[styles.itemText, { color: '#2563eb' }]}>Get started</Text>
+            </TouchableOpacity>
+          )}
 
-              {showParentMenuActions && (
-                <TouchableOpacity
-                  style={styles.item}
-                  onPress={() => {
-                    setOpen(false)
-                    router.push('/settings')
-                  }}
-                >
-                  <MaterialCommunityIcons name="cog-outline" size={20} color="#334155" />
-                  <Text style={styles.itemText}>Settings</Text>
-                </TouchableOpacity>
-              )}
+          {showParentMenuActions && (
+            <TouchableOpacity
+              style={styles.item}
+              onPress={() => {
+                setOpen(false)
+                router.push('/settings')
+              }}
+            >
+              <MaterialCommunityIcons name="cog-outline" size={20} color="#334155" />
+              <Text style={styles.itemText}>Settings</Text>
+            </TouchableOpacity>
+          )}
 
-              {showParentMenuActions && (
-                <TouchableOpacity style={styles.item} onPress={handleOpenKidModePicker}>
-                  <MaterialCommunityIcons name="shield-lock-outline" size={20} color="#334155" />
-                  <Text style={styles.itemText}>Enter kid mode</Text>
-                </TouchableOpacity>
-              )}
+          {showParentMenuActions && (
+            <TouchableOpacity style={styles.item} onPress={handleOpenKidModePicker}>
+              <MaterialCommunityIcons name="shield-lock-outline" size={20} color="#334155" />
+              <Text style={styles.itemText}>Enter kid mode</Text>
+            </TouchableOpacity>
+          )}
 
-              {isKidMode && effectiveMember && (
-                <>
-                  <View style={styles.kidMenuIdentity}>
-                    <Text style={styles.kidMenuLabel}>Playing as</Text>
-                    <Text style={styles.kidMenuName} numberOfLines={2}>
-                      {memberDisplayName(effectiveMember as FamilyMember)}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.item}
-                    onPress={() => {
-                      setOpen(false)
-                      router.push('/settings')
-                    }}
-                  >
-                    <MaterialCommunityIcons name="cog-outline" size={20} color="#334155" />
-                    <Text style={styles.itemText}>Settings</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.item}
-                    onPress={() => {
-                      setOpen(false)
-                      void exitKidMode?.()
-                    }}
-                  >
-                    <MaterialCommunityIcons name="shield-lock-outline" size={20} color="#1d4ed8" />
-                    <Text style={[styles.itemText, { color: '#1d4ed8' }]}>Exit kid mode</Text>
-                  </TouchableOpacity>
-                </>
-              )}
+          {isKidMode && effectiveMember && (
+            <>
+              <View style={styles.kidMenuIdentity}>
+                <Text style={styles.kidMenuLabel}>Playing as</Text>
+                <Text style={styles.kidMenuName} numberOfLines={2}>
+                  {memberDisplayName(effectiveMember as FamilyMember)}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.item}
+                onPress={() => {
+                  setOpen(false)
+                  router.push('/settings')
+                }}
+              >
+                <MaterialCommunityIcons name="cog-outline" size={20} color="#334155" />
+                <Text style={styles.itemText}>Settings</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.item}
+                onPress={() => {
+                  setOpen(false)
+                  void exitKidMode?.()
+                }}
+              >
+                <MaterialCommunityIcons name="shield-lock-outline" size={20} color="#1d4ed8" />
+                <Text style={[styles.itemText, { color: '#1d4ed8' }]}>Exit kid mode</Text>
+              </TouchableOpacity>
+            </>
+          )}
 
-              {!isKidMode && (
-                <TouchableOpacity style={styles.item} onPress={handleLogout}>
-                  <MaterialCommunityIcons name="logout" size={20} color="#dc2626" />
-                  <Text style={[styles.itemText, { color: '#dc2626' }]}>Log out</Text>
-                </TouchableOpacity>
-              )}
-          </View>
-      </AppModal>
+          {!isKidMode && (
+            <TouchableOpacity style={styles.item} onPress={handleLogout}>
+              <MaterialCommunityIcons name="logout" size={20} color="#dc2626" />
+              <Text style={[styles.itemText, { color: '#dc2626' }]}>Log out</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </ModalPopover>
 
       <KidModePickerModal
         visible={kidModePickerOpen}

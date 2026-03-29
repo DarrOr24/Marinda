@@ -6,7 +6,7 @@ import {
   View,
 } from 'react-native'
 
-import { AppModal, Button } from '@/components/ui'
+import { Button, ModalDialog } from '@/components/ui'
 
 export type KidModePinPrompt = {
   title: string
@@ -29,7 +29,7 @@ export function KidModePinModal({
   onSubmit,
 }: Props) {
   return (
-    <AppModal visible={!!pinPrompt} onClose={onCancel} onShow={() => onChangePinValue('')} size="sm">
+    <ModalDialog visible={!!pinPrompt} onClose={onCancel} onShow={() => onChangePinValue('')} size="sm">
       <View style={styles.pinContent}>
         <Text style={styles.pinTitle}>{pinPrompt?.title}</Text>
         <Text style={styles.pinMessage}>{pinPrompt?.message}</Text>
@@ -49,7 +49,7 @@ export function KidModePinModal({
           <Button title="Unlock" type="primary" size="md" onPress={onSubmit} />
         </View>
       </View>
-    </AppModal>
+    </ModalDialog>
   )
 }
 

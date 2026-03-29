@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native'
 import { Calendar } from 'react-native-calendars'
-import { AppModal } from '@/components/ui'
+import { ModalDialog } from '@/components/ui'
 
 
 type Props = {
@@ -130,7 +130,7 @@ export function DatePicker({
         </Text>
       </Pressable>
 
-      <AppModal visible={open} onClose={closeModal} size="md">
+      <ModalDialog visible={open} onClose={closeModal} size="md">
           <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{title}</Text>
 
@@ -200,7 +200,7 @@ export function DatePicker({
           <Pressable onPress={closeModal} style={styles.closeBtn}>
             <Text style={styles.closeText}>Close</Text>
           </Pressable>
-      </AppModal>
+      </ModalDialog>
     </View>
   )
 }

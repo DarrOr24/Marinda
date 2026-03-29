@@ -1,7 +1,8 @@
 import { MemberAvatar } from '@/components/avatar/member-avatar';
 import { TodoItemModal } from '@/components/modals/todo-item-modal';
-import { AppModal, Button, MetaRow, Screen } from '@/components/ui';
+import { Button, MetaRow, ModalDialog, ModalPopover, Screen } from '@/components/ui';
 import { useAuthContext } from '@/hooks/use-auth-context';
+import { useRefById } from '@/hooks/use-ref-by-id';
 import { useFamily } from '@/lib/families/families.hooks';
 import {
   addTodoItem,
@@ -60,6 +61,7 @@ function visibleToActingKid(it: TodoItem, actingMemberId: string): boolean {
 export default function TodosBoard() {
   const { activeFamilyId, effectiveMember, family, members, isKidMode } = useAuthContext() as any;
   const viewMenuAnchorRef = useRef<View>(null);
+  const getTodoMenuAnchorRef = useRefById<View>();
 
   const { familyMembers } = useFamily(activeFamilyId);
 
@@ -468,18 +470,20 @@ export default function TodosBoard() {
           ) : null}
         </View>
 
-        <Pressable
-          hitSlop={10}
-          onPress={(e) => {
-            e?.stopPropagation?.();
-            setTodoMenuItem(it);
-          }}
-          style={({ pressed }) => [styles.rowMenuBtn, pressed && { opacity: 0.72 }]}
-          accessibilityRole="button"
-          accessibilityLabel="To-do actions"
-        >
-          <MaterialCommunityIcons name="dots-vertical" size={20} color="#475569" />
-        </Pressable>
+        <View ref={getTodoMenuAnchorRef(it.id)} collapsable={false}>
+          <Pressable
+            hitSlop={10}
+            onPress={(e) => {
+              e?.stopPropagation?.();
+              setTodoMenuItem(it);
+            }}
+            style={({ pressed }) => [styles.rowMenuBtn, pressed && { opacity: 0.72 }]}
+            accessibilityRole="button"
+            accessibilityLabel="To-do actions"
+          >
+            <MaterialCommunityIcons name="dots-vertical" size={20} color="#475569" />
+          </Pressable>
+        </View>
       </Pressable>
     );
   }
@@ -580,11 +584,11 @@ export default function TodosBoard() {
         onSubmit={() => void saveItem()}
       />
 
-      <AppModal
+      <ModalPopover
         visible={!!todoMenuItem}
         onClose={() => setTodoMenuItem(null)}
-        avoidKeyboard={false}
-        type="menu"
+        anchorRef={getTodoMenuAnchorRef(todoMenuItem?.id ?? '')}
+        position="bottom-right"
       >
         {todoMenuItem &&
         myMemberId &&
@@ -615,9 +619,9 @@ export default function TodosBoard() {
           <MaterialCommunityIcons name="information-outline" size={18} color="#334155" />
           <Text style={styles.todoMenuRowLabel}>Details</Text>
         </Pressable>
-      </AppModal>
+      </ModalPopover>
 
-      <AppModal
+      <ModalDialog
         visible={!!sharedVisibilityItem}
         onClose={() => setSharedVisibilityItem(null)}
         size="md"
@@ -658,9 +662,9 @@ export default function TodosBoard() {
             </>
           ) : null}
         </View>
-      </AppModal>
+      </ModalDialog>
 
-      <AppModal visible={!!infoItem} onClose={() => setInfoItem(null)} size="md">
+      <ModalDialog visible={!!infoItem} onClose={() => setInfoItem(null)} size="md">
         <View>
           {infoItem && (
             <>
@@ -685,16 +689,14 @@ export default function TodosBoard() {
             </>
           )}
         </View>
-      </AppModal>
+      </ModalDialog>
 
-      <AppModal
+      <ModalPopover
         visible={viewMenuOpen}
         onClose={closeViewMenu}
-        avoidKeyboard={false}
-        type="popover"
         size="menu-wide"
-        position="top-right"
         anchorRef={viewMenuAnchorRef}
+        position="bottom-right"
       >
         <Pressable
           style={styles.viewOption}
@@ -714,7 +716,7 @@ export default function TodosBoard() {
         >
           <Text style={styles.viewOptionText}>All items (A → Z)</Text>
         </Pressable>
-      </AppModal>
+      </ModalPopover>
     </Screen>
   );
 }

@@ -7,7 +7,7 @@ import {
 } from 'react-native'
 
 import { MemberAvatar } from '@/components/avatar/member-avatar'
-import { AppModal, Button } from '@/components/ui'
+import { Button, ModalDialog } from '@/components/ui'
 import type { FamilyMember } from '@/lib/members/members.types'
 import { memberDisplayName } from '@/utils/format.utils'
 
@@ -25,7 +25,7 @@ export function KidModePickerModal({
   onSelectMember,
 }: Props) {
   return (
-    <AppModal visible={visible} onClose={onClose} size="md">
+    <ModalDialog visible={visible} onClose={onClose} size="md">
       <View style={styles.pickerModal}>
         <Text style={styles.pickerTitle}>Choose a kid</Text>
         <Text style={styles.pickerSubtitle}>Pick the profile to enter kid mode with.</Text>
@@ -47,7 +47,7 @@ export function KidModePickerModal({
           <Button title="Cancel" type="ghost" size="md" onPress={onClose} />
         </View>
       </View>
-    </AppModal>
+    </ModalDialog>
   )
 }
 

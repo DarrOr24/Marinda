@@ -9,7 +9,7 @@ import {
 } from "react-native";
 
 import { DocsPageLayout, DocsSection, docsPageStyles } from "@/components/docs-page-layout";
-import { AppModal, Button, ScreenState, TextInput } from "@/components/ui";
+import { Button, ModalDialog, ScreenState, TextInput } from "@/components/ui";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useParentPermissionGuard } from "@/hooks/use-parent-permission-guard";
 import {
@@ -154,11 +154,11 @@ export default function WishlistSettingsScreen() {
                 </Pressable>
 
                 {/* Modal */}
-                <AppModal
+                <ModalDialog
                     visible={showCurrencyPicker}
                     onClose={() => setShowCurrencyPicker(false)}
-                    type="bottom-sheet"
-                    size="menu-wide"
+                    presentation="bottom-sheet"
+                    size="md"
                     avoidKeyboard={false}
                 >
                     {CURRENCIES.map((cur) => (
@@ -173,7 +173,7 @@ export default function WishlistSettingsScreen() {
                             <Text style={styles.modalOptionText}>{cur}</Text>
                         </TouchableOpacity>
                     ))}
-                </AppModal>
+                </ModalDialog>
             </DocsSection>
 
             <DocsSection title="Points Conversion">

@@ -11,7 +11,7 @@ import {
     View
 } from "react-native";
 
-import { AppModal, Button, TextInput } from "@/components/ui";
+import { Button, ModalDialog, TextInput } from "@/components/ui";
 import { MembersSelector } from "../members-selector";
 
 
@@ -206,7 +206,7 @@ export default function ChorePostModal({
     }
 
     return (
-        <AppModal
+        <ModalDialog
             visible={visible}
             onClose={onClose}
             size="lg"
@@ -385,7 +385,7 @@ export default function ChorePostModal({
                     />
                 </View>
             </View>
-        </AppModal>
+        </ModalDialog>
     );
 }
 
