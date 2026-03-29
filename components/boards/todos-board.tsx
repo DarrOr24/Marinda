@@ -53,8 +53,14 @@ function mapRow(r: TodoItemRow): TodoItem {
   };
 }
 
+/** Kid mode keeps the parent's JWT; RLS also grants parents all child-created rows. Restrict to what the acting kid would see. */
+function visibleToActingKid(it: TodoItem, actingMemberId: string): boolean {
+  if (it.created_by_member_id === actingMemberId) return true;
+  return it.shared_with_member_ids.includes(actingMemberId);
+}
+
 export default function TodosBoard() {
-  const { activeFamilyId, effectiveMember, family, members } = useAuthContext() as any;
+  const { activeFamilyId, effectiveMember, family, members, isKidMode } = useAuthContext() as any;
   const { width: windowWidth } = useWindowDimensions();
   const viewMenuAnchorRef = useRef<View>(null);
 
@@ -116,12 +122,18 @@ export default function TodosBoard() {
     if (!activeFamilyId) return;
     try {
       const rows = await fetchTodoItems(activeFamilyId);
-      setItems(rows.map((r) => mapRow(r)));
+      let mapped = rows.map((r) => mapRow(r));
+      if (isKidMode) {
+        mapped = myMemberId
+          ? mapped.filter((it) => visibleToActingKid(it, myMemberId))
+          : [];
+      }
+      setItems(mapped);
     } catch (e) {
       console.error('fetchTodoItems failed', e);
       Alert.alert('Error', 'Could not load to-dos.');
     }
-  }, [activeFamilyId]);
+  }, [activeFamilyId, isKidMode, myMemberId]);
 
   useEffect(() => {
     void reloadItems();
