@@ -1,15 +1,22 @@
 import { MembersSelector } from '@/components/members-selector';
 import { Button, ModalDialog, TextInput } from '@/components/ui';
+import type { ListTab } from '@/lib/lists/list-tabs.types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type Props = {
   visible: boolean;
   mode: 'add' | 'edit';
   name: string;
   onChangeName: (v: string) => void;
-  /** Creator-only: multi-select family members who may also see this to-do. */
+  /** Built-in + custom lists; `id` is `todo_items.list_kind`. */
+  tabs: ListTab[];
+  listKind: string;
+  onChangeListKind: (v: string) => void;
+  listOpen: boolean;
+  onToggleListOpen: () => void;
+  /** Creator-only: multi-select family members who may also see this item. */
   showShare: boolean;
   sharedMemberIds: string[];
   onChangeSharedMemberIds: (ids: string[]) => void;
@@ -22,20 +29,27 @@ export function TodoItemModal({
   mode,
   name,
   onChangeName,
+  tabs,
+  listKind,
+  onChangeListKind,
+  listOpen,
+  onToggleListOpen,
   showShare,
   sharedMemberIds,
   onChangeSharedMemberIds,
   onCancel,
   onSubmit,
 }: Props) {
-  const title = mode === 'edit' ? 'Edit to-do' : 'Add to-do';
+  const title = mode === 'edit' ? 'Edit item' : 'Add item';
   const submitLabel = mode === 'edit' ? 'Save' : 'Add';
+
+  const listLabel = tabs.find((t) => t.id === listKind)?.label ?? 'Choose list';
 
   return (
     <ModalDialog visible={visible} onClose={onCancel} size="lg" title={title} scrollable>
       <View>
         <TextInput
-          label="Task"
+          label="Item"
           value={name}
           onChangeText={onChangeName}
           placeholder="e.g., Call dentist"
@@ -43,14 +57,41 @@ export function TodoItemModal({
           autoFocus
         />
 
+        <Text style={styles.labelText}>List</Text>
+        <TouchableOpacity
+          onPress={onToggleListOpen}
+          style={styles.select}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.selectText}>{listLabel}</Text>
+          <MaterialCommunityIcons name="menu-down" size={22} color="#334155" />
+        </TouchableOpacity>
+
+        {listOpen ? (
+          <View style={styles.menu}>
+            {tabs.map((t) => (
+              <Pressable
+                key={t.id}
+                onPress={() => {
+                  onChangeListKind(t.id);
+                  onToggleListOpen();
+                }}
+                style={styles.menuItem}
+              >
+                <Text style={styles.menuItemText}>{t.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
         {showShare ? (
-          <View style={styles.fieldGap}>
+          <View style={styles.shareBlock}>
             <View style={styles.shareHeader}>
               <MaterialCommunityIcons name="account-multiple-outline" size={18} color="#475569" />
               <Text style={styles.shareLabel}>Also visible to</Text>
             </View>
             <Text style={styles.shareHint}>
-              Leave empty to keep this to-do private to you. Selected people can view and check it
+              Leave empty to keep this item private to you. Selected people can view and check it
               off.
             </Text>
             <MembersSelector
@@ -72,6 +113,37 @@ export function TodoItemModal({
 const styles = StyleSheet.create({
   fieldGap: {
     marginTop: 4,
+  },
+  labelText: {
+    fontSize: 12,
+    color: '#475569',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  select: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  selectText: { color: '#0f172a', fontSize: 16 },
+  menu: {
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    overflow: 'hidden',
+  },
+  menuItem: { paddingHorizontal: 12, paddingVertical: 10 },
+  menuItemText: { color: '#0f172a', fontSize: 16 },
+  shareBlock: {
+    marginTop: 12,
   },
   shareHeader: {
     flexDirection: 'row',

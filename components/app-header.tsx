@@ -222,6 +222,15 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    if (pathname === '/lists/settings') {
+      return {
+        title: 'Lists settings',
+        icon: 'format-list-bulleted',
+        color: '#2563eb',
+        hiddenTitle,
+      }
+    }
+
     return {
       title: '',
       hiddenTitle,

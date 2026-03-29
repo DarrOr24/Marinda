@@ -1,9 +1,16 @@
 import { MemberAvatar } from '@/components/avatar/member-avatar';
+import { ChipSelector } from '@/components/chip-selector';
 import { TodoItemModal } from '@/components/modals/todo-item-modal';
-import { Button, MetaRow, ModalDialog, ModalPopover, Screen } from '@/components/ui';
+import { Button, MetaRow, ModalDialog, ModalPopover, Screen, TextInput } from '@/components/ui';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useRefById } from '@/hooks/use-ref-by-id';
 import { useFamily } from '@/lib/families/families.hooks';
+import {
+  DEFAULT_LIST_TAB_ID,
+  DEFAULT_LIST_TABS,
+  type ListTab,
+} from '@/lib/lists/list-tabs.types';
+import { createListTab, fetchListTabs } from '@/lib/lists/list-tabs.api';
 import {
   addTodoItem,
   deleteTodoItems,
@@ -13,10 +20,13 @@ import {
   updateTodoText,
   type TodoItemRow,
 } from '@/lib/todos/todos.api';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -34,6 +44,7 @@ type TodoItem = {
   checked_at?: string | null;
   created_at: string;
   shared_with_member_ids: string[];
+  list_kind: string;
 };
 
 const shortId = (id?: string) => (id ? `ID ${String(id).slice(0, 8)}` : '—');
@@ -49,6 +60,7 @@ function mapRow(r: TodoItemRow): TodoItem {
     checked_at: r.completed_at,
     created_at: r.created_at,
     shared_with_member_ids: shares.map((s) => s.member_id),
+    list_kind: r.list_kind?.trim() || DEFAULT_LIST_TAB_ID,
   };
 }
 
@@ -59,7 +71,15 @@ function visibleToActingKid(it: TodoItem, actingMemberId: string): boolean {
 }
 
 export default function TodosBoard() {
-  const { activeFamilyId, effectiveMember, family, members, isKidMode } = useAuthContext() as any;
+  const router = useRouter();
+  const {
+    activeFamilyId,
+    effectiveMember,
+    family,
+    members,
+    isKidMode,
+    hasParentPermissions,
+  } = useAuthContext() as any;
   const viewMenuAnchorRef = useRef<View>(null);
   const getTodoMenuAnchorRef = useRefById<View>();
 
@@ -111,7 +131,35 @@ export default function TodosBoard() {
   const [sharedVisibilityItem, setSharedVisibilityItem] = useState<TodoItem | null>(null);
 
   const [name, setName] = useState('');
+  const [formListKind, setFormListKind] = useState<string>(DEFAULT_LIST_TAB_ID);
+  const [listOpen, setListOpen] = useState(false);
   const [sharedMemberIds, setSharedMemberIds] = useState<string[]>([]);
+
+  const [customTabs, setCustomTabs] = useState<ListTab[]>([]);
+  const [activeListKind, setActiveListKind] = useState<string>(DEFAULT_LIST_TAB_ID);
+  const [showAddTabModal, setShowAddTabModal] = useState(false);
+  const [newTabLabel, setNewTabLabel] = useState('');
+  const [creatingTab, setCreatingTab] = useState(false);
+
+  const ALL_TABS: ListTab[] = useMemo(
+    () => [...DEFAULT_LIST_TABS, ...customTabs],
+    [customTabs],
+  );
+
+  const tabIds = useMemo(() => ALL_TABS.map((t) => t.id), [ALL_TABS]);
+  useEffect(() => {
+    if (!tabIds.includes(activeListKind) && tabIds.length > 0) {
+      setActiveListKind(tabIds[0]);
+    }
+  }, [tabIds, activeListKind]);
+
+  const tabLabelById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const t of ALL_TABS) m.set(t.id, t.label);
+    return m;
+  }, [ALL_TABS]);
+
+  const activeTab = ALL_TABS.find((t) => t.id === activeListKind) ?? ALL_TABS[0];
 
   const reloadItems = useCallback(async () => {
     if (!activeFamilyId) return;
@@ -134,13 +182,34 @@ export default function TodosBoard() {
     void reloadItems();
   }, [reloadItems]);
 
+  const reloadCustomTabs = useCallback(async () => {
+    if (!activeFamilyId) return;
+    try {
+      const list = await fetchListTabs(activeFamilyId);
+      setCustomTabs(list);
+    } catch (e) {
+      console.error('fetchListTabs failed', e);
+    }
+  }, [activeFamilyId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void reloadCustomTabs();
+    }, [reloadCustomTabs]),
+  );
+
+  const itemsInTab = useMemo(
+    () => items.filter((it) => it.list_kind === activeListKind),
+    [items, activeListKind],
+  );
+
   const allSorted = useMemo(() => {
-    return [...items].sort((a, b) => a.name.localeCompare(b.name));
-  }, [items]);
+    return [...itemsInTab].sort((a, b) => a.name.localeCompare(b.name));
+  }, [itemsInTab]);
 
   const groupedByMember = useMemo(() => {
     const map = new Map<string, TodoItem[]>();
-    for (const it of items) {
+    for (const it of itemsInTab) {
       const key = it.created_by_member_id || '—';
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(it);
@@ -151,10 +220,38 @@ export default function TodosBoard() {
     return Array.from(map.entries()).sort(([idA], [idB]) =>
       nameForId(idA).localeCompare(nameForId(idB)),
     );
-  }, [items, nameForId]);
+  }, [itemsInTab, nameForId]);
+
+  async function handleCreateTab() {
+    const trimmed = newTabLabel.trim();
+    if (!trimmed || !activeFamilyId) return;
+
+    setCreatingTab(true);
+    try {
+      const tab = await createListTab({
+        familyId: activeFamilyId,
+        label: trimmed,
+      });
+      setCustomTabs((prev) =>
+        [...prev, tab].sort(
+          (a, b) =>
+            (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.label.localeCompare(b.label),
+        ),
+      );
+      setActiveListKind(tab.id);
+      setShowAddTabModal(false);
+      setNewTabLabel('');
+    } catch (e) {
+      Alert.alert('Error', e instanceof Error ? e.message : 'Could not create list.');
+    } finally {
+      setCreatingTab(false);
+    }
+  }
 
   function resetAddForm() {
     setName('');
+    setFormListKind(activeListKind);
+    setListOpen(false);
     setSharedMemberIds([]);
     setEditingItem(null);
   }
@@ -179,10 +276,12 @@ export default function TodosBoard() {
 
     const familyId = activeFamilyId;
 
+    const kind = formListKind.trim() || DEFAULT_LIST_TAB_ID;
+
     if (editingItem) {
       const showShare = editingItem.created_by_member_id === myMemberId;
       try {
-        const row = await updateTodoText(editingItem.id, trimmed);
+        const row = await updateTodoText(editingItem.id, trimmed, kind);
         const updated = mapRow(row);
 
         if (showShare) {
@@ -212,6 +311,7 @@ export default function TodosBoard() {
         familyId,
         text: trimmed,
         createdByMemberId: myMemberId,
+        listKind: kind,
       });
       let next = mapRow(row);
 
@@ -246,6 +346,8 @@ export default function TodosBoard() {
     }
     setEditingItem(item);
     setName(item.name);
+    setFormListKind(item.list_kind);
+    setListOpen(false);
     setSharedMemberIds([...item.shared_with_member_ids]);
     setAddOpen(true);
   }
@@ -267,6 +369,7 @@ export default function TodosBoard() {
                 ...it,
                 is_checked: mapped.is_checked,
                 checked_at: mapped.checked_at,
+                list_kind: mapped.list_kind ?? it.list_kind,
               }
             : it,
         ),
@@ -278,7 +381,7 @@ export default function TodosBoard() {
   }
 
   function deleteChecked() {
-    const checked = items.filter((i) => i.is_checked);
+    const checked = itemsInTab.filter((i) => i.is_checked);
     if (!checked.length) {
       Alert.alert('Nothing selected', 'Check items to delete first.');
       return;
@@ -535,18 +638,73 @@ export default function TodosBoard() {
                 rightIcon={<MaterialCommunityIcons name="menu-down" size={18} />}
               />
             </View>
+
+            {hasParentPermissions ? (
+              <View style={styles.toolbarIcons}>
+                <Button
+                  type="outline"
+                  size="sm"
+                  backgroundColor="#eef2ff"
+                  round
+                  hitSlop={8}
+                  title=""
+                  onPress={() => router.push('/lists/settings')}
+                  leftIcon={<Ionicons name="settings-outline" size={20} />}
+                />
+              </View>
+            ) : null}
+          </View>
+
+          <View style={styles.tabsContainer}>
+            <ChipSelector
+              horizontal
+              value={activeListKind}
+              onChange={(val) => {
+                if (!val) return;
+                setActiveListKind(val);
+              }}
+              allowDeselect={false}
+              options={ALL_TABS.map((t) => ({ label: t.label, value: t.id }))}
+              chipStyle={(active) => ({
+                backgroundColor: active ? '#eff6ff' : '#f9fafb',
+                borderColor: active ? '#2563eb' : '#d4d4d4',
+              })}
+              chipTextStyle={(active) => ({
+                color: active ? '#1d4ed8' : '#4b5563',
+                fontWeight: active ? '600' : '500',
+              })}
+              trailingElement={
+                <Button
+                  type="outline"
+                  size="sm"
+                  backgroundColor="#eef2ff"
+                  round
+                  hitSlop={8}
+                  title=""
+                  leftIcon={<MaterialCommunityIcons name="plus" size={16} />}
+                  style={styles.tabPlusBtn}
+                  onPress={() => {
+                    setNewTabLabel('');
+                    setShowAddTabModal(true);
+                  }}
+                />
+              }
+            />
           </View>
         </View>
 
         <ScrollView
           style={styles.listScroll}
-          contentContainerStyle={[styles.listContent, items.length === 0 && styles.listContentEmpty]}
+          contentContainerStyle={[
+            styles.listContent,
+            itemsInTab.length === 0 && styles.listContentEmpty,
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator
           scrollEnabled={!viewMenuOpen && !todoMenuItem && !sharedVisibilityItem}
         >
-          {items.length === 0 ? (
-            <View style={styles.emptyState} accessibilityLabel="No to-dos yet. Tap Add.">
+          {itemsInTab.length === 0 ? (
+            <View style={styles.emptyState} accessibilityLabel="No items in this list. Tap Add.">
               <MaterialCommunityIcons
                 name="format-list-checks"
                 size={44}
@@ -554,7 +712,11 @@ export default function TodosBoard() {
                 style={styles.emptyIcon}
               />
               <Text style={styles.emptyTitle}>Nothing here yet.</Text>
-              <Text style={styles.emptyHint}>Tap Add to create a to-do.</Text>
+              <Text style={styles.emptyHint}>
+                {items.length === 0
+                  ? 'Tap Add to create an item.'
+                  : `No items in “${activeTab.label}”. Tap Add or switch tab.`}
+              </Text>
             </View>
           ) : viewMode === 'member' ? (
             groupedByMember.map(([memberId, arr]) => (
@@ -574,6 +736,11 @@ export default function TodosBoard() {
         mode={editingItem ? 'edit' : 'add'}
         name={name}
         onChangeName={setName}
+        tabs={ALL_TABS}
+        listKind={formListKind}
+        onChangeListKind={setFormListKind}
+        listOpen={listOpen}
+        onToggleListOpen={() => setListOpen((o) => !o)}
         showShare={editShowShare}
         sharedMemberIds={sharedMemberIds}
         onChangeSharedMemberIds={setSharedMemberIds}
@@ -583,6 +750,48 @@ export default function TodosBoard() {
         }}
         onSubmit={() => void saveItem()}
       />
+
+      <ModalDialog visible={showAddTabModal} onClose={() => setShowAddTabModal(false)} size="md">
+        <View>
+          <Text style={styles.addTabTitle}>New list</Text>
+          <Text style={styles.addTabHint}>
+            Same checklists and sharing as To-dos—use this for ideas, trip prep, or anything else.
+          </Text>
+          <TextInput
+            placeholder="List name (e.g. Ideas)"
+            value={newTabLabel}
+            onChangeText={setNewTabLabel}
+            containerStyle={{ marginBottom: 10 }}
+            numberOfLines={1}
+            {...Platform.select({
+              ios: {
+                adjustsFontSizeToFit: true,
+                minimumFontScale: 0.72,
+              },
+              android: {
+                maxFontSizeMultiplier: 2.35,
+              },
+              default: {},
+            })}
+          />
+          <View style={styles.addTabActions}>
+            <Button
+              type="ghost"
+              size="sm"
+              title="Cancel"
+              titleColor="#475569"
+              onPress={() => setShowAddTabModal(false)}
+            />
+            <Button
+              type="primary"
+              size="sm"
+              title={creatingTab ? '…' : 'Create'}
+              disabled={!newTabLabel.trim() || creatingTab}
+              onPress={() => void handleCreateTab()}
+            />
+          </View>
+        </View>
+      </ModalDialog>
 
       <ModalPopover
         visible={!!todoMenuItem}
@@ -677,6 +886,11 @@ export default function TodosBoard() {
                 </Text>
               ) : null}
               <MetaRow label="Created by" value={nameForId(infoItem.created_by_member_id)} spacing={6} />
+              <MetaRow
+                label="List"
+                value={tabLabelById.get(infoItem.list_kind) ?? infoItem.list_kind}
+                spacing={6}
+              />
               <MetaRow label="Visible to" value={visibleToSummary(infoItem)} spacing={6} />
               <MetaRow
                 label="When"
@@ -743,7 +957,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 0,
+    marginBottom: 14,
   },
   actionsScroll: {
     flex: 1,
@@ -763,6 +977,38 @@ const styles = StyleSheet.create({
   viewMenuAnchor: {
     flexShrink: 0,
     justifyContent: 'center',
+  },
+  toolbarIcons: {
+    flexShrink: 0,
+    justifyContent: 'center',
+  },
+  tabsContainer: {
+    width: '100%',
+  },
+  tabPlusBtn: {
+    width: 28,
+    height: 28,
+    minWidth: 28,
+    minHeight: 28,
+    alignSelf: 'center',
+  },
+  addTabTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 6,
+  },
+  addTabHint: {
+    fontSize: 13,
+    color: '#64748b',
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  addTabActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 4,
   },
   viewOption: {
     paddingHorizontal: 14,

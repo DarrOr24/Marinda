@@ -14,6 +14,8 @@ export type TodoItemRow = {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Built-in `todos` or a custom tab uuid string. */
+  list_kind?: string;
   todo_item_shares?: TodoShareRow[] | null;
 };
 
@@ -32,11 +34,13 @@ export async function addTodoItem(input: {
   familyId: string;
   text: string;
   createdByMemberId: string;
+  listKind?: string;
 }) {
   const { data, error } = await supabase.rpc('insert_todo_item', {
     p_family_id: input.familyId,
     p_text: input.text,
     p_created_by_member_id: input.createdByMemberId,
+    p_list_kind: input.listKind ?? 'todos',
   });
 
   if (error || !data) throw new Error(error?.message || 'Failed to add to-do');
@@ -51,6 +55,7 @@ export async function addTodoItem(input: {
     completed_at: row.completed_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
+    list_kind: (row.list_kind as string) ?? 'todos',
     todo_item_shares: [],
   } as TodoItemRow;
 }
@@ -70,10 +75,14 @@ export async function updateTodoCompleted(id: string, completed: boolean) {
   return data as TodoItemRow;
 }
 
-export async function updateTodoText(id: string, text: string) {
+export async function updateTodoText(id: string, text: string, listKind?: string) {
+  const patch: { text: string; list_kind?: string } = { text };
+  if (listKind !== undefined) {
+    patch.list_kind = listKind.trim() || 'todos';
+  }
   const { data, error } = await supabase
     .from('todo_items')
-    .update({ text })
+    .update(patch)
     .eq('id', id)
     .select('*, todo_item_shares(member_id)')
     .single();
