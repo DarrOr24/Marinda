@@ -13,8 +13,20 @@ dist/
 web-build/
 expo-env.d.ts
 
-VSCode
-.vscode
+# VSCode
+.vscode/
+
+# Build artifacts (local builds, exports, stores)
+*.apk
+*.aab
+*.ipa
+*.app
+*.xcarchive
+build/
+**/android/**/build/
+**/ios/**/build/
+xcodebuild.log
+*.dSYM.zip
 
 # Native
 .kotlin/
