@@ -33,7 +33,7 @@ export function TodoItemModal({
   const submitLabel = mode === 'edit' ? 'Save' : 'Add';
 
   return (
-    <AppModal visible={visible} onClose={onCancel} keyboardOffset={12} size="lg">
+    <AppModal visible={visible} onClose={onCancel} size="lg">
       <Text style={styles.title}>{title}</Text>
 
       <ScrollView

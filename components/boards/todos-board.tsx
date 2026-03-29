@@ -582,7 +582,6 @@ export default function TodosBoard() {
 
       <AppModal
         visible={!!todoMenuItem}
-        statusBarTranslucent
         onClose={() => setTodoMenuItem(null)}
         avoidKeyboard={false}
         type="menu"
@@ -621,7 +620,6 @@ export default function TodosBoard() {
       <AppModal
         visible={!!sharedVisibilityItem}
         onClose={() => setSharedVisibilityItem(null)}
-        keyboardOffset={0}
         size="md"
       >
         <View>
@@ -662,7 +660,7 @@ export default function TodosBoard() {
         </View>
       </AppModal>
 
-      <AppModal visible={!!infoItem} onClose={() => setInfoItem(null)} keyboardOffset={0} size="md">
+      <AppModal visible={!!infoItem} onClose={() => setInfoItem(null)} size="md">
         <View>
           {infoItem && (
             <>
@@ -691,7 +689,6 @@ export default function TodosBoard() {
 
       <AppModal
         visible={viewMenuOpen}
-        statusBarTranslucent
         onClose={closeViewMenu}
         avoidKeyboard={false}
         type="popover"

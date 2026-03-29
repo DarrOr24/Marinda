@@ -953,7 +953,6 @@ export default function AnnouncementsBoard() {
         <AppModal
           visible={!!editingItem}
           onClose={() => setEditingItem(null)}
-          keyboardOffset={0}
           size="md"
         >
           <View>
@@ -1021,7 +1020,6 @@ export default function AnnouncementsBoard() {
             setReplyModalItem(null);
             setReplyModalDraft('');
           }}
-          keyboardOffset={0}
           size="md"
         >
           <View>
@@ -1116,7 +1114,6 @@ export default function AnnouncementsBoard() {
         <AppModal
           visible={showAddTabModal}
           onClose={() => setShowAddTabModal(false)}
-          keyboardOffset={0}
           size="md"
         >
           <View>

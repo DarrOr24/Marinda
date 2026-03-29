@@ -729,7 +729,7 @@ export default function Grocery() {
                 onSubmit={saveItem}
             />
 
-            <AppModal visible={showAddTabModal} onClose={() => setShowAddTabModal(false)} keyboardOffset={0} size="md">
+            <AppModal visible={showAddTabModal} onClose={() => setShowAddTabModal(false)} size="md">
                 <View>
                     <Text style={styles.addTabTitle}>New shopping list</Text>
 
@@ -763,7 +763,7 @@ export default function Grocery() {
                 </View>
             </AppModal>
 
-            <AppModal visible={!!infoItem} onClose={() => setInfoItem(null)} keyboardOffset={0} size="md">
+            <AppModal visible={!!infoItem} onClose={() => setInfoItem(null)} size="md">
                 <View>
                     {infoItem && (
                         <>
@@ -799,7 +799,6 @@ export default function Grocery() {
 
             <AppModal
                 visible={viewMenuOpen}
-                statusBarTranslucent
                 onClose={closeViewMenu}
                 avoidKeyboard={false}
                 type="popover"

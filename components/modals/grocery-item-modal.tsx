@@ -82,7 +82,7 @@ export function GroceryItemModal({
         tabs.find((t) => t.id === listKind)?.label ?? 'Choose list';
 
     return (
-        <AppModal visible={visible} onClose={onCancel} keyboardOffset={12} size="lg">
+        <AppModal visible={visible} onClose={onCancel} size="lg">
             <Text style={styles.title}>{title}</Text>
 
             <ScrollView

@@ -1,10 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 import {
+  Dimensions,
   Keyboard,
   KeyboardAvoidingView,
+  KeyboardEventName,
   Modal,
+  Platform,
   Pressable,
+  ScrollView,
+  StatusBar,
   StyleSheet,
+  Text,
   useWindowDimensions,
   View,
 } from 'react-native'
@@ -26,11 +33,12 @@ type Props = {
   visible: boolean
   onClose: () => void
   children: React.ReactNode
+  title?: React.ReactNode
+  showCloseButton?: boolean
+  scrollable?: boolean
   type?: AppModalType
   size?: AppModalSize
   position?: AppModalPosition
-  keyboardOffset?: number
-  statusBarTranslucent?: boolean
   closeOnBackdropPress?: boolean
   avoidKeyboard?: boolean
   onShow?: () => void
@@ -66,11 +74,12 @@ export function AppModal({
   visible,
   onClose,
   children,
+  title,
+  showCloseButton = false,
+  scrollable = false,
   type = 'dialog',
   size,
   position,
-  keyboardOffset = 0,
-  statusBarTranslucent = false,
   closeOnBackdropPress = true,
   avoidKeyboard = true,
   onShow,
@@ -80,6 +89,8 @@ export function AppModal({
   const { width: screenWidth, height: screenHeight } = useWindowDimensions()
   const Container = avoidKeyboard ? KeyboardAvoidingView : View
   const [anchorLayout, setAnchorLayout] = useState<AnchorLayout | null>(null)
+  const [keyboardVisible, setKeyboardVisible] = useState(false)
+  const [modalBaseHeight, setModalBaseHeight] = useState(() => Dimensions.get('window').height)
 
   const resolvedSize = SURFACE_WIDTH[size ?? defaultSizeForType(type)]
   const resolvedPosition = position ?? defaultPositionForType(type)
@@ -88,6 +99,8 @@ export function AppModal({
   const isTopAligned = resolvedPosition === 'top-left' || resolvedPosition === 'top-right'
   const isPopover = type === 'popover' || isTopAligned
   const isAnchoredPopover = isPopover && !!anchorRef?.current
+  const keyboardVerticalOffset = avoidKeyboard && !isMenuLike && !isBottomSheet ? 12 : 0
+  const androidAnchorOffset = Platform.OS === 'android' ? Math.max(insets.top, StatusBar.currentHeight ?? 0) : 0
 
   const measureAnchor = useCallback(() => {
     const anchorNode = anchorRef?.current
@@ -115,11 +128,39 @@ export function AppModal({
     return () => cancelAnimationFrame(frame)
   }, [visible, isAnchoredPopover, measureAnchor, screenWidth, screenHeight])
 
+  useEffect(() => {
+    if (!visible || !avoidKeyboard || isMenuLike || isBottomSheet || isTopAligned) {
+      setKeyboardVisible(false)
+      return
+    }
+
+    const showEvent: KeyboardEventName = 'keyboardDidShow'
+    const hideEvent: KeyboardEventName = 'keyboardDidHide'
+
+    const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true))
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false))
+
+    return () => {
+      showSub.remove()
+      hideSub.remove()
+    }
+  }, [avoidKeyboard, isBottomSheet, isMenuLike, isTopAligned, visible])
+
+  useEffect(() => {
+    if (!visible) return
+    setModalBaseHeight(Dimensions.get('window').height)
+  }, [visible, screenWidth])
+
+  const shouldTopAlignForKeyboard =
+    visible && keyboardVisible && avoidKeyboard && !isMenuLike && !isBottomSheet && !isTopAligned
+
   const justifyContent = isBottomSheet
     ? 'flex-end'
     : isTopAligned
       ? 'flex-start'
-      : 'center'
+      : shouldTopAlignForKeyboard
+        ? 'flex-start'
+        : 'center'
 
   const alignItems =
     resolvedPosition === 'top-left'
@@ -133,7 +174,9 @@ export function AppModal({
     }
   }
 
-  const anchorTop = anchorLayout ? anchorLayout.y + anchorLayout.height + POPOVER_GAP : null
+  const anchorTop = anchorLayout
+    ? anchorLayout.y + anchorLayout.height + POPOVER_GAP + androidAnchorOffset
+    : null
   const containerPaddingTop = isTopAligned
     ? Math.max(CONTAINER_PADDING + insets.top, anchorTop ?? 0)
     : 16 + insets.top
@@ -142,9 +185,12 @@ export function AppModal({
     ? 12 + insets.bottom
     : 16 + insets.bottom
 
+  const surfaceScreenHeight = shouldTopAlignForKeyboard ? modalBaseHeight : screenHeight
   const maxHeight =
-    screenHeight - containerPaddingTop - containerPaddingBottom - 12
+    surfaceScreenHeight - containerPaddingTop - containerPaddingBottom
   const boundedWidth = Math.min(resolvedSize, screenWidth - CONTAINER_PADDING * 2)
+  const usesStandardDialogLayout =
+    !isMenuLike && (title !== undefined || showCloseButton || scrollable)
 
   const anchoredContentStyle = useMemo(() => {
     if (!anchorLayout || !isTopAligned) return null
@@ -163,13 +209,32 @@ export function AppModal({
     }
   }, [anchorLayout, isTopAligned, resolvedPosition, screenWidth])
 
+  const renderedTitle =
+    typeof title === 'string' ? <Text style={styles.standardTitle}>{title}</Text> : title
+
+  const bodyContent = scrollable ? (
+    <View style={styles.standardBodyScrollable}>
+      <ScrollView
+        style={styles.standardScrollView}
+        contentContainerStyle={styles.standardScrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="none"
+        showsVerticalScrollIndicator
+        nestedScrollEnabled
+      >
+        <View style={styles.childrenContainer}>{children}</View>
+      </ScrollView>
+    </View>
+  ) : (
+    <View style={styles.childrenContainer}>{children}</View>
+  )
+
   return (
     <Modal
       transparent
       visible={visible}
       animationType="fade"
       onRequestClose={onClose}
-      statusBarTranslucent={statusBarTranslucent}
       onShow={() => {
         if (isAnchoredPopover) {
           measureAnchor()
@@ -188,9 +253,9 @@ export function AppModal({
       <Container
         {...(avoidKeyboard
           ? {
-              behavior: 'padding' as const,
-              keyboardVerticalOffset: keyboardOffset,
-            }
+            behavior: 'padding' as const,
+            keyboardVerticalOffset,
+          }
           : {})}
         style={[
           styles.container,
@@ -217,17 +282,53 @@ export function AppModal({
           <View
             style={[
               styles.surface,
-              isMenuLike ? styles.menuSurface : styles.dialogSurface,
+              isMenuLike ? styles.menuSurfaceShadow : styles.dialogSurfaceShadow,
               isBottomSheet ? styles.bottomSheetSurface : null,
               {
                 width: isBottomSheet ? '100%' : undefined,
                 minWidth: isBottomSheet ? undefined : boundedWidth,
                 maxWidth: screenWidth - CONTAINER_PADDING * 2,
-                maxHeight,
               },
             ]}
           >
-            {children}
+            <View
+              style={[
+                styles.surfaceClip,
+                isMenuLike ? styles.menuSurface : styles.dialogSurface,
+                isBottomSheet ? styles.bottomSheetSurface : null,
+                {
+                  width: isMenuLike ? undefined : '100%',
+                  maxHeight,
+                  paddingBottom: isMenuLike ? undefined : CONTAINER_PADDING,
+                },
+              ]}
+            >
+              {usesStandardDialogLayout ? (
+                <View style={styles.standardLayout}>
+                  {title !== undefined || showCloseButton ? (
+                    <View style={styles.standardHeader}>
+                      <View style={styles.standardHeaderMain}>
+                        {renderedTitle ?? <View />}
+                      </View>
+                      {showCloseButton ? (
+                        <Pressable
+                          onPress={onClose}
+                          hitSlop={8}
+                          accessibilityRole="button"
+                          accessibilityLabel="Close modal"
+                          style={styles.standardHeaderCloseButton}
+                        >
+                          <MaterialCommunityIcons name="close" size={22} color="#64748b" />
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  ) : null}
+                  {bodyContent}
+                </View>
+              ) : (
+                children
+              )}
+            </View>
           </View>
         </View>
       </Container>
@@ -250,6 +351,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: CONTAINER_PADDING,
   },
   content: {
+    flex: 1,
     width: '100%',
     minHeight: 0,
   },
@@ -268,16 +370,74 @@ const styles = StyleSheet.create({
   surface: {
     flexGrow: 0,
     flexShrink: 1,
+    minHeight: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.18,
     shadowRadius: 14,
     elevation: 8,
   },
+  surfaceClip: {
+    flexGrow: 0,
+    flexShrink: 1,
+    minHeight: 0,
+    maxHeight: '100%',
+    overflow: 'hidden',
+  },
+  childrenContainer: {
+    flexGrow: 0,
+    flexShrink: 1,
+    minHeight: 0,
+  },
+  standardLayout: {
+    flexGrow: 0,
+    flexShrink: 1,
+    minHeight: 0,
+    width: '100%',
+  },
+  standardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  standardHeaderMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  standardHeaderCloseButton: {
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  standardTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  standardBodyScrollable: {
+    flexGrow: 0,
+    flexShrink: 1,
+    minHeight: 0,
+  },
+  standardScrollView: {
+    flexGrow: 0,
+    flexShrink: 1,
+    minHeight: 0,
+  },
+  standardScrollContent: {
+    paddingBottom: 4,
+  },
+  dialogSurfaceShadow: {
+    borderRadius: 20,
+  },
   dialogSurface: {
     backgroundColor: '#fff',
     borderRadius: 20,
     padding: 20,
+  },
+  menuSurfaceShadow: {
+    borderRadius: 16,
   },
   menuSurface: {
     backgroundColor: '#fff',

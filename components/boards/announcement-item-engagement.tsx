@@ -266,7 +266,7 @@ export function AnnouncementItemEngagement({
         </View>
       )}
 
-      <AppModal visible={reactionsSheetOpen} onClose={closeReactionsSheet} keyboardOffset={0} size="md">
+      <AppModal visible={reactionsSheetOpen} onClose={closeReactionsSheet} size="md">
         <View>
           {reactionsSheetOpen ? (
             <>
@@ -498,7 +498,6 @@ export function AnnouncementItemEngagement({
       <AppModal
         visible={!!editingReply}
         onClose={() => setEditingReply(null)}
-        keyboardOffset={0}
         size="md"
       >
         <View>

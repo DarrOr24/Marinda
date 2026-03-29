@@ -133,7 +133,7 @@ export function WishlistItemModal({
 
 
     return (
-        <AppModal visible={visible} onClose={onClose} keyboardOffset={12} size="lg">
+      <AppModal visible={visible} onClose={onClose} size="lg">
             <View style={styles.card}>
                 <Text style={styles.modalTitle}>{mode === "edit" ? "Edit Wish" : "Add Wish"}</Text>
 

@@ -297,7 +297,6 @@ export default function ChoreDetailModal({
         <AppModal
             visible={visible}
             onClose={requestClose}
-            keyboardOffset={12}
             size="lg"
         >
             <>
