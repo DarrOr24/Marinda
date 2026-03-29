@@ -547,6 +547,7 @@ export default function ActivityBoard() {
   return (
     <Screen
       scroll={false}
+      withBackground={false}
       contentStyle={{ paddingTop: 8, paddingHorizontal: 0, paddingBottom: 0 }}
       overlay={
         <SafeFab bottomOffset={18} rightOffset={16}>
@@ -1041,7 +1042,8 @@ export default function ActivityBoard() {
 const styles = StyleSheet.create({
 
   /** Same horizontal inset as day view so chips / header don’t shift when switching. */
-  center: { flex: 1, paddingLeft: 10, paddingRight: 10, paddingTop: 0, gap: 12 },
+  /** Match Shopping/Bulletin breathing room below the Boards switcher (Shopping · Bulletin · Events). */
+  center: { flex: 1, paddingLeft: 10, paddingRight: 10, paddingTop: 12, gap: 12 },
   /** Slightly tighter vertical gap between filter row and day timeline than week stack. */
   centerDayTimeline: { gap: 8 },
 
