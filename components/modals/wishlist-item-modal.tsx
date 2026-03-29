@@ -11,7 +11,7 @@ import {
 } from "react-native";
 
 import MediaPicker from "@/components/media-picker";
-import { Button, ModalCard, ModalShell, TextInput, useModalScrollMaxHeight } from "@/components/ui";
+import { AppModal, Button, TextInput, useModalScrollMaxHeight } from "@/components/ui";
 
 type Props = {
     visible: boolean;
@@ -133,8 +133,8 @@ export function WishlistItemModal({
 
 
     return (
-        <ModalShell visible={visible} onClose={onClose} keyboardOffset={12}>
-            <ModalCard bottomPadding={12} maxHeightPadding={6} style={styles.card}>
+        <AppModal visible={visible} onClose={onClose} keyboardOffset={12} size="lg">
+            <View style={styles.card}>
                 <Text style={styles.modalTitle}>{mode === "edit" ? "Edit Wish" : "Add Wish"}</Text>
 
                 <ScrollView
@@ -237,15 +237,13 @@ export function WishlistItemModal({
                     <Button type="outline" size="sm" title="Cancel" onPress={onClose} />
                     <Button type="primary" size="sm" title="Save" onPress={onSubmit} />
                 </View>
-            </ModalCard>
-        </ModalShell>
+            </View>
+        </AppModal>
     );
 }
 
 const styles = StyleSheet.create({
     card: {
-        width: '100%',
-        maxWidth: 460,
         gap: 10,
     },
     modalTitle: {

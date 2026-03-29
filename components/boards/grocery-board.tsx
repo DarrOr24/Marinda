@@ -1,6 +1,6 @@
 import { GroceryItemModal } from '@/components/modals/grocery-item-modal';
 import { ChipSelector } from '@/components/chip-selector';
-import { Button, MetaRow, ModalCard, ModalShell, Screen, TextInput } from '@/components/ui';
+import { AppModal, Button, MetaRow, Screen, TextInput } from '@/components/ui';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useFamily } from '@/lib/families/families.hooks';
 import { useFocusEffect } from '@react-navigation/native';
@@ -26,13 +26,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Alert,
     Image,
-    Modal,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
-    useWindowDimensions,
     View,
 } from 'react-native';
 
@@ -54,12 +52,11 @@ const shortId = (id?: string) =>
 
 export default function Grocery() {
     const router = useRouter();
-    const { width: windowWidth } = useWindowDimensions();
+    const viewMenuAnchorRef = useRef<View>(null);
     const { activeFamilyId, effectiveMember, family, members, hasParentPermissions } =
         useAuthContext() as any;
 
     const { familyMembers } = useFamily(activeFamilyId);
-    const viewMenuAnchorRef = useRef<View>(null);
 
     const rawMembers: any[] = useMemo(
         () =>
@@ -113,12 +110,6 @@ export default function Grocery() {
     const [activeListKind, setActiveListKind] = useState<string>(GROCERIES_LIST_KIND);
     const [viewMode, setViewMode] = useState<'category' | 'member' | 'all'>('category');
     const [viewMenuOpen, setViewMenuOpen] = useState(false);
-    const [viewMenuAnchor, setViewMenuAnchor] = useState<{
-        x: number;
-        y: number;
-        w: number;
-        h: number;
-    } | null>(null);
 
     const [addOpen, setAddOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<GroceryItem | null>(null);
@@ -213,7 +204,6 @@ export default function Grocery() {
 
     useEffect(() => {
         setViewMenuOpen(false);
-        setViewMenuAnchor(null);
         if (isGroceriesList) {
             setViewMode('category');
         } else {
@@ -223,7 +213,6 @@ export default function Grocery() {
 
     function closeViewMenu() {
         setViewMenuOpen(false);
-        setViewMenuAnchor(null);
     }
 
     function toggleViewMenu() {
@@ -231,10 +220,7 @@ export default function Grocery() {
             closeViewMenu();
             return;
         }
-        viewMenuAnchorRef.current?.measureInWindow((x, y, w, h) => {
-            setViewMenuAnchor({ x, y, w, h });
-            setViewMenuOpen(true);
-        });
+        setViewMenuOpen(true);
     }
 
     const grouped = useMemo(() => {
@@ -743,8 +729,8 @@ export default function Grocery() {
                 onSubmit={saveItem}
             />
 
-            <ModalShell visible={showAddTabModal} onClose={() => setShowAddTabModal(false)} keyboardOffset={0}>
-                <ModalCard>
+            <AppModal visible={showAddTabModal} onClose={() => setShowAddTabModal(false)} keyboardOffset={0} size="md">
+                <View>
                     <Text style={styles.addTabTitle}>New shopping list</Text>
 
                     <Text style={styles.addTabHint}>
@@ -774,11 +760,11 @@ export default function Grocery() {
                             onPress={() => void handleCreateTab()}
                         />
                     </View>
-                </ModalCard>
-            </ModalShell>
+                </View>
+            </AppModal>
 
-            <ModalShell visible={!!infoItem} onClose={() => setInfoItem(null)} keyboardOffset={0}>
-                <ModalCard>
+            <AppModal visible={!!infoItem} onClose={() => setInfoItem(null)} keyboardOffset={0} size="md">
+                <View>
                     {infoItem && (
                         <>
                             <Text style={styles.infoModalTitle}>{infoItem.name}</Text>
@@ -808,60 +794,49 @@ export default function Grocery() {
                             </View>
                         </>
                     )}
-                </ModalCard>
-            </ModalShell>
+                </View>
+            </AppModal>
 
-            <Modal
-                visible={viewMenuOpen && !!viewMenuAnchor}
-                transparent
-                animationType="fade"
+            <AppModal
+                visible={viewMenuOpen}
                 statusBarTranslucent
-                onRequestClose={closeViewMenu}
+                onClose={closeViewMenu}
+                avoidKeyboard={false}
+                type="popover"
+                size="menu-wide"
+                position="top-right"
+                anchorRef={viewMenuAnchorRef}
             >
-                <Pressable style={styles.viewMenuBackdrop} onPress={closeViewMenu} />
-                {viewMenuAnchor ? (
-                    <View
-                        style={[
-                            styles.viewMenuPopover,
-                            {
-                                top: viewMenuAnchor.y + viewMenuAnchor.h + 4,
-                                right: Math.max(12, windowWidth - viewMenuAnchor.x - viewMenuAnchor.w),
-                            },
-                        ]}
-                        pointerEvents="box-none"
+                {isGroceriesList ? (
+                    <Pressable
+                        style={styles.viewOption}
+                        onPress={() => {
+                            setViewMode('category');
+                            closeViewMenu();
+                        }}
                     >
-                        {isGroceriesList ? (
-                            <Pressable
-                                style={styles.viewOption}
-                                onPress={() => {
-                                    setViewMode('category');
-                                    closeViewMenu();
-                                }}
-                            >
-                                <Text style={styles.viewOptionText}>By category</Text>
-                            </Pressable>
-                        ) : null}
-                        <Pressable
-                            style={styles.viewOption}
-                            onPress={() => {
-                                setViewMode('member');
-                                closeViewMenu();
-                            }}
-                        >
-                            <Text style={styles.viewOptionText}>By family member</Text>
-                        </Pressable>
-                        <Pressable
-                            style={styles.viewOption}
-                            onPress={() => {
-                                setViewMode('all');
-                                closeViewMenu();
-                            }}
-                        >
-                            <Text style={styles.viewOptionText}>All items (A → Z)</Text>
-                        </Pressable>
-                    </View>
+                        <Text style={styles.viewOptionText}>By category</Text>
+                    </Pressable>
                 ) : null}
-            </Modal>
+                <Pressable
+                    style={styles.viewOption}
+                    onPress={() => {
+                        setViewMode('member');
+                        closeViewMenu();
+                    }}
+                >
+                    <Text style={styles.viewOptionText}>By family member</Text>
+                </Pressable>
+                <Pressable
+                    style={styles.viewOption}
+                    onPress={() => {
+                        setViewMode('all');
+                        closeViewMenu();
+                    }}
+                >
+                    <Text style={styles.viewOptionText}>All items (A → Z)</Text>
+                </Pressable>
+            </AppModal>
         </Screen>
     );
 }
@@ -916,25 +891,6 @@ const styles = StyleSheet.create({
     viewMenuAnchor: {
         flexShrink: 0,
         justifyContent: 'center',
-    },
-    viewMenuBackdrop: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(15, 23, 42, 0.06)',
-    },
-    viewMenuPopover: {
-        position: 'absolute',
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-        paddingVertical: 4,
-        width: 240,
-        zIndex: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 10,
-        elevation: 16,
     },
     viewOption: {
         paddingHorizontal: 14,

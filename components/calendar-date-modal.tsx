@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -10,7 +9,7 @@ import {
 } from "react-native";
 import { Calendar } from "react-native-calendars";
 
-import { Button } from "@/components/ui";
+import { AppModal, Button } from "@/components/ui";
 
 export function toLocalYmdFromIso(iso: string): string {
   const d = new Date(iso);
@@ -136,14 +135,7 @@ export function CalendarDateModal({
   }
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onCancel}
-    >
-      <Pressable style={styles.backdrop} onPress={onCancel}>
-        <View style={styles.sheet}>
+    <AppModal visible={visible} onClose={onCancel} size="md">
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>{title}</Text>
             <Pressable
@@ -239,25 +231,11 @@ export function CalendarDateModal({
           <View style={styles.actions}>
             <Button type="outline" size="sm" title="Cancel" onPress={onCancel} />
           </View>
-        </View>
-      </Pressable>
-    </Modal>
+    </AppModal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.35)",
-    justifyContent: "center",
-    padding: 18,
-  },
-  sheet: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 14,
-    maxHeight: "90%",
-  },
   sheetHeader: {
     flexDirection: "row",
     alignItems: "center",

@@ -1,7 +1,5 @@
 import React from 'react'
 import {
-  Modal,
-  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -9,6 +7,7 @@ import {
 } from 'react-native'
 
 import { MemberAvatar } from '@/components/avatar/member-avatar'
+import { AppModal, Button } from '@/components/ui'
 import type { FamilyMember } from '@/lib/members/members.types'
 import { memberDisplayName } from '@/utils/format.utils'
 
@@ -26,17 +25,7 @@ export function KidModePickerModal({
   onSelectMember,
 }: Props) {
   return (
-    <Modal
-      transparent
-      visible={visible}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <Pressable
-        style={styles.modalOverlay}
-        onPress={onClose}
-      />
-
+    <AppModal visible={visible} onClose={onClose} size="md">
       <View style={styles.pickerModal}>
         <Text style={styles.pickerTitle}>Choose a kid</Text>
         <Text style={styles.pickerSubtitle}>Pick the profile to enter kid mode with.</Text>
@@ -54,34 +43,17 @@ export function KidModePickerModal({
           ))}
         </View>
 
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={onClose}
-        >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
+        <View style={styles.actions}>
+          <Button title="Cancel" type="ghost" size="md" onPress={onClose} />
+        </View>
       </View>
-    </Modal>
+    </AppModal>
   )
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.35)',
-  },
   pickerModal: {
-    marginHorizontal: 20,
-    marginTop: 'auto',
-    marginBottom: 'auto',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
     gap: 12,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
   },
   pickerTitle: {
     fontSize: 18,
@@ -109,16 +81,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#0f172a',
   },
-  cancelButton: {
-    alignSelf: 'flex-end',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: '#eef2f7',
-  },
-  cancelButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#334155',
+  actions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
 })

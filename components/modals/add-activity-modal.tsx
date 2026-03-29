@@ -17,7 +17,7 @@ import {
 } from "@/components/calendar-date-modal";
 import { ChipSelector } from "@/components/chip-selector";
 import { DateRangePicker } from "@/components/date-range-picker";
-import { ModalCard, ModalShell, useModalScrollMaxHeight } from "@/components/ui";
+import { AppModal, useModalScrollMaxHeight } from "@/components/ui";
 import {
   buildRecurrenceRule,
   formatRecurrenceRuleSummary,
@@ -389,26 +389,25 @@ export default function AddActivityModal({
   }
 
   return (
-    <ModalShell visible={visible} onClose={onClose} keyboardOffset={12}>
-      <ModalCard style={styles.sheet} maxHeightPadding={10} bottomPadding={12}>
-        <View style={styles.header}>
-          <Text style={styles.title}>
-            {headerTitle ??
-              (mode === "edit" ? "Edit Activity" : "New Activity")}
-          </Text>
-          <TouchableOpacity onPress={onClose}>
-            <MaterialCommunityIcons name="close" size={22} color="#64748b" />
-          </TouchableOpacity>
-        </View>
+    <AppModal visible={visible} onClose={onClose} keyboardOffset={12} size="xl">
+      <View style={styles.header}>
+        <Text style={styles.title}>
+          {headerTitle ??
+            (mode === "edit" ? "Edit Activity" : "New Activity")}
+        </Text>
+        <TouchableOpacity onPress={onClose}>
+          <MaterialCommunityIcons name="close" size={22} color="#64748b" />
+        </TouchableOpacity>
+      </View>
 
-        <ScrollView
-          style={{ maxHeight: scrollMaxHeight }}
-          contentContainerStyle={[styles.scrollContent, { flexGrow: 0 }]}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="none"
-          showsVerticalScrollIndicator={true}
-          nestedScrollEnabled
-        >
+      <ScrollView
+        style={{ maxHeight: scrollMaxHeight }}
+        contentContainerStyle={[styles.scrollContent, { flexGrow: 0 }]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="none"
+        showsVerticalScrollIndicator={true}
+        nestedScrollEnabled
+      >
           <FormFieldRow icon="clock-outline" first>
             <Text style={styles.label}>When *</Text>
             <DateRangePicker
@@ -717,19 +716,18 @@ export default function AddActivityModal({
               multiline
             />
           </FormFieldRow>
-        </ScrollView>
+      </ScrollView>
 
-        <View style={styles.actions}>
-          <Button type="outline" size="sm" title="Cancel" onPress={onClose} />
-          <Button
-            type="primary"
-            size="sm"
-            title={submitLabel ?? (mode === "edit" ? "Update" : "Save")}
-            onPress={handleSave}
-            disabled={!canSave}
-          />
-        </View>
-      </ModalCard>
+      <View style={styles.actions}>
+        <Button type="outline" size="sm" title="Cancel" onPress={onClose} />
+        <Button
+          type="primary"
+          size="sm"
+          title={submitLabel ?? (mode === "edit" ? "Update" : "Save")}
+          onPress={handleSave}
+          disabled={!canSave}
+        />
+      </View>
 
       <CalendarDateModal
         visible={untilPickerOpen}
@@ -744,16 +742,11 @@ export default function AddActivityModal({
           setUntilPickerOpen(false);
         }}
       />
-    </ModalShell>
+    </AppModal>
   );
 }
 
 const styles = StyleSheet.create({
-  sheet: {
-    width: "100%",
-    maxWidth: 460,
-  },
-
   header: {
     flexDirection: "row",
     justifyContent: "space-between",

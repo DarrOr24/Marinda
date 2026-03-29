@@ -1,7 +1,7 @@
 // components/chore-detail-modal.tsx
 import { ChipSelector } from '@/components/chip-selector';
 import MediaPicker, { PickedMedia } from '@/components/media-picker';
-import { Button, MetaRow, ModalCard, ModalShell, TextInput, useModalScrollMaxHeight } from '@/components/ui';
+import { AppModal, Button, MetaRow, TextInput, useModalScrollMaxHeight } from '@/components/ui';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { ChoreView, Proof } from '@/lib/chores/chores.types';
 import { Audio, ResizeMode, Video } from 'expo-av';
@@ -294,12 +294,13 @@ export default function ChoreDetailModal({
     }
 
     return (
-        <ModalShell
+        <AppModal
             visible={visible}
             onClose={requestClose}
             keyboardOffset={12}
+            size="lg"
         >
-            <ModalCard style={s.card} maxHeightPadding={6} bottomPadding={12}>
+            <>
                 {/* HEADER (outside scroll) */}
                 <Text style={s.title}>{chore.title}</Text>
                 <Text style={s.status}>{chore.status.toUpperCase()}</Text>
@@ -611,20 +612,13 @@ export default function ChoreDetailModal({
                         <Button title="Close" type="secondary" size="sm" onPress={requestClose} />
                     </View>
                 )}
-            </ModalCard>
-        </ModalShell>
+            </>
+        </AppModal>
     );
 
 }
 
 const s = StyleSheet.create({
-    card: {
-        flexGrow: 0,
-        flexShrink: 1,
-        width: '100%',
-        maxWidth: 460,
-    },
-
     title: { fontSize: 20, fontWeight: '900', color: '#0f172a' },
     status: { fontWeight: '700', color: '#64748b', marginTop: 2 },
     text: { color: '#334155' },

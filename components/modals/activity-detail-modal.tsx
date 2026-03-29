@@ -11,9 +11,8 @@ import {
   View,
 } from "react-native";
 import {
+  AppModal,
   Button,
-  ModalCard,
-  ModalShell,
   TextInput,
   useModalScrollMaxHeight,
 } from "@/components/ui";
@@ -129,19 +128,20 @@ export function ActivityDetailModal({
   }, [visible]);
 
   if (!activity) return null;
+  const currentActivity = activity;
 
-  const isBirthday = !!activity.isBirthday;
-  const isVirtualSeries = activity.seriesOccurrence != null;
+  const isBirthday = !!currentActivity.isBirthday;
+  const isVirtualSeries = currentActivity.seriesOccurrence != null;
   const canAddToCalendar = !isVirtualSeries;
   const canDuplicate =
     !isBirthday && !isVirtualSeries && onDuplicate != null;
 
   const memberMap = memberById as Map<string, FamilyMember>;
   const birthdayAccentHex = isBirthday
-    ? getActivityRowAccentColor(activity, memberMap)
+    ? getActivityRowAccentColor(currentActivity, memberMap)
     : "#db2777";
 
-  const participantIds = activity.participants?.map((p) => p.member_id) ?? [];
+  const participantIds = currentActivity.participants?.map((p) => p.member_id) ?? [];
   const names = participantIds
     .map((id: string) => {
       const m = memberById.get(id);
@@ -170,25 +170,25 @@ export function ActivityDetailModal({
   const dateLine = sameDayRange
     ? startDateLabel
     : `${startDateLabel} → ${endDateLabel}`;
-  const timeLine = formatActivityTimeRange(activity.start_at, activity.end_at);
+  const timeLine = formatActivityTimeRange(currentActivity.start_at, currentActivity.end_at);
 
   const statusLabel =
-    activity.status === "APPROVED"
+    currentActivity.status === "APPROVED"
       ? "Approved"
-      : activity.status === "NOT_APPROVED"
+      : currentActivity.status === "NOT_APPROVED"
         ? "Not approved"
         : "Pending approval";
 
   const parentCanDecide =
     isParent &&
-    (activity.status === "PENDING" ||
-      activity.status === "APPROVED" ||
-      activity.status === "NOT_APPROVED");
+    (currentActivity.status === "PENDING" ||
+      currentActivity.status === "APPROVED" ||
+      currentActivity.status === "NOT_APPROVED");
 
   function confirmDelete() {
     if (!onDelete) return;
     if (isVirtualSeries) {
-      onDelete(activity);
+      onDelete(currentActivity);
       return;
     }
     Alert.alert(
@@ -199,14 +199,14 @@ export function ActivityDetailModal({
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => onDelete(activity),
+          onPress: () => onDelete(currentActivity),
         },
       ],
     );
   }
 
   function submitReject() {
-    onReject(activity, rejectReason.trim());
+    onReject(currentActivity, rejectReason.trim());
     setRejectOpen(false);
     setRejectReason("");
   }
@@ -228,8 +228,8 @@ export function ActivityDetailModal({
   }
 
   return (
-    <ModalShell visible={visible} onClose={onClose}>
-      <ModalCard style={styles.card}>
+    <AppModal visible={visible} onClose={onClose} size="lg">
+      <View style={styles.card}>
         <Text style={styles.title}>{isBirthday ? "Birthday" : "Activity"}</Text>
 
         <ScrollView
@@ -490,8 +490,8 @@ export function ActivityDetailModal({
             onPress={onClose}
           />
         </View>
-      </ModalCard>
-    </ModalShell>
+      </View>
+    </AppModal>
   );
 }
 

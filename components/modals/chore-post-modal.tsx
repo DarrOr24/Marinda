@@ -11,7 +11,7 @@ import {
     View
 } from "react-native";
 
-import { Button, ModalCard, ModalShell, TextInput, useModalScrollMaxHeight } from "@/components/ui";
+import { AppModal, Button, TextInput, useModalScrollMaxHeight } from "@/components/ui";
 import { MembersSelector } from "../members-selector";
 
 
@@ -179,9 +179,8 @@ export default function ChorePostModal({
     }
 
     return (
-        <ModalShell visible={visible} onClose={onClose} keyboardOffset={12}>
-
-            <ModalCard bottomPadding={12} maxHeightPadding={6} style={styles.card}>
+        <AppModal visible={visible} onClose={onClose} keyboardOffset={12} size="lg">
+            <View style={styles.card}>
 
                 <Text style={styles.h1}>{titleText}</Text>
 
@@ -390,15 +389,13 @@ export default function ChorePostModal({
                         style={styles.flex1}
                     />
                 </View>
-            </ModalCard>
-        </ModalShell>
+            </View>
+        </AppModal>
     );
 }
 
 const styles = StyleSheet.create({
     card: {
-        width: '100%',
-        maxWidth: 460,
         gap: 10,
     },
     h1: { fontSize: 18, fontWeight: "800", color: "#0f172a", marginBottom: 6 },

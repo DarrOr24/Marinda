@@ -2,13 +2,13 @@ import { Ionicons } from '@expo/vector-icons'
 import React, { useEffect, useMemo, useState } from 'react'
 import {
   FlatList,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native'
 import { Calendar } from 'react-native-calendars'
+import { AppModal } from '@/components/ui'
 
 
 type Props = {
@@ -130,15 +130,8 @@ export function DatePicker({
         </Text>
       </Pressable>
 
-      <Modal
-        visible={open}
-        transparent
-        animationType="fade"
-        onRequestClose={closeModal}
-      >
-        <Pressable style={styles.backdrop} onPress={closeModal}>
-          <Pressable style={styles.sheet} onPress={() => { }}>
-            <View style={styles.sheetHeader}>
+      <AppModal visible={open} onClose={closeModal} size="md">
+          <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{title}</Text>
 
               {enableYearPicker && (
@@ -152,64 +145,62 @@ export function DatePicker({
                   <Ionicons name={yearOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#334155" />
                 </Pressable>
               )}
-            </View>
+          </View>
 
-            <View style={styles.calendarWrap}>
-              {enableYearPicker && yearOpen && (
-                <View
-                  style={[
-                    styles.yearOverlay,
-                    { top: 0, bottom: 0 },
-                  ]}
-                >
-                  <FlatList
-                    data={years}
-                    keyExtractor={(y) => String(y)}
-                    numColumns={3}
-                    columnWrapperStyle={{ gap: 10 }}
-                    contentContainerStyle={{ gap: 10, paddingTop: 10 }}
-                    style={{ height: 290 }}
-                    renderItem={({ item: y }) => {
-                      const active = selectedYear === y
-                      return (
-                        <Pressable
-                          onPress={() => handlePickYear(y)}
-                          style={[styles.yearCell, active && styles.yearCellActive]}
-                        >
-                          <Text style={[styles.yearCellText, active && styles.yearCellTextActive]}>
-                            {y}
-                          </Text>
-                        </Pressable>
-                      )
-                    }}
-                  />
-                </View>
-              )}
+          <View style={styles.calendarWrap}>
+            {enableYearPicker && yearOpen && (
+              <View
+                style={[
+                  styles.yearOverlay,
+                  { top: 0, bottom: 0 },
+                ]}
+              >
+                <FlatList
+                  data={years}
+                  keyExtractor={(y) => String(y)}
+                  numColumns={3}
+                  columnWrapperStyle={{ gap: 10 }}
+                  contentContainerStyle={{ gap: 10, paddingTop: 10 }}
+                  style={{ height: 290 }}
+                  renderItem={({ item: y }) => {
+                    const active = selectedYear === y
+                    return (
+                      <Pressable
+                        onPress={() => handlePickYear(y)}
+                        style={[styles.yearCell, active && styles.yearCellActive]}
+                      >
+                        <Text style={[styles.yearCellText, active && styles.yearCellTextActive]}>
+                          {y}
+                        </Text>
+                      </Pressable>
+                    )
+                  }}
+                />
+              </View>
+            )}
 
-              <Calendar
-                key={current.slice(0, 7)}
-                current={current}
-                markedDates={
-                  selected
-                    ? { [selected]: { selected: true, disableTouchEvent: true } }
-                    : undefined
-                }
-                maxDate={maxDate}
-                onDayPress={(day) => {
-                  onChange(day.dateString)
-                  closeModal()
-                }}
-                enableSwipeMonths
-                onMonthChange={(m) => setCurrent(m.dateString)}
-              />
-            </View>
+            <Calendar
+              key={current.slice(0, 7)}
+              current={current}
+              markedDates={
+                selected
+                  ? { [selected]: { selected: true, disableTouchEvent: true } }
+                  : undefined
+              }
+              maxDate={maxDate}
+              onDayPress={(day) => {
+                onChange(day.dateString)
+                closeModal()
+              }}
+              enableSwipeMonths
+              onMonthChange={(m) => setCurrent(m.dateString)}
+            />
+          </View>
 
-            <Pressable onPress={closeModal} style={styles.closeBtn}>
-              <Text style={styles.closeText}>Close</Text>
-            </Pressable>
+          <Pressable onPress={closeModal} style={styles.closeBtn}>
+            <Text style={styles.closeText}>Close</Text>
           </Pressable>
-        </Pressable>
-      </Modal>
+      </AppModal>
     </View>
   )
 }
@@ -227,19 +218,6 @@ const styles = StyleSheet.create({
   valueText: { fontSize: 16, color: '#0f172a' },
   placeholder: { color: '#94a3b8' },
   disabled: { opacity: 0.6 },
-
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.35)',
-    justifyContent: 'center',
-    padding: 18,
-  },
-  sheet: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
-    position: 'relative',
-  },
 
   sheetHeader: {
     flexDirection: 'row',

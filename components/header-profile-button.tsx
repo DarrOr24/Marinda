@@ -5,25 +5,22 @@ import { useFamily } from '@/lib/families/families.hooks'
 import { useMember } from '@/lib/members/members.hooks'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { router } from 'expo-router'
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import {
   Alert,
-  Modal,
-  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { MemberAvatar } from '@/components/avatar/member-avatar'
+import { AppModal } from '@/components/ui'
 import type { FamilyMember } from '@/lib/members/members.types'
 import { memberDisplayName } from '@/utils/format.utils'
 
 
 export function HeaderProfileButton() {
-  const insets = useSafeAreaInsets()
   const {
     isLoggedIn,
     signOut,
@@ -37,6 +34,7 @@ export function HeaderProfileButton() {
   } = useAuthContext()
   const { familyMembers } = useFamily(activeFamilyId)
   const authMemberDetails = useMember(authMember?.id ?? null)
+  const menuAnchorRef = useRef<View>(null)
 
   const [open, setOpen] = useState(false)
   const [kidModePickerOpen, setKidModePickerOpen] = useState(false)
@@ -115,32 +113,29 @@ export function HeaderProfileButton() {
   return (
     <>
       <View style={styles.headerRight}>
-        <TouchableOpacity onPress={onPressIcon} style={{ marginLeft: 4 }}>
-          {effectiveMember?.id && (
-            <MemberAvatar
-              memberId={effectiveMember.id}
-              size="md"
-              isUpdatable={false}
-            />
-          )}
-        </TouchableOpacity>
+        <View ref={menuAnchorRef} collapsable={false}>
+          <TouchableOpacity onPress={onPressIcon} style={{ marginLeft: 4 }}>
+            {effectiveMember?.id && (
+              <MemberAvatar
+                memberId={effectiveMember.id}
+                size="md"
+                isUpdatable={false}
+              />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Dropdown Modal */}
-      <Modal
-        transparent
+      <AppModal
         visible={open}
-        animationType="fade"
-        onRequestClose={() => setOpen(false)}
+        onClose={() => setOpen(false)}
+        avoidKeyboard={false}
+        type="popover"
+        position="top-right"
+        anchorRef={menuAnchorRef}
       >
-        <View style={styles.menuOverlay}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={() => setOpen(false)}
-          />
-
-          <View style={[styles.menuAnchor, { top: insets.top + 56 }]}>
-            <View style={styles.menu}>
+          <View style={styles.menu}>
               {showParentMenuActions && (
                 <TouchableOpacity
                   style={styles.item}
@@ -201,10 +196,8 @@ export function HeaderProfileButton() {
                   <Text style={[styles.itemText, { color: '#dc2626' }]}>Log out</Text>
                 </TouchableOpacity>
               )}
-            </View>
           </View>
-        </View>
-      </Modal>
+      </AppModal>
 
       <KidModePickerModal
         visible={kidModePickerOpen}
@@ -222,15 +215,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  menuOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  menuAnchor: {
-    position: 'absolute',
-    right: 10,
-    zIndex: 2,
-    elevation: 8,
   },
   kidMenuIdentity: {
     paddingVertical: 10,
@@ -250,15 +234,7 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   menu: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    width: 200,
     paddingVertical: 8,
-    elevation: 6,
-    zIndex: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
   },
   item: {
     flexDirection: 'row',

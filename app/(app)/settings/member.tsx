@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, View } from 'react-native'
 
 import { ChipSelector, type ChipOption } from '@/components/chip-selector'
-import { Button, ModalCard, ModalShell, Screen, ScreenState } from '@/components/ui'
+import { AppModal, Button, Screen, ScreenState } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useColorPalette, useMember, useUpdateMember } from '@/lib/members/members.hooks'
 import { formatColorName, tint } from '@/utils/color.utils'
@@ -152,12 +152,12 @@ export default function MyFamilyMemberSettingsScreen() {
         />
       </View>
 
-      <ModalShell
+      <AppModal
         visible={themeModalVisible}
         onClose={() => setThemeModalVisible(false)}
+        size="md"
       >
-        <View style={styles.modalContainer}>
-          <ModalCard>
+          <View>
             <Text style={styles.modalTitle}>Choose a theme</Text>
             <Text style={styles.modalSubtitle}>
               Pick the color that you like!
@@ -221,9 +221,8 @@ export default function MyFamilyMemberSettingsScreen() {
               onPress={() => setThemeModalVisible(false)}
               style={{ marginTop: 16, alignSelf: 'flex-end' }}
             />
-          </ModalCard>
-        </View>
-      </ModalShell>
+          </View>
+      </AppModal>
     </Screen>
   )
 }
@@ -309,10 +308,6 @@ const styles = StyleSheet.create({
   },
   colorLabelActive: {
     color: '#ffffff',
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
   },
   modalTitle: {
     fontSize: 20,
