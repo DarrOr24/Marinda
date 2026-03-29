@@ -11,7 +11,7 @@ import {
     View
 } from "react-native";
 
-import { Button, ModalCard, ModalShell, TextInput, useModalScrollMaxHeight } from "@/components/ui";
+import { Button, ModalDialog, TextInput } from "@/components/ui";
 import { MembersSelector } from "../members-selector";
 
 
@@ -61,7 +61,6 @@ export default function ChorePostModal({
     assigneeOptions,
     canEditPoints = true,
 }: Props) {
-    const scrollMaxHeight = useModalScrollMaxHeight(78);
     const [title, setTitle] = React.useState(initial?.title ?? "");
     const [description, setDescription] = React.useState(initial?.description ?? "");
     const [points, setPoints] = React.useState(String(initial?.points ?? 0));
@@ -178,230 +177,222 @@ export default function ChorePostModal({
         }
     }
 
+    function handleSubmit() {
+        let expiresAt: string | null | undefined = undefined;
+
+        if (finishByTime.trim()) {
+            const iso = parseFinishTimeToIso(finishByTime);
+            if (!iso) {
+                Alert.alert("Check time", "Please enter a valid time like 7:30 pm or 19:30.");
+                return;
+            }
+            expiresAt = iso;
+        }
+
+        onSubmit({
+            title: title.trim(),
+            description: description.trim() || undefined,
+            points: Number(points),
+            saveAsTemplate,
+            assignedToIds: assignedToIds.length > 0 ? assignedToIds : undefined,
+            audioLocal:
+                audioUri && audioDuration != null
+                    ? { uri: audioUri, durationSeconds: audioDuration }
+                    : undefined,
+            expiresAt,
+        });
+
+        Keyboard.dismiss();
+    }
+
     return (
-        <ModalShell visible={visible} onClose={onClose} keyboardOffset={12}>
+        <ModalDialog
+            visible={visible}
+            onClose={onClose}
+            size="lg"
+            title={titleText}
+            showCloseButton
+            scrollable
+        >
+            <View style={styles.content}>
+                {/* Routine chores as dropdown */}
+                {templates && templates.length > 0 && (
+                    <View style={{ marginBottom: 10 }}>
+                        <Text style={styles.label}>Choose from routine</Text>
 
-            <ModalCard bottomPadding={12} maxHeightPadding={6} style={styles.card}>
-
-                <Text style={styles.h1}>{titleText}</Text>
-
-                <ScrollView
-                    style={{ maxHeight: scrollMaxHeight }}
-                    contentContainerStyle={{ paddingBottom: 16, flexGrow: 0 }}
-                    keyboardShouldPersistTaps="handled"
-                    keyboardDismissMode="none"
-                    showsVerticalScrollIndicator={true}
-                    nestedScrollEnabled
-                >
-                    {/* Routine chores as dropdown */}
-                    {templates && templates.length > 0 && (
-                        <View style={{ marginBottom: 10 }}>
-                            <Text style={styles.label}>Choose from routine</Text>
-
-                            <Pressable
-                                style={styles.dropdown}
-                                onPress={() => setIsTemplateDropdownOpen((prev) => !prev)}
+                        <Pressable
+                            style={styles.dropdown}
+                            onPress={() => setIsTemplateDropdownOpen((prev) => !prev)}
+                        >
+                            <Text
+                                style={selectedTemplate ? styles.dropdownValue : styles.dropdownPlaceholder}
                             >
-                                <Text
-                                    style={selectedTemplate ? styles.dropdownValue : styles.dropdownPlaceholder}
-                                >
-                                    {selectedTemplate ? selectedTemplate.title : "Select a routine chore"}
-                                </Text>
-                                <Text style={styles.dropdownChevron}>
-                                    {isTemplateDropdownOpen ? "▲" : "▼"}
-                                </Text>
-                            </Pressable>
+                                {selectedTemplate ? selectedTemplate.title : "Select a routine chore"}
+                            </Text>
+                            <Text style={styles.dropdownChevron}>
+                                {isTemplateDropdownOpen ? "▲" : "▼"}
+                            </Text>
+                        </Pressable>
 
-                            {isTemplateDropdownOpen && (
-                                <View style={styles.dropdownList}>
-                                    <ScrollView nestedScrollEnabled>
-                                        {/* "None" option */}
-                                        <View style={styles.dropdownItemRow}>
+                        {isTemplateDropdownOpen && (
+                            <View style={styles.dropdownList}>
+                                <ScrollView nestedScrollEnabled>
+                                    {/* "None" option */}
+                                    <View style={styles.dropdownItemRow}>
+                                        <Pressable
+                                            style={styles.dropdownItemBtn}
+                                            onPress={() => {
+                                                setSelectedTemplateId(null);
+                                                setIsTemplateDropdownOpen(false);
+                                            }}
+                                        >
+                                            <Text style={styles.dropdownItemTxt}>None</Text>
+                                        </Pressable>
+                                    </View>
+
+                                    {templates.map((t) => (
+                                        <View key={t.id} style={styles.dropdownItemRow}>
                                             <Pressable
                                                 style={styles.dropdownItemBtn}
                                                 onPress={() => {
-                                                    setSelectedTemplateId(null);
+                                                    setSelectedTemplateId(t.id);
+                                                    setTitle(t.title);
+                                                    setPoints(String(t.defaultPoints));
                                                     setIsTemplateDropdownOpen(false);
                                                 }}
                                             >
-                                                <Text style={styles.dropdownItemTxt}>None</Text>
+                                                <Text style={styles.dropdownItemTxt}>{t.title}</Text>
+                                                <Text style={styles.dropdownItemPoints}>
+                                                    {t.defaultPoints} pts
+                                                </Text>
                                             </Pressable>
                                         </View>
-
-                                        {templates.map((t) => (
-                                            <View key={t.id} style={styles.dropdownItemRow}>
-                                                <Pressable
-                                                    style={styles.dropdownItemBtn}
-                                                    onPress={() => {
-                                                        setSelectedTemplateId(t.id);
-                                                        setTitle(t.title);
-                                                        setPoints(String(t.defaultPoints));
-                                                        setIsTemplateDropdownOpen(false);
-                                                    }}
-                                                >
-                                                    <Text style={styles.dropdownItemTxt}>{t.title}</Text>
-                                                    <Text style={styles.dropdownItemPoints}>
-                                                        {t.defaultPoints} pts
-                                                    </Text>
-                                                </Pressable>
-                                            </View>
-                                        ))}
-                                    </ScrollView>
-                                </View>
-                            )}
-                        </View>
-                    )}
-
-                    <TextInput
-                        label="Title"
-                        value={title}
-                        onChangeText={handleTitleChange}
-                        placeholder="e.g. Empty the dishwasher"
-                        returnKeyType="done"
-                        submitBehavior="submit"
-                        onSubmitEditing={() => Keyboard.dismiss()}
-                    />
-
-                    {canEditPoints && (
-                        <TextInput
-                            label="Points"
-                            value={points}
-                            onChangeText={setPoints}
-                            keyboardType="number-pad"
-                            placeholder="e.g. 10"
-                            containerStyle={{ marginTop: 8 }}
-                            returnKeyType="done"
-                            submitBehavior="submit"
-                            onSubmitEditing={() => Keyboard.dismiss()}
-                        />
-                    )}
-
-                    <TextInput
-                        label="Finish by (optional, today)"
-                        value={finishByTime}
-                        onChangeText={setFinishByTime}
-                        placeholder="e.g. 7:30 pm or 19:30"
-                        containerStyle={{ marginTop: 8 }}
-                        returnKeyType="done"
-                        submitBehavior="submit"
-                        onSubmitEditing={() => Keyboard.dismiss()}
-                    />
-
-                    <TextInput
-                        label="Description (optional)"
-                        value={description}
-                        onChangeText={setDescription}
-                        placeholder="Add extra details for this chore…"
-                        multiline
-                        containerStyle={{ marginTop: 8 }}
-                        submitBehavior="submit"
-                        onSubmitEditing={() => Keyboard.dismiss()}
-                    />
-
-                    <Text style={[styles.label, { marginTop: 8 }]}>Audio description (optional)</Text>
-
-                    <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6, gap: 8 }}>
-                        {!recording ? (
-                            <Button
-                                type="primary"
-                                size="sm"
-                                title={audioUri ? "Re-record" : "Record audio"}
-                                onPress={startRecording}
-                            />
-                        ) : (
-                            <Button type="danger" size="sm" title="Stop" onPress={stopRecording} />
-                        )}
-
-                        {audioUri && !recording && (
-                            <>
-                                <Button type="secondary" size="sm" title="Play" onPress={playRecording} />
-
-                                {audioDuration != null && (
-                                    <Text style={{ fontSize: 12, color: "#64748b" }}>~{audioDuration}s</Text>
-                                )}
-                            </>
+                                    ))}
+                                </ScrollView>
+                            </View>
                         )}
                     </View>
+                )}
 
-                    {assigneeOptions && assigneeOptions.length > 0 && (
+                <TextInput
+                    label="Title"
+                    value={title}
+                    onChangeText={handleTitleChange}
+                    placeholder="e.g. Empty the dishwasher"
+                    returnKeyType="done"
+                    submitBehavior="submit"
+                    onSubmitEditing={() => Keyboard.dismiss()}
+                />
+
+                {canEditPoints && (
+                    <TextInput
+                        label="Points"
+                        value={points}
+                        onChangeText={setPoints}
+                        keyboardType="number-pad"
+                        placeholder="e.g. 10"
+                        containerStyle={{ marginTop: 8 }}
+                        returnKeyType="done"
+                        submitBehavior="submit"
+                        onSubmitEditing={() => Keyboard.dismiss()}
+                    />
+                )}
+
+                <TextInput
+                    label="Finish by (optional, today)"
+                    value={finishByTime}
+                    onChangeText={setFinishByTime}
+                    placeholder="e.g. 7:30 pm or 19:30"
+                    containerStyle={{ marginTop: 8 }}
+                    returnKeyType="done"
+                    submitBehavior="submit"
+                    onSubmitEditing={() => Keyboard.dismiss()}
+                />
+
+                <TextInput
+                    label="Description (optional)"
+                    value={description}
+                    onChangeText={setDescription}
+                    placeholder="Add extra details for this chore…"
+                    multiline
+                    containerStyle={{ marginTop: 8 }}
+                    submitBehavior="submit"
+                    onSubmitEditing={() => Keyboard.dismiss()}
+                />
+
+                <Text style={[styles.label, { marginTop: 8 }]}>Audio description (optional)</Text>
+
+                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6, gap: 8 }}>
+                    {!recording ? (
+                        <Button
+                            type="primary"
+                            size="sm"
+                            title={audioUri ? "Re-record" : "Record audio"}
+                            onPress={startRecording}
+                        />
+                    ) : (
+                        <Button type="danger" size="sm" title="Stop" onPress={stopRecording} />
+                    )}
+
+                    {audioUri && !recording && (
                         <>
-                            <Text style={[styles.label, { marginTop: 8 }]}>Assign to (optional)</Text>
-                            <MembersSelector values={assignedToIds} onChange={setAssignedToIds} />
+                            <Button type="secondary" size="sm" title="Play" onPress={playRecording} />
+
+                            {audioDuration != null && (
+                                <Text style={{ fontSize: 12, color: "#64748b" }}>~{audioDuration}s</Text>
+                            )}
                         </>
                     )}
+                </View>
 
-                    {!initial && (
-                        <Pressable
-                            onPress={() => setSaveAsTemplate(!saveAsTemplate)}
-                            style={{ flexDirection: "row", alignItems: "center", marginTop: 8 }}
-                        >
-                            <View
-                                style={{
-                                    width: 22,
-                                    height: 22,
-                                    borderRadius: 4,
-                                    borderWidth: 2,
-                                    borderColor: "#2563eb",
-                                    marginRight: 8,
-                                    backgroundColor: saveAsTemplate ? "#2563eb" : "transparent",
-                                }}
-                            />
-                            <Text style={{ fontSize: 14, fontWeight: "600", color: "#1e293b" }}>
-                                Save as routine
-                            </Text>
-                        </Pressable>
-                    )}
-                </ScrollView>
+                {assigneeOptions && assigneeOptions.length > 0 && (
+                    <>
+                        <Text style={[styles.label, { marginTop: 8 }]}>Assign to (optional)</Text>
+                        <MembersSelector values={assignedToIds} onChange={setAssignedToIds} />
+                    </>
+                )}
 
+                {!initial && (
+                    <Pressable
+                        onPress={() => setSaveAsTemplate(!saveAsTemplate)}
+                        style={{ flexDirection: "row", alignItems: "center", marginTop: 8 }}
+                    >
+                        <View
+                            style={{
+                                width: 22,
+                                height: 22,
+                                borderRadius: 4,
+                                borderWidth: 2,
+                                borderColor: "#2563eb",
+                                marginRight: 8,
+                                backgroundColor: saveAsTemplate ? "#2563eb" : "transparent",
+                            }}
+                        />
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#1e293b" }}>
+                            Save as routine
+                        </Text>
+                    </Pressable>
+                )}
                 <View style={styles.row}>
-                    <Button type="outline" size="sm" title="Cancel" onPress={onClose} style={styles.flex1} />
+                    <Button type="outline" size="md" title="Cancel" onPress={onClose} style={styles.flex1} />
                     <Button
                         type="primary"
-                        size="sm"
+                        size="md"
                         title={submitText}
                         disabled={disabled}
-                        onPress={() => {
-                            let expiresAt: string | null | undefined = undefined;
-
-                            if (finishByTime.trim()) {
-                                const iso = parseFinishTimeToIso(finishByTime);
-                                if (!iso) {
-                                    Alert.alert("Check time", "Please enter a valid time like 7:30 pm or 19:30.");
-                                    return;
-                                }
-                                expiresAt = iso;
-                            }
-
-                            onSubmit({
-                                title: title.trim(),
-                                description: description.trim() || undefined,
-                                points: Number(points),
-                                saveAsTemplate,
-                                assignedToIds: assignedToIds.length > 0 ? assignedToIds : undefined,
-                                audioLocal:
-                                    audioUri && audioDuration != null
-                                        ? { uri: audioUri, durationSeconds: audioDuration }
-                                        : undefined,
-                                expiresAt,
-                            });
-
-                            Keyboard.dismiss();
-                        }}
+                        onPress={handleSubmit}
                         style={styles.flex1}
                     />
                 </View>
-            </ModalCard>
-        </ModalShell>
+            </View>
+        </ModalDialog>
     );
 }
 
 const styles = StyleSheet.create({
-    card: {
-        width: '100%',
-        maxWidth: 460,
+    content: {
         gap: 10,
     },
-    h1: { fontSize: 18, fontWeight: "800", color: "#0f172a", marginBottom: 6 },
     label: { fontSize: 12, fontWeight: "700", color: "#64748b" },
     row: { flexDirection: "row", gap: 10, marginTop: 8 },
     flex1: { flex: 1 },

@@ -2,16 +2,14 @@
 import React, { useEffect, useState } from "react";
 import {
     Alert,
-    Modal,
     Pressable,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
 } from "react-native";
 
 import { DocsPageLayout, DocsSection, docsPageStyles } from "@/components/docs-page-layout";
-import { Button, ScreenState, TextInput } from "@/components/ui";
+import { Button, ModalDialog, ScreenState, TextInput } from "@/components/ui";
 import { useAuthContext } from "@/hooks/use-auth-context";
 import { useParentPermissionGuard } from "@/hooks/use-parent-permission-guard";
 import {
@@ -156,31 +154,26 @@ export default function WishlistSettingsScreen() {
                 </Pressable>
 
                 {/* Modal */}
-                <Modal
+                <ModalDialog
                     visible={showCurrencyPicker}
-                    transparent
-                    animationType="fade"
+                    onClose={() => setShowCurrencyPicker(false)}
+                    presentation="bottom-sheet"
+                    size="md"
+                    avoidKeyboard={false}
                 >
-                    <Pressable
-                        style={styles.modalOverlay}
-                        onPress={() => setShowCurrencyPicker(false)}
-                    >
-                        <View style={styles.modalSheet}>
-                            {CURRENCIES.map((cur) => (
-                                <TouchableOpacity
-                                    key={cur}
-                                    style={styles.modalOption}
-                                    onPress={() => {
-                                        setCurrency(cur);
-                                        setShowCurrencyPicker(false);
-                                    }}
-                                >
-                                    <Text style={styles.modalOptionText}>{cur}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    </Pressable>
-                </Modal>
+                    {CURRENCIES.map((cur) => (
+                        <TouchableOpacity
+                            key={cur}
+                            style={styles.modalOption}
+                            onPress={() => {
+                                setCurrency(cur);
+                                setShowCurrencyPicker(false);
+                            }}
+                        >
+                            <Text style={styles.modalOptionText}>{cur}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </ModalDialog>
             </DocsSection>
 
             <DocsSection title="Points Conversion">
@@ -272,17 +265,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         backgroundColor: "#fff",
         fontSize: 14,
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: "rgba(0,0,0,0.3)",
-        justifyContent: "flex-end",
-    },
-    modalSheet: {
-        backgroundColor: "#fff",
-        paddingVertical: 20,
-        borderTopLeftRadius: 16,
-        borderTopRightRadius: 16,
     },
     modalOption: { paddingVertical: 14, paddingHorizontal: 20 },
     modalOptionText: { fontSize: 16, color: "#0f172a" },

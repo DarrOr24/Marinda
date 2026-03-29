@@ -24,10 +24,12 @@ const KID_MODE_BLOCKED_ROUTES = [
   '/getting-started',
 ]
 
+function isKidModeBlockedSettingsRoute(pathname: string) {
+  return pathname.startsWith('/settings/') && pathname !== '/settings/member'
+}
+
 function isKidModeBlockedRoute(pathname: string) {
-  return pathname === '/settings'
-    || pathname.startsWith('/settings/')
-    || KID_MODE_BLOCKED_ROUTES.includes(pathname)
+  return isKidModeBlockedSettingsRoute(pathname) || KID_MODE_BLOCKED_ROUTES.includes(pathname)
 }
 
 function isProfileComplete(p: Profile | undefined) {
@@ -121,6 +123,11 @@ export function AuthRouter() {
     if (!effectiveMember) return
 
     if (isKidMode && isKidModeBlockedRoute(pathname)) {
+      if (isKidModeBlockedSettingsRoute(pathname)) {
+        router.replace('/settings/member')
+        return
+      }
+
       router.replace('/profiles')
       return
     }

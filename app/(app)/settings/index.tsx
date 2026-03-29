@@ -65,10 +65,12 @@ const ITEMS: Item[] = [
 
 export default function SettingsIndex() {
   const router = useRouter()
-  const { effectiveMember, hasParentPermissions } = useAuthContext()
+  const { effectiveMember, hasParentPermissions, isKidMode } = useAuthContext()
   const profileId = effectiveMember?.profile_id ?? null
   const { data: profile } = useProfile(profileId)
-  const visibleItems = hasParentPermissions
+  const visibleItems = isKidMode
+    ? ITEMS.filter(item => item.key === 'member')
+    : hasParentPermissions
     ? ITEMS
     : ITEMS.filter(item => item.key !== 'kid-mode-pin')
 

@@ -1,7 +1,8 @@
 import { MemberAvatar } from '@/components/avatar/member-avatar';
 import { TodoItemModal } from '@/components/modals/todo-item-modal';
-import { Button, MetaRow, ModalCard, ModalShell, Screen } from '@/components/ui';
+import { Button, MetaRow, ModalDialog, ModalPopover, Screen } from '@/components/ui';
 import { useAuthContext } from '@/hooks/use-auth-context';
+import { useRefById } from '@/hooks/use-ref-by-id';
 import { useFamily } from '@/lib/families/families.hooks';
 import {
   addTodoItem,
@@ -16,18 +17,13 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from 'react-native';
-
-/** Same width as announcements note ⋯ menu for a consistent action sheet. */
-const TODO_MENU_WIDTH = 220;
 
 type TodoItem = {
   id: string;
@@ -64,8 +60,8 @@ function visibleToActingKid(it: TodoItem, actingMemberId: string): boolean {
 
 export default function TodosBoard() {
   const { activeFamilyId, effectiveMember, family, members, isKidMode } = useAuthContext() as any;
-  const { width: windowWidth } = useWindowDimensions();
   const viewMenuAnchorRef = useRef<View>(null);
+  const getTodoMenuAnchorRef = useRefById<View>();
 
   const { familyMembers } = useFamily(activeFamilyId);
 
@@ -105,12 +101,6 @@ export default function TodosBoard() {
 
   const [viewMode, setViewMode] = useState<'member' | 'all'>('member');
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
-  const [viewMenuAnchor, setViewMenuAnchor] = useState<{
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-  } | null>(null);
 
   const [items, setItems] = useState<TodoItem[]>([]);
 
@@ -355,7 +345,6 @@ export default function TodosBoard() {
 
   function closeViewMenu() {
     setViewMenuOpen(false);
-    setViewMenuAnchor(null);
   }
 
   function toggleViewMenu() {
@@ -363,10 +352,7 @@ export default function TodosBoard() {
       closeViewMenu();
       return;
     }
-    viewMenuAnchorRef.current?.measureInWindow((x, y, w, h) => {
-      setViewMenuAnchor({ x, y, w, h });
-      setViewMenuOpen(true);
-    });
+    setViewMenuOpen(true);
   }
 
   function renderMemberGroupHeader(memberId: string, sectionItems: TodoItem[]) {
@@ -484,18 +470,20 @@ export default function TodosBoard() {
           ) : null}
         </View>
 
-        <Pressable
-          hitSlop={10}
-          onPress={(e) => {
-            e?.stopPropagation?.();
-            setTodoMenuItem(it);
-          }}
-          style={({ pressed }) => [styles.rowMenuBtn, pressed && { opacity: 0.72 }]}
-          accessibilityRole="button"
-          accessibilityLabel="To-do actions"
-        >
-          <MaterialCommunityIcons name="dots-vertical" size={20} color="#475569" />
-        </Pressable>
+        <View ref={getTodoMenuAnchorRef(it.id)} collapsable={false}>
+          <Pressable
+            hitSlop={10}
+            onPress={(e) => {
+              e?.stopPropagation?.();
+              setTodoMenuItem(it);
+            }}
+            style={({ pressed }) => [styles.rowMenuBtn, pressed && { opacity: 0.72 }]}
+            accessibilityRole="button"
+            accessibilityLabel="To-do actions"
+          >
+            <MaterialCommunityIcons name="dots-vertical" size={20} color="#475569" />
+          </Pressable>
+        </View>
       </Pressable>
     );
   }
@@ -596,57 +584,49 @@ export default function TodosBoard() {
         onSubmit={() => void saveItem()}
       />
 
-      <Modal
+      <ModalPopover
         visible={!!todoMenuItem}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => setTodoMenuItem(null)}
+        onClose={() => setTodoMenuItem(null)}
+        anchorRef={getTodoMenuAnchorRef(todoMenuItem?.id ?? '')}
+        position="bottom-right"
       >
-        <View style={styles.todoMenuModalRoot}>
-          <Pressable style={styles.todoMenuModalDismiss} onPress={() => setTodoMenuItem(null)} />
-          <View style={styles.todoMenuModalSheet} pointerEvents="box-none">
-            <View style={styles.todoMenuCard}>
-              {todoMenuItem &&
-              myMemberId &&
-              todoMenuItem.created_by_member_id === myMemberId ? (
-                <>
-                  <Pressable
-                    style={styles.todoMenuRow}
-                    onPress={() => {
-                      const item = todoMenuItem;
-                      setTodoMenuItem(null);
-                      startEdit(item);
-                    }}
-                  >
-                    <MaterialCommunityIcons name="pencil-outline" size={18} color="#334155" />
-                    <Text style={styles.todoMenuRowLabel}>Edit</Text>
-                  </Pressable>
-                  <View style={styles.todoMenuDivider} />
-                </>
-              ) : null}
-              <Pressable
-                style={styles.todoMenuRow}
-                onPress={() => {
-                  const item = todoMenuItem;
-                  setTodoMenuItem(null);
-                  if (item) setInfoItem(item);
-                }}
-              >
-                <MaterialCommunityIcons name="information-outline" size={18} color="#334155" />
-                <Text style={styles.todoMenuRowLabel}>Details</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        {todoMenuItem &&
+        myMemberId &&
+        todoMenuItem.created_by_member_id === myMemberId ? (
+          <>
+            <Pressable
+              style={styles.todoMenuRow}
+              onPress={() => {
+                const item = todoMenuItem;
+                setTodoMenuItem(null);
+                startEdit(item);
+              }}
+            >
+              <MaterialCommunityIcons name="pencil-outline" size={18} color="#334155" />
+              <Text style={styles.todoMenuRowLabel}>Edit</Text>
+            </Pressable>
+            <View style={styles.todoMenuDivider} />
+          </>
+        ) : null}
+        <Pressable
+          style={styles.todoMenuRow}
+          onPress={() => {
+            const item = todoMenuItem;
+            setTodoMenuItem(null);
+            if (item) setInfoItem(item);
+          }}
+        >
+          <MaterialCommunityIcons name="information-outline" size={18} color="#334155" />
+          <Text style={styles.todoMenuRowLabel}>Details</Text>
+        </Pressable>
+      </ModalPopover>
 
-      <ModalShell
+      <ModalDialog
         visible={!!sharedVisibilityItem}
         onClose={() => setSharedVisibilityItem(null)}
-        keyboardOffset={0}
+        size="md"
       >
-        <ModalCard>
+        <View>
           {sharedVisibilityItem ? (
             <>
               <Text style={styles.visibilityModalTitle}>Visible to</Text>
@@ -681,11 +661,11 @@ export default function TodosBoard() {
               </View>
             </>
           ) : null}
-        </ModalCard>
-      </ModalShell>
+        </View>
+      </ModalDialog>
 
-      <ModalShell visible={!!infoItem} onClose={() => setInfoItem(null)} keyboardOffset={0}>
-        <ModalCard>
+      <ModalDialog visible={!!infoItem} onClose={() => setInfoItem(null)} size="md">
+        <View>
           {infoItem && (
             <>
               <Text style={styles.infoModalTitle}>{infoItem.name}</Text>
@@ -708,49 +688,35 @@ export default function TodosBoard() {
               </View>
             </>
           )}
-        </ModalCard>
-      </ModalShell>
+        </View>
+      </ModalDialog>
 
-      <Modal
-        visible={viewMenuOpen && !!viewMenuAnchor}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={closeViewMenu}
+      <ModalPopover
+        visible={viewMenuOpen}
+        onClose={closeViewMenu}
+        size="menu-wide"
+        anchorRef={viewMenuAnchorRef}
+        position="bottom-right"
       >
-        <Pressable style={styles.viewMenuBackdrop} onPress={closeViewMenu} />
-        {viewMenuAnchor ? (
-          <View
-            style={[
-              styles.viewMenuPopover,
-              {
-                top: viewMenuAnchor.y + viewMenuAnchor.h + 4,
-                right: Math.max(12, windowWidth - viewMenuAnchor.x - viewMenuAnchor.w),
-              },
-            ]}
-            pointerEvents="box-none"
-          >
-            <Pressable
-              style={styles.viewOption}
-              onPress={() => {
-                setViewMode('member');
-                closeViewMenu();
-              }}
-            >
-              <Text style={styles.viewOptionText}>By family member</Text>
-            </Pressable>
-            <Pressable
-              style={styles.viewOption}
-              onPress={() => {
-                setViewMode('all');
-                closeViewMenu();
-              }}
-            >
-              <Text style={styles.viewOptionText}>All items (A → Z)</Text>
-            </Pressable>
-          </View>
-        ) : null}
-      </Modal>
+        <Pressable
+          style={styles.viewOption}
+          onPress={() => {
+            setViewMode('member');
+            closeViewMenu();
+          }}
+        >
+          <Text style={styles.viewOptionText}>By family member</Text>
+        </Pressable>
+        <Pressable
+          style={styles.viewOption}
+          onPress={() => {
+            setViewMode('all');
+            closeViewMenu();
+          }}
+        >
+          <Text style={styles.viewOptionText}>All items (A → Z)</Text>
+        </Pressable>
+      </ModalPopover>
     </Screen>
   );
 }
@@ -797,25 +763,6 @@ const styles = StyleSheet.create({
   viewMenuAnchor: {
     flexShrink: 0,
     justifyContent: 'center',
-  },
-  viewMenuBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.06)',
-  },
-  viewMenuPopover: {
-    position: 'absolute',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    paddingVertical: 4,
-    width: 240,
-    zIndex: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 16,
   },
   viewOption: {
     paddingHorizontal: 14,
@@ -986,33 +933,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  todoMenuModalRoot: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  todoMenuModalDismiss: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15,23,42,0.4)',
-  },
-  todoMenuModalSheet: {
-    width: TODO_MENU_WIDTH,
-    maxWidth: '92%',
-    zIndex: 1,
-  },
-  todoMenuCard: {
-    width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 4,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 10,
   },
   todoMenuRow: {
     flexDirection: 'row',

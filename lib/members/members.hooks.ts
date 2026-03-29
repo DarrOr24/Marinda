@@ -1,12 +1,13 @@
 // lib/members/members.hooks.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  fetchColorPalette,
   fetchMember,
   getMemberAvatarPublicUrl,
   updateMember,
   uploadMemberAvatar,
 } from './members.api'
-import { FamilyMember } from './members.types'
+import { Color, FamilyMember } from './members.types'
 
 
 export function useMember(memberId: string | null) {
@@ -22,6 +23,14 @@ export function useMember(memberId: string | null) {
           : null,
       }
     },
+  })
+}
+
+export function useColorPalette() {
+  return useQuery<Color[]>({
+    queryKey: ['color-palette'],
+    queryFn: fetchColorPalette,
+    staleTime: Infinity,
   })
 }
 

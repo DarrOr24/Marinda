@@ -1,13 +1,12 @@
 import React from 'react'
 import {
-  Modal,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native'
+
+import { Button, ModalDialog } from '@/components/ui'
 
 export type KidModePinPrompt = {
   title: string
@@ -30,56 +29,32 @@ export function KidModePinModal({
   onSubmit,
 }: Props) {
   return (
-    <Modal
-      transparent
-      animationType="fade"
-      visible={!!pinPrompt}
-      onRequestClose={onCancel}
-    >
-      <View style={styles.pinOverlay}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onCancel} />
-        <View style={styles.pinCard}>
-          <Text style={styles.pinTitle}>{pinPrompt?.title}</Text>
-          <Text style={styles.pinMessage}>{pinPrompt?.message}</Text>
+    <ModalDialog visible={!!pinPrompt} onClose={onCancel} onShow={() => onChangePinValue('')} size="sm">
+      <View style={styles.pinContent}>
+        <Text style={styles.pinTitle}>{pinPrompt?.title}</Text>
+        <Text style={styles.pinMessage}>{pinPrompt?.message}</Text>
 
-          <TextInput
-            value={pinValue}
-            onChangeText={onChangePinValue}
-            keyboardType="number-pad"
-            maxLength={4}
-            secureTextEntry
-            placeholder="1234"
-            style={styles.pinInput}
-          />
+        <TextInput
+          value={pinValue}
+          onChangeText={onChangePinValue}
+          keyboardType="number-pad"
+          maxLength={4}
+          secureTextEntry
+          placeholder="1234"
+          style={styles.pinInput}
+        />
 
-          <View style={styles.pinActions}>
-            <TouchableOpacity style={styles.pinSecondaryButton} onPress={onCancel}>
-              <Text style={styles.pinSecondaryText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.pinPrimaryButton} onPress={onSubmit}>
-              <Text style={styles.pinPrimaryText}>Unlock</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.pinActions}>
+          <Button title="Cancel" type="ghost" size="md" onPress={onCancel} />
+          <Button title="Unlock" type="primary" size="md" onPress={onSubmit} />
         </View>
       </View>
-    </Modal>
+    </ModalDialog>
   )
 }
 
 const styles = StyleSheet.create({
-  pinOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  pinCard: {
-    width: '100%',
-    maxWidth: 360,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
+  pinContent: {
     gap: 12,
   },
   pinTitle: {
@@ -107,25 +82,5 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 10,
     marginTop: 4,
-  },
-  pinPrimaryButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  pinPrimaryText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  pinSecondaryButton: {
-    backgroundColor: '#e2e8f0',
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  pinSecondaryText: {
-    color: '#0f172a',
-    fontWeight: '700',
   },
 })

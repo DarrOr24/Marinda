@@ -1,15 +1,13 @@
 // components/settings/edit-email-modal.tsx
 import { useMemo, useState } from 'react'
 import {
-  Modal,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native'
 
-import { Button } from '@/components/ui'
+import { Button, ModalDialog } from '@/components/ui'
 import { Colors } from '@/config/colors'
 import { isValidEmail } from '@/utils/validation.utils'
 
@@ -41,16 +39,7 @@ export function EditEmailModal({
   const showInvalid = draft.trim().length > 0 && !isValidEmail(draft)
 
   return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      transparent
-      onRequestClose={onClose}
-      onShow={() => setDraft(initialEmail)}
-    >
-      <Pressable style={styles.backdrop} onPress={onClose} />
-
-      <View style={styles.card}>
+    <ModalDialog visible={visible} onClose={onClose} onShow={() => setDraft(initialEmail)} size="md">
         <Text style={styles.title}>Change email</Text>
         <Text style={styles.subtitle}>
           We’ll send a verification link to the new address.
@@ -99,29 +88,11 @@ export function EditEmailModal({
             fullWidth
           />
         </View>
-      </View>
-    </Modal>
+    </ModalDialog>
   )
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
-  },
-
-  card: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    top: '28%',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-
   title: {
     fontSize: 16,
     fontWeight: '800',

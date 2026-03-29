@@ -1,7 +1,7 @@
 // components/chore-detail-modal.tsx
 import { ChipSelector } from '@/components/chip-selector';
 import MediaPicker, { PickedMedia } from '@/components/media-picker';
-import { Button, MetaRow, ModalCard, ModalShell, TextInput, useModalScrollMaxHeight } from '@/components/ui';
+import { Button, MetaRow, ModalDialog, TextInput } from '@/components/ui';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { ChoreView, Proof } from '@/lib/chores/chores.types';
 import { Audio, ResizeMode, Video } from 'expo-av';
@@ -10,7 +10,6 @@ import {
     Alert,
     Image,
     Keyboard,
-    ScrollView,
     StyleSheet,
     Text,
     View,
@@ -58,7 +57,6 @@ export default function ChoreDetailModal({
     doneByOptions,
     defaultDoneById,
 }: Props) {
-    const scrollMaxHeight = useModalScrollMaxHeight(78);
     const { hasParentPermissions } = useAuthContext();
 
     // 🔹 Normalize assignees: plural-only
@@ -294,25 +292,15 @@ export default function ChoreDetailModal({
     }
 
     return (
-        <ModalShell
+        <ModalDialog
             visible={visible}
             onClose={requestClose}
-            keyboardOffset={12}
+            size="lg"
+            scrollable
         >
-            <ModalCard style={s.card} maxHeightPadding={6} bottomPadding={12}>
-                {/* HEADER (outside scroll) */}
+            <>
                 <Text style={s.title}>{chore.title}</Text>
                 <Text style={s.status}>{chore.status.toUpperCase()}</Text>
-
-                {/* SCROLLING BODY */}
-                <ScrollView
-                    style={{ maxHeight: scrollMaxHeight }}
-                    contentContainerStyle={{ paddingBottom: 16, flexGrow: 0 }}
-                    keyboardShouldPersistTaps="handled"
-                    keyboardDismissMode="none"
-                    showsVerticalScrollIndicator={true}
-                    nestedScrollEnabled
-                >
                     {chore.points > 0 && (
                         <Text style={[s.text, { marginTop: 2 }]}>
                             Worth: <Text style={s.bold}>{chore.points} pts</Text>
@@ -573,9 +561,7 @@ export default function ChoreDetailModal({
                             </View>
                         </>
                     )}
-                </ScrollView>
 
-                {/* FOOTER (outside scroll) */}
                 {chore.status === 'open' && (
                     <View style={s.row}>
                         <View style={s.flex1}>
@@ -611,20 +597,13 @@ export default function ChoreDetailModal({
                         <Button title="Close" type="secondary" size="sm" onPress={requestClose} />
                     </View>
                 )}
-            </ModalCard>
-        </ModalShell>
+            </>
+        </ModalDialog>
     );
 
 }
 
 const s = StyleSheet.create({
-    card: {
-        flexGrow: 0,
-        flexShrink: 1,
-        width: '100%',
-        maxWidth: 460,
-    },
-
     title: { fontSize: 20, fontWeight: '900', color: '#0f172a' },
     status: { fontWeight: '700', color: '#64748b', marginTop: 2 },
     text: { color: '#334155' },

@@ -9,7 +9,6 @@ import {
   AppState,
   Image,
   Keyboard,
-  Modal,
   PixelRatio,
   Platform,
   Pressable,
@@ -23,6 +22,7 @@ import {
 } from 'react-native';
 
 import { useAuthContext } from '@/hooks/use-auth-context';
+import { useRefById } from '@/hooks/use-ref-by-id';
 import { useFamily } from '@/lib/families/families.hooks';
 
 import {
@@ -41,7 +41,7 @@ import {
 import { AnnouncementItemEngagement } from '@/components/boards/announcement-item-engagement';
 import { ChipSelector } from '@/components/chip-selector';
 import { StickyNote } from '@/components/sticky-note';
-import { Button, ModalCard, ModalShell, Screen, ScreenState, TextInput } from '@/components/ui';
+import { Button, ModalDialog, ModalPopover, Screen, ScreenState, TextInput } from '@/components/ui';
 import { Colors } from '@/config/colors';
 import {
   CUSTOM_TAB_TEXT,
@@ -81,8 +81,6 @@ function formatBulletinDetailTime(iso: string): string {
   });
 }
 
-const NOTE_MENU_WIDTH = 220;
-
 /** Only then enable auto-shrink; shorter placeholders stay at full font size (Android often over-shrinks). */
 const COMPOSER_PLACEHOLDER_SHRINK_MIN_CHARS = 52;
 
@@ -106,6 +104,7 @@ export default function AnnouncementsBoard() {
   const [showAuthorMenu, setShowAuthorMenu] = useState(false);
   const [searchExpanded, setSearchExpanded] = useState(false);
   const bulletinSearchRef = useRef<RNTextInput>(null);
+  const getNoteMenuAnchorRef = useRefById<View>();
 
   /** Check: collapse toolbar; keep query and filtered results. */
   const applyBulletinSearch = () => {
@@ -912,22 +911,24 @@ export default function AnnouncementsBoard() {
                         {myFamilyMemberId ||
                         item.created_by_member_id === myFamilyMemberId ||
                         hasParentPermissions ? (
-                          <Pressable
-                            hitSlop={10}
-                            onPress={() => setNoteMenuItem(item)}
-                            style={({ pressed }) => [
-                              styles.noteMenuIconBtn,
-                              pressed && { opacity: 0.72 },
-                            ]}
-                            accessibilityRole="button"
-                            accessibilityLabel="Note actions"
-                          >
-                            <MaterialCommunityIcons
-                              name="dots-vertical"
-                              size={20}
-                              color="#475569"
-                            />
-                          </Pressable>
+                          <View ref={getNoteMenuAnchorRef(item.id)} collapsable={false}>
+                            <Pressable
+                              hitSlop={10}
+                              onPress={() => setNoteMenuItem(item)}
+                              style={({ pressed }) => [
+                                styles.noteMenuIconBtn,
+                                pressed && { opacity: 0.72 },
+                              ]}
+                              accessibilityRole="button"
+                              accessibilityLabel="Note actions"
+                            >
+                              <MaterialCommunityIcons
+                                name="dots-vertical"
+                                size={20}
+                                color="#475569"
+                              />
+                            </Pressable>
+                          </View>
                         ) : null}
                       </View>
                     </View>
@@ -951,14 +952,14 @@ export default function AnnouncementsBoard() {
         </ScrollView>
 
         {/* ---------------------------------------------- */}
-        {/* EDIT ANNOUNCEMENT MODAL (ModalShell + ModalCard) */}
+        {/* EDIT ANNOUNCEMENT MODAL */}
         {/* ---------------------------------------------- */}
-        <ModalShell
+        <ModalDialog
           visible={!!editingItem}
           onClose={() => setEditingItem(null)}
-          keyboardOffset={0}
+          size="md"
         >
-          <ModalCard>
+          <View>
             <Text style={styles.modalTitle}>Edit item</Text>
 
             <TextInput
@@ -1011,21 +1012,21 @@ export default function AnnouncementsBoard() {
                 )}
               </Pressable>
             </View>
-          </ModalCard>
-        </ModalShell>
+          </View>
+        </ModalDialog>
 
         {/* ---------------------------------------------- */}
         {/* REPLY TO NOTE (from ⋯ menu) */}
         {/* ---------------------------------------------- */}
-        <ModalShell
+        <ModalDialog
           visible={!!replyModalItem}
           onClose={() => {
             setReplyModalItem(null);
             setReplyModalDraft('');
           }}
-          keyboardOffset={0}
+          size="md"
         >
-          <ModalCard>
+          <View>
             <Text style={styles.modalTitle}>Reply</Text>
             <TextInput
               style={styles.textInputMultiline}
@@ -1097,8 +1098,8 @@ export default function AnnouncementsBoard() {
                 )}
               </Pressable>
             </View>
-          </ModalCard>
-        </ModalShell>
+          </View>
+        </ModalDialog>
 
         <EmojiPicker
           open={!!emojiPickerForItemId}
@@ -1112,14 +1113,14 @@ export default function AnnouncementsBoard() {
 
 
         {/* ---------------------------------------------- */}
-        {/* ADD TAB MODAL (ModalShell + ModalCard) */}
+        {/* ADD TAB MODAL */}
         {/* ---------------------------------------------- */}
-        <ModalShell
+        <ModalDialog
           visible={showAddTabModal}
           onClose={() => setShowAddTabModal(false)}
-          keyboardOffset={0}
+          size="md"
         >
-          <ModalCard>
+          <View>
             <Text style={styles.modalTitle}>Create New Tab</Text>
 
             <TextInput
@@ -1174,167 +1175,149 @@ export default function AnnouncementsBoard() {
                 }}
               />
             </View>
-          </ModalCard>
-        </ModalShell>
-
-
-        {/* ---------------------------------------------- */}
-        {/* NOTE: ⋯ menu — centered sheet (reliable vs ScrollView measure) */}
-        {/* ---------------------------------------------- */}
-        <Modal
-          visible={!!noteMenuItem}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setNoteMenuItem(null)}
-        >
-          <View style={styles.noteMenuModalRoot}>
-            <Pressable
-              style={styles.noteMenuModalDismiss}
-              onPress={() => setNoteMenuItem(null)}
-            />
-            <View style={styles.noteMenuModalSheet} pointerEvents="box-none">
-              <View style={styles.noteMenuCard}>
-                {noteMenuItem
-                  ? (() => {
-                      const item = noteMenuItem;
-                      const canEditNote =
-                        item.created_by_member_id === myFamilyMemberId ||
-                        hasParentPermissions;
-                      const moveTargets = ALL_TABS.filter(t => t.id !== item.kind);
-                      const noteInfoWasEdited = item.created_at !== item.updated_at;
-                      return (
-                        <>
-                          {canEditNote ? (
-                            <Pressable
-                              style={styles.noteMenuRow}
-                              onPress={() => {
-                                setNoteMenuItem(null);
-                                setEditingItem(item);
-                                setEditText(item.text);
-                              }}
-                            >
-                              <MaterialCommunityIcons
-                                name="pencil-outline"
-                                size={18}
-                                color="#334155"
-                              />
-                              <Text style={styles.noteMenuRowLabel}>Edit</Text>
-                            </Pressable>
-                          ) : null}
-                          {canEditNote && moveTargets.length > 0 ? (
-                            <Pressable
-                              style={styles.noteMenuRow}
-                              onPress={() => {
-                                setNoteMenuItem(null);
-                                setMoveNoteItem(item);
-                              }}
-                            >
-                              <MaterialCommunityIcons
-                                name="folder-move-outline"
-                                size={18}
-                                color="#334155"
-                              />
-                              <Text style={styles.noteMenuRowLabel}>Move to tab…</Text>
-                            </Pressable>
-                          ) : null}
-                          {canEditNote ? (
-                            <Pressable
-                              style={styles.noteMenuRow}
-                              onPress={() => {
-                                setNoteMenuItem(null);
-                                confirmDelete(item);
-                              }}
-                            >
-                              <MaterialCommunityIcons
-                                name="close"
-                                size={18}
-                                color="#b91c1c"
-                              />
-                              <Text style={styles.noteMenuRowLabelDestructive}>
-                                Delete
-                              </Text>
-                            </Pressable>
-                          ) : null}
-                          {canEditNote && myFamilyMemberId ? (
-                            <View style={styles.noteMenuDivider} />
-                          ) : null}
-                          {myFamilyMemberId ? (
-                            <Pressable
-                              style={styles.noteMenuRow}
-                              onPress={() => {
-                                setNoteMenuItem(null);
-                                setReplyModalItem(item);
-                                setReplyModalDraft('');
-                              }}
-                            >
-                              <MaterialCommunityIcons
-                                name="reply-outline"
-                                size={18}
-                                color="#334155"
-                              />
-                              <Text style={styles.noteMenuRowLabel}>Reply</Text>
-                            </Pressable>
-                          ) : null}
-                          {myFamilyMemberId ? (
-                            <Pressable
-                              style={styles.noteMenuRow}
-                              onPress={() => {
-                                const id = item.id;
-                                setNoteMenuItem(null);
-                                emojiPickItemRef.current = id;
-                                setEmojiPickerForItemId(id);
-                              }}
-                            >
-                              <MaterialCommunityIcons
-                                name="emoticon-happy-outline"
-                                size={18}
-                                color="#334155"
-                              />
-                              <Text style={styles.noteMenuRowLabel}>React</Text>
-                            </Pressable>
-                          ) : null}
-                          <View style={styles.noteMenuDivider} />
-                          <Pressable
-                            style={styles.noteMenuRow}
-                            onPress={() => {
-                              setNoteMenuItem(null);
-                              Alert.alert(
-                                'Note info',
-                                noteInfoWasEdited
-                                  ? `Created: ${formatBulletinDetailTime(item.created_at)}\n\nLast edited: ${formatBulletinDetailTime(item.updated_at)}`
-                                  : `Created: ${formatBulletinDetailTime(item.created_at)}`
-                              );
-                            }}
-                          >
-                            <MaterialCommunityIcons
-                              name="information-outline"
-                              size={18}
-                              color="#334155"
-                            />
-                            <Text style={styles.noteMenuRowLabel}>Info</Text>
-                          </Pressable>
-                        </>
-                      );
-                    })()
-                  : null}
-              </View>
-            </View>
           </View>
-        </Modal>
+        </ModalDialog>
 
-        <Modal
-          visible={!!moveNoteItem}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setMoveNoteItem(null)}
+
+        <ModalPopover
+          visible={!!noteMenuItem}
+          onClose={() => setNoteMenuItem(null)}
+          anchorRef={getNoteMenuAnchorRef(noteMenuItem?.id ?? '')}
+          position="bottom-right"
         >
-          <View style={styles.noteMenuModalRoot}>
-            <Pressable
-              style={styles.noteMenuModalDismiss}
-              onPress={() => setMoveNoteItem(null)}
-            />
-            <View style={styles.moveTabModalSheet} pointerEvents="box-none">
-              <View style={styles.moveTabModalCard}>
+          {noteMenuItem
+            ? (() => {
+                const item = noteMenuItem;
+                const canEditNote =
+                  item.created_by_member_id === myFamilyMemberId ||
+                  hasParentPermissions;
+                const moveTargets = ALL_TABS.filter(t => t.id !== item.kind);
+                const noteInfoWasEdited = item.created_at !== item.updated_at;
+                return (
+                  <>
+                    {canEditNote ? (
+                      <Pressable
+                        style={styles.noteMenuRow}
+                        onPress={() => {
+                          setNoteMenuItem(null);
+                          setEditingItem(item);
+                          setEditText(item.text);
+                        }}
+                      >
+                        <MaterialCommunityIcons
+                          name="pencil-outline"
+                          size={18}
+                          color="#334155"
+                        />
+                        <Text style={styles.noteMenuRowLabel}>Edit</Text>
+                      </Pressable>
+                    ) : null}
+                    {canEditNote && moveTargets.length > 0 ? (
+                      <Pressable
+                        style={styles.noteMenuRow}
+                        onPress={() => {
+                          setNoteMenuItem(null);
+                          setMoveNoteItem(item);
+                        }}
+                      >
+                        <MaterialCommunityIcons
+                          name="folder-move-outline"
+                          size={18}
+                          color="#334155"
+                        />
+                        <Text style={styles.noteMenuRowLabel}>Move to tab…</Text>
+                      </Pressable>
+                    ) : null}
+                    {canEditNote ? (
+                      <Pressable
+                        style={styles.noteMenuRow}
+                        onPress={() => {
+                          setNoteMenuItem(null);
+                          confirmDelete(item);
+                        }}
+                      >
+                        <MaterialCommunityIcons
+                          name="close"
+                          size={18}
+                          color="#b91c1c"
+                        />
+                        <Text style={styles.noteMenuRowLabelDestructive}>
+                          Delete
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                    {canEditNote && myFamilyMemberId ? (
+                      <View style={styles.noteMenuDivider} />
+                    ) : null}
+                    {myFamilyMemberId ? (
+                      <Pressable
+                        style={styles.noteMenuRow}
+                        onPress={() => {
+                          setNoteMenuItem(null);
+                          setReplyModalItem(item);
+                          setReplyModalDraft('');
+                        }}
+                      >
+                        <MaterialCommunityIcons
+                          name="reply-outline"
+                          size={18}
+                          color="#334155"
+                        />
+                        <Text style={styles.noteMenuRowLabel}>Reply</Text>
+                      </Pressable>
+                    ) : null}
+                    {myFamilyMemberId ? (
+                      <Pressable
+                        style={styles.noteMenuRow}
+                        onPress={() => {
+                          const id = item.id;
+                          setNoteMenuItem(null);
+                          emojiPickItemRef.current = id;
+                          setEmojiPickerForItemId(id);
+                        }}
+                      >
+                        <MaterialCommunityIcons
+                          name="emoticon-happy-outline"
+                          size={18}
+                          color="#334155"
+                        />
+                        <Text style={styles.noteMenuRowLabel}>React</Text>
+                      </Pressable>
+                    ) : null}
+                    <View style={styles.noteMenuDivider} />
+                    <Pressable
+                      style={styles.noteMenuRow}
+                      onPress={() => {
+                        setNoteMenuItem(null);
+                        Alert.alert(
+                          'Note info',
+                          noteInfoWasEdited
+                            ? `Created: ${formatBulletinDetailTime(item.created_at)}\n\nLast edited: ${formatBulletinDetailTime(item.updated_at)}`
+                            : `Created: ${formatBulletinDetailTime(item.created_at)}`
+                        );
+                      }}
+                    >
+                      <MaterialCommunityIcons
+                        name="information-outline"
+                        size={18}
+                        color="#334155"
+                      />
+                      <Text style={styles.noteMenuRowLabel}>Info</Text>
+                    </Pressable>
+                  </>
+                );
+              })()
+            : null}
+        </ModalPopover>
+
+        <ModalDialog
+          visible={!!moveNoteItem}
+          onClose={() => setMoveNoteItem(null)}
+          avoidKeyboard={false}
+          size="md"
+        >
+            <View style={styles.moveTabModalSheet}>
+              <View style={styles.moveTabMenuContent}>
                 <Text style={styles.moveTabModalTitle}>Move to tab</Text>
                 <ScrollView
                   style={styles.moveTabList}
@@ -1383,8 +1366,7 @@ export default function AnnouncementsBoard() {
                 </Pressable>
               </View>
             </View>
-          </View>
-        </Modal>
+        </ModalDialog>
           </View>
         </View>
       </View>
@@ -1669,39 +1651,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  noteMenuModalRoot: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  noteMenuModalDismiss: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15,23,42,0.4)',
-  },
-  noteMenuModalSheet: {
-    width: NOTE_MENU_WIDTH,
-    maxWidth: '92%',
-    zIndex: 1,
-  },
   moveTabModalSheet: {
-    width: Math.max(NOTE_MENU_WIDTH, 260),
-    maxWidth: '92%',
-    zIndex: 1,
     maxHeight: '70%',
   },
-  moveTabModalCard: {
-    width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
+  moveTabMenuContent: {
     paddingTop: 12,
     paddingBottom: 4,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 10,
   },
   moveTabModalTitle: {
     fontSize: 17,
@@ -1738,19 +1693,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#64748b',
     fontWeight: '500',
-  },
-  noteMenuCard: {
-    width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 4,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 10,
   },
   modalSendIconBtn: {
     padding: 8,

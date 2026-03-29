@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -20,11 +19,12 @@ import {
   useDeleteAnnouncementReply,
   useUpdateAnnouncementReply,
 } from '@/lib/announcements/announcements.hooks';
+import { useRefById } from '@/hooks/use-ref-by-id';
 import type {
   AnnouncementReaction,
   AnnouncementReply,
 } from '@/lib/announcements/announcements.types';
-import { Button, ModalCard, ModalShell, TextInput } from '@/components/ui';
+import { Button, ModalDialog, ModalPopover, TextInput } from '@/components/ui';
 import { Colors } from '@/config/colors';
 
 function normalizeReactionKey(emoji: string): string {
@@ -60,8 +60,6 @@ function formatReplyDetailTime(iso: string): string {
   });
 }
 
-const REPLY_MENU_WIDTH = 220;
-
 export function AnnouncementItemEngagement({
   familyId,
   myFamilyMemberId,
@@ -79,6 +77,7 @@ export function AnnouncementItemEngagement({
   const [editReplyDraft, setEditReplyDraft] = useState('');
   const [reactionsSheetOpen, setReactionsSheetOpen] = useState(false);
   const [replyMenuReply, setReplyMenuReply] = useState<AnnouncementReply | null>(null);
+  const getReplyMenuAnchorRef = useRefById<View>();
 
   const byEmojiGrouped = useMemo(() => {
     const m = new Map<
@@ -250,18 +249,20 @@ export function AnnouncementItemEngagement({
                 </Text>
               </View>
               {canModifyReply(r) && (
-                <Pressable
-                  hitSlop={10}
-                  onPress={() => setReplyMenuReply(r)}
-                  style={({ pressed }) => [
-                    styles.replyMenuIconBtn,
-                    pressed && { opacity: 0.72 },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Reply actions"
-                >
-                  <MaterialCommunityIcons name="dots-vertical" size={20} color="#475569" />
-                </Pressable>
+                <View ref={getReplyMenuAnchorRef(r.id)} collapsable={false}>
+                  <Pressable
+                    hitSlop={10}
+                    onPress={() => setReplyMenuReply(r)}
+                    style={({ pressed }) => [
+                      styles.replyMenuIconBtn,
+                      pressed && { opacity: 0.72 },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Reply actions"
+                  >
+                    <MaterialCommunityIcons name="dots-vertical" size={20} color="#475569" />
+                  </Pressable>
+                </View>
               )}
             </View>
             );
@@ -269,8 +270,8 @@ export function AnnouncementItemEngagement({
         </View>
       )}
 
-      <ModalShell visible={reactionsSheetOpen} onClose={closeReactionsSheet} keyboardOffset={0}>
-        <ModalCard>
+      <ModalDialog visible={reactionsSheetOpen} onClose={closeReactionsSheet} size="md">
+        <View>
           {reactionsSheetOpen ? (
             <>
               <Text style={styles.reactionsSheetTitle}>
@@ -433,87 +434,77 @@ export function AnnouncementItemEngagement({
               </ScrollView>
             </>
           ) : null}
-        </ModalCard>
-      </ModalShell>
-
-      <Modal
-        visible={!!replyMenuReply}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setReplyMenuReply(null)}
-      >
-        <View style={styles.replyMenuModalRoot}>
-          <Pressable
-            style={styles.replyMenuModalDismiss}
-            onPress={() => setReplyMenuReply(null)}
-          />
-          <View style={styles.replyMenuModalSheet} pointerEvents="box-none">
-            <View style={styles.replyMenuCard}>
-              {replyMenuReply ? (
-                <>
-                  <Pressable
-                    style={styles.replyMenuRow}
-                    onPress={() => {
-                      const target = replyMenuReply;
-                      setReplyMenuReply(null);
-                      setEditingReply(target);
-                      setEditReplyDraft(target.text);
-                    }}
-                  >
-                    <MaterialCommunityIcons
-                      name="pencil-outline"
-                      size={18}
-                      color="#334155"
-                    />
-                    <Text style={styles.replyMenuRowLabel}>Edit reply</Text>
-                  </Pressable>
-                  <View style={styles.replyMenuDivider} />
-                  <Pressable
-                    style={styles.replyMenuRow}
-                    onPress={() => {
-                      const id = replyMenuReply.id;
-                      setReplyMenuReply(null);
-                      confirmDeleteReply(id);
-                    }}
-                  >
-                    <MaterialCommunityIcons name="close" size={18} color="#b91c1c" />
-                    <Text style={styles.replyMenuRowLabelDestructive}>Delete reply</Text>
-                  </Pressable>
-                  <View style={styles.replyMenuDivider} />
-                  <Pressable
-                    style={styles.replyMenuRow}
-                    onPress={() => {
-                      const r = replyMenuReply;
-                      const wasEdited = r.created_at !== r.updated_at;
-                      setReplyMenuReply(null);
-                      Alert.alert(
-                        'Reply info',
-                        wasEdited
-                          ? `Created: ${formatReplyDetailTime(r.created_at)}\n\nLast edited: ${formatReplyDetailTime(r.updated_at)}`
-                          : `Created: ${formatReplyDetailTime(r.created_at)}`
-                      );
-                    }}
-                  >
-                    <MaterialCommunityIcons
-                      name="information-outline"
-                      size={18}
-                      color="#334155"
-                    />
-                    <Text style={styles.replyMenuRowLabel}>Info</Text>
-                  </Pressable>
-                </>
-              ) : null}
-            </View>
-          </View>
         </View>
-      </Modal>
+      </ModalDialog>
 
-      <ModalShell
+      <ModalPopover
+        visible={!!replyMenuReply}
+        onClose={() => setReplyMenuReply(null)}
+        anchorRef={getReplyMenuAnchorRef(replyMenuReply?.id ?? '')}
+        position="bottom-right"
+      >
+        {replyMenuReply ? (
+          <>
+            <Pressable
+              style={styles.replyMenuRow}
+              onPress={() => {
+                const target = replyMenuReply;
+                setReplyMenuReply(null);
+                setEditingReply(target);
+                setEditReplyDraft(target.text);
+              }}
+            >
+              <MaterialCommunityIcons
+                name="pencil-outline"
+                size={18}
+                color="#334155"
+              />
+              <Text style={styles.replyMenuRowLabel}>Edit reply</Text>
+            </Pressable>
+            <View style={styles.replyMenuDivider} />
+            <Pressable
+              style={styles.replyMenuRow}
+              onPress={() => {
+                const id = replyMenuReply.id;
+                setReplyMenuReply(null);
+                confirmDeleteReply(id);
+              }}
+            >
+              <MaterialCommunityIcons name="close" size={18} color="#b91c1c" />
+              <Text style={styles.replyMenuRowLabelDestructive}>Delete reply</Text>
+            </Pressable>
+            <View style={styles.replyMenuDivider} />
+            <Pressable
+              style={styles.replyMenuRow}
+              onPress={() => {
+                const r = replyMenuReply;
+                const wasEdited = r.created_at !== r.updated_at;
+                setReplyMenuReply(null);
+                Alert.alert(
+                  'Reply info',
+                  wasEdited
+                    ? `Created: ${formatReplyDetailTime(r.created_at)}\n\nLast edited: ${formatReplyDetailTime(r.updated_at)}`
+                    : `Created: ${formatReplyDetailTime(r.created_at)}`
+                );
+              }}
+            >
+              <MaterialCommunityIcons
+                name="information-outline"
+                size={18}
+                color="#334155"
+              />
+              <Text style={styles.replyMenuRowLabel}>Info</Text>
+            </Pressable>
+          </>
+        ) : null}
+      </ModalPopover>
+
+      <ModalDialog
         visible={!!editingReply}
         onClose={() => setEditingReply(null)}
-        keyboardOffset={0}
+        size="md"
       >
-        <ModalCard>
+        <View>
           <Text style={styles.modalTitle}>Edit reply</Text>
           <TextInput
             style={styles.editReplyInput}
@@ -567,8 +558,8 @@ export function AnnouncementItemEngagement({
               )}
             </Pressable>
           </View>
-        </ModalCard>
-      </ModalShell>
+        </View>
+      </ModalDialog>
     </View>
   );
 }
@@ -662,33 +653,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexShrink: 0,
     marginTop: 1,
-  },
-  replyMenuModalRoot: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  replyMenuModalDismiss: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15,23,42,0.4)',
-  },
-  replyMenuModalSheet: {
-    width: REPLY_MENU_WIDTH,
-    maxWidth: '92%',
-    zIndex: 1,
-  },
-  replyMenuCard: {
-    width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 4,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 10,
   },
   replyMenuRow: {
     flexDirection: 'row',

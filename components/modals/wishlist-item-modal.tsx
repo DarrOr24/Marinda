@@ -4,14 +4,13 @@ import {
     Alert,
     Keyboard,
     Pressable,
-    ScrollView,
     StyleSheet,
     Text,
     View,
 } from "react-native";
 
 import MediaPicker from "@/components/media-picker";
-import { Button, ModalCard, ModalShell, TextInput, useModalScrollMaxHeight } from "@/components/ui";
+import { Button, ModalDialog, TextInput } from "@/components/ui";
 
 type Props = {
     visible: boolean;
@@ -84,7 +83,6 @@ export function WishlistItemModal({
     onClose,
     onSubmit,
 }: Props) {
-    const scrollMaxHeight = useModalScrollMaxHeight(78);
     function handleToggleSelfFulfill() {
         // must have a price first
         if (!price.trim()) {
@@ -133,18 +131,15 @@ export function WishlistItemModal({
 
 
     return (
-        <ModalShell visible={visible} onClose={onClose} keyboardOffset={12}>
-            <ModalCard bottomPadding={12} maxHeightPadding={6} style={styles.card}>
-                <Text style={styles.modalTitle}>{mode === "edit" ? "Edit Wish" : "Add Wish"}</Text>
-
-                <ScrollView
-                    style={{ maxHeight: scrollMaxHeight }}
-                    contentContainerStyle={{ paddingBottom: 16, flexGrow: 0 }}
-                    keyboardShouldPersistTaps="handled"
-                    keyboardDismissMode="none"
-                    showsVerticalScrollIndicator={true}
-                    nestedScrollEnabled
-                >
+      <ModalDialog
+        visible={visible}
+        onClose={onClose}
+        size="lg"
+        title={mode === "edit" ? "Edit Wish" : "Add Wish"}
+        scrollable
+      >
+            <View style={styles.card}>
+                <View>
                     <TextInput
                         placeholder="Title"
                         value={title}
@@ -231,27 +226,20 @@ export function WishlistItemModal({
                         allowVideo={false}
                         pickFromLibrary={true}
                     />
-                </ScrollView>
+                </View>
 
                 <View style={styles.modalButtonsRow}>
                     <Button type="outline" size="sm" title="Cancel" onPress={onClose} />
                     <Button type="primary" size="sm" title="Save" onPress={onSubmit} />
                 </View>
-            </ModalCard>
-        </ModalShell>
+            </View>
+        </ModalDialog>
     );
 }
 
 const styles = StyleSheet.create({
     card: {
-        width: '100%',
-        maxWidth: 460,
         gap: 10,
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: "700",
-        marginBottom: 10,
     },
     inputSpacing: { marginBottom: 10 },
     previewText: {

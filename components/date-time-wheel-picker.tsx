@@ -4,14 +4,12 @@ import React, {
   useState
 } from "react";
 import {
-  Modal,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 
-import { Button } from "@/components/ui";
+import { Button, ModalDialog } from "@/components/ui";
 import { WheelPicker } from "./wheel-picker";
 
 import {
@@ -165,11 +163,13 @@ export function DateTimeWheelPicker({
   // ───────────────────────────────────────────────────────────────
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.backdrop}>
-        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onCancel} />
-
-        <View style={styles.sheet}>
+    <ModalDialog
+      visible={visible}
+      onClose={onCancel}
+      presentation="bottom-sheet"
+      size="xl"
+      avoidKeyboard={false}
+    >
           {/* Header — full date */}
           <Text style={styles.title}>
             {`${getWeekDayFromDateString(selectedDayISO)}, `}
@@ -257,9 +257,7 @@ export function DateTimeWheelPicker({
               }}
             />
           </View>
-        </View>
-      </View>
-    </Modal>
+    </ModalDialog>
   );
 }
 
@@ -267,18 +265,6 @@ export function DateTimeWheelPicker({
 // STYLES
 // ───────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    margin: 16,
-    marginBottom: 60,
-    borderRadius: 16,
-    backgroundColor: "#fff",
-    padding: 16,
-  },
   title: {
     textAlign: "center",
     fontSize: 20,

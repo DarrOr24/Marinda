@@ -32,3 +32,9 @@ export interface FamilyMember {
   avatarCacheBuster?: number
   public_avatar_url?: string | null
 }
+
+export type UpdateMemberInput = Partial<
+  Omit<FamilyMember, 'color' | 'profile' | 'public_avatar_url' | 'avatarCacheBuster'>
+> & {
+  color_scheme?: string | null
+}

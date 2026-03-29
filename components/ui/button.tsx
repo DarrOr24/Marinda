@@ -34,6 +34,7 @@ type ButtonProps = {
   type?: ButtonType;
   size?: ButtonSize;
   onPress?: (e?: GestureResponderEvent) => void;
+  accessibilityLabel?: string;
   bold?: boolean;
   uppercase?: boolean;
   disabled?: boolean;
@@ -57,6 +58,7 @@ export function Button({
   type = 'primary',
   size = 'md',
   onPress,
+  accessibilityLabel,
   bold = false,
   uppercase = false,
   disabled = false,
@@ -134,6 +136,7 @@ export function Button({
       hitSlop={hitSlop}
       onPress={disabled ? undefined : onPress}
       disabled={disabled}
+      accessibilityLabel={accessibilityLabel}
       style={({ pressed }) => [
         styles.base,
         round

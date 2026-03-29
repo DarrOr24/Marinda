@@ -17,7 +17,7 @@ import {
 } from "@/components/calendar-date-modal";
 import { ChipSelector } from "@/components/chip-selector";
 import { DateRangePicker } from "@/components/date-range-picker";
-import { ModalCard, ModalShell, useModalScrollMaxHeight } from "@/components/ui";
+import { ModalDialog } from "@/components/ui";
 import {
   buildRecurrenceRule,
   formatRecurrenceRuleSummary,
@@ -239,7 +239,6 @@ export default function AddActivityModal({
     });
   }, [visible, range?.start_at, endMode]);
 
-  const scrollMaxHeight = useModalScrollMaxHeight(98);
   const firstStartMs = range ? new Date(range.start_at).getTime() : 0;
   const untilMs = untilEndIso ? new Date(untilEndIso).getTime() : 0;
   const intervalN = parseInt(intervalStr, 10) || 0;
@@ -247,6 +246,8 @@ export default function AddActivityModal({
 
   const editSeriesRecurrence =
     mode === "edit" && seriesRecurrenceInitial !== undefined;
+  const modalTitle =
+    headerTitle ?? (mode === "edit" ? "Edit Activity" : "New Activity");
 
   const weeklyDaysValid =
     recurrenceFreq !== "WEEKLY" || byWeekday.length >= 1;
@@ -355,9 +356,9 @@ export default function AddActivityModal({
           : endMode === "count"
             ? ({ type: "count", count: countN } as const)
             : ({
-                type: "until",
-                untilIso: untilEndIso!,
-              } as const);
+              type: "until",
+              untilIso: untilEndIso!,
+            } as const);
       recurrence = buildRecurrenceRule(
         recurrenceFreq,
         intervalN || 1,
@@ -389,120 +390,144 @@ export default function AddActivityModal({
   }
 
   return (
-    <ModalShell visible={visible} onClose={onClose} keyboardOffset={12}>
-      <ModalCard style={styles.sheet} maxHeightPadding={10} bottomPadding={12}>
-        <View style={styles.header}>
-          <Text style={styles.title}>
-            {headerTitle ??
-              (mode === "edit" ? "Edit Activity" : "New Activity")}
-          </Text>
-          <TouchableOpacity onPress={onClose}>
-            <MaterialCommunityIcons name="close" size={22} color="#64748b" />
-          </TouchableOpacity>
-        </View>
+    <>
+      <ModalDialog
+        visible={visible}
+        onClose={onClose}
+        size="xl"
+        title={modalTitle}
+        showCloseButton
+        scrollable
+      >
+        <FormFieldRow icon="clock-outline" first>
+          <Text style={styles.label}>When *</Text>
+          <DateRangePicker
+            baseDateStr={initialDateStr}
+            initialStartAt={initial?.start_at}
+            initialEndAt={initial?.end_at}
+            onChange={setRange}
+            hideLabel
+          />
+        </FormFieldRow>
 
-        <ScrollView
-          style={{ maxHeight: scrollMaxHeight }}
-          contentContainerStyle={[styles.scrollContent, { flexGrow: 0 }]}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="none"
-          showsVerticalScrollIndicator={true}
-          nestedScrollEnabled
-        >
-          <FormFieldRow icon="clock-outline" first>
-            <Text style={styles.label}>When *</Text>
-            <DateRangePicker
-              baseDateStr={initialDateStr}
-              initialStartAt={initial?.start_at}
-              initialEndAt={initial?.end_at}
-              onChange={setRange}
-              hideLabel
-            />
-          </FormFieldRow>
-
-          {mode === "edit" && seriesRecurrenceReadOnly !== undefined ? (
-            <View style={styles.readOnlyRepeatBox}>
-              <View style={styles.labelRow}>
-                <View style={styles.iconCol}>
-                  <MaterialCommunityIcons
-                    name="calendar-text-outline"
-                    size={ICON_SIZE}
-                    color="#64748b"
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>Series repeat</Text>
-                  {seriesRecurrenceReadOnly ? (
-                    <>
-                      <Text style={styles.readOnlyRepeatSummary}>
-                        {formatRecurrenceRuleSummary(seriesRecurrenceReadOnly)}
-                      </Text>
-                      <Text style={styles.readOnlyRepeatHint}>
-                        This edit only affects this day. To change the repeat rule
-                        or end date for the series, choose “This and future
-                        events” from the activity details.
-                      </Text>
-                    </>
-                  ) : (
-                    <Text style={styles.readOnlyRepeatMuted}>
-                      Could not load repeat details.
+        {mode === "edit" && seriesRecurrenceReadOnly !== undefined ? (
+          <View style={styles.readOnlyRepeatBox}>
+            <View style={styles.labelRow}>
+              <View style={styles.iconCol}>
+                <MaterialCommunityIcons
+                  name="calendar-text-outline"
+                  size={ICON_SIZE}
+                  color="#64748b"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Series repeat</Text>
+                {seriesRecurrenceReadOnly ? (
+                  <>
+                    <Text style={styles.readOnlyRepeatSummary}>
+                      {formatRecurrenceRuleSummary(seriesRecurrenceReadOnly)}
                     </Text>
-                  )}
-                </View>
+                    <Text style={styles.readOnlyRepeatHint}>
+                      This edit only affects this day. To change the repeat rule
+                      or end date for the series, choose “This and future
+                      events” from the activity details.
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={styles.readOnlyRepeatMuted}>
+                    Could not load repeat details.
+                  </Text>
+                )}
               </View>
             </View>
-          ) : null}
+          </View>
+        ) : null}
 
-          {mode === "create" || editSeriesRecurrence ? (
-            <View style={styles.formRow}>
-              <View style={styles.labelRow}>
-                <View style={styles.iconCol}>
-                  <MaterialCommunityIcons
-                    name="calendar-sync"
-                    size={ICON_SIZE}
-                    color="#64748b"
+        {mode === "create" || editSeriesRecurrence ? (
+          <View style={styles.formRow}>
+            <View style={styles.labelRow}>
+              <View style={styles.iconCol}>
+                <MaterialCommunityIcons
+                  name="calendar-sync"
+                  size={ICON_SIZE}
+                  color="#64748b"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.repeatHeaderRow}>
+                  <Text style={styles.label}>
+                    {editSeriesRecurrence ? "Repeat (series)" : "Repeat"}
+                  </Text>
+                  {editSeriesRecurrence ? null : (
+                    <Switch
+                      value={repeatEnabled}
+                      onValueChange={setRepeatEnabled}
+                      trackColor={{ false: "#d1d5db", true: "#93c5fd" }}
+                      thumbColor={repeatEnabled ? "#2563eb" : "#f4f4f5"}
+                    />
+                  )}
+                </View>
+                <Text style={styles.repeatHint}>
+                  {editSeriesRecurrence
+                    ? "Changes here apply to this series from this occurrence forward (end date, count, or frequency)."
+                    : "Never ends, or stop after a number of times, or on a date (like Google Calendar)."}
+                </Text>
+              </View>
+            </View>
+
+            {(repeatEnabled || editSeriesRecurrence) ? (
+              <View style={styles.recurrenceBlock}>
+                <Text style={styles.subLabel}>Every</Text>
+                <View style={styles.everyRow}>
+                  <TextInput
+                    placeholder="1"
+                    keyboardType="number-pad"
+                    value={intervalStr}
+                    onChangeText={setIntervalStr}
+                    style={styles.intervalInput}
+                  />
+                  <ChipSelector
+                    value={recurrenceFreq}
+                    onChange={(v) => v && setRecurrenceFreq(v as RecurrenceFreq)}
+                    options={[
+                      { label: "Day", value: "DAILY" },
+                      { label: "Week", value: "WEEKLY" },
+                      { label: "Month", value: "MONTHLY" },
+                    ]}
+                    horizontal
+                    horizontalContentContainerStyle={{
+                      justifyContent: "flex-start",
+                    }}
                   />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <View style={styles.repeatHeaderRow}>
-                    <Text style={styles.label}>
-                      {editSeriesRecurrence ? "Repeat (series)" : "Repeat"}
-                    </Text>
-                    {editSeriesRecurrence ? null : (
-                      <Switch
-                        value={repeatEnabled}
-                        onValueChange={setRepeatEnabled}
-                        trackColor={{ false: "#d1d5db", true: "#93c5fd" }}
-                        thumbColor={repeatEnabled ? "#2563eb" : "#f4f4f5"}
-                      />
-                    )}
-                  </View>
-                  <Text style={styles.repeatHint}>
-                    {editSeriesRecurrence
-                      ? "Changes here apply to this series from this occurrence forward (end date, count, or frequency)."
-                      : "Never ends, or stop after a number of times, or on a date (like Google Calendar)."}
-                  </Text>
-                </View>
-              </View>
 
-              {(repeatEnabled || editSeriesRecurrence) ? (
-                <View style={styles.recurrenceBlock}>
-                  <Text style={styles.subLabel}>Every</Text>
-                  <View style={styles.everyRow}>
-                    <TextInput
-                      placeholder="1"
-                      keyboardType="number-pad"
-                      value={intervalStr}
-                      onChangeText={setIntervalStr}
-                      style={styles.intervalInput}
-                    />
+                {recurrenceFreq === "WEEKLY" ? (
+                  <View style={styles.weekdayRow}>
+                    <Text style={styles.subLabel}>On days</Text>
                     <ChipSelector
-                      value={recurrenceFreq}
-                      onChange={(v) => v && setRecurrenceFreq(v as RecurrenceFreq)}
+                      multiple
+                      values={byWeekday.map(String)}
+                      onChange={(vals) => {
+                        const nums = vals
+                          .map(Number)
+                          .filter((n) => !Number.isNaN(n))
+                          .sort((a, b) => a - b);
+                        if (nums.length === 0 && range?.start_at) {
+                          setByWeekday([
+                            new Date(range.start_at).getDay(),
+                          ]);
+                        } else {
+                          setByWeekday(nums);
+                        }
+                      }}
                       options={[
-                        { label: "Day", value: "DAILY" },
-                        { label: "Week", value: "WEEKLY" },
-                        { label: "Month", value: "MONTHLY" },
+                        { label: "Sun", value: "0" },
+                        { label: "Mon", value: "1" },
+                        { label: "Tue", value: "2" },
+                        { label: "Wed", value: "3" },
+                        { label: "Thu", value: "4" },
+                        { label: "Fri", value: "5" },
+                        { label: "Sat", value: "6" },
                       ]}
                       horizontal
                       horizontalContentContainerStyle={{
@@ -510,227 +535,189 @@ export default function AddActivityModal({
                       }}
                     />
                   </View>
+                ) : null}
 
-                  {recurrenceFreq === "WEEKLY" ? (
-                    <View style={styles.weekdayRow}>
-                      <Text style={styles.subLabel}>On days</Text>
-                      <ChipSelector
-                        multiple
-                        values={byWeekday.map(String)}
-                        onChange={(vals) => {
-                          const nums = vals
-                            .map(Number)
-                            .filter((n) => !Number.isNaN(n))
-                            .sort((a, b) => a - b);
-                          if (nums.length === 0 && range?.start_at) {
-                            setByWeekday([
-                              new Date(range.start_at).getDay(),
-                            ]);
-                          } else {
-                            setByWeekday(nums);
-                          }
-                        }}
-                        options={[
-                          { label: "Sun", value: "0" },
-                          { label: "Mon", value: "1" },
-                          { label: "Tue", value: "2" },
-                          { label: "Wed", value: "3" },
-                          { label: "Thu", value: "4" },
-                          { label: "Fri", value: "5" },
-                          { label: "Sat", value: "6" },
-                        ]}
-                        horizontal
-                        horizontalContentContainerStyle={{
-                          justifyContent: "flex-start",
-                        }}
-                      />
-                    </View>
-                  ) : null}
+                <Text style={styles.subLabel}>Ends</Text>
+                <ChipSelector
+                  value={endMode}
+                  onChange={(v) => v && setEndMode(v as RecurrenceEndMode)}
+                  options={[
+                    { label: "Never", value: "never" },
+                    { label: "After", value: "count" },
+                    { label: "On date", value: "until" },
+                  ]}
+                  horizontal
+                  horizontalContentContainerStyle={{
+                    justifyContent: "flex-start",
+                  }}
+                />
 
-                  <Text style={styles.subLabel}>Ends</Text>
-                  <ChipSelector
-                    value={endMode}
-                    onChange={(v) => v && setEndMode(v as RecurrenceEndMode)}
-                    options={[
-                      { label: "Never", value: "never" },
-                      { label: "After", value: "count" },
-                      { label: "On date", value: "until" },
-                    ]}
-                    horizontal
-                    horizontalContentContainerStyle={{
-                      justifyContent: "flex-start",
-                    }}
-                  />
+                {endMode === "count" ? (
+                  <View style={styles.countRow}>
+                    <TextInput
+                      placeholder="10"
+                      keyboardType="number-pad"
+                      value={countStr}
+                      onChangeText={setCountStr}
+                      style={styles.countInput}
+                    />
+                    <Text style={styles.countSuffix}>occurrences</Text>
+                  </View>
+                ) : null}
 
-                  {endMode === "count" ? (
-                    <View style={styles.countRow}>
-                      <TextInput
-                        placeholder="10"
-                        keyboardType="number-pad"
-                        value={countStr}
-                        onChangeText={setCountStr}
-                        style={styles.countInput}
-                      />
-                      <Text style={styles.countSuffix}>occurrences</Text>
-                    </View>
-                  ) : null}
+                {endMode === "until" ? (
+                  <TouchableOpacity
+                    style={styles.untilTap}
+                    onPress={() => setUntilPickerOpen(true)}
+                  >
+                    <MaterialCommunityIcons
+                      name="calendar"
+                      size={18}
+                      color="#2563eb"
+                    />
+                    <Text style={styles.untilTapText}>
+                      {untilEndIso
+                        ? formatShortDateFromIso(untilEndIso)
+                        : "Choose end date"}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
 
-                  {endMode === "until" ? (
-                    <TouchableOpacity
-                      style={styles.untilTap}
-                      onPress={() => setUntilPickerOpen(true)}
+        <FormFieldRow icon="format-title">
+          <Text style={styles.label}>Title *</Text>
+          <TextInput
+            placeholder="e.g., Soccer practice"
+            value={title}
+            onChangeText={setTitle}
+            style={styles.input}
+            autoCapitalize="words"
+          />
+        </FormFieldRow>
+
+        <FormFieldRow icon="map-marker-outline">
+          <Text style={styles.label}>Location</Text>
+          <View style={styles.locationField}>
+            <TextInput
+              placeholder="Search for an address or place"
+              value={location}
+              onChangeText={handleLocationChange}
+              style={styles.input}
+              autoCorrect={false}
+              autoCapitalize="sentences"
+            />
+            {placesLoading ? (
+              <Text style={styles.placesLoadingHint}>Searching…</Text>
+            ) : null}
+            {placeSuggestions.length > 0 ? (
+              <View style={styles.suggestionsBox}>
+                <ScrollView
+                  nestedScrollEnabled
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="none"
+                  style={styles.suggestionsScroll}
+                >
+                  {placeSuggestions.map((s, i) => (
+                    <Pressable
+                      key={`${s.placeId}-${i}`}
+                      onPress={() => pickPlaceSuggestion(s.description)}
+                      style={({ pressed }) => [
+                        styles.suggestionRow,
+                        pressed && styles.suggestionRowPressed,
+                      ]}
                     >
-                      <MaterialCommunityIcons
-                        name="calendar"
-                        size={18}
-                        color="#2563eb"
-                      />
-                      <Text style={styles.untilTapText}>
-                        {untilEndIso
-                          ? formatShortDateFromIso(untilEndIso)
-                          : "Choose end date"}
+                      <Text style={styles.suggestionText} numberOfLines={3}>
+                        {s.description}
                       </Text>
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-              ) : null}
-            </View>
-          ) : null}
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            ) : null}
+          </View>
+        </FormFieldRow>
 
-          <FormFieldRow icon="format-title">
-            <Text style={styles.label}>Title *</Text>
-            <TextInput
-              placeholder="e.g., Soccer practice"
-              value={title}
-              onChangeText={setTitle}
-              style={styles.input}
-              autoCapitalize="words"
-            />
-          </FormFieldRow>
+        <FormFieldRow icon="cash">
+          <Text style={styles.label}>Amount ($)</Text>
+          <TextInput
+            placeholder="e.g., 15"
+            keyboardType="numeric"
+            value={money}
+            onChangeText={setMoney}
+            style={styles.input}
+          />
+        </FormFieldRow>
 
-          <FormFieldRow icon="map-marker-outline">
-            <Text style={styles.label}>Location</Text>
-            <View style={styles.locationField}>
-              <TextInput
-                placeholder="Search for an address or place"
-                value={location}
-                onChangeText={handleLocationChange}
-                style={styles.input}
-                autoCorrect={false}
-                autoCapitalize="sentences"
-              />
-              {placesLoading ? (
-                <Text style={styles.placesLoadingHint}>Searching…</Text>
-              ) : null}
-              {placeSuggestions.length > 0 ? (
-                <View style={styles.suggestionsBox}>
-                  <ScrollView
-                    nestedScrollEnabled
-                    keyboardShouldPersistTaps="handled"
-                    keyboardDismissMode="none"
-                    style={styles.suggestionsScroll}
-                  >
-                    {placeSuggestions.map((s, i) => (
-                      <Pressable
-                        key={`${s.placeId}-${i}`}
-                        onPress={() => pickPlaceSuggestion(s.description)}
-                        style={({ pressed }) => [
-                          styles.suggestionRow,
-                          pressed && styles.suggestionRowPressed,
-                        ]}
-                      >
-                        <Text style={styles.suggestionText} numberOfLines={3}>
-                          {s.description}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                </View>
-              ) : null}
-            </View>
-          </FormFieldRow>
+        <FormFieldRow icon="flag-outline">
+          <Text style={styles.label}>Flags</Text>
+          <ChipSelector
+            multiple
+            values={flags}
+            onChange={setFlags}
+            options={[
+              { label: "Ride", value: "ride_needed" },
+              { label: "Present", value: "present_needed" },
+              { label: "Babysitter", value: "babysitter_needed" },
+            ]}
+            renderOption={(opt, active) => (
+              <View style={styles.chipContent}>
+                <MaterialCommunityIcons
+                  name={
+                    opt.value === "ride_needed"
+                      ? "car-outline"
+                      : opt.value === "present_needed"
+                        ? "gift-outline"
+                        : "baby-face-outline"
+                  }
+                  size={16}
+                  color={active ? "#fff" : "#64748b"}
+                />
+                <Text
+                  style={[
+                    styles.chipLabel,
+                    active && styles.chipLabelActive,
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </View>
+            )}
+          />
+        </FormFieldRow>
 
-          <FormFieldRow icon="cash">
-            <Text style={styles.label}>Amount ($)</Text>
-            <TextInput
-              placeholder="e.g., 15"
-              keyboardType="numeric"
-              value={money}
-              onChangeText={setMoney}
-              style={styles.input}
-            />
-          </FormFieldRow>
+        <FormFieldRow icon="account-group-outline">
+          <Text style={styles.label}>Who&apos;s going?</Text>
+          <MembersSelector
+            values={selectedIds}
+            onChange={setSelectedIds}
+            containerStyle={{ marginTop: 2, marginBottom: 0 }}
+          />
+        </FormFieldRow>
 
-          <FormFieldRow icon="flag-outline">
-            <Text style={styles.label}>Flags</Text>
-            <ChipSelector
-              multiple
-              values={flags}
-              onChange={setFlags}
-              options={[
-                { label: "Ride", value: "ride_needed" },
-                { label: "Present", value: "present_needed" },
-                { label: "Babysitter", value: "babysitter_needed" },
-              ]}
-              renderOption={(opt, active) => (
-                <View style={styles.chipContent}>
-                  <MaterialCommunityIcons
-                    name={
-                      opt.value === "ride_needed"
-                        ? "car-outline"
-                        : opt.value === "present_needed"
-                          ? "gift-outline"
-                          : "baby-face-outline"
-                    }
-                    size={16}
-                    color={active ? "#fff" : "#64748b"}
-                  />
-                  <Text
-                    style={[
-                      styles.chipLabel,
-                      active && styles.chipLabelActive,
-                    ]}
-                  >
-                    {opt.label}
-                  </Text>
-                </View>
-              )}
-            />
-          </FormFieldRow>
-
-          <FormFieldRow icon="account-group-outline">
-            <Text style={styles.label}>Who's going?</Text>
-            <MembersSelector
-              values={selectedIds}
-              onChange={setSelectedIds}
-              containerStyle={{ marginTop: 2, marginBottom: 0 }}
-            />
-          </FormFieldRow>
-
-          <FormFieldRow icon="note-text-outline">
-            <Text style={styles.label}>Notes</Text>
-            <TextInput
-              placeholder="Add a note…"
-              value={notes}
-              onChangeText={setNotes}
-              style={[styles.input, styles.notesInput]}
-              multiline
-            />
-          </FormFieldRow>
-        </ScrollView>
-
+        <FormFieldRow icon="note-text-outline">
+          <Text style={styles.label}>Notes</Text>
+          <TextInput
+            placeholder="Add a note…"
+            value={notes}
+            onChangeText={setNotes}
+            style={[styles.input, styles.notesInput]}
+            multiline
+          />
+        </FormFieldRow>
         <View style={styles.actions}>
-          <Button type="outline" size="sm" title="Cancel" onPress={onClose} />
+          <Button type="outline" size="md" title="Cancel" onPress={onClose} />
           <Button
             type="primary"
-            size="sm"
+            size="md"
             title={submitLabel ?? (mode === "edit" ? "Update" : "Save")}
             onPress={handleSave}
             disabled={!canSave}
           />
         </View>
-      </ModalCard>
-
+      </ModalDialog>
       <CalendarDateModal
         visible={untilPickerOpen}
         title="Repeat until"
@@ -744,25 +731,11 @@ export default function AddActivityModal({
           setUntilPickerOpen(false);
         }}
       />
-    </ModalShell>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  sheet: {
-    width: "100%",
-    maxWidth: 460,
-  },
-
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-
-  title: { fontSize: 18, fontWeight: "800", color: "#0f172a" },
-
   label: {
     fontSize: 13,
     color: "#475569",
@@ -940,8 +913,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     lineHeight: 20,
   },
-
-  scrollContent: { paddingBottom: 16, gap: 2 },
 
   actions: {
     flexDirection: "row",
