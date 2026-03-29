@@ -1,5 +1,6 @@
 import { MemberAvatar } from '@/components/avatar/member-avatar';
 import { ChipSelector } from '@/components/chip-selector';
+import { MoveToTabModal } from '@/components/modals/move-to-tab-modal';
 import { TodoItemModal } from '@/components/modals/todo-item-modal';
 import { Button, MetaRow, ModalDialog, ModalPopover, Screen, TextInput } from '@/components/ui';
 import { useAuthContext } from '@/hooks/use-auth-context';
@@ -128,6 +129,8 @@ export default function TodosBoard() {
   const [editingItem, setEditingItem] = useState<TodoItem | null>(null);
   const [infoItem, setInfoItem] = useState<TodoItem | null>(null);
   const [todoMenuItem, setTodoMenuItem] = useState<TodoItem | null>(null);
+  const [moveTodoItem, setMoveTodoItem] = useState<TodoItem | null>(null);
+  const [todoMovePending, setTodoMovePending] = useState(false);
   const [sharedVisibilityItem, setSharedVisibilityItem] = useState<TodoItem | null>(null);
 
   const [name, setName] = useState('');
@@ -701,7 +704,9 @@ export default function TodosBoard() {
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator
-          scrollEnabled={!viewMenuOpen && !todoMenuItem && !sharedVisibilityItem}
+          scrollEnabled={
+            !viewMenuOpen && !todoMenuItem && !sharedVisibilityItem && !moveTodoItem
+          }
         >
           {itemsInTab.length === 0 ? (
             <View style={styles.emptyState} accessibilityLabel="No items in this list. Tap Add.">
@@ -799,36 +804,96 @@ export default function TodosBoard() {
         anchorRef={getTodoMenuAnchorRef(todoMenuItem?.id ?? '')}
         position="bottom-right"
       >
-        {todoMenuItem &&
-        myMemberId &&
-        todoMenuItem.created_by_member_id === myMemberId ? (
-          <>
-            <Pressable
-              style={styles.todoMenuRow}
-              onPress={() => {
-                const item = todoMenuItem;
-                setTodoMenuItem(null);
-                startEdit(item);
-              }}
-            >
-              <MaterialCommunityIcons name="pencil-outline" size={18} color="#334155" />
-              <Text style={styles.todoMenuRowLabel}>Edit</Text>
-            </Pressable>
-            <View style={styles.todoMenuDivider} />
-          </>
-        ) : null}
-        <Pressable
-          style={styles.todoMenuRow}
-          onPress={() => {
-            const item = todoMenuItem;
-            setTodoMenuItem(null);
-            if (item) setInfoItem(item);
-          }}
-        >
-          <MaterialCommunityIcons name="information-outline" size={18} color="#334155" />
-          <Text style={styles.todoMenuRowLabel}>Details</Text>
-        </Pressable>
+        {todoMenuItem
+          ? (() => {
+              const item = todoMenuItem;
+              const isCreator =
+                !!myMemberId && item.created_by_member_id === myMemberId;
+              const moveTargets = ALL_TABS.filter((t) => t.id !== item.list_kind);
+              return (
+                <>
+                  {isCreator ? (
+                    <Pressable
+                      style={styles.todoMenuRow}
+                      onPress={() => {
+                        setTodoMenuItem(null);
+                        startEdit(item);
+                      }}
+                    >
+                      <MaterialCommunityIcons name="pencil-outline" size={18} color="#334155" />
+                      <Text style={styles.todoMenuRowLabel}>Edit</Text>
+                    </Pressable>
+                  ) : null}
+                  {isCreator && moveTargets.length > 0 ? (
+                    <Pressable
+                      style={styles.todoMenuRow}
+                      onPress={() => {
+                        setTodoMenuItem(null);
+                        setMoveTodoItem(item);
+                      }}
+                    >
+                      <MaterialCommunityIcons
+                        name="folder-move-outline"
+                        size={18}
+                        color="#334155"
+                      />
+                      <Text style={styles.todoMenuRowLabel}>Move to tab…</Text>
+                    </Pressable>
+                  ) : null}
+                  {isCreator ? <View style={styles.todoMenuDivider} /> : null}
+                  <Pressable
+                    style={styles.todoMenuRow}
+                    onPress={() => {
+                      setTodoMenuItem(null);
+                      setInfoItem(item);
+                    }}
+                  >
+                    <MaterialCommunityIcons name="information-outline" size={18} color="#334155" />
+                    <Text style={styles.todoMenuRowLabel}>Details</Text>
+                  </Pressable>
+                </>
+              );
+            })()
+          : null}
       </ModalPopover>
+
+      <MoveToTabModal
+        visible={!!moveTodoItem}
+        onClose={() => {
+          if (!todoMovePending) setMoveTodoItem(null);
+        }}
+        options={
+          moveTodoItem
+            ? ALL_TABS.filter((t) => t.id !== moveTodoItem.list_kind).map((t) => ({
+                id: t.id,
+                label: t.label,
+              }))
+            : []
+        }
+        busy={todoMovePending}
+        onSelectOption={(tabId) => {
+          const target = moveTodoItem;
+          if (!target) return;
+          setTodoMovePending(true);
+          void (async () => {
+            try {
+              const row = await updateTodoText(target.id, target.name, tabId);
+              const updated = mapRow(row);
+              setItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)));
+              setMoveTodoItem(null);
+              setActiveListKind(tabId);
+            } catch (e) {
+              console.error('move todo to tab failed', e);
+              Alert.alert(
+                'Error',
+                e instanceof Error ? e.message : 'Could not move item.',
+              );
+            } finally {
+              setTodoMovePending(false);
+            }
+          })();
+        }}
+      />
 
       <ModalDialog
         visible={!!sharedVisibilityItem}

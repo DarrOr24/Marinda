@@ -40,6 +40,7 @@ import {
 
 import { AnnouncementItemEngagement } from '@/components/boards/announcement-item-engagement';
 import { ChipSelector } from '@/components/chip-selector';
+import { MoveToTabModal } from '@/components/modals/move-to-tab-modal';
 import { StickyNote } from '@/components/sticky-note';
 import { Button, ModalDialog, ModalPopover, Screen, ScreenState, TextInput } from '@/components/ui';
 import { Colors } from '@/config/colors';
@@ -1310,63 +1311,37 @@ export default function AnnouncementsBoard() {
             : null}
         </ModalPopover>
 
-        <ModalDialog
+        <MoveToTabModal
           visible={!!moveNoteItem}
           onClose={() => setMoveNoteItem(null)}
-          avoidKeyboard={false}
-          size="md"
-        >
-            <View style={styles.moveTabModalSheet}>
-              <View style={styles.moveTabMenuContent}>
-                <Text style={styles.moveTabModalTitle}>Move to tab</Text>
-                <ScrollView
-                  style={styles.moveTabList}
-                  keyboardShouldPersistTaps="handled"
-                  nestedScrollEnabled
-                >
-                  {moveNoteItem
-                    ? ALL_TABS.filter(t => t.id !== moveNoteItem.kind).map(tab => (
-                        <Pressable
-                          key={tab.id}
-                          style={styles.moveTabRow}
-                          onPress={() => {
-                            const target = moveNoteItem;
-                            updateMutation.mutate(
-                              { id: target.id, updates: { kind: tab.id } },
-                              {
-                                onSuccess: () => {
-                                  setMoveNoteItem(null);
-                                  setActiveKind(tab.id);
-                                },
-                                onError: err =>
-                                  Alert.alert(
-                                    'Error',
-                                    err instanceof Error ? err.message : 'Could not move'
-                                  ),
-                              }
-                            );
-                          }}
-                          disabled={updateMutation.isPending}
-                        >
-                          <Text style={styles.moveTabRowLabel}>{tab.label}</Text>
-                          <MaterialCommunityIcons
-                            name="chevron-right"
-                            size={20}
-                            color="#94a3b8"
-                          />
-                        </Pressable>
-                      ))
-                    : null}
-                </ScrollView>
-                <Pressable
-                  style={styles.moveTabCancelRow}
-                  onPress={() => setMoveNoteItem(null)}
-                >
-                  <Text style={styles.moveTabCancelLabel}>Cancel</Text>
-                </Pressable>
-              </View>
-            </View>
-        </ModalDialog>
+          options={
+            moveNoteItem
+              ? ALL_TABS.filter((t) => t.id !== moveNoteItem.kind).map((t) => ({
+                  id: t.id,
+                  label: t.label,
+                }))
+              : []
+          }
+          busy={updateMutation.isPending}
+          onSelectOption={(tabId) => {
+            const target = moveNoteItem;
+            if (!target) return;
+            updateMutation.mutate(
+              { id: target.id, updates: { kind: tabId } },
+              {
+                onSuccess: () => {
+                  setMoveNoteItem(null);
+                  setActiveKind(tabId);
+                },
+                onError: (err) =>
+                  Alert.alert(
+                    'Error',
+                    err instanceof Error ? err.message : 'Could not move',
+                  ),
+              },
+            );
+          }}
+        />
           </View>
         </View>
       </View>
@@ -1651,49 +1626,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  moveTabModalSheet: {
-    maxHeight: '70%',
-  },
-  moveTabMenuContent: {
-    paddingTop: 12,
-    paddingBottom: 4,
-  },
-  moveTabModalTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#0f172a',
-    paddingHorizontal: 14,
-    marginBottom: 8,
-  },
-  moveTabList: {
-    maxHeight: 280,
-  },
-  moveTabRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(0,0,0,0.06)',
-  },
-  moveTabRowLabel: {
-    fontSize: 16,
-    color: '#0f172a',
-    flex: 1,
-  },
-  moveTabCancelRow: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    marginTop: 4,
-    alignItems: 'center',
-  },
-  moveTabCancelLabel: {
-    fontSize: 16,
-    color: '#64748b',
-    fontWeight: '500',
-  },
   modalSendIconBtn: {
     padding: 8,
     justifyContent: 'center',

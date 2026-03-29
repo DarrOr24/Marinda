@@ -1,7 +1,9 @@
 import { GroceryItemModal } from '@/components/modals/grocery-item-modal';
+import { MoveToTabModal } from '@/components/modals/move-to-tab-modal';
 import { ChipSelector } from '@/components/chip-selector';
 import { Button, MetaRow, ModalDialog, ModalPopover, Screen, TextInput } from '@/components/ui';
 import { useAuthContext } from '@/hooks/use-auth-context';
+import { useRefById } from '@/hooks/use-ref-by-id';
 import { useFamily } from '@/lib/families/families.hooks';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,6 +56,7 @@ const shortId = (id?: string) =>
 export default function Grocery() {
     const router = useRouter();
     const viewMenuAnchorRef = useRef<View>(null);
+    const getGroceryMenuAnchorRef = useRefById<View>();
     const { activeFamilyId, effectiveMember, family, members, hasParentPermissions } =
         useAuthContext() as any;
 
@@ -115,6 +118,9 @@ export default function Grocery() {
     const [addOpen, setAddOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<GroceryItem | null>(null);
     const [infoItem, setInfoItem] = useState<GroceryItem | null>(null);
+    const [groceryMenuItem, setGroceryMenuItem] = useState<GroceryItem | null>(null);
+    const [moveGroceryItem, setMoveGroceryItem] = useState<GroceryItem | null>(null);
+    const [groceryMovePending, setGroceryMovePending] = useState(false);
 
     const [name, setName] = useState('');
     const [categoryOpen, setCategoryOpen] = useState(false);
@@ -506,31 +512,20 @@ export default function Grocery() {
                     )}
                 </View>
 
-                <Button
-                    type="ghost"
-                    size="sm"
-                    round
-                    hitSlop={10}
-                    leftIcon={<MaterialCommunityIcons name="pencil-outline" size={20} />}
-                    leftIconColor="#0f172a"
-                    onPress={(e) => {
-                        e?.stopPropagation?.();
-                        startEdit(it);
-                    }}
-                />
-
-                <Button
-                    type="ghost"
-                    size="sm"
-                    round
-                    hitSlop={10}
-                    leftIcon={<MaterialCommunityIcons name="information-outline" size={20} />}
-                    leftIconColor="#475569"
-                    onPress={(e) => {
-                        e?.stopPropagation?.();
-                        showItemInfo(it);
-                    }}
-                />
+                <View ref={getGroceryMenuAnchorRef(it.id)} collapsable={false}>
+                    <Pressable
+                        hitSlop={10}
+                        onPress={(e) => {
+                            e?.stopPropagation?.();
+                            setGroceryMenuItem(it);
+                        }}
+                        style={({ pressed }) => [styles.rowMenuBtn, pressed && { opacity: 0.72 }]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Shopping item actions"
+                    >
+                        <MaterialCommunityIcons name="dots-vertical" size={20} color="#475569" />
+                    </Pressable>
+                </View>
             </Pressable>
         );
     }
@@ -651,7 +646,7 @@ export default function Grocery() {
                     ]}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator
-                    scrollEnabled={!viewMenuOpen}
+                    scrollEnabled={!viewMenuOpen && !groceryMenuItem && !moveGroceryItem}
                 >
                     {tabItems.length === 0 ? (
                         <View
@@ -808,6 +803,129 @@ export default function Grocery() {
                     )}
                 </View>
             </ModalDialog>
+
+            <ModalPopover
+                visible={!!groceryMenuItem}
+                onClose={() => setGroceryMenuItem(null)}
+                anchorRef={getGroceryMenuAnchorRef(groceryMenuItem?.id ?? '')}
+                position="bottom-right"
+            >
+                {groceryMenuItem
+                    ? (() => {
+                          const item = groceryMenuItem;
+                          const moveTargets = ALL_TABS.filter((t) => t.id !== item.list_kind);
+                          return (
+                              <>
+                                  <Pressable
+                                      style={styles.groceryMenuRow}
+                                      onPress={() => {
+                                          setGroceryMenuItem(null);
+                                          startEdit(item);
+                                      }}
+                                  >
+                                      <MaterialCommunityIcons
+                                          name="pencil-outline"
+                                          size={18}
+                                          color="#334155"
+                                      />
+                                      <Text style={styles.groceryMenuRowLabel}>Edit</Text>
+                                  </Pressable>
+                                  {moveTargets.length > 0 ? (
+                                      <Pressable
+                                          style={styles.groceryMenuRow}
+                                          onPress={() => {
+                                              setGroceryMenuItem(null);
+                                              setMoveGroceryItem(item);
+                                          }}
+                                      >
+                                          <MaterialCommunityIcons
+                                              name="folder-move-outline"
+                                              size={18}
+                                              color="#334155"
+                                          />
+                                          <Text style={styles.groceryMenuRowLabel}>
+                                              Move to tab…
+                                          </Text>
+                                      </Pressable>
+                                  ) : null}
+                                  <View style={styles.groceryMenuDivider} />
+                                  <Pressable
+                                      style={styles.groceryMenuRow}
+                                      onPress={() => {
+                                          setGroceryMenuItem(null);
+                                          showItemInfo(item);
+                                      }}
+                                  >
+                                      <MaterialCommunityIcons
+                                          name="information-outline"
+                                          size={18}
+                                          color="#334155"
+                                      />
+                                      <Text style={styles.groceryMenuRowLabel}>Details</Text>
+                                  </Pressable>
+                              </>
+                          );
+                      })()
+                    : null}
+            </ModalPopover>
+
+            <MoveToTabModal
+                visible={!!moveGroceryItem}
+                onClose={() => {
+                    if (!groceryMovePending) setMoveGroceryItem(null);
+                }}
+                options={
+                    moveGroceryItem
+                        ? ALL_TABS.filter((t) => t.id !== moveGroceryItem.list_kind).map((t) => ({
+                              id: t.id,
+                              label: t.label,
+                          }))
+                        : []
+                }
+                busy={groceryMovePending}
+                onSelectOption={(tabId) => {
+                    const target = moveGroceryItem;
+                    if (!target) return;
+                    setGroceryMovePending(true);
+                    void (async () => {
+                        try {
+                            const categoryForSave =
+                                tabId === GROCERIES_LIST_KIND ? target.category : undefined;
+                            const row = await updateGroceryItem(target.id, {
+                                text: target.name,
+                                category: categoryForSave,
+                                listKind: tabId,
+                                amount: target.amount,
+                            });
+                            const updated: GroceryItem = {
+                                id: row.id,
+                                family_id: row.family_id,
+                                name: row.text,
+                                category: row.category ?? undefined,
+                                list_kind: row.list_kind || GROCERIES_LIST_KIND,
+                                added_by_member_id: row.added_by_member_id,
+                                is_checked: row.purchased,
+                                checked_at: row.purchased_at,
+                                created_at: row.created_at,
+                                amount: row.amount ?? undefined,
+                            };
+                            setItems((prev) =>
+                                prev.map((it) => (it.id === updated.id ? updated : it)),
+                            );
+                            setMoveGroceryItem(null);
+                            setActiveListKind(tabId);
+                        } catch (e) {
+                            console.error('move grocery item failed', e);
+                            Alert.alert(
+                                'Error',
+                                e instanceof Error ? e.message : 'Could not move item.',
+                            );
+                        } finally {
+                            setGroceryMovePending(false);
+                        }
+                    })();
+                }}
+            />
 
             <ModalPopover
                 visible={viewMenuOpen}
@@ -1023,6 +1141,27 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: '#0f172a',
+    },
+
+    rowMenuBtn: {
+        padding: 4,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    groceryMenuRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+    },
+    groceryMenuRowLabel: { fontSize: 16, color: '#0f172a' },
+    groceryMenuDivider: {
+        height: StyleSheet.hairlineWidth,
+        backgroundColor: 'rgba(0,0,0,0.08)',
+        marginVertical: 2,
+        marginHorizontal: 10,
     },
 
     infoModalTitle: {
