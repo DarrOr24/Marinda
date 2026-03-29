@@ -26,6 +26,9 @@ import {
   View,
 } from 'react-native';
 
+/** Same width as announcements note ⋯ menu for a consistent action sheet. */
+const TODO_MENU_WIDTH = 220;
+
 type TodoItem = {
   id: string;
   family_id: string;
@@ -114,6 +117,8 @@ export default function TodosBoard() {
   const [addOpen, setAddOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<TodoItem | null>(null);
   const [infoItem, setInfoItem] = useState<TodoItem | null>(null);
+  const [todoMenuItem, setTodoMenuItem] = useState<TodoItem | null>(null);
+  const [sharedVisibilityItem, setSharedVisibilityItem] = useState<TodoItem | null>(null);
 
   const [name, setName] = useState('');
   const [sharedMemberIds, setSharedMemberIds] = useState<string[]>([]);
@@ -331,9 +336,21 @@ export default function TodosBoard() {
     ]);
   }
 
-  function shareSummary(item: TodoItem): string {
-    if (!item.shared_with_member_ids.length) return 'Only you';
-    return item.shared_with_member_ids.map((id) => nameForId(id)).join(', ');
+  /** Creator plus sharees; creator first, then others sorted by display name. */
+  function visibleToMemberIds(item: TodoItem): string[] {
+    const creator = item.created_by_member_id || '';
+    const shared = [...new Set(item.shared_with_member_ids)];
+    const rest = shared
+      .filter((id) => id && id !== creator)
+      .sort((a, b) => nameForId(a).localeCompare(nameForId(b)));
+    if (!creator) return rest;
+    return [creator, ...rest];
+  }
+
+  function visibleToSummary(item: TodoItem): string {
+    const ids = visibleToMemberIds(item);
+    if (ids.length === 0) return '—';
+    return ids.map((id) => nameForId(id)).join(', ');
   }
 
   function closeViewMenu() {
@@ -382,6 +399,15 @@ export default function TodosBoard() {
       !!myMemberId &&
       !isCreator &&
       it.shared_with_member_ids.includes(myMemberId);
+    const sharedByCreator =
+      isCreator && it.shared_with_member_ids.length > 0;
+    /** Same icon for “I shared this” and “someone shared this with me” — quick scan in the list. */
+    const showSharedIcon = sharedByCreator || isSharee;
+    const sharedIconA11yLabel = sharedByCreator
+      ? 'Shared with others'
+      : isSharee
+        ? 'Shared with you'
+        : '';
 
     // In "by member" view, the section header already says who it’s from; everything there is shared.
     let contextHint: string | null = null;
@@ -415,9 +441,38 @@ export default function TodosBoard() {
 
         <View style={styles.rowTextBlock}>
           <View style={styles.rowLine}>
-            <Text numberOfLines={1} style={[styles.rowText, it.is_checked && styles.rowTextDone]}>
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.rowText,
+                it.is_checked && styles.rowTextDone,
+                styles.rowTitleFlex,
+              ]}
+            >
               {it.name}
             </Text>
+            {showSharedIcon ? (
+              <Pressable
+                hitSlop={8}
+                onPress={(e) => {
+                  e?.stopPropagation?.();
+                  setSharedVisibilityItem(it);
+                }}
+                style={({ pressed }) => [
+                  styles.rowSharedIconBtn,
+                  pressed && { opacity: 0.65 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Visible to. ${sharedIconA11yLabel}`}
+              >
+                <MaterialCommunityIcons
+                  name="account-multiple-outline"
+                  size={17}
+                  color="#2563eb"
+                  style={styles.rowSharedWithIcon}
+                />
+              </Pressable>
+            ) : null}
           </View>
           {contextHint ? (
             <Text
@@ -429,35 +484,18 @@ export default function TodosBoard() {
           ) : null}
         </View>
 
-        {isCreator ? (
-          <Button
-            type="ghost"
-            size="sm"
-            round
-            hitSlop={10}
-            leftIcon={<MaterialCommunityIcons name="pencil-outline" size={20} />}
-            leftIconColor="#0f172a"
-            onPress={(e) => {
-              e?.stopPropagation?.();
-              startEdit(it);
-            }}
-          />
-        ) : (
-          <View style={styles.rowEditPlaceholder} />
-        )}
-
-        <Button
-          type="ghost"
-          size="sm"
-          round
+        <Pressable
           hitSlop={10}
-          leftIcon={<MaterialCommunityIcons name="information-outline" size={20} />}
-          leftIconColor="#475569"
           onPress={(e) => {
             e?.stopPropagation?.();
-            setInfoItem(it);
+            setTodoMenuItem(it);
           }}
-        />
+          style={({ pressed }) => [styles.rowMenuBtn, pressed && { opacity: 0.72 }]}
+          accessibilityRole="button"
+          accessibilityLabel="To-do actions"
+        >
+          <MaterialCommunityIcons name="dots-vertical" size={20} color="#475569" />
+        </Pressable>
       </Pressable>
     );
   }
@@ -517,7 +555,7 @@ export default function TodosBoard() {
           contentContainerStyle={[styles.listContent, items.length === 0 && styles.listContentEmpty]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator
-          scrollEnabled={!viewMenuOpen}
+          scrollEnabled={!viewMenuOpen && !todoMenuItem && !sharedVisibilityItem}
         >
           {items.length === 0 ? (
             <View style={styles.emptyState} accessibilityLabel="No to-dos yet. Tap Add.">
@@ -558,6 +596,94 @@ export default function TodosBoard() {
         onSubmit={() => void saveItem()}
       />
 
+      <Modal
+        visible={!!todoMenuItem}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setTodoMenuItem(null)}
+      >
+        <View style={styles.todoMenuModalRoot}>
+          <Pressable style={styles.todoMenuModalDismiss} onPress={() => setTodoMenuItem(null)} />
+          <View style={styles.todoMenuModalSheet} pointerEvents="box-none">
+            <View style={styles.todoMenuCard}>
+              {todoMenuItem &&
+              myMemberId &&
+              todoMenuItem.created_by_member_id === myMemberId ? (
+                <>
+                  <Pressable
+                    style={styles.todoMenuRow}
+                    onPress={() => {
+                      const item = todoMenuItem;
+                      setTodoMenuItem(null);
+                      startEdit(item);
+                    }}
+                  >
+                    <MaterialCommunityIcons name="pencil-outline" size={18} color="#334155" />
+                    <Text style={styles.todoMenuRowLabel}>Edit</Text>
+                  </Pressable>
+                  <View style={styles.todoMenuDivider} />
+                </>
+              ) : null}
+              <Pressable
+                style={styles.todoMenuRow}
+                onPress={() => {
+                  const item = todoMenuItem;
+                  setTodoMenuItem(null);
+                  if (item) setInfoItem(item);
+                }}
+              >
+                <MaterialCommunityIcons name="information-outline" size={18} color="#334155" />
+                <Text style={styles.todoMenuRowLabel}>Details</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <ModalShell
+        visible={!!sharedVisibilityItem}
+        onClose={() => setSharedVisibilityItem(null)}
+        keyboardOffset={0}
+      >
+        <ModalCard>
+          {sharedVisibilityItem ? (
+            <>
+              <Text style={styles.visibilityModalTitle}>Visible to</Text>
+              <Text style={styles.visibilityModalSubtitle} numberOfLines={2}>
+                {sharedVisibilityItem.name}
+              </Text>
+              <ScrollView
+                style={styles.visibilityList}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={visibleToMemberIds(sharedVisibilityItem).length > 6}
+              >
+                {visibleToMemberIds(sharedVisibilityItem).map((memberId) => {
+                  const isSelf = !!myMemberId && memberId === myMemberId;
+                  return (
+                    <View key={memberId} style={styles.visibilityRow}>
+                      <MemberAvatar memberId={memberId} size="sm" />
+                      <Text style={styles.visibilityName} numberOfLines={1}>
+                        {nameForId(memberId)}
+                        {isSelf ? ' (you)' : ''}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+              <View style={styles.visibilityModalActions}>
+                <Button
+                  type="primary"
+                  size="sm"
+                  title="Close"
+                  onPress={() => setSharedVisibilityItem(null)}
+                />
+              </View>
+            </>
+          ) : null}
+        </ModalCard>
+      </ModalShell>
+
       <ModalShell visible={!!infoItem} onClose={() => setInfoItem(null)} keyboardOffset={0}>
         <ModalCard>
           {infoItem && (
@@ -571,7 +697,7 @@ export default function TodosBoard() {
                 </Text>
               ) : null}
               <MetaRow label="Created by" value={nameForId(infoItem.created_by_member_id)} spacing={6} />
-              <MetaRow label="Visible to" value={shareSummary(infoItem)} spacing={6} />
+              <MetaRow label="Visible to" value={visibleToSummary(infoItem)} spacing={6} />
               <MetaRow
                 label="When"
                 value={new Date(infoItem.created_at).toLocaleString()}
@@ -795,6 +921,55 @@ const styles = StyleSheet.create({
   rowLine: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+  },
+  rowTitleFlex: {
+    flex: 1,
+    minWidth: 0,
+  },
+  rowSharedIconBtn: {
+    flexShrink: 0,
+    marginTop: 1,
+    padding: 2,
+    borderRadius: 6,
+  },
+  rowSharedWithIcon: {
+    flexShrink: 0,
+  },
+  visibilityModalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 4,
+  },
+  visibilityModalSubtitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748b',
+    marginBottom: 14,
+  },
+  visibilityList: {
+    maxHeight: 280,
+    marginHorizontal: -4,
+  },
+  visibilityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  visibilityName: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  visibilityModalActions: {
+    marginTop: 16,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
   rowFromHint: {
     marginTop: 2,
@@ -806,9 +981,52 @@ const styles = StyleSheet.create({
     color: '#2563eb',
     fontWeight: '600',
   },
-  rowEditPlaceholder: {
-    width: 40,
-    height: 40,
+  rowMenuBtn: {
+    padding: 4,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  todoMenuModalRoot: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  todoMenuModalDismiss: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15,23,42,0.4)',
+  },
+  todoMenuModalSheet: {
+    width: TODO_MENU_WIDTH,
+    maxWidth: '92%',
+    zIndex: 1,
+  },
+  todoMenuCard: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  todoMenuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  todoMenuRowLabel: { fontSize: 16, color: '#0f172a' },
+  todoMenuDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+    marginVertical: 2,
+    marginHorizontal: 10,
   },
   infoSharedBanner: {
     fontSize: 14,
