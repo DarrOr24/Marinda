@@ -26,6 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Alert,
     Image,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -738,10 +739,21 @@ export default function Grocery() {
                     </Text>
 
                     <TextInput
-                        placeholder="List name (e.g., Amazon, Clothes, School supplies)"
+                        placeholder="List name (e.g. Amazon)"
                         value={newTabLabel}
                         onChangeText={setNewTabLabel}
                         containerStyle={{ marginBottom: 10 }}
+                        numberOfLines={1}
+                        {...Platform.select({
+                            ios: {
+                                adjustsFontSizeToFit: true,
+                                minimumFontScale: 0.72,
+                            },
+                            android: {
+                                maxFontSizeMultiplier: 2.35,
+                            },
+                            default: {},
+                        })}
                     />
 
                     <View style={styles.addTabActions}>

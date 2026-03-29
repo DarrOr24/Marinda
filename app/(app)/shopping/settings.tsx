@@ -10,7 +10,7 @@ import {
 import type { ShoppingTab } from '@/lib/groceries/shopping.types';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
-import { Alert, ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { Alert, ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 
 export default function ShoppingListsSettingsScreen() {
     const { activeFamilyId } = useAuthContext() as any;
@@ -153,7 +153,18 @@ export default function ShoppingListsSettingsScreen() {
                             label="Name"
                             value={editing.label}
                             onChangeText={(txt) => setEditing((prev) => (prev ? { ...prev, label: txt } : prev))}
-                            placeholder="e.g. Amazon, Clothes, School supplies"
+                            placeholder="List name (e.g. Amazon)"
+                            numberOfLines={1}
+                            {...Platform.select({
+                                ios: {
+                                    adjustsFontSizeToFit: true,
+                                    minimumFontScale: 0.72,
+                                },
+                                android: {
+                                    maxFontSizeMultiplier: 2.35,
+                                },
+                                default: {},
+                            })}
                         />
                         <View style={styles.editorButtons}>
                             <Button
