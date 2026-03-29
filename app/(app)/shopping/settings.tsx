@@ -101,7 +101,7 @@ export default function ShoppingListsSettingsScreen() {
     };
 
     return (
-        <DocsPageLayout intro="Rename or remove your family’s custom shopping lists. Open this from the Shopping board (settings icon on the top row) or from Settings → Shopping lists. Groceries is always available and can’t be deleted. To add a new list, use the + button next to the list pills on the Shopping board. Examples of extra lists: online orders (e.g. Amazon), clothes, or school supplies.">
+        <DocsPageLayout intro="Rename or remove your family’s custom shopping lists. Open this from the Shopping board (settings icon on the top row). Groceries is always available and can’t be deleted. To add a new list, use the + button next to the list pills on the Shopping board. Examples of extra lists: online orders (e.g. Amazon), clothes, or school supplies.">
             <DocsSection title="Custom lists">
                 <Text style={docsPageStyles.description}>
                     These lists appear as tabs on the Shopping board. Categories (produce, dairy, etc.)
