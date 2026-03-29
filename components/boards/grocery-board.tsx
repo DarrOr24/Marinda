@@ -624,7 +624,9 @@ export default function Grocery() {
                             </View>
                         ))
                     ) : (
-                        allSorted.map((it) => renderRow(it))
+                        <View style={styles.group}>
+                            {allSorted.map((it) => renderRow(it))}
+                        </View>
                     )}
                 </ScrollView>
             </View>
