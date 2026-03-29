@@ -48,6 +48,13 @@ const ITEMS: Item[] = [
     href: '/settings/family',
   },
   {
+    key: 'shopping-lists',
+    title: 'Shopping lists',
+    description: 'Rename or delete custom lists on the Shopping board',
+    icon: 'cart-outline',
+    href: '/shopping/settings',
+  },
+  {
     key: 'kid-mode-pin',
     title: 'Kid mode PIN',
     description: 'Set or change the PIN used to exit kid mode',
@@ -70,7 +77,9 @@ export default function SettingsIndex() {
   const { data: profile } = useProfile(profileId)
   const visibleItems = hasParentPermissions
     ? ITEMS
-    : ITEMS.filter(item => item.key !== 'kid-mode-pin')
+    : ITEMS.filter(
+        item => item.key !== 'kid-mode-pin' && item.key !== 'shopping-lists',
+      )
 
   const firstName = profile?.first_name ?? effectiveMember?.profile?.first_name ?? ''
   const lastName = profile?.last_name ?? effectiveMember?.profile?.last_name ?? ''

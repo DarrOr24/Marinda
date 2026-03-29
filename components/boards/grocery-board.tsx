@@ -20,10 +20,12 @@ import {
     GROCERIES_LIST_KIND,
     type ShoppingTab,
 } from '@/lib/groceries/shopping.types';
+import { getAvatarPublicUrl } from '@/lib/profiles/profiles.api';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Alert,
+    Image,
     Modal,
     Pressable,
     ScrollView,
@@ -59,11 +61,20 @@ export default function Grocery() {
     const { familyMembers } = useFamily(activeFamilyId);
     const viewMenuAnchorRef = useRef<View>(null);
 
+    const rawMembers: any[] = useMemo(
+        () =>
+            (familyMembers?.data ??
+                members?.data ??
+                members ??
+                family?.members ??
+                []) as any[],
+        [familyMembers?.data, members, family],
+    );
+
     const nameForId = useMemo(() => {
-        const list = (familyMembers?.data ?? members?.data ?? members ?? family?.members ?? []) as any[];
         const map: Record<string, string> = {};
 
-        for (const m of list) {
+        for (const m of rawMembers) {
             const id = m?.id ?? m?.member_id;
             if (!id) continue;
 
@@ -79,12 +90,28 @@ export default function Grocery() {
         }
 
         return (id?: string) => (id ? map[id] || shortId(id) : '—');
-    }, [familyMembers?.data, family]);
+    }, [rawMembers]);
+
+    const avatarUrlForMemberId = useMemo(() => {
+        const map: Record<string, string | null> = {};
+        for (const m of rawMembers) {
+            const id = m?.id ?? m?.member_id;
+            if (!id) continue;
+            const pub = m?.public_avatar_url;
+            if (typeof pub === 'string' && pub.length > 0) {
+                map[id] = pub;
+                continue;
+            }
+            const path = m?.profile?.avatar_url ?? m?.avatar_url ?? null;
+            map[id] = path ? getAvatarPublicUrl(path) : null;
+        }
+        return (memberId: string) => map[memberId] ?? null;
+    }, [rawMembers]);
 
     const [items, setItems] = useState<GroceryItem[]>([]);
     const [customTabs, setCustomTabs] = useState<ShoppingTab[]>([]);
     const [activeListKind, setActiveListKind] = useState<string>(GROCERIES_LIST_KIND);
-    const [viewMode, setViewMode] = useState<'category' | 'all'>('category');
+    const [viewMode, setViewMode] = useState<'category' | 'member' | 'all'>('category');
     const [viewMenuOpen, setViewMenuOpen] = useState(false);
     const [viewMenuAnchor, setViewMenuAnchor] = useState<{
         x: number;
@@ -185,10 +212,12 @@ export default function Grocery() {
     );
 
     useEffect(() => {
-        if (!isGroceriesList) {
-            setViewMode('all');
-            setViewMenuOpen(false);
-            setViewMenuAnchor(null);
+        setViewMenuOpen(false);
+        setViewMenuAnchor(null);
+        if (isGroceriesList) {
+            setViewMode('category');
+        } else {
+            setViewMode('member');
         }
     }, [isGroceriesList]);
 
@@ -228,6 +257,21 @@ export default function Grocery() {
     const allSorted = useMemo(() => {
         return [...tabItems].sort((a, b) => a.name.localeCompare(b.name));
     }, [tabItems]);
+
+    const groupedByMember = useMemo(() => {
+        const map = new Map<string, GroceryItem[]>();
+        for (const it of tabItems) {
+            const key = it.added_by_member_id || '—';
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(it);
+        }
+        for (const [, arr] of map) {
+            arr.sort((a, b) => a.name.localeCompare(b.name));
+        }
+        return Array.from(map.entries()).sort(([idA], [idB]) =>
+            nameForId(idA).localeCompare(nameForId(idB)),
+        );
+    }, [tabItems, nameForId]);
 
     function resetAddForm() {
         setName('');
@@ -390,6 +434,30 @@ export default function Grocery() {
         setInfoItem(it);
     }
 
+    function renderMemberGroupHeader(memberId: string) {
+        const label = nameForId(memberId);
+        const url = avatarUrlForMemberId(memberId);
+        const initial = label.trim().charAt(0).toUpperCase() || '?';
+        return (
+            <View style={[styles.groupTitleBar, styles.groupTitleMemberRow]}>
+                {url ? (
+                    <Image
+                        source={{ uri: url }}
+                        style={styles.groupMemberAvatar}
+                        resizeMode="cover"
+                    />
+                ) : (
+                    <View style={[styles.groupMemberAvatar, styles.groupMemberAvatarPlaceholder]}>
+                        <Text style={styles.groupMemberAvatarInitial}>{initial}</Text>
+                    </View>
+                )}
+                <Text style={styles.groupTitleMemberName} numberOfLines={1}>
+                    {label}
+                </Text>
+            </View>
+        );
+    }
+
     async function handleCreateTab() {
         const trimmed = newTabLabel.trim();
         if (!trimmed || !activeFamilyId) return;
@@ -518,17 +586,15 @@ export default function Grocery() {
                             />
                         </ScrollView>
 
-                        {isGroceriesList ? (
-                            <View ref={viewMenuAnchorRef} collapsable={false} style={styles.viewMenuAnchor}>
-                                <Button
-                                    type="outline"
-                                    size="sm"
-                                    title="View"
-                                    onPress={toggleViewMenu}
-                                    rightIcon={<MaterialCommunityIcons name="menu-down" size={18} />}
-                                />
-                            </View>
-                        ) : null}
+                        <View ref={viewMenuAnchorRef} collapsable={false} style={styles.viewMenuAnchor}>
+                            <Button
+                                type="outline"
+                                size="sm"
+                                title="View"
+                                onPress={toggleViewMenu}
+                                rightIcon={<MaterialCommunityIcons name="menu-down" size={18} />}
+                            />
+                        </View>
 
                         {hasParentPermissions ? (
                             <View style={styles.toolbarIcons}>
@@ -619,7 +685,16 @@ export default function Grocery() {
                     ) : isGroceriesList && viewMode === 'category' ? (
                         grouped.map(([cat, arr]) => (
                             <View key={cat} style={styles.group}>
-                                <Text style={styles.groupTitle}>{cat}</Text>
+                                <View style={styles.groupTitleBar}>
+                                    <Text style={styles.groupTitleText}>{cat}</Text>
+                                </View>
+                                {arr.map((it) => renderRow(it))}
+                            </View>
+                        ))
+                    ) : viewMode === 'member' ? (
+                        groupedByMember.map(([memberId, arr]) => (
+                            <View key={memberId} style={styles.group}>
+                                {renderMemberGroupHeader(memberId)}
                                 {arr.map((it) => renderRow(it))}
                             </View>
                         ))
@@ -755,14 +830,25 @@ export default function Grocery() {
                         ]}
                         pointerEvents="box-none"
                     >
+                        {isGroceriesList ? (
+                            <Pressable
+                                style={styles.viewOption}
+                                onPress={() => {
+                                    setViewMode('category');
+                                    closeViewMenu();
+                                }}
+                            >
+                                <Text style={styles.viewOptionText}>By category</Text>
+                            </Pressable>
+                        ) : null}
                         <Pressable
                             style={styles.viewOption}
                             onPress={() => {
-                                setViewMode('category');
+                                setViewMode('member');
                                 closeViewMenu();
                             }}
                         >
-                            <Text style={styles.viewOptionText}>By category</Text>
+                            <Text style={styles.viewOptionText}>By family member</Text>
                         </Pressable>
                         <Pressable
                             style={styles.viewOption}
@@ -842,7 +928,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#e5e7eb',
         paddingVertical: 4,
-        width: 200,
+        width: 240,
         zIndex: 2,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
@@ -903,15 +989,43 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
 
-    groupTitle: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#334155',
+    groupTitleBar: {
         paddingHorizontal: 12,
         paddingVertical: 8,
         backgroundColor: '#f1f5f9',
         borderBottomWidth: 1,
         borderBottomColor: '#e5e7eb',
+    },
+    groupTitleText: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#334155',
+    },
+    groupTitleMemberRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    groupMemberAvatar: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: '#e2e8f0',
+    },
+    groupMemberAvatarPlaceholder: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    groupMemberAvatarInitial: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#64748b',
+    },
+    groupTitleMemberName: {
+        flex: 1,
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#334155',
     },
 
     row: {
