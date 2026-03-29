@@ -13,16 +13,9 @@ import {
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useFamily } from '@/lib/families/families.hooks'
 import type { FamilyMember } from '@/lib/members/members.types'
+import { tint } from '@/utils/color.utils'
 import { isKidRole, isParentRole } from '@/utils/validation.utils'
 import { ChipSelector, type ChipOption } from './chip-selector'
-
-
-function tint(hex: string, opacity: number) {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`
-}
 
 type MultiMembersSelectorProps = {
   singleSelection?: false

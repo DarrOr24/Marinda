@@ -10,13 +10,7 @@ import {
 } from "react-native";
 
 import type { FamilyMember } from "@/lib/members/members.types";
-
-function tint(hex: string, opacity: number) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-}
+import { tint } from "@/utils/color.utils";
 
 type Props = {
   members: FamilyMember[];

@@ -1,24 +1,50 @@
-import React, { useEffect, useState } from 'react'
-import { Alert, StyleSheet, Text, TextInput, View } from 'react-native'
+import React, { useEffect, useMemo, useState } from 'react'
+import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, View } from 'react-native'
 
-import { Button, Screen, ScreenState } from '@/components/ui'
+import { ChipSelector, type ChipOption } from '@/components/chip-selector'
+import { Button, ModalCard, ModalShell, Screen, ScreenState } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
-import { useMember, useUpdateMember } from '@/lib/members/members.hooks'
+import { useColorPalette, useMember, useUpdateMember } from '@/lib/members/members.hooks'
+import { formatColorName, tint } from '@/utils/color.utils'
 
 export default function MyFamilyMemberSettingsScreen() {
   const { effectiveMember } = useAuthContext() as any
   const memberQuery = useMember(effectiveMember?.id ?? null)
+  const colorPaletteQuery = useColorPalette()
   const updateMember = useUpdateMember()
   const member = memberQuery.data ?? effectiveMember
 
   const [nickname, setNickname] = useState('')
-  const [themeColor, setThemeColor] = useState<string>('blue') // placeholder
+  const [themeColorName, setThemeColorName] = useState<string | null>(null)
+  const [themeModalVisible, setThemeModalVisible] = useState(false)
 
   useEffect(() => {
     setNickname(member?.nickname ?? '')
-  }, [member])
+    setThemeColorName(member?.color?.name ?? null)
+  }, [member?.color?.name, member?.nickname])
 
-  const hasChanges = nickname.trim() !== (member?.nickname ?? '') // extend later
+  const paletteOptions = useMemo<ChipOption[]>(
+    () =>
+      (colorPaletteQuery.data ?? []).map((color) => ({
+        label: formatColorName(color.name),
+        value: color.name,
+      })),
+    [colorPaletteQuery.data],
+  )
+
+  const colorByName = useMemo(
+    () =>
+      new Map((colorPaletteQuery.data ?? []).map((color) => [color.name, color.hex])),
+    [colorPaletteQuery.data],
+  )
+
+  const currentThemeHex = themeColorName
+    ? colorByName.get(themeColorName) ?? '#94a3b8'
+    : '#94a3b8'
+
+  const hasChanges =
+    nickname.trim() !== (member?.nickname ?? '') ||
+    themeColorName !== (member?.color?.name ?? null)
 
   const onSave = async () => {
     if (!member?.id) {
@@ -27,11 +53,19 @@ export default function MyFamilyMemberSettingsScreen() {
     }
 
     try {
+      const updates: Record<string, string | null> = {}
+
+      if (nickname.trim() !== (member?.nickname ?? '')) {
+        updates.nickname = nickname.trim() || null
+      }
+
+      if (themeColorName && themeColorName !== member?.color?.name) {
+        updates.color_scheme = themeColorName
+      }
+
       await updateMember.mutateAsync({
         memberId: member.id,
-        updates: {
-          nickname: nickname.trim() || null,
-        },
+        updates,
       })
       Alert.alert('Saved', 'Member settings updated.')
     } catch (e: any) {
@@ -51,33 +85,166 @@ export default function MyFamilyMemberSettingsScreen() {
 
   return (
     <Screen>
-      <Text style={styles.label}>Nickname (optional)</Text>
-      <TextInput value={nickname} onChangeText={setNickname} style={styles.input} />
+      <Text style={styles.title}>My family member</Text>
+      <Text style={styles.subtitle}>
+        Update your nickname and choose the color that represents you across the app.
+      </Text>
 
-      <Text style={styles.label}>Theme color</Text>
-      <View style={styles.placeholderBox}>
-        <Text style={styles.subtitle}>
-          Later: your color theme selector here (chips / palette / preview).
-        </Text>
-        <Text style={[styles.subtitle, { marginTop: 6 }]}>Current: {themeColor}</Text>
+      <View style={styles.card}>
+        <Text style={styles.label}>Nickname (optional)</Text>
+        <TextInput
+          value={nickname}
+          onChangeText={setNickname}
+          style={styles.input}
+          placeholder="Enter a nickname"
+          placeholderTextColor="#94a3b8"
+        />
+
+        <Text style={styles.label}>Theme color</Text>
+
+        {colorPaletteQuery.isLoading && !(colorPaletteQuery.data ?? []).length ? (
+          <View style={styles.loadingRow}>
+            <ActivityIndicator />
+            <Text style={styles.helperText}>Loading color palette…</Text>
+          </View>
+        ) : colorPaletteQuery.isError ? (
+          <Text style={styles.errorText}>
+            Could not load theme colors. Please try again.
+          </Text>
+        ) : (
+          <View style={styles.themeRow}>
+            <View style={styles.themeSummary}>
+              <View
+                style={[
+                  styles.themePreview,
+                  { backgroundColor: tint(currentThemeHex, 0.12), borderColor: currentThemeHex },
+                ]}
+              >
+                <View style={[styles.themePreviewDot, { backgroundColor: currentThemeHex }]} />
+              </View>
+              <Text style={styles.themeName}>
+                {themeColorName ? formatColorName(themeColorName) : 'No theme selected'}
+              </Text>
+            </View>
+
+            <Button
+              title="Change theme"
+              type="outline"
+              size="md"
+              onPress={() => setThemeModalVisible(true)}
+            />
+          </View>
+        )}
+
+        <Button
+          title={updateMember.isPending ? 'Saving…' : 'Save Changes'}
+          type="primary"
+          size="lg"
+          onPress={onSave}
+          disabled={
+            !hasChanges ||
+            updateMember.isPending ||
+            colorPaletteQuery.isLoading ||
+            !themeColorName
+          }
+          fullWidth
+          style={{ marginTop: 12 }}
+        />
       </View>
 
-      <Button
-        title={updateMember.isPending ? 'Saving…' : 'Save Changes'}
-        type="primary"
-        size="lg"
-        onPress={onSave}
-        disabled={!hasChanges || updateMember.isPending}
-        fullWidth
-        style={{ marginTop: 12 }}
-      />
+      <ModalShell
+        visible={themeModalVisible}
+        onClose={() => setThemeModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <ModalCard>
+            <Text style={styles.modalTitle}>Choose a theme</Text>
+            <Text style={styles.modalSubtitle}>
+              Pick the color that you like!
+            </Text>
+
+            <ChipSelector
+              options={paletteOptions}
+              value={themeColorName}
+              onChange={(value) => {
+                setThemeColorName(value)
+                setThemeModalVisible(false)
+              }}
+              chipStyle={(active, opt) => {
+                const color = colorByName.get(opt.value) ?? '#94a3b8'
+
+                return active
+                  ? {
+                    borderColor: color,
+                    backgroundColor: color,
+                  }
+                  : {
+                    borderColor: color,
+                    backgroundColor: tint(color, 0.1),
+                  }
+              }}
+              chipTextStyle={(active) => ({
+                color: active ? '#ffffff' : '#0f172a',
+                fontWeight: active ? '700' : '600',
+              })}
+              renderOption={(opt, active) => {
+                const color = colorByName.get(opt.value) ?? '#94a3b8'
+
+                return (
+                  <View style={styles.colorOption}>
+                    <View
+                      style={[
+                        styles.colorSwatch,
+                        {
+                          backgroundColor: color,
+                          borderColor: active ? '#ffffff' : color,
+                        },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.colorLabel,
+                        active && styles.colorLabelActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </View>
+                )
+              }}
+            />
+
+            <Button
+              title="Done"
+              type="ghost"
+              size="lg"
+              onPress={() => setThemeModalVisible(false)}
+              style={{ marginTop: 16, alignSelf: 'flex-end' }}
+            />
+          </ModalCard>
+        </View>
+      </ModalShell>
     </Screen>
   )
 }
 
 const styles = StyleSheet.create({
+  title: { fontSize: 24, fontWeight: '700', color: '#0f172a', marginBottom: 6 },
   label: { fontSize: 14, fontWeight: '700', color: '#334155' },
-  subtitle: { fontSize: 13, color: '#64748b' },
+  subtitle: { fontSize: 14, color: '#64748b', lineHeight: 20, marginBottom: 16 },
+  helperText: { fontSize: 13, color: '#64748b' },
+  errorText: { fontSize: 13, color: '#b91c1c' },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 16,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
   input: {
     borderWidth: 1,
     borderColor: '#CBD5E1',
@@ -88,9 +255,75 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#0f172a',
   },
-  placeholderBox: {
-    padding: 12,
+  loadingRow: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  themeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  themeSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  themePreview: {
+    width: 44,
+    height: 44,
     borderRadius: 14,
-    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  themePreviewDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 999,
+  },
+  themeName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  colorOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  colorSwatch: {
+    width: 14,
+    height: 14,
+    borderRadius: 999,
+    borderWidth: 2,
+  },
+  colorLabel: {
+    fontSize: 13,
+    color: '#0f172a',
+    fontWeight: '600',
+  },
+  colorLabelActive: {
+    color: '#ffffff',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 6,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    lineHeight: 20,
+    marginBottom: 16,
   },
 })

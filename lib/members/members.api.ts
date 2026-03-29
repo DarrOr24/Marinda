@@ -3,37 +3,59 @@ import { decode } from 'base64-arraybuffer'
 import * as FileSystem from 'expo-file-system/legacy'
 
 import { getSupabase } from '@/lib/supabase'
-import { FamilyMember } from './members.types'
-
+import { MEMBER_WITH_PROFILE_SELECT } from './members.select'
+import { Color, FamilyMember, UpdateMemberInput } from './members.types'
 
 const supabase = getSupabase()
 
 const BUCKET = 'profile-photos'
 
+export async function fetchActiveMemberIdsForProfile(profileId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('family_members')
+    .select('id')
+    .eq('profile_id', profileId)
+    .eq('is_active', true)
+
+  if (error) throw new Error(error.message)
+
+  return (data ?? []).map(row => row.id)
+}
+
 export async function fetchMember(memberId: string): Promise<FamilyMember> {
   const { data, error } = await supabase
     .from('family_members')
-    .select('*')
+    .select(MEMBER_WITH_PROFILE_SELECT)
     .eq('id', memberId)
     .single()
 
   if (error) throw new Error(error.message)
-  return data as FamilyMember
+  return data as unknown as FamilyMember
 }
 
 export async function updateMember(
   memberId: string,
-  updates: Partial<FamilyMember>,
+  updates: UpdateMemberInput,
 ): Promise<FamilyMember> {
   const { data, error } = await supabase
     .from('family_members')
     .update(updates)
     .eq('id', memberId)
-    .select()
+    .select(MEMBER_WITH_PROFILE_SELECT)
     .single()
 
   if (error) throw new Error(error.message)
-  return data as FamilyMember
+  return data as unknown as FamilyMember
+}
+
+export async function fetchColorPalette(): Promise<Color[]> {
+  const { data, error } = await supabase
+    .from('color_palette')
+    .select('name, hex')
+
+  if (error) throw new Error(error.message)
+
+  return [...(data ?? [])].sort((a, b) => a.name.localeCompare(b.name)) as Color[]
 }
 
 export function getMemberAvatarPublicUrl(path: string | null): string | null {
