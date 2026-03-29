@@ -11,8 +11,9 @@ import {
 import ActivityBoard from '@/components/boards/activity-board'
 import AnnouncementsBoard from '@/components/boards/announcements-board'
 import GroceryBoard from '@/components/boards/grocery-board'
+import TodosBoard from '@/components/boards/todos-board'
 
-type BoardKey = 'grocery' | 'announcements' | 'activity'
+type BoardKey = 'grocery' | 'todos' | 'announcements' | 'activity'
 
 type BoardTab = {
   key: BoardKey
@@ -21,6 +22,7 @@ type BoardTab = {
 
 const BOARD_TABS: BoardTab[] = [
   { key: 'grocery', label: 'Shopping' },
+  { key: 'todos', label: 'To-dos' },
   { key: 'announcements', label: 'Bulletin' },
   { key: 'activity', label: 'Events' },
 ]
@@ -43,6 +45,7 @@ export default function BoardsTabScreen() {
   )
 
   const content = useMemo(() => {
+    if (activeBoard === 'todos') return <TodosBoard />
     if (activeBoard === 'announcements') return <AnnouncementsBoard />
     if (activeBoard === 'activity') return <ActivityBoard />
     return <GroceryBoard />
