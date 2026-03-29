@@ -283,21 +283,45 @@ export default function TodosBoard() {
   }
 
   function deleteChecked() {
-    const checkedIds = items.filter((i) => i.is_checked).map((i) => i.id);
-    if (!checkedIds.length) {
+    const checked = items.filter((i) => i.is_checked);
+    if (!checked.length) {
       Alert.alert('Nothing selected', 'Check items to delete first.');
       return;
     }
 
-    Alert.alert('Delete completed to-dos?', 'This will remove all checked items.', [
+    const deletable = myMemberId
+      ? checked.filter((i) => i.created_by_member_id === myMemberId)
+      : [];
+    const skippedCount = checked.length - deletable.length;
+
+    if (!deletable.length) {
+      Alert.alert(
+        "Can't delete these",
+        skippedCount === 1
+          ? 'This to-do was created by someone else. Only they can delete it.'
+          : 'These to-dos were created by other people. Only they can delete them.',
+      );
+      return;
+    }
+
+    const deleteCount = deletable.length;
+    const message =
+      skippedCount > 0
+        ? `Only to-dos you created can be removed. This deletes ${deleteCount} of yours. ${skippedCount} from others will stay on the list.`
+        : deleteCount === 1
+          ? 'This will remove the checked to-do.'
+          : `This will remove ${deleteCount} checked to-dos.`;
+
+    Alert.alert('Delete to-dos?', message, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
+          const ids = deletable.map((i) => i.id);
           try {
-            await deleteTodoItems(checkedIds);
-            setItems((prev) => prev.filter((it) => !checkedIds.includes(it.id)));
+            await deleteTodoItems(ids);
+            setItems((prev) => prev.filter((it) => !ids.includes(it.id)));
           } catch (e) {
             console.error('deleteTodoItems failed', e);
             Alert.alert('Error', 'Could not delete items.');
