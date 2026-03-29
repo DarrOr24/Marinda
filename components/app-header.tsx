@@ -172,7 +172,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
       return {
         title: 'Chores settings',
         icon: 'clipboard-check-outline',
-        color: '#7c3aed',
+        color: '#f59e0b',
         hiddenTitle,
       }
     }
@@ -190,7 +190,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
       return {
         title: 'Wishes settings',
         icon: 'gift-outline',
-        color: '#22c55e',
+        color: '#f59e0b',
         hiddenTitle,
       }
     }
@@ -206,7 +206,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/announcements/settings') {
       return {
-        title: 'Bulletin settings',
+        title: 'Post settings',
         icon: 'bullhorn-outline',
         color: '#f59e0b',
         hiddenTitle,
@@ -215,9 +215,9 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/shopping/settings') {
       return {
-        title: 'Shopping lists',
+        title: 'Shop settings',
         icon: 'cart-outline',
-        color: '#2563eb',
+        color: '#f59e0b',
         hiddenTitle,
       }
     }
@@ -226,7 +226,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
       return {
         title: 'Lists settings',
         icon: 'format-list-bulleted',
-        color: '#2563eb',
+        color: '#f59e0b',
         hiddenTitle,
       }
     }
