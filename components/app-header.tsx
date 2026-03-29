@@ -213,6 +213,15 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    if (pathname === '/shopping/settings') {
+      return {
+        title: 'Shopping lists',
+        icon: 'cart-outline',
+        color: '#2563eb',
+        hiddenTitle,
+      }
+    }
+
     return {
       title: '',
       hiddenTitle,
