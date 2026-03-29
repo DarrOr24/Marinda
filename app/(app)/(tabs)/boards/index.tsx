@@ -21,10 +21,10 @@ type BoardTab = {
 }
 
 const BOARD_TABS: BoardTab[] = [
-  { key: 'grocery', label: 'Shopping' },
-  { key: 'todos', label: 'To-dos' },
-  { key: 'announcements', label: 'Bulletin' },
+  { key: 'grocery', label: 'Shop' },
+  { key: 'announcements', label: 'Posts' },
   { key: 'activity', label: 'Events' },
+  { key: 'todos', label: 'Todos' },
 ]
 
 /** Extra horizontal space vs a ~340pt phone; scales gap and padding on larger widths. */

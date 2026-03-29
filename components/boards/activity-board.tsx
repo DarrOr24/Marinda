@@ -1042,7 +1042,7 @@ export default function ActivityBoard() {
 const styles = StyleSheet.create({
 
   /** Same horizontal inset as day view so chips / header don’t shift when switching. */
-  /** Match Shopping/Bulletin breathing room below the Boards switcher (Shopping · Bulletin · Events). */
+  /** Match Shop/Posts/Events breathing room below the Boards switcher. */
   center: { flex: 1, paddingLeft: 10, paddingRight: 10, paddingTop: 12, gap: 12 },
   /** Slightly tighter vertical gap between filter row and day timeline than week stack. */
   centerDayTimeline: { gap: 8 },
