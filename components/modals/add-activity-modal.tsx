@@ -239,7 +239,7 @@ export default function AddActivityModal({
     });
   }, [visible, range?.start_at, endMode]);
 
-  const scrollMaxHeight = useModalScrollMaxHeight(200);
+  const scrollMaxHeight = useModalScrollMaxHeight(98);
   const firstStartMs = range ? new Date(range.start_at).getTime() : 0;
   const untilMs = untilEndIso ? new Date(untilEndIso).getTime() : 0;
   const intervalN = parseInt(intervalStr, 10) || 0;
@@ -389,8 +389,8 @@ export default function AddActivityModal({
   }
 
   return (
-    <ModalShell visible={visible} onClose={onClose} keyboardOffset={40}>
-      <ModalCard style={styles.sheet} maxHeightPadding={24} bottomPadding={12}>
+    <ModalShell visible={visible} onClose={onClose} keyboardOffset={12}>
+      <ModalCard style={styles.sheet} maxHeightPadding={10} bottomPadding={12}>
         <View style={styles.header}>
           <Text style={styles.title}>
             {headerTitle ??
@@ -405,7 +405,7 @@ export default function AddActivityModal({
           style={{ maxHeight: scrollMaxHeight }}
           contentContainerStyle={[styles.scrollContent, { flexGrow: 0 }]}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
+          keyboardDismissMode="none"
           showsVerticalScrollIndicator={true}
           nestedScrollEnabled
         >
@@ -627,6 +627,7 @@ export default function AddActivityModal({
                   <ScrollView
                     nestedScrollEnabled
                     keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="none"
                     style={styles.suggestionsScroll}
                   >
                     {placeSuggestions.map((s, i) => (

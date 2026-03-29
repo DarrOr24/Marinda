@@ -74,7 +74,7 @@ export function GroceryItemModal({
     onCancel,
     onSubmit,
 }: Props) {
-    const scrollMaxHeight = useModalScrollMaxHeight(200);
+    const scrollMaxHeight = useModalScrollMaxHeight(112);
     const title = mode === 'edit' ? 'Edit Shopping Item' : 'Add Shopping Item';
     const submitLabel = mode === 'edit' ? 'Save' : 'Add';
 
@@ -82,15 +82,15 @@ export function GroceryItemModal({
         tabs.find((t) => t.id === listKind)?.label ?? 'Choose list';
 
     return (
-        <ModalShell visible={visible} onClose={onCancel} keyboardOffset={40}>
-            <ModalCard style={styles.card} maxHeightPadding={24}>
+        <ModalShell visible={visible} onClose={onCancel} keyboardOffset={12}>
+            <ModalCard style={styles.card} maxHeightPadding={6}>
                 <Text style={styles.title}>{title}</Text>
 
                 <ScrollView
                     style={{ maxHeight: scrollMaxHeight }}
                     contentContainerStyle={{ paddingBottom: 16, flexGrow: 0 }}
                     keyboardShouldPersistTaps="handled"
-                    keyboardDismissMode="on-drag"
+                    keyboardDismissMode="none"
                     showsVerticalScrollIndicator={true}
                     nestedScrollEnabled
                 >

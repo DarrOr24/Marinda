@@ -4,7 +4,6 @@ import {
     Keyboard,
     KeyboardAvoidingView,
     Modal,
-    Platform,
     Pressable,
     StyleSheet,
     View,
@@ -40,7 +39,8 @@ export function ModalShell({
             />
 
             <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                // Both platforms: lift sheet with keyboard. Android `undefined` left the modal centered in the resized window so lower fields (e.g. Notes) stayed under the keyboard.
+                behavior="padding"
                 keyboardVerticalOffset={keyboardOffset}
                 style={[
                     styles.backdrop,

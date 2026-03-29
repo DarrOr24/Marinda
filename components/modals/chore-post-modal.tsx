@@ -61,7 +61,7 @@ export default function ChorePostModal({
     assigneeOptions,
     canEditPoints = true,
 }: Props) {
-    const scrollMaxHeight = useModalScrollMaxHeight(140);
+    const scrollMaxHeight = useModalScrollMaxHeight(78);
     const [title, setTitle] = React.useState(initial?.title ?? "");
     const [description, setDescription] = React.useState(initial?.description ?? "");
     const [points, setPoints] = React.useState(String(initial?.points ?? 0));
@@ -179,9 +179,9 @@ export default function ChorePostModal({
     }
 
     return (
-        <ModalShell visible={visible} onClose={onClose} keyboardOffset={40}>
+        <ModalShell visible={visible} onClose={onClose} keyboardOffset={12}>
 
-            <ModalCard bottomPadding={12} maxHeightPadding={24} style={styles.card}>
+            <ModalCard bottomPadding={12} maxHeightPadding={6} style={styles.card}>
 
                 <Text style={styles.h1}>{titleText}</Text>
 
@@ -189,7 +189,7 @@ export default function ChorePostModal({
                     style={{ maxHeight: scrollMaxHeight }}
                     contentContainerStyle={{ paddingBottom: 16, flexGrow: 0 }}
                     keyboardShouldPersistTaps="handled"
-                    keyboardDismissMode="on-drag"
+                    keyboardDismissMode="none"
                     showsVerticalScrollIndicator={true}
                     nestedScrollEnabled
                 >

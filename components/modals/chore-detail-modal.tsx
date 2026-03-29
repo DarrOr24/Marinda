@@ -58,7 +58,7 @@ export default function ChoreDetailModal({
     doneByOptions,
     defaultDoneById,
 }: Props) {
-    const scrollMaxHeight = useModalScrollMaxHeight(140);
+    const scrollMaxHeight = useModalScrollMaxHeight(78);
     const { hasParentPermissions } = useAuthContext();
 
     // 🔹 Normalize assignees: plural-only
@@ -297,9 +297,9 @@ export default function ChoreDetailModal({
         <ModalShell
             visible={visible}
             onClose={requestClose}
-            keyboardOffset={40}
+            keyboardOffset={12}
         >
-            <ModalCard style={s.card} maxHeightPadding={24} bottomPadding={12}>
+            <ModalCard style={s.card} maxHeightPadding={6} bottomPadding={12}>
                 {/* HEADER (outside scroll) */}
                 <Text style={s.title}>{chore.title}</Text>
                 <Text style={s.status}>{chore.status.toUpperCase()}</Text>
@@ -309,7 +309,7 @@ export default function ChoreDetailModal({
                     style={{ maxHeight: scrollMaxHeight }}
                     contentContainerStyle={{ paddingBottom: 16, flexGrow: 0 }}
                     keyboardShouldPersistTaps="handled"
-                    keyboardDismissMode="on-drag"
+                    keyboardDismissMode="none"
                     showsVerticalScrollIndicator={true}
                     nestedScrollEnabled
                 >

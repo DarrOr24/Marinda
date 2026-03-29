@@ -115,7 +115,7 @@ export function ActivityDetailModal({
   isParent,
   isCreator,
 }: Props) {
-  const scrollMaxHeight = useModalScrollMaxHeight(160);
+  const scrollMaxHeight = useModalScrollMaxHeight(92);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [calendarBusy, setCalendarBusy] = useState(false);
@@ -236,7 +236,7 @@ export function ActivityDetailModal({
           style={{ maxHeight: scrollMaxHeight }}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
+          keyboardDismissMode="none"
           showsVerticalScrollIndicator={true}
           nestedScrollEnabled
         >

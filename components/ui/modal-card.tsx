@@ -4,10 +4,11 @@ import { Dimensions, useWindowDimensions, View, ViewProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /** Max height for ScrollView content so modals shrink-to-fit but scroll when needed */
-export function useModalScrollMaxHeight(reserve = 140) {
+export function useModalScrollMaxHeight(reserve = 88) {
   const { height: screenH } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  return screenH - insets.top - insets.bottom - 24 - 16 - 16 - reserve;
+  // Lower fixed slack + lower reserve ⇒ taller scroll when keyboard has reduced the window
+  return screenH - insets.top - insets.bottom - 14 - reserve;
 }
 
 type Props = ViewProps & {
@@ -26,7 +27,7 @@ type Props = ViewProps & {
 export function ModalCard({
     style,
     bottomPadding = 12,
-    maxHeightPadding = 24,
+    maxHeightPadding = 6,
 
     // ✅ defaults for consistent modals
     padded = true,

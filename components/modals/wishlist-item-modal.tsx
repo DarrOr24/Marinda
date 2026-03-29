@@ -84,7 +84,7 @@ export function WishlistItemModal({
     onClose,
     onSubmit,
 }: Props) {
-    const scrollMaxHeight = useModalScrollMaxHeight(140);
+    const scrollMaxHeight = useModalScrollMaxHeight(78);
     function handleToggleSelfFulfill() {
         // must have a price first
         if (!price.trim()) {
@@ -133,15 +133,15 @@ export function WishlistItemModal({
 
 
     return (
-        <ModalShell visible={visible} onClose={onClose} keyboardOffset={40}>
-            <ModalCard bottomPadding={12} maxHeightPadding={24} style={styles.card}>
+        <ModalShell visible={visible} onClose={onClose} keyboardOffset={12}>
+            <ModalCard bottomPadding={12} maxHeightPadding={6} style={styles.card}>
                 <Text style={styles.modalTitle}>{mode === "edit" ? "Edit Wish" : "Add Wish"}</Text>
 
                 <ScrollView
                     style={{ maxHeight: scrollMaxHeight }}
                     contentContainerStyle={{ paddingBottom: 16, flexGrow: 0 }}
                     keyboardShouldPersistTaps="handled"
-                    keyboardDismissMode="on-drag"
+                    keyboardDismissMode="none"
                     showsVerticalScrollIndicator={true}
                     nestedScrollEnabled
                 >
