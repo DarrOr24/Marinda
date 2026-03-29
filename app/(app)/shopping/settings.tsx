@@ -101,11 +101,12 @@ export default function ShoppingListsSettingsScreen() {
     };
 
     return (
-        <DocsPageLayout intro="Rename or remove your family’s custom shopping lists. Groceries is always available and can’t be deleted. To add a new list, use the + button next to the list pills on the Shopping board.">
+        <DocsPageLayout intro="Rename or remove your family’s custom shopping lists. Groceries is always available and can’t be deleted. To add a new list, use the + button next to the list pills on the Shopping board. Examples of extra lists: online orders (e.g. Amazon), clothes, or school supplies.">
             <DocsSection title="Custom lists">
                 <Text style={docsPageStyles.description}>
                     These lists appear as tabs on the Shopping board. Categories (produce, dairy, etc.)
-                    only apply to the Groceries list.
+                    only apply to the Groceries list. Use separate lists for things like school supplies, birthday
+                    gifts, or a big trip—whatever fits your family.
                 </Text>
 
                 {!hasParentPermissions && (
@@ -151,7 +152,7 @@ export default function ShoppingListsSettingsScreen() {
                             label="Name"
                             value={editing.label}
                             onChangeText={(txt) => setEditing((prev) => (prev ? { ...prev, label: txt } : prev))}
-                            placeholder="Amazon, Clothes…"
+                            placeholder="e.g. Amazon, Clothes, School supplies"
                         />
                         <View style={styles.editorButtons}>
                             <Button

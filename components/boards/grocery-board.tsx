@@ -677,7 +677,7 @@ export default function Grocery() {
                     </Text>
 
                     <TextInput
-                        placeholder="List name (e.g., Amazon, Clothes)"
+                        placeholder="List name (e.g., Amazon, Clothes, School supplies)"
                         value={newTabLabel}
                         onChangeText={setNewTabLabel}
                         containerStyle={{ marginBottom: 10 }}
