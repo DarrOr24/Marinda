@@ -1,3 +1,4 @@
+import { MemberAvatar } from '@/components/avatar/member-avatar';
 import { TodoItemModal } from '@/components/modals/todo-item-modal';
 import { Button, MetaRow, ModalCard, ModalShell, Screen } from '@/components/ui';
 import { useAuthContext } from '@/hooks/use-auth-context';
@@ -12,15 +13,16 @@ import {
   type TodoItemRow,
 } from '@/lib/todos/todos.api';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -52,13 +54,20 @@ function mapRow(r: TodoItemRow): TodoItem {
 }
 
 export default function TodosBoard() {
-  const { activeFamilyId, effectiveMember } = useAuthContext() as any;
+  const { activeFamilyId, effectiveMember, family, members } = useAuthContext() as any;
+  const { width: windowWidth } = useWindowDimensions();
+  const viewMenuAnchorRef = useRef<View>(null);
 
   const { familyMembers } = useFamily(activeFamilyId);
 
   const rawMembers: any[] = useMemo(
-    () => (familyMembers?.data ?? []) as any[],
-    [familyMembers?.data],
+    () =>
+      (familyMembers?.data ??
+        members?.data ??
+        members ??
+        family?.members ??
+        []) as any[],
+    [familyMembers?.data, members, family],
   );
 
   const myMemberId: string | undefined =
@@ -85,6 +94,15 @@ export default function TodosBoard() {
     return (id?: string) => (id ? map[id] || shortId(id) : '—');
   }, [rawMembers]);
 
+  const [viewMode, setViewMode] = useState<'member' | 'all'>('member');
+  const [viewMenuOpen, setViewMenuOpen] = useState(false);
+  const [viewMenuAnchor, setViewMenuAnchor] = useState<{
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  } | null>(null);
+
   const [items, setItems] = useState<TodoItem[]>([]);
 
   const [addOpen, setAddOpen] = useState(false);
@@ -109,9 +127,24 @@ export default function TodosBoard() {
     void reloadItems();
   }, [reloadItems]);
 
-  const sortedItems = useMemo(() => {
+  const allSorted = useMemo(() => {
     return [...items].sort((a, b) => a.name.localeCompare(b.name));
   }, [items]);
+
+  const groupedByMember = useMemo(() => {
+    const map = new Map<string, TodoItem[]>();
+    for (const it of items) {
+      const key = it.created_by_member_id || '—';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(it);
+    }
+    for (const [, arr] of map) {
+      arr.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return Array.from(map.entries()).sort(([idA], [idB]) =>
+      nameForId(idA).localeCompare(nameForId(idB)),
+    );
+  }, [items, nameForId]);
 
   function resetAddForm() {
     setName('');
@@ -197,6 +230,13 @@ export default function TodosBoard() {
   }
 
   function startEdit(item: TodoItem) {
+    if (!myMemberId || item.created_by_member_id !== myMemberId) {
+      Alert.alert(
+        'View only',
+        "Only the person who created this to-do can change the text or who it's shared with.",
+      );
+      return;
+    }
     setEditingItem(item);
     setName(item.name);
     setSharedMemberIds([...item.shared_with_member_ids]);
@@ -260,7 +300,63 @@ export default function TodosBoard() {
     return item.shared_with_member_ids.map((id) => nameForId(id)).join(', ');
   }
 
+  function closeViewMenu() {
+    setViewMenuOpen(false);
+    setViewMenuAnchor(null);
+  }
+
+  function toggleViewMenu() {
+    if (viewMenuOpen) {
+      closeViewMenu();
+      return;
+    }
+    viewMenuAnchorRef.current?.measureInWindow((x, y, w, h) => {
+      setViewMenuAnchor({ x, y, w, h });
+      setViewMenuOpen(true);
+    });
+  }
+
+  function renderMemberGroupHeader(memberId: string, sectionItems: TodoItem[]) {
+    const label = nameForId(memberId);
+    const isOthersSection = !!myMemberId && memberId !== myMemberId;
+    const showSharedSubtitle =
+      isOthersSection &&
+      sectionItems.some((it) => myMemberId && it.shared_with_member_ids.includes(myMemberId));
+
+    return (
+      <View style={[styles.groupTitleBar, styles.groupTitleMemberRow]}>
+        <MemberAvatar memberId={memberId} size="sm" />
+        <View style={styles.groupHeaderTextCol}>
+          <Text style={styles.groupTitleMemberName} numberOfLines={1}>
+            {label}
+          </Text>
+          {showSharedSubtitle ? (
+            <Text style={styles.groupSharedSubtitle} numberOfLines={1}>
+              Shared with you
+            </Text>
+          ) : null}
+        </View>
+      </View>
+    );
+  }
+
   function renderRow(it: TodoItem) {
+    const isCreator = !!myMemberId && it.created_by_member_id === myMemberId;
+    const isSharee =
+      !!myMemberId &&
+      !isCreator &&
+      it.shared_with_member_ids.includes(myMemberId);
+
+    // In "by member" view, the section header already says who it’s from; everything there is shared.
+    let contextHint: string | null = null;
+    if (viewMode === 'all') {
+      if (isSharee) {
+        contextHint = `${nameForId(it.created_by_member_id)} shared this with you`;
+      } else if (!isCreator) {
+        contextHint = `From ${nameForId(it.created_by_member_id)}`;
+      }
+    }
+
     return (
       <Pressable
         key={it.id}
@@ -281,24 +377,38 @@ export default function TodosBoard() {
           />
         </TouchableOpacity>
 
-        <View style={styles.rowLine}>
-          <Text numberOfLines={1} style={[styles.rowText, it.is_checked && styles.rowTextDone]}>
-            {it.name}
-          </Text>
+        <View style={styles.rowTextBlock}>
+          <View style={styles.rowLine}>
+            <Text numberOfLines={1} style={[styles.rowText, it.is_checked && styles.rowTextDone]}>
+              {it.name}
+            </Text>
+          </View>
+          {contextHint ? (
+            <Text
+              style={[styles.rowFromHint, isSharee && styles.rowSharedHint]}
+              numberOfLines={viewMode === 'member' && isSharee ? 1 : 2}
+            >
+              {contextHint}
+            </Text>
+          ) : null}
         </View>
 
-        <Button
-          type="ghost"
-          size="sm"
-          round
-          hitSlop={10}
-          leftIcon={<MaterialCommunityIcons name="pencil-outline" size={20} />}
-          leftIconColor="#0f172a"
-          onPress={(e) => {
-            e?.stopPropagation?.();
-            startEdit(it);
-          }}
-        />
+        {isCreator ? (
+          <Button
+            type="ghost"
+            size="sm"
+            round
+            hitSlop={10}
+            leftIcon={<MaterialCommunityIcons name="pencil-outline" size={20} />}
+            leftIconColor="#0f172a"
+            onPress={(e) => {
+              e?.stopPropagation?.();
+              startEdit(it);
+            }}
+          />
+        ) : (
+          <View style={styles.rowEditPlaceholder} />
+        )}
 
         <Button
           type="ghost"
@@ -322,36 +432,48 @@ export default function TodosBoard() {
     <Screen scroll={false} withBackground={false} gap="no" contentStyle={styles.screenContent}>
       <View style={styles.page}>
         <View style={styles.header}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.actionsScroll}
-            contentContainerStyle={styles.actionsScrollContent}
-            keyboardShouldPersistTaps="handled"
-          >
-            <Button
-              type="outline"
-              size="sm"
-              title="Add"
-              onPress={startAdd}
-              style={styles.actionChip}
-              leftIcon={<MaterialCommunityIcons name="plus" size={18} />}
-            />
+          <View style={styles.toolbarRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.actionsScroll}
+              contentContainerStyle={styles.actionsScrollContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              <Button
+                type="outline"
+                size="sm"
+                title="Add"
+                onPress={startAdd}
+                style={styles.actionChip}
+                leftIcon={<MaterialCommunityIcons name="plus" size={18} />}
+              />
 
-            <Button
-              type="outline"
-              size="sm"
-              title="Delete"
-              onPress={deleteChecked}
-              style={[styles.actionChip, { borderColor: '#fecaca' }]}
-              leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
-              rightIcon={<MaterialCommunityIcons name="checkbox-multiple-marked" size={18} />}
-              backgroundColor="#fff5f5"
-              leftIconColor="#b91c1c"
-              rightIconColor="#b91c1c"
-              titleColor="#b91c1c"
-            />
-          </ScrollView>
+              <Button
+                type="outline"
+                size="sm"
+                title="Delete"
+                onPress={deleteChecked}
+                style={[styles.actionChip, { borderColor: '#fecaca' }]}
+                leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
+                rightIcon={<MaterialCommunityIcons name="checkbox-multiple-marked" size={18} />}
+                backgroundColor="#fff5f5"
+                leftIconColor="#b91c1c"
+                rightIconColor="#b91c1c"
+                titleColor="#b91c1c"
+              />
+            </ScrollView>
+
+            <View ref={viewMenuAnchorRef} collapsable={false} style={styles.viewMenuAnchor}>
+              <Button
+                type="outline"
+                size="sm"
+                title="View"
+                onPress={toggleViewMenu}
+                rightIcon={<MaterialCommunityIcons name="menu-down" size={18} />}
+              />
+            </View>
+          </View>
         </View>
 
         <ScrollView
@@ -359,6 +481,7 @@ export default function TodosBoard() {
           contentContainerStyle={[styles.listContent, items.length === 0 && styles.listContentEmpty]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator
+          scrollEnabled={!viewMenuOpen}
         >
           {items.length === 0 ? (
             <View style={styles.emptyState} accessibilityLabel="No to-dos yet. Tap Add.">
@@ -371,13 +494,15 @@ export default function TodosBoard() {
               <Text style={styles.emptyTitle}>Nothing here yet.</Text>
               <Text style={styles.emptyHint}>Tap Add to create a to-do.</Text>
             </View>
-          ) : (
-            <View style={styles.group}>
-              <View style={styles.groupTitleBar}>
-                <Text style={styles.groupTitleText}>To-dos</Text>
+          ) : viewMode === 'member' ? (
+            groupedByMember.map(([memberId, arr]) => (
+              <View key={memberId} style={styles.group}>
+                {renderMemberGroupHeader(memberId, arr)}
+                {arr.map((it) => renderRow(it))}
               </View>
-              {sortedItems.map((it) => renderRow(it))}
-            </View>
+            ))
+          ) : (
+            <View style={styles.group}>{allSorted.map((it) => renderRow(it))}</View>
           )}
         </ScrollView>
       </View>
@@ -402,6 +527,13 @@ export default function TodosBoard() {
           {infoItem && (
             <>
               <Text style={styles.infoModalTitle}>{infoItem.name}</Text>
+              {myMemberId &&
+              infoItem.created_by_member_id !== myMemberId &&
+              infoItem.shared_with_member_ids.includes(myMemberId) ? (
+                <Text style={styles.infoSharedBanner}>
+                  {nameForId(infoItem.created_by_member_id)} shared this with you
+                </Text>
+              ) : null}
               <MetaRow label="Created by" value={nameForId(infoItem.created_by_member_id)} spacing={6} />
               <MetaRow label="Visible to" value={shareSummary(infoItem)} spacing={6} />
               <MetaRow
@@ -416,6 +548,47 @@ export default function TodosBoard() {
           )}
         </ModalCard>
       </ModalShell>
+
+      <Modal
+        visible={viewMenuOpen && !!viewMenuAnchor}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={closeViewMenu}
+      >
+        <Pressable style={styles.viewMenuBackdrop} onPress={closeViewMenu} />
+        {viewMenuAnchor ? (
+          <View
+            style={[
+              styles.viewMenuPopover,
+              {
+                top: viewMenuAnchor.y + viewMenuAnchor.h + 4,
+                right: Math.max(12, windowWidth - viewMenuAnchor.x - viewMenuAnchor.w),
+              },
+            ]}
+            pointerEvents="box-none"
+          >
+            <Pressable
+              style={styles.viewOption}
+              onPress={() => {
+                setViewMode('member');
+                closeViewMenu();
+              }}
+            >
+              <Text style={styles.viewOptionText}>By family member</Text>
+            </Pressable>
+            <Pressable
+              style={styles.viewOption}
+              onPress={() => {
+                setViewMode('all');
+                closeViewMenu();
+              }}
+            >
+              <Text style={styles.viewOptionText}>All items (A → Z)</Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </Modal>
     </Screen>
   );
 }
@@ -435,19 +608,60 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: 12,
     paddingBottom: 8,
+    zIndex: 2,
+  },
+  toolbarRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 0,
   },
   actionsScroll: {
-    flexGrow: 0,
+    flex: 1,
+    minWidth: 0,
   },
   actionsScrollContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingRight: 2,
+    flexGrow: 0,
     minHeight: 36,
   },
   actionChip: {
     flexShrink: 0,
+  },
+  viewMenuAnchor: {
+    flexShrink: 0,
+    justifyContent: 'center',
+  },
+  viewMenuBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.06)',
+  },
+  viewMenuPopover: {
+    position: 'absolute',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    paddingVertical: 4,
+    width: 240,
+    zIndex: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 16,
+  },
+  viewOption: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  viewOptionText: {
+    fontSize: 15,
+    color: '#0f172a',
   },
   listScroll: {
     flex: 1,
@@ -506,6 +720,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#334155',
   },
+  groupTitleMemberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  groupHeaderTextCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  groupTitleMemberName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  groupSharedSubtitle: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2563eb',
+  },
 
   row: {
     flexDirection: 'row',
@@ -518,10 +752,35 @@ const styles = StyleSheet.create({
   rowText: { fontSize: 16, color: '#0f172a' },
   rowTextDone: { color: '#64748b', textDecorationLine: 'line-through' },
 
-  rowLine: {
+  rowTextBlock: {
     flex: 1,
+    minWidth: 0,
+  },
+  rowLine: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  rowFromHint: {
+    marginTop: 2,
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  rowSharedHint: {
+    color: '#2563eb',
+    fontWeight: '600',
+  },
+  rowEditPlaceholder: {
+    width: 40,
+    height: 40,
+  },
+  infoSharedBanner: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1d4ed8',
+    marginTop: -8,
+    marginBottom: 14,
+    lineHeight: 20,
   },
 
   infoModalTitle: {
