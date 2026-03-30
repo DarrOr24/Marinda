@@ -2,14 +2,12 @@ import React, { createContext, PropsWithChildren, useContext, useMemo } from 're
 
 import { getTheme, type AppTheme } from '@/config/theme'
 import { useAuthContext } from '@/hooks/use-auth-context'
-import { useMember } from '@/lib/members/members.hooks'
 
 const ThemeContext = createContext<AppTheme | null>(null)
 
 export function AppThemeProvider({ children }: PropsWithChildren) {
   const { effectiveMember } = useAuthContext()
-  const memberQuery = useMember(effectiveMember?.id ?? null)
-  const memberAccentHex = memberQuery.data?.color?.hex ?? effectiveMember?.color?.hex ?? null
+  const memberAccentHex = effectiveMember?.color?.hex ?? null
 
   const theme = useMemo(() => getTheme(memberAccentHex), [memberAccentHex])
 

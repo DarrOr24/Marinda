@@ -4,11 +4,11 @@ import {
   Pressable,
   StyleProp,
   StyleSheet,
-  Text,
   View,
   ViewStyle,
 } from 'react-native';
 
+import { ThemedText } from '@/components/themed-text';
 import type { AppTheme } from '@/config/theme';
 import { useTheme } from '@/providers/theme-provider';
 import type { GestureResponderEvent, Insets } from 'react-native';
@@ -160,7 +160,8 @@ export function Button({
         {leftIcon && renderLeftIcon()}
 
         {hasText && (
-          <Text
+          <ThemedText
+            variant="bodySmall"
             style={[
               styles.text,
               sizeTextStyle,
@@ -171,7 +172,7 @@ export function Button({
             ]}
           >
             {title}
-          </Text>
+          </ThemedText>
         )}
 
         {rightIcon && renderRightIcon()}
