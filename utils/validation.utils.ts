@@ -2,6 +2,8 @@
 import type { Role } from '@/lib/members/members.types'
 
 
+export const KID_MODE_PIN_PATTERN = /^\d{4}$/
+
 export function isValidEmail(email?: string | null): boolean {
   return email != null && /^\S+@\S+\.\S+$/.test(email)
 }

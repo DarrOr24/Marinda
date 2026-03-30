@@ -1,5 +1,6 @@
 // components/header-profile-button.tsx
 import { useAuthContext } from '@/hooks/use-auth-context'
+import { KidModePinModal } from '@/components/kid-mode-pin-modal'
 import { KidModePickerModal } from '@/components/kid-mode-picker-modal'
 import { useFamily } from '@/lib/families/families.hooks'
 import { useMember } from '@/lib/members/members.hooks'
@@ -9,12 +10,12 @@ import React, { useRef, useState } from 'react'
 import {
   Alert,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native'
 
 import { MemberAvatar } from '@/components/avatar/member-avatar'
+import { ThemedText } from '@/components/themed-text'
 import { ModalPopover } from '@/components/ui'
 import type { FamilyMember } from '@/lib/members/members.types'
 import { memberDisplayName } from '@/utils/format.utils'
@@ -38,6 +39,7 @@ export function HeaderProfileButton() {
 
   const [open, setOpen] = useState(false)
   const [kidModePickerOpen, setKidModePickerOpen] = useState(false)
+  const [kidModePinOpen, setKidModePinOpen] = useState(false)
   const kidModeCandidates = (familyMembers.data ?? []).filter(
     member => member.role === 'CHILD' || member.role === 'TEEN',
   )
@@ -110,6 +112,25 @@ export function HeaderProfileButton() {
     await enterKidMode(memberId)
   }
 
+  const handleExitKidMode = async () => {
+    setOpen(false)
+
+    if (authMember?.kid_mode_pin) {
+      setKidModePinOpen(true)
+      return
+    }
+
+    await exitKidMode()
+  }
+
+  const handleSubmitKidModePin = async (pin: string) => {
+    const didExitKidMode = await exitKidMode(pin)
+
+    if (didExitKidMode) {
+      setKidModePinOpen(false)
+    }
+  }
+
   return (
     <>
       <View style={styles.headerRight}>
@@ -143,7 +164,9 @@ export function HeaderProfileButton() {
               }}
             >
               <MaterialCommunityIcons name="play-circle-outline" size={20} color="#2563eb" />
-              <Text style={[styles.itemText, { color: '#2563eb' }]}>Get started</Text>
+              <ThemedText variant="bodySmall" style={[styles.itemText, { color: '#2563eb' }]}>
+                Get started
+              </ThemedText>
             </TouchableOpacity>
           )}
 
@@ -156,24 +179,30 @@ export function HeaderProfileButton() {
               }}
             >
               <MaterialCommunityIcons name="cog-outline" size={20} color="#334155" />
-              <Text style={styles.itemText}>Settings</Text>
+              <ThemedText variant="bodySmall" style={styles.itemText}>
+                Settings
+              </ThemedText>
             </TouchableOpacity>
           )}
 
           {showParentMenuActions && (
             <TouchableOpacity style={styles.item} onPress={handleOpenKidModePicker}>
               <MaterialCommunityIcons name="shield-lock-outline" size={20} color="#334155" />
-              <Text style={styles.itemText}>Enter kid mode</Text>
+              <ThemedText variant="bodySmall" style={styles.itemText}>
+                Enter kid mode
+              </ThemedText>
             </TouchableOpacity>
           )}
 
           {isKidMode && effectiveMember && (
             <>
               <View style={styles.kidMenuIdentity}>
-                <Text style={styles.kidMenuLabel}>Playing as</Text>
-                <Text style={styles.kidMenuName} numberOfLines={2}>
+                <ThemedText variant="micro" tone="muted" style={styles.kidMenuLabel}>
+                  Playing as
+                </ThemedText>
+                <ThemedText variant="body" style={styles.kidMenuName} numberOfLines={2}>
                   {memberDisplayName(effectiveMember as FamilyMember)}
-                </Text>
+                </ThemedText>
               </View>
               <TouchableOpacity
                 style={styles.item}
@@ -183,17 +212,20 @@ export function HeaderProfileButton() {
                 }}
               >
                 <MaterialCommunityIcons name="cog-outline" size={20} color="#334155" />
-                <Text style={styles.itemText}>Settings</Text>
+                <ThemedText variant="bodySmall" style={styles.itemText}>
+                  Settings
+                </ThemedText>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.item}
                 onPress={() => {
-                  setOpen(false)
-                  void exitKidMode?.()
+                  void handleExitKidMode()
                 }}
               >
                 <MaterialCommunityIcons name="shield-lock-outline" size={20} color="#1d4ed8" />
-                <Text style={[styles.itemText, { color: '#1d4ed8' }]}>Exit kid mode</Text>
+                <ThemedText variant="bodySmall" style={[styles.itemText, { color: '#1d4ed8' }]}>
+                  Exit kid mode
+                </ThemedText>
               </TouchableOpacity>
             </>
           )}
@@ -201,7 +233,9 @@ export function HeaderProfileButton() {
           {!isKidMode && (
             <TouchableOpacity style={styles.item} onPress={handleLogout}>
               <MaterialCommunityIcons name="logout" size={20} color="#dc2626" />
-              <Text style={[styles.itemText, { color: '#dc2626' }]}>Log out</Text>
+              <ThemedText variant="bodySmall" style={[styles.itemText, { color: '#dc2626' }]}>
+                Log out
+              </ThemedText>
             </TouchableOpacity>
           )}
         </View>
@@ -212,6 +246,14 @@ export function HeaderProfileButton() {
         members={kidModeCandidates}
         onClose={() => setKidModePickerOpen(false)}
         onSelectMember={handleSelectKidModeMember}
+      />
+
+      <KidModePinModal
+        visible={kidModePinOpen}
+        title="Enter parent PIN"
+        message="Enter your 4-digit PIN to switch back to parent mode."
+        onCancel={() => setKidModePinOpen(false)}
+        onSubmit={handleSubmitKidModePin}
       />
     </>
   )

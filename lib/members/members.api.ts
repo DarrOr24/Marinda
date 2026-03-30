@@ -22,11 +22,27 @@ export async function fetchActiveMemberIdsForProfile(profileId: string): Promise
   return (data ?? []).map(row => row.id)
 }
 
-export async function fetchMember(memberId: string): Promise<FamilyMember> {
+export async function fetchMemberById(memberId: string): Promise<FamilyMember> {
   const { data, error } = await supabase
     .from('family_members')
     .select(MEMBER_WITH_PROFILE_SELECT)
     .eq('id', memberId)
+    .single()
+
+  if (error) throw new Error(error.message)
+  return data as unknown as FamilyMember
+}
+
+export async function fetchMemberByFamilyAndProfile(
+  familyId: string,
+  profileId: string,
+): Promise<FamilyMember> {
+  const { data, error } = await supabase
+    .from('family_members')
+    .select(MEMBER_WITH_PROFILE_SELECT)
+    .eq('family_id', familyId)
+    .eq('profile_id', profileId)
+    .eq('is_active', true)
     .single()
 
   if (error) throw new Error(error.message)

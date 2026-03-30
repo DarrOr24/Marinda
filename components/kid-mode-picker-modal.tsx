@@ -1,12 +1,12 @@
 import React from 'react'
 import {
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native'
 
 import { MemberAvatar } from '@/components/avatar/member-avatar'
+import { ThemedText } from '@/components/themed-text'
 import { Button, ModalDialog } from '@/components/ui'
 import type { FamilyMember } from '@/lib/members/members.types'
 import { memberDisplayName } from '@/utils/format.utils'
@@ -27,8 +27,12 @@ export function KidModePickerModal({
   return (
     <ModalDialog visible={visible} onClose={onClose} size="md">
       <View style={styles.pickerModal}>
-        <Text style={styles.pickerTitle}>Choose a kid</Text>
-        <Text style={styles.pickerSubtitle}>Pick the profile to enter kid mode with.</Text>
+        <ThemedText variant="title" style={styles.pickerTitle}>
+          Choose a kid
+        </ThemedText>
+        <ThemedText variant="bodySmall" tone="muted" style={styles.pickerSubtitle}>
+          Pick the profile to enter kid mode with.
+        </ThemedText>
 
         <View style={styles.pickerList}>
           {members.map(member => (
@@ -38,7 +42,9 @@ export function KidModePickerModal({
               onPress={() => void onSelectMember(member.id)}
             >
               <MemberAvatar memberId={member.id} size="sm" isUpdatable={false} />
-              <Text style={styles.pickerItemText}>{memberDisplayName(member)}</Text>
+              <ThemedText variant="bodySmall" style={styles.pickerItemText}>
+                {memberDisplayName(member)}
+              </ThemedText>
             </TouchableOpacity>
           ))}
         </View>

@@ -1,42 +1,60 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import {
+  Alert,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from 'react-native'
 
+import { ThemedText } from '@/components/themed-text'
 import { Button, ModalDialog } from '@/components/ui'
-
-export type KidModePinPrompt = {
-  title: string
-  message: string
-}
+import { KID_MODE_PIN_PATTERN } from '@/utils/validation.utils'
 
 type Props = {
-  pinPrompt: KidModePinPrompt | null
-  pinValue: string
-  onChangePinValue: (value: string) => void
+  visible: boolean
+  title: string
+  message: string
   onCancel: () => void
-  onSubmit: () => void
+  onSubmit: (pin: string) => void | Promise<void>
 }
 
 export function KidModePinModal({
-  pinPrompt,
-  pinValue,
-  onChangePinValue,
+  visible,
+  title,
+  message,
   onCancel,
   onSubmit,
 }: Props) {
+  const [pinValue, setPinValue] = useState('')
+
+  useEffect(() => {
+    if (visible) {
+      setPinValue('')
+    }
+  }, [visible])
+
+  const handleSubmit = () => {
+    if (!KID_MODE_PIN_PATTERN.test(pinValue)) {
+      Alert.alert('Choose a 4-digit PIN', 'Please enter exactly 4 digits.')
+      return
+    }
+
+    void onSubmit(pinValue)
+  }
+
   return (
-    <ModalDialog visible={!!pinPrompt} onClose={onCancel} onShow={() => onChangePinValue('')} size="sm">
+    <ModalDialog visible={visible} onClose={onCancel} size="sm">
       <View style={styles.pinContent}>
-        <Text style={styles.pinTitle}>{pinPrompt?.title}</Text>
-        <Text style={styles.pinMessage}>{pinPrompt?.message}</Text>
+        <ThemedText variant="title" style={styles.pinTitle}>
+          {title}
+        </ThemedText>
+        <ThemedText variant="bodySmall" tone="muted" style={styles.pinMessage}>
+          {message}
+        </ThemedText>
 
         <TextInput
           value={pinValue}
-          onChangeText={onChangePinValue}
+          onChangeText={setPinValue}
           keyboardType="number-pad"
           maxLength={4}
           secureTextEntry
@@ -46,7 +64,7 @@ export function KidModePinModal({
 
         <View style={styles.pinActions}>
           <Button title="Cancel" type="ghost" size="md" onPress={onCancel} />
-          <Button title="Unlock" type="primary" size="md" onPress={onSubmit} />
+          <Button title="Unlock" type="primary" size="md" onPress={handleSubmit} />
         </View>
       </View>
     </ModalDialog>

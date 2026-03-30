@@ -1,5 +1,4 @@
 // lib/families/families.api.ts
-import { MEMBER_WITH_PROFILE_SELECT } from "../members/members.select";
 import { FamilyMember, Role } from "../members/members.types";
 import { getSupabase } from "../supabase";
 import type {
@@ -102,33 +101,6 @@ export function getFamilyAvatarPublicUrl(path: string | null): string | null {
   if (!path) return null;
   const { data } = supabase.storage.from(FAMILY_AVATAR_BUCKET).getPublicUrl(path);
   return data.publicUrl;
-}
-
-export async function fetchMember(
-  familyId: string,
-  profileId: string,
-): Promise<FamilyMember> {
-  const { data, error } = await supabase
-    .from("family_members")
-    .select(MEMBER_WITH_PROFILE_SELECT)
-    .eq("family_id", familyId)
-    .eq("profile_id", profileId)
-    .eq("is_active", true)
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data as unknown as FamilyMember;
-}
-
-export async function fetchMemberById(id: string): Promise<FamilyMember> {
-  const { data, error } = await supabase
-    .from("family_members")
-    .select(MEMBER_WITH_PROFILE_SELECT)
-    .eq("id", id)
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data as unknown as FamilyMember;
 }
 
 export async function fetchFamilyMembers(
