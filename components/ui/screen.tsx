@@ -8,7 +8,8 @@ import {
   ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import CheckerboardBackground from "../checkerboard-background";
+
+import { useTheme } from "@/providers/theme-provider";
 
 type Props = {
   children: React.ReactNode;
@@ -40,15 +41,13 @@ export function Screen({
   keyboardDismissMode = "on-drag",
   keyboardShouldPersistTaps = "handled",
 }: Props) {
+  const theme = useTheme()
   const gapStyle =
     gap === "no" ? 0 : gap === "sm" ? 8 : gap === "md" ? 16 : gap === "lg" ? 24 : 16;
+  const screenBackgroundColor = withBackground ? theme.screenBackgroundAccent : theme.background
 
   return (
-    <SafeAreaView style={styles.screen} edges={["left", "right"]}>
-      {withBackground && (
-        <CheckerboardBackground colorA="#F6FAFF" colorB="#EAF3FF" size={28} />
-      )}
-
+    <SafeAreaView style={[styles.screen, { backgroundColor: screenBackgroundColor }]} edges={["left", "right"]}>
       {/* stage keeps overlay OUTSIDE scroll but on top */}
       <View style={styles.stage}>
         {fixedHeader ? (

@@ -7,10 +7,10 @@ import {
   Text,
   View,
   ViewStyle,
-  useColorScheme,
 } from 'react-native';
 
-import { Colors } from '@/config/colors';
+import type { AppTheme } from '@/config/theme';
+import { useTheme } from '@/providers/theme-provider';
 import type { GestureResponderEvent, Insets } from 'react-native';
 
 export type ButtonType =
@@ -74,9 +74,7 @@ export function Button({
   backgroundColor,
   titleColor,
 }: ButtonProps) {
-  const scheme = useColorScheme();
-  const theme = scheme === 'dark' ? Colors.dark : Colors.light;
-
+  const theme = useTheme();
   const typeStyles = getTypeStyles(type, theme);
 
   const resolvedTextColor = titleColor ?? (typeStyles.text?.color ?? '#000');
@@ -182,7 +180,7 @@ export function Button({
   );
 }
 
-function getTypeStyles(type: ButtonType, theme: any) {
+function getTypeStyles(type: ButtonType, theme: AppTheme) {
   switch (type) {
     case 'primary':
       return {

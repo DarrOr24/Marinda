@@ -1,7 +1,6 @@
 // app/providers.tsx
 import { Fredoka_700Bold, useFonts } from '@expo-google-fonts/fredoka'
 import NetInfo from '@react-native-community/netinfo'
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native'
 import {
   QueryClient,
   QueryClientProvider,
@@ -10,10 +9,11 @@ import {
 } from '@tanstack/react-query'
 import { Audio } from 'expo-av'
 import { PropsWithChildren, useEffect } from 'react'
-import { AppState, Platform, useColorScheme } from 'react-native'
+import { AppState, Platform } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 
 import { AuthProvider } from '@/providers/auth-provider'
+import { AppThemeProvider } from '@/providers/theme-provider'
 import { ToastProvider } from '@/providers/toast-provider'
 
 
@@ -54,22 +54,21 @@ function useAudioModeForSilentIOS() {
 }
 
 export default function Providers({ children }: PropsWithChildren) {
-  const colorScheme = useColorScheme()
   useFonts({ Fredoka_700Bold })
   useReactQuerySync()
   useAudioModeForSilentIOS()
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <AppThemeProvider>
             <ToastProvider>
               {children}
             </ToastProvider>
-          </AuthProvider>
-        </QueryClientProvider>
-      </SafeAreaProvider>
-    </ThemeProvider>
+          </AppThemeProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </SafeAreaProvider>
   )
 }
