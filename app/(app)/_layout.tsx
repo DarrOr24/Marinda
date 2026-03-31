@@ -23,6 +23,7 @@ export default function AppLayout() {
         <Stack.Screen name="announcements/info" />
         <Stack.Screen name="announcements/settings" />
         <Stack.Screen name="shopping/settings" />
+        <Stack.Screen name="lists/settings" />
       </Stack>
     </AppHeaderProvider>
   )

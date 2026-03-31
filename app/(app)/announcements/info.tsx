@@ -58,7 +58,7 @@ export default function AnnouncementsInfoScreen() {
                     Parents can create <Text style={docsPageStyles.highlight}>custom tabs</Text> to organize the board in a way that fits your family — such as "Holidays," "Signatures," "Chores," or anything else.
                 </DocsBullet>
                 <DocsBullet>
-                    Custom tabs can be <Text style={docsPageStyles.highlight}>added, renamed, or deleted</Text> at any time from the bulletin settings page.
+                    Custom tabs can be <Text style={docsPageStyles.highlight}>added, renamed, or deleted</Text> at any time from the post settings page.
                 </DocsBullet>
                 <DocsBullet>
                     Kids and teens can view and add items inside custom tabs, but only parents can modify the tabs themselves.
