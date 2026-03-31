@@ -30,7 +30,7 @@ export type AuthData = {
   activeFamilyId: string | null
   setActiveFamilyId: (id: string | null) => Promise<void>
   enterKidMode: (memberId: string) => Promise<boolean>
-  exitKidMode: () => Promise<boolean>
+  exitKidMode: (pin?: string | null) => Promise<boolean>
   pendingInviteToken: string | null
   setPendingInviteToken: (token: string | null) => Promise<void>
 }

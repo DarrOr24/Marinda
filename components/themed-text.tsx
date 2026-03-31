@@ -1,25 +1,27 @@
-import { StyleSheet, Text, type TextProps } from 'react-native';
+import { StyleSheet, Text, type TextProps } from 'react-native'
 
-import { useTheme } from '@/providers/theme-provider';
+import { useTheme } from '@/providers/theme-provider'
 
 export type ThemedTextProps = TextProps & {
   variant?:
-    | 'display'
-    | 'title'
-    | 'headline'
-    | 'body'
-    | 'bodySmall'
-    | 'label'
-    | 'caption'
-    | 'micro'
-    | 'link';
-  tone?: 'default' | 'muted' | 'hint' | 'danger' | 'info' | 'success';
-};
+  | 'display'
+  | 'title'
+  | 'headline'
+  | 'body'
+  | 'bodySmall'
+  | 'bodyMicro'
+  | 'label'
+  | 'caption'
+  | 'link'
+  tone?: 'default' | 'muted' | 'hint' | 'danger' | 'info' | 'success'
+  weight?: 'regular' | 'semibold' | 'bold'
+}
 
 export function ThemedText({
   style,
   variant = 'body',
   tone = 'default',
+  weight,
   ...rest
 }: ThemedTextProps) {
   const theme = useTheme()
@@ -36,7 +38,19 @@ export function ThemedText({
               ? theme.success
               : variant === 'link'
                 ? theme.linkText
-                : theme.text
+                : variant === 'bodySmall'
+                  ? theme.textLighter1
+                  : variant === 'bodyMicro'
+                    ? theme.textLighter2
+                    : theme.text
+  const weightStyle =
+    weight === 'regular'
+      ? styles.weightRegular
+      : weight === 'semibold'
+        ? styles.weightSemibold
+        : weight === 'bold'
+          ? styles.weightBold
+          : undefined
 
   return (
     <Text
@@ -47,15 +61,16 @@ export function ThemedText({
         variant === 'headline' ? styles.headline : undefined,
         variant === 'body' ? styles.body : undefined,
         variant === 'bodySmall' ? styles.bodySmall : undefined,
+        variant === 'bodyMicro' ? styles.bodyMicro : undefined,
         variant === 'label' ? styles.label : undefined,
         variant === 'caption' ? styles.caption : undefined,
-        variant === 'micro' ? styles.micro : undefined,
         variant === 'link' ? styles.link : undefined,
+        weightStyle,
         style,
       ]}
       {...rest}
     />
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -82,22 +97,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  bodyMicro: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
   label: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 16,
     fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.72,
   },
   caption: {
     fontSize: 13,
     lineHeight: 18,
-  },
-  micro: {
-    fontSize: 12,
-    lineHeight: 16,
   },
   link: {
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '600',
   },
-});
+  weightRegular: {
+    fontWeight: '400',
+  },
+  weightSemibold: {
+    fontWeight: '600',
+  },
+  weightBold: {
+    fontWeight: '700',
+  },
+})
