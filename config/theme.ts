@@ -6,8 +6,11 @@ export type AppTheme = {
   surface: string
   surfaceMuted: string
   text: string
+  textLighter1: string
+  textLighter2: string
   textMuted: string
   hint: string
+  placeholder: string
   border: string
   borderLight: string
   overlay: string
@@ -39,8 +42,11 @@ type BaseThemeTokens = {
   surface: string
   surfaceMuted: string
   text: string
+  textLighter1: string
+  textLighter2: string
   textMuted: string
   hint: string
+  placeholder: string
   border: string
   borderLight: string
   overlay: string
@@ -57,8 +63,11 @@ const BASE_THEME: BaseThemeTokens = {
   surface: '#ffffff',
   surfaceMuted: '#f8fafc',
   text: '#0f172a',
+  textLighter1: '#334155',
+  textLighter2: '#64748b',
   textMuted: '#475569',
   hint: '#94a3b8',
+  placeholder: '#94a3b8',
   border: '#cbd5e1',
   borderLight: '#e2e8f0',
   overlay: 'rgba(15, 23, 42, 0.35)',

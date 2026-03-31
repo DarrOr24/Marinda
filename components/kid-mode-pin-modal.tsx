@@ -2,12 +2,11 @@ import React, { useEffect, useState } from 'react'
 import {
   Alert,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native'
 
 import { ThemedText } from '@/components/themed-text'
-import { Button, ModalDialog } from '@/components/ui'
+import { Button, ModalDialog, TextInput } from '@/components/ui'
 import { KID_MODE_PIN_PATTERN } from '@/utils/validation.utils'
 
 type Props = {
@@ -45,10 +44,10 @@ export function KidModePinModal({
   return (
     <ModalDialog visible={visible} onClose={onCancel} size="sm">
       <View style={styles.pinContent}>
-        <ThemedText variant="title" style={styles.pinTitle}>
+        <ThemedText variant="title">
           {title}
         </ThemedText>
-        <ThemedText variant="bodySmall" tone="muted" style={styles.pinMessage}>
+        <ThemedText variant="bodySmall" tone="muted">
           {message}
         </ThemedText>
 
@@ -59,7 +58,6 @@ export function KidModePinModal({
           maxLength={4}
           secureTextEntry
           placeholder="1234"
-          style={styles.pinInput}
         />
 
         <View style={styles.pinActions}>
@@ -74,26 +72,6 @@ export function KidModePinModal({
 const styles = StyleSheet.create({
   pinContent: {
     gap: 12,
-  },
-  pinTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  pinMessage: {
-    fontSize: 14,
-    color: '#475569',
-    lineHeight: 20,
-  },
-  pinInput: {
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#0f172a',
-    backgroundColor: '#f8fafc',
   },
   pinActions: {
     flexDirection: 'row',

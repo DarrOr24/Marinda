@@ -18,10 +18,12 @@ import { MemberAvatar } from '@/components/avatar/member-avatar'
 import { ThemedText } from '@/components/themed-text'
 import { ModalPopover } from '@/components/ui'
 import type { FamilyMember } from '@/lib/members/members.types'
+import { useTheme } from '@/providers/theme-provider'
 import { memberDisplayName } from '@/utils/format.utils'
 
 
 export function HeaderProfileButton() {
+  const theme = useTheme()
   const {
     isLoggedIn,
     signOut,
@@ -163,8 +165,8 @@ export function HeaderProfileButton() {
                 router.push('/getting-started')
               }}
             >
-              <MaterialCommunityIcons name="play-circle-outline" size={20} color="#2563eb" />
-              <ThemedText variant="bodySmall" style={[styles.itemText, { color: '#2563eb' }]}>
+              <MaterialCommunityIcons name="play-circle-outline" size={20} color={theme.info} />
+              <ThemedText variant="bodySmall" weight="semibold" tone="info">
                 Get started
               </ThemedText>
             </TouchableOpacity>
@@ -178,8 +180,8 @@ export function HeaderProfileButton() {
                 router.push('/settings')
               }}
             >
-              <MaterialCommunityIcons name="cog-outline" size={20} color="#334155" />
-              <ThemedText variant="bodySmall" style={styles.itemText}>
+              <MaterialCommunityIcons name="cog-outline" size={20} color={theme.textLighter1} />
+              <ThemedText variant="bodySmall" weight="semibold">
                 Settings
               </ThemedText>
             </TouchableOpacity>
@@ -187,8 +189,8 @@ export function HeaderProfileButton() {
 
           {showParentMenuActions && (
             <TouchableOpacity style={styles.item} onPress={handleOpenKidModePicker}>
-              <MaterialCommunityIcons name="shield-lock-outline" size={20} color="#334155" />
-              <ThemedText variant="bodySmall" style={styles.itemText}>
+              <MaterialCommunityIcons name="shield-lock-outline" size={20} color={theme.textLighter1} />
+              <ThemedText variant="bodySmall" weight="semibold">
                 Enter kid mode
               </ThemedText>
             </TouchableOpacity>
@@ -196,11 +198,11 @@ export function HeaderProfileButton() {
 
           {isKidMode && effectiveMember && (
             <>
-              <View style={styles.kidMenuIdentity}>
-                <ThemedText variant="micro" tone="muted" style={styles.kidMenuLabel}>
+              <View style={[styles.kidMenuIdentity, { borderBottomColor: theme.borderLight }]}>
+                <ThemedText variant="label" tone="muted" style={styles.kidMenuLabel}>
                   Playing as
                 </ThemedText>
-                <ThemedText variant="body" style={styles.kidMenuName} numberOfLines={2}>
+                <ThemedText variant="headline" numberOfLines={2}>
                   {memberDisplayName(effectiveMember as FamilyMember)}
                 </ThemedText>
               </View>
@@ -211,8 +213,8 @@ export function HeaderProfileButton() {
                   router.push('/settings')
                 }}
               >
-                <MaterialCommunityIcons name="cog-outline" size={20} color="#334155" />
-                <ThemedText variant="bodySmall" style={styles.itemText}>
+                <MaterialCommunityIcons name="cog-outline" size={20} color={theme.textLighter1} />
+                <ThemedText variant="bodySmall" weight="semibold">
                   Settings
                 </ThemedText>
               </TouchableOpacity>
@@ -222,8 +224,8 @@ export function HeaderProfileButton() {
                   void handleExitKidMode()
                 }}
               >
-                <MaterialCommunityIcons name="shield-lock-outline" size={20} color="#1d4ed8" />
-                <ThemedText variant="bodySmall" style={[styles.itemText, { color: '#1d4ed8' }]}>
+                <MaterialCommunityIcons name="shield-lock-outline" size={20} color={theme.info} />
+                <ThemedText variant="bodySmall" weight="semibold" tone="info">
                   Exit kid mode
                 </ThemedText>
               </TouchableOpacity>
@@ -232,8 +234,8 @@ export function HeaderProfileButton() {
 
           {!isKidMode && (
             <TouchableOpacity style={styles.item} onPress={handleLogout}>
-              <MaterialCommunityIcons name="logout" size={20} color="#dc2626" />
-              <ThemedText variant="bodySmall" style={[styles.itemText, { color: '#dc2626' }]}>
+              <MaterialCommunityIcons name="logout" size={20} color={theme.dangerText} />
+              <ThemedText variant="bodySmall" weight="semibold" tone="danger">
                 Log out
               </ThemedText>
             </TouchableOpacity>
@@ -270,18 +272,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e2e8f0',
   },
   kidMenuLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748b',
     marginBottom: 4,
-  },
-  kidMenuName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0f172a',
   },
   menu: {
     paddingVertical: 8,
@@ -292,10 +285,5 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 10,
     paddingHorizontal: 12,
-  },
-  itemText: {
-    fontSize: 14,
-    color: '#334155',
-    fontWeight: '600',
   },
 })

@@ -9,6 +9,7 @@ import { MemberAvatar } from '@/components/avatar/member-avatar'
 import { ThemedText } from '@/components/themed-text'
 import { Button, ModalDialog } from '@/components/ui'
 import type { FamilyMember } from '@/lib/members/members.types'
+import { useTheme } from '@/providers/theme-provider'
 import { memberDisplayName } from '@/utils/format.utils'
 
 type Props = {
@@ -24,13 +25,15 @@ export function KidModePickerModal({
   onClose,
   onSelectMember,
 }: Props) {
+  const theme = useTheme()
+
   return (
     <ModalDialog visible={visible} onClose={onClose} size="md">
       <View style={styles.pickerModal}>
-        <ThemedText variant="title" style={styles.pickerTitle}>
+        <ThemedText variant="title">
           Choose a kid
         </ThemedText>
-        <ThemedText variant="bodySmall" tone="muted" style={styles.pickerSubtitle}>
+        <ThemedText variant="bodySmall" tone="muted">
           Pick the profile to enter kid mode with.
         </ThemedText>
 
@@ -38,11 +41,11 @@ export function KidModePickerModal({
           {members.map(member => (
             <TouchableOpacity
               key={member.id}
-              style={styles.pickerItem}
+              style={[styles.pickerItem, { backgroundColor: theme.surfaceMuted }]}
               onPress={() => void onSelectMember(member.id)}
             >
               <MemberAvatar memberId={member.id} size="sm" isUpdatable={false} />
-              <ThemedText variant="bodySmall" style={styles.pickerItemText}>
+              <ThemedText variant="bodySmall" weight="semibold">
                 {memberDisplayName(member)}
               </ThemedText>
             </TouchableOpacity>
@@ -61,15 +64,6 @@ const styles = StyleSheet.create({
   pickerModal: {
     gap: 12,
   },
-  pickerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  pickerSubtitle: {
-    fontSize: 14,
-    color: '#64748b',
-  },
   pickerList: {
     gap: 8,
   },
@@ -80,12 +74,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderRadius: 14,
-    backgroundColor: '#f8fafc',
-  },
-  pickerItemText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#0f172a',
   },
   actions: {
     flexDirection: 'row',
