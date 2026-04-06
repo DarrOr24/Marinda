@@ -8,6 +8,8 @@ import {
 } from 'react-native'
 
 import { AuthContext } from '@/hooks/use-auth-context'
+import { usePushNotificationRouting } from '@/lib/notifications/push-notifications.hooks'
+import { usePushTokenSync } from '@/lib/notifications/push-tokens.hooks'
 import {
   configureRevenueCat,
   identifyRevenueCatUser,
@@ -78,6 +80,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
     || isProfileLoading
     || isResolvingFamily
 
+  const { deactivateCurrentPushToken } = usePushTokenSync({
+    profileId: profile?.id ?? null,
+    memberships,
+    authMemberId: authMember?.id ?? null,
+    effectiveMemberId: effectiveMember?.id ?? null,
+    isKidMode,
+  })
+
+  usePushNotificationRouting({
+    activeFamilyId,
+    setActiveFamilyId,
+    isEnabled: !isLoading && !!session,
+  })
 
   const readKidModeMemberMap = useCallback(async () => {
     const raw = await appStorage.getItem(KID_MODE_MEMBER_BY_FAMILY_KEY)
@@ -437,11 +452,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [activeFamilyId, authMember, isKidMode, setKidModeMemberForFamily])
 
   const signOut = useCallback(async () => {
+    await deactivateCurrentPushToken()
     await logoutRevenueCat().catch(() => { })
     const { error } = await supabase.auth.signOut()
     if (error) throw error
     await cleanState()
-  }, [supabase, cleanState])
+  }, [cleanState, deactivateCurrentPushToken, supabase])
 
   const value = useMemo(
     () => ({

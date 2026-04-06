@@ -2,9 +2,15 @@ import "react-native-get-random-values";
 import "react-native-url-polyfill/auto";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import {
+  createClient,
+  type FunctionInvokeOptions,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
 import * as Linking from "expo-linking";
 import { Platform } from "react-native";
+
+import { getInvokeErrorMessage } from "@/lib/errors";
 
 export const redirectTo = Linking.createURL("auth-callback");
 
@@ -50,4 +56,39 @@ export function getSupabase(): SupabaseClient {
   });
 
   return _client;
+}
+
+type SuccessfulFunctionResponse = {
+  ok: boolean
+}
+
+export async function invokeAuthenticatedFunction<TResult extends SuccessfulFunctionResponse>({
+  functionName,
+  body,
+  errorMessage,
+}: {
+  functionName: string
+  body: FunctionInvokeOptions["body"]
+  errorMessage: string
+}): Promise<TResult> {
+  const supabase = getSupabase()
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+  const accessToken = sessionData.session?.access_token
+
+  if (sessionError || !accessToken) {
+    throw new Error("You must be signed in to perform this action.")
+  }
+
+  const { data, error } = await supabase.functions.invoke(functionName, {
+    body,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  })
+
+  if (error || !data?.ok) {
+    throw new Error(getInvokeErrorMessage(error, data, errorMessage))
+  }
+
+  return data as TResult
 }

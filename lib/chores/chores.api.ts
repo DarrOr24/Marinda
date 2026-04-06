@@ -1,5 +1,8 @@
 import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system/legacy';
+
+import { notifyChoreCreated } from './chores-notifications.api';
+
 import { getSupabase } from '../supabase';
 import type { ProofPayload } from './chores.types';
 
@@ -185,6 +188,16 @@ export async function addChore(
     .select()
     .single();
   if (error) throw new Error(error.message);
+
+  try {
+    await notifyChoreCreated({
+      choreId: data.id,
+      familyId,
+    });
+  } catch (notificationError) {
+    console.error('Failed to send chore notifications:', notificationError);
+  }
+
   return data;
 }
 
@@ -307,6 +320,16 @@ export async function duplicateChore(
     .single();
 
   if (insErr) throw new Error(insErr.message);
+
+  try {
+    await notifyChoreCreated({
+      choreId: inserted.id,
+      familyId: src.family_id,
+    });
+  } catch (notificationError) {
+    console.error('Failed to send chore notifications:', notificationError);
+  }
+
   return inserted;
 }
 

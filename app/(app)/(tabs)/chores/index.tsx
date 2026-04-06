@@ -3,7 +3,7 @@ import ChoreDetailModal from '@/components/modals/chore-detail-modal';
 
 import { useChoreTemplates } from '@/lib/chores/chores-templates.hooks';
 import type { ChoreView, Proof } from '@/lib/chores/chores.types';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import ChorePostModal from '@/components/modals/chore-post-modal';
 import { useAuthContext } from '@/hooks/use-auth-context';
@@ -28,7 +28,7 @@ import {
   useUpdateChore,
 } from '@/lib/chores/chores.hooks';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -88,6 +88,12 @@ type TabKey = 'open' | 'pending' | 'approved' | 'archived';
 export default function Chores() {
   const { activeFamilyId, effectiveMember, family, members, hasParentPermissions } = useAuthContext() as any;
   const router = useRouter();
+  const { choreId: choreIdParam } = useLocalSearchParams<{ choreId?: string | string[] }>();
+
+  const requestedChoreId = useMemo(() => {
+    if (Array.isArray(choreIdParam)) return choreIdParam[0] ?? null;
+    return choreIdParam ?? null;
+  }, [choreIdParam]);
 
   const authUserId: string | undefined =
     effectiveMember?.profile?.id || effectiveMember?.user_id || effectiveMember?.profile_id;
@@ -170,6 +176,15 @@ export default function Chores() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editing, setEditing] = useState<ChoreView | null>(null);
   const selected = selectedId ? list.find((c) => c.id === selectedId) ?? null : null;
+
+  useEffect(() => {
+    if (!requestedChoreId || selectedId === requestedChoreId) return;
+
+    const requestedChore = list.find(chore => chore.id === requestedChoreId);
+    if (!requestedChore) return;
+
+    setSelectedId(requestedChore.id);
+  }, [list, requestedChoreId, selectedId]);
 
   // which tab is visible
   const [tab, setTab] = useState<TabKey>('open');
@@ -869,6 +884,14 @@ export default function Chores() {
     setSelectedId(item.id);
   }
 
+  const closeSelectedChore = useCallback(() => {
+    setSelectedId(null);
+
+    if (requestedChoreId) {
+      router.replace('/chores');
+    }
+  }, [requestedChoreId, router]);
+
   const humanTabLabel: Record<TabKey, string> = {
     open: 'To do',
     pending: 'Check',
@@ -1215,7 +1238,7 @@ export default function Chores() {
         <ChoreDetailModal
           visible={!!selected}
           chore={selected}
-          onClose={() => setSelectedId(null)}
+          onClose={closeSelectedChore}
           onAttachProof={onAttachProof}
           onMarkPending={onMarkPending}
           onApprove={onApprove}

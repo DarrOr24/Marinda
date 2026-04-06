@@ -25,6 +25,7 @@
         "foregroundImage": "./assets/images/app-icon-android.png"
       },
       "edgeToEdgeEnabled": true,
+      "googleServicesFile": "./google-services.json",
       "predictiveBackGestureEnabled": false,
       "package": "com.marinda.marinda",
       "softwareKeyboardLayoutMode": "resize",
@@ -68,7 +69,8 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

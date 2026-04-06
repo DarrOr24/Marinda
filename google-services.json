@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "727737532870",
+    "project_id": "marinda-352dc",
+    "storage_bucket": "marinda-352dc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:727737532870:android:d2a90e1bc7a086257432c7",
+        "android_client_info": {
+          "package_name": "com.marinda.marinda"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBcCfqAf0obdKI9RCh1wpXzp1LUAFDy6qY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
