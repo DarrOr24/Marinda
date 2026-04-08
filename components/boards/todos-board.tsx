@@ -522,7 +522,6 @@ export default function TodosBoard() {
         <View style={styles.rowTextBlock}>
           <View style={styles.rowLine}>
             <Text
-              numberOfLines={1}
               style={[
                 styles.rowText,
                 it.is_checked && styles.rowTextDone,
@@ -1151,13 +1150,21 @@ const styles = StyleSheet.create({
 
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   rowChecked: { backgroundColor: '#f5faff' },
-  rowText: { fontSize: 16, color: '#0f172a' },
+  /** Match MaterialCommunityIcons checkbox size (22) so first line lines up with the box. */
+  rowText: {
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#0f172a',
+    ...Platform.select({
+      android: { includeFontPadding: false },
+    }),
+  },
   rowTextDone: { color: '#64748b', textDecorationLine: 'line-through' },
 
   rowTextBlock: {
@@ -1166,7 +1173,7 @@ const styles = StyleSheet.create({
   },
   rowLine: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 6,
   },
   rowTitleFlex: {
@@ -1175,7 +1182,8 @@ const styles = StyleSheet.create({
   },
   rowSharedIconBtn: {
     flexShrink: 0,
-    marginTop: 1,
+    /** ~half of (rowText lineHeight 22 − icon 17) for optical alignment with first line */
+    marginTop: 2,
     padding: 2,
     borderRadius: 6,
   },
