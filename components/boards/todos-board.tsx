@@ -6,25 +6,25 @@ import { Button, MetaRow, ModalDialog, ModalPopover, Screen, TextInput } from '@
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useRefById } from '@/hooks/use-ref-by-id';
 import { useFamily } from '@/lib/families/families.hooks';
+import { useFamilyListTabs } from '@/lib/lists/list-tabs.hooks';
 import {
   DEFAULT_LIST_TAB_ID,
   DEFAULT_LIST_TABS,
   type ListTab,
 } from '@/lib/lists/list-tabs.types';
-import { createListTab, fetchListTabs } from '@/lib/lists/list-tabs.api';
+import { createListTab } from '@/lib/lists/list-tabs.api';
 import {
   addTodoItem,
   deleteTodoItems,
-  fetchTodoItems,
   replaceTodoItemShares,
   updateTodoCompleted,
   updateTodoText,
   type TodoItemRow,
 } from '@/lib/todos/todos.api';
+import { useFamilyTodoItems } from '@/lib/todos/todos.hooks';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -85,6 +85,8 @@ export default function TodosBoard() {
   const getTodoMenuAnchorRef = useRefById<View>();
 
   const { familyMembers } = useFamily(activeFamilyId);
+  const { data: todoRows } = useFamilyTodoItems(activeFamilyId);
+  const { data: listTabsData } = useFamilyListTabs(activeFamilyId);
 
   const rawMembers: any[] = useMemo(
     () =>
@@ -164,42 +166,28 @@ export default function TodosBoard() {
 
   const activeTab = ALL_TABS.find((t) => t.id === activeListKind) ?? ALL_TABS[0];
 
-  const reloadItems = useCallback(async () => {
-    if (!activeFamilyId) return;
-    try {
-      const rows = await fetchTodoItems(activeFamilyId);
-      let mapped = rows.map((r) => mapRow(r));
-      if (isKidMode) {
-        mapped = myMemberId
-          ? mapped.filter((it) => visibleToActingKid(it, myMemberId))
-          : [];
-      }
-      setItems(mapped);
-    } catch (e) {
-      console.error('fetchTodoItems failed', e);
-      Alert.alert('Error', 'Could not load to-dos.');
-    }
-  }, [activeFamilyId, isKidMode, myMemberId]);
-
   useEffect(() => {
-    void reloadItems();
-  }, [reloadItems]);
-
-  const reloadCustomTabs = useCallback(async () => {
-    if (!activeFamilyId) return;
-    try {
-      const list = await fetchListTabs(activeFamilyId);
-      setCustomTabs(list);
-    } catch (e) {
-      console.error('fetchListTabs failed', e);
-    }
+    setItems([]);
+    setCustomTabs([]);
   }, [activeFamilyId]);
 
-  useFocusEffect(
-    useCallback(() => {
-      void reloadCustomTabs();
-    }, [reloadCustomTabs]),
-  );
+  useEffect(() => {
+    if (!todoRows) return;
+
+    let mapped = todoRows.map((row) => mapRow(row));
+    if (isKidMode) {
+      mapped = myMemberId
+        ? mapped.filter((item) => visibleToActingKid(item, myMemberId))
+        : [];
+    }
+
+    setItems(mapped);
+  }, [todoRows, isKidMode, myMemberId]);
+
+  useEffect(() => {
+    if (!listTabsData) return;
+    setCustomTabs(listTabsData);
+  }, [listTabsData]);
 
   const itemsInTab = useMemo(
     () => items.filter((it) => it.list_kind === activeListKind),

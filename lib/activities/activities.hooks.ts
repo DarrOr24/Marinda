@@ -12,6 +12,7 @@ import {
   createActivitySeriesWithParticipants,
   fetchFamilyActivitySeries,
 } from './activities.series.api';
+import { usePostgresChangesInvalidate } from '@/lib/realtime';
 import type {
   Activity,
   ActivityInsert,
@@ -59,10 +60,79 @@ export function invalidateActivitySeries(
   })
 }
 
+function useActivitiesRealtime(
+  familyId: string | undefined,
+  params?: { from?: Date; to?: Date }
+) {
+  const fromIso = params?.from?.toISOString() ?? null
+  const toIso = params?.to?.toISOString() ?? null
+  const queryKey = useMemo(
+    () => ['activities', familyId ?? null, fromIso, toIso] as const,
+    [familyId, fromIso, toIso]
+  )
+  const activitiesRealtime = useMemo(() => {
+    if (!familyId) return null
+    return {
+      table: 'activities',
+      filter: `family_id=eq.${familyId}`,
+      queryKeys: [queryKey],
+      channel: `rt:activities:${familyId}:items`,
+    } as const
+  }, [familyId, queryKey])
+  const participantsRealtime = useMemo(() => {
+    if (!familyId) return null
+    return {
+      table: 'activity_participants',
+      filter: `family_id=eq.${familyId}`,
+      queryKeys: [queryKey],
+      channel: `rt:activities:${familyId}:participants`,
+    } as const
+  }, [familyId, queryKey])
+
+  usePostgresChangesInvalidate(activitiesRealtime)
+  usePostgresChangesInvalidate(participantsRealtime)
+}
+
+function useActivitySeriesRealtime(familyId: string | undefined) {
+  const seriesRealtime = useMemo(() => {
+    if (!familyId) return null
+    return {
+      table: 'activity_series',
+      filter: `family_id=eq.${familyId}`,
+      queryKeys: [activitySeriesKey(familyId)],
+      channel: `rt:activities:${familyId}:series`,
+    } as const
+  }, [familyId])
+  const seriesParticipantsRealtime = useMemo(() => {
+    if (!familyId) return null
+    return {
+      table: 'activity_series_participants',
+      filter: `family_id=eq.${familyId}`,
+      queryKeys: [activitySeriesKey(familyId)],
+      channel: `rt:activities:${familyId}:series-participants`,
+    } as const
+  }, [familyId])
+  const seriesExceptionsRealtime = useMemo(() => {
+    if (!familyId) return null
+    return {
+      table: 'activity_series_exceptions',
+      filter: `family_id=eq.${familyId}`,
+      queryKeys: [activitySeriesKey(familyId)],
+      channel: `rt:activities:${familyId}:series-exceptions`,
+    } as const
+  }, [familyId])
+
+  usePostgresChangesInvalidate(seriesRealtime)
+  usePostgresChangesInvalidate(seriesParticipantsRealtime)
+  usePostgresChangesInvalidate(seriesExceptionsRealtime)
+}
+
 export function useFamilyActivities(
   familyId: string | undefined,
   params?: { from?: Date; to?: Date }
 ) {
+  useActivitiesRealtime(familyId, params)
+
   return useQuery<Activity[]>({
     queryKey: activitiesKey(familyId, params),
     queryFn: () => fetchFamilyActivities(familyId!, params),
@@ -77,6 +147,9 @@ export function useFamilyCalendarActivities(
   familyId: string | undefined,
   params?: { from?: Date; to?: Date }
 ) {
+  useActivitiesRealtime(familyId, params)
+  useActivitySeriesRealtime(familyId)
+
   const qActivities = useQuery<Activity[]>({
     queryKey: activitiesKey(familyId, params),
     queryFn: () => fetchFamilyActivities(familyId!, params),

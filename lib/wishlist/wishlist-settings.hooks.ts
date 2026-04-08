@@ -6,6 +6,8 @@ import {
     updateWishlistSettings,
 } from "./wishlist-settings.api";
 import type { WishlistSettings } from "./wishlist-settings.types";
+import { useMemo } from "react";
+import { usePostgresChangesInvalidate } from "@/lib/realtime";
 
 const key = (familyId?: string) =>
     ["wishlist-settings", familyId ?? null] as const;
@@ -14,6 +16,18 @@ const key = (familyId?: string) =>
    Load wishlist settings (auto-creates default entry)
 -------------------------------------------------------- */
 export function useFamilyWishlistSettings(familyId?: string) {
+    const settingsRealtime = useMemo(() => {
+        if (!familyId) return null;
+        return {
+            table: "wishlist_settings",
+            filter: `family_id=eq.${familyId}`,
+            queryKeys: [key(familyId)],
+            channel: `rt:wishlist:${familyId}:settings`,
+        } as const;
+    }, [familyId]);
+
+    usePostgresChangesInvalidate(settingsRealtime);
+
     return useQuery<WishlistSettings>({
         queryKey: key(familyId),
         queryFn: () => fetchWishlistSettings(familyId!),

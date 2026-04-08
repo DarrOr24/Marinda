@@ -14,6 +14,20 @@ type Opts = {
   channel?: string
 }
 
+function getRealtimeRecordId(payload: { new: unknown; old: unknown }) {
+  const next = payload.new
+  if (next && typeof next === 'object' && 'id' in next) {
+    return (next as { id?: unknown }).id
+  }
+
+  const prev = payload.old
+  if (prev && typeof prev === 'object' && 'id' in prev) {
+    return (prev as { id?: unknown }).id
+  }
+
+  return null
+}
+
 export function usePostgresChangesInvalidate(opts?: Opts | null) {
   const qc = useQueryClient()
 
@@ -32,7 +46,20 @@ export function usePostgresChangesInvalidate(opts?: Opts | null) {
       }
     }
 
-    const invalidate = () => {
+    const invalidate = (payload?: {
+      eventType?: string
+      new: unknown
+      old: unknown
+    }) => {
+      if (payload) {
+        debugLog('realtime', topic, payload.eventType ?? 'EVENT', {
+          table,
+          filter: filter ?? null,
+          recordId: getRealtimeRecordId(payload),
+          queryKeys,
+        })
+      }
+
       for (const queryKey of queryKeys) {
         qc.invalidateQueries({ queryKey, refetchType: 'active' })
       }

@@ -10,11 +10,34 @@ import {
     submitChore,
     updateChore,
 } from './chores.api'
+import { usePostgresChangesInvalidate } from '@/lib/realtime'
+import { useMemo } from 'react'
 
 const choresKey = (familyId?: string) => ['chores', familyId ?? null] as const
 
 // Load chores (already merged with proofs via fetchChores)
 export function useFamilyChores(familyId?: string) {
+    const choresRealtime = useMemo(() => {
+        if (!familyId) return null
+        return {
+            table: 'chores',
+            filter: `family_id=eq.${familyId}`,
+            queryKeys: [choresKey(familyId)],
+            channel: `rt:chores:${familyId}:items`,
+        } as const
+    }, [familyId])
+    const proofsRealtime = useMemo(() => {
+        if (!familyId) return null
+        return {
+            table: 'chore_proofs',
+            queryKeys: [choresKey(familyId)],
+            channel: `rt:chores:${familyId}:proofs`,
+        } as const
+    }, [familyId])
+
+    usePostgresChangesInvalidate(choresRealtime)
+    usePostgresChangesInvalidate(proofsRealtime)
+
     return useQuery({
         queryKey: choresKey(familyId),
         enabled: !!familyId,

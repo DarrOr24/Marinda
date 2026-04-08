@@ -21,12 +21,26 @@ import type {
     AnnouncementEngagementBundle,
     AnnouncementItem,
 } from './announcements.types'
+import { useMemo } from 'react'
+import { usePostgresChangesInvalidate } from '@/lib/realtime'
 
 const announcementsKey = (familyId?: string) =>
     ['announcements', familyId ?? null] as const
 
 /** Load announcements */
 export function useFamilyAnnouncements(familyId?: string) {
+    const announcementsRealtime = useMemo(() => {
+        if (!familyId) return null
+        return {
+            table: 'announcement_items',
+            filter: `family_id=eq.${familyId}`,
+            queryKeys: [announcementsKey(familyId)],
+            channel: `rt:announcements:${familyId}:items`,
+        } as const
+    }, [familyId])
+
+    usePostgresChangesInvalidate(announcementsRealtime)
+
     return useQuery<AnnouncementItem[]>({
         queryKey: announcementsKey(familyId),
         queryFn: () => fetchAnnouncements(familyId!),
@@ -93,6 +107,18 @@ const tabsKey = (familyId?: string) =>
     ['announcement-tabs', familyId ?? null] as const
 
 export function useFamilyAnnouncementTabs(familyId?: string) {
+    const tabsRealtime = useMemo(() => {
+        if (!familyId) return null
+        return {
+            table: 'announcement_tabs',
+            filter: `family_id=eq.${familyId}`,
+            queryKeys: [tabsKey(familyId)],
+            channel: `rt:announcements:${familyId}:tabs`,
+        } as const
+    }, [familyId])
+
+    usePostgresChangesInvalidate(tabsRealtime)
+
     return useQuery({
         queryKey: tabsKey(familyId),
         queryFn: () => fetchAnnouncementTabs(familyId!),
@@ -156,6 +182,28 @@ const engagementKey = (familyId?: string) =>
     ['announcement-engagement', familyId ?? null] as const
 
 export function useAnnouncementEngagement(familyId?: string) {
+    const repliesRealtime = useMemo(() => {
+        if (!familyId) return null
+        return {
+            table: 'announcement_replies',
+            filter: `family_id=eq.${familyId}`,
+            queryKeys: [engagementKey(familyId)],
+            channel: `rt:announcements:${familyId}:replies`,
+        } as const
+    }, [familyId])
+    const reactionsRealtime = useMemo(() => {
+        if (!familyId) return null
+        return {
+            table: 'announcement_reactions',
+            filter: `family_id=eq.${familyId}`,
+            queryKeys: [engagementKey(familyId)],
+            channel: `rt:announcements:${familyId}:reactions`,
+        } as const
+    }, [familyId])
+
+    usePostgresChangesInvalidate(repliesRealtime)
+    usePostgresChangesInvalidate(reactionsRealtime)
+
     return useQuery<AnnouncementEngagementBundle>({
         queryKey: engagementKey(familyId),
         queryFn: () => fetchAnnouncementEngagement(familyId!),

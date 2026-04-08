@@ -85,6 +85,19 @@ const formatDateTime = (ts?: number) => {
 
 type TabKey = 'open' | 'pending' | 'approved' | 'archived';
 
+function dedupeChoreList(items: ChoreView[]) {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
+
+function prependOrReplaceChore(items: ChoreView[], next: ChoreView) {
+  return dedupeChoreList([next, ...items]);
+}
+
 export default function Chores() {
   const { activeFamilyId, effectiveMember, family, members, hasParentPermissions } = useAuthContext() as any;
   const router = useRouter();
@@ -169,7 +182,7 @@ export default function Chores() {
     return me?.id as string | undefined;
   }, [effectiveMember, rawMembers, authUserId]);
 
-  const { templates, createTemplate, deleteTemplate } = useChoreTemplates(activeFamilyId);
+  const { templates, createTemplate } = useChoreTemplates(activeFamilyId);
 
   const [list, setList] = useState<ChoreView[]>([]);
   const [showPost, setShowPost] = useState(false);
@@ -290,7 +303,7 @@ export default function Chores() {
         };
       });
 
-      setList(mapped);
+      setList(dedupeChoreList(mapped));
     } catch (e) {
       console.error("map chores failed", e);
       Alert.alert("Error", "Could not load chores.");
@@ -305,15 +318,7 @@ export default function Chores() {
     const approved: ChoreView[] = [];
     const archived: ChoreView[] = [];
 
-    const now = Date.now();
-
     for (const c of list) {
-      const isExpiredToday =
-        c.status === 'open' &&
-        c.expiresAt &&
-        c.expiresAt < now &&
-        c.expiresAt >= startOfToday;
-
       const expiredBeforeToday =
         c.status === 'open' &&
         c.expiresAt &&
@@ -444,7 +449,7 @@ export default function Chores() {
         createdByName: myFamilyMemberId ? nameForId(myFamilyMemberId) : 'You',
       };
 
-      setList((prev) => [created, ...prev]);
+      setList((prev) => prependOrReplaceChore(prev, created));
 
       if (saveAsTemplate) {
         const trimmedTitle = title.trim();
@@ -856,7 +861,7 @@ export default function Chores() {
                   : 'You',
               };
 
-              setList((prev) => [created, ...prev]);
+              setList((prev) => prependOrReplaceChore(prev, created));
             } catch (e) {
               console.error('duplicateChore failed', e);
               Alert.alert('Error', 'Could not duplicate the chore.');

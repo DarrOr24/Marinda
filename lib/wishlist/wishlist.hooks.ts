@@ -8,6 +8,8 @@ import {
     updateWishlistItem,
 } from "./wishlist.api";
 import type { WishlistItem } from "./wishlist.types";
+import { useMemo } from "react";
+import { usePostgresChangesInvalidate } from "@/lib/realtime";
 
 const wishlistKey = (familyId?: string) =>
     ["wishlist", familyId ?? null] as const;
@@ -16,6 +18,18 @@ const wishlistKey = (familyId?: string) =>
    Load wishlist items for a family
 -------------------------------------------------------- */
 export function useWishlist(familyId?: string) {
+    const wishlistRealtime = useMemo(() => {
+        if (!familyId) return null;
+        return {
+            table: "wishlist_items",
+            filter: `family_id=eq.${familyId}`,
+            queryKeys: [wishlistKey(familyId)],
+            channel: `rt:wishlist:${familyId}:items`,
+        } as const;
+    }, [familyId]);
+
+    usePostgresChangesInvalidate(wishlistRealtime);
+
     return useQuery<WishlistItem[]>({
         queryKey: wishlistKey(familyId),
         enabled: !!familyId,
