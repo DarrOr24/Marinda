@@ -786,7 +786,25 @@ export default function TodosBoard() {
           </View>
         </View>
 
-        {isCustomActiveList && (activeTabUsesListSharing || hasParentPermissions) ? (
+        {activeListKind === DEFAULT_LIST_TAB_ID ? (
+          <View
+            style={styles.sharedListBanner}
+            accessible
+            accessibilityLabel="This list is private. Share individual items when adding or editing."
+          >
+            <MaterialCommunityIcons
+              name="account-multiple-outline"
+              size={20}
+              color="#64748b"
+              style={styles.sharedListBannerIcon}
+            />
+            <View style={styles.sharedListBannerTextCol}>
+              <Text style={styles.sharedListBannerTitle} numberOfLines={2}>
+                Private list. Share items individually.
+              </Text>
+            </View>
+          </View>
+        ) : isCustomActiveList && (activeTabUsesListSharing || hasParentPermissions) ? (
           <Pressable
             onPress={() => {
               if (hasParentPermissions) openListShareEditor();
