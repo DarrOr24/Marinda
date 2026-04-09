@@ -1,5 +1,6 @@
 import { MemberAvatar } from '@/components/avatar/member-avatar';
 import { ChipSelector } from '@/components/chip-selector';
+import { MembersSelector } from '@/components/members-selector';
 import { MoveToTabModal } from '@/components/modals/move-to-tab-modal';
 import { TodoItemModal } from '@/components/modals/todo-item-modal';
 import { Button, MetaRow, ModalDialog, ModalPopover, Screen, TextInput } from '@/components/ui';
@@ -11,8 +12,10 @@ import {
   DEFAULT_LIST_TAB_ID,
   DEFAULT_LIST_TABS,
   type ListTab,
+  tabUsesListLevelSharing,
 } from '@/lib/lists/list-tabs.types';
-import { createListTab } from '@/lib/lists/list-tabs.api';
+import { createListTab, replaceListTabShares } from '@/lib/lists/list-tabs.api';
+import { listTabsKey } from '@/lib/lists/list-tabs.hooks';
 import {
   addTodoItem,
   deleteTodoItems,
@@ -23,8 +26,9 @@ import {
 } from '@/lib/todos/todos.api';
 import { useFamilyTodoItems } from '@/lib/todos/todos.hooks';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -65,12 +69,6 @@ function mapRow(r: TodoItemRow): TodoItem {
   };
 }
 
-/** Kid mode keeps the parent's JWT; RLS also grants parents all child-created rows. Restrict to what the acting kid would see. */
-function visibleToActingKid(it: TodoItem, actingMemberId: string): boolean {
-  if (it.created_by_member_id === actingMemberId) return true;
-  return it.shared_with_member_ids.includes(actingMemberId);
-}
-
 export default function TodosBoard() {
   const router = useRouter();
   const {
@@ -100,6 +98,8 @@ export default function TodosBoard() {
 
   const myMemberId: string | undefined =
     effectiveMember?.id ?? effectiveMember?.member_id ?? undefined;
+
+  const qc = useQueryClient();
 
   const nameForId = useMemo(() => {
     const map: Record<string, string> = {};
@@ -144,7 +144,12 @@ export default function TodosBoard() {
   const [activeListKind, setActiveListKind] = useState<string>(DEFAULT_LIST_TAB_ID);
   const [showAddTabModal, setShowAddTabModal] = useState(false);
   const [newTabLabel, setNewTabLabel] = useState('');
+  const [newTabShareMemberIds, setNewTabShareMemberIds] = useState<string[]>([]);
   const [creatingTab, setCreatingTab] = useState(false);
+
+  const [listShareEditingTabId, setListShareEditingTabId] = useState<string | null>(null);
+  const [listShareDraftIds, setListShareDraftIds] = useState<string[]>([]);
+  const [listShareSaving, setListShareSaving] = useState(false);
 
   const ALL_TABS: ListTab[] = useMemo(
     () => [...DEFAULT_LIST_TABS, ...customTabs],
@@ -166,6 +171,21 @@ export default function TodosBoard() {
 
   const activeTab = ALL_TABS.find((t) => t.id === activeListKind) ?? ALL_TABS[0];
 
+  const visibleToActingKid = useCallback(
+    (it: TodoItem, actingMemberId: string) => {
+      if (it.created_by_member_id === actingMemberId) return true;
+      const tab = ALL_TABS.find((t) => t.id === it.list_kind);
+      if (tabUsesListLevelSharing(tab)) {
+        return tab!.shareMemberIds.includes(actingMemberId);
+      }
+      return it.shared_with_member_ids.includes(actingMemberId);
+    },
+    [ALL_TABS],
+  );
+
+  const activeTabUsesListSharing = tabUsesListLevelSharing(activeTab);
+  const isCustomActiveList = activeListKind !== DEFAULT_LIST_TAB_ID;
+
   useEffect(() => {
     setItems([]);
     setCustomTabs([]);
@@ -182,7 +202,15 @@ export default function TodosBoard() {
     }
 
     setItems(mapped);
-  }, [todoRows, isKidMode, myMemberId]);
+  }, [todoRows, isKidMode, myMemberId, visibleToActingKid]);
+
+  /** Per-item “Also visible to” is hidden for list-level shared tabs; clear chips when switching list in the form. */
+  useEffect(() => {
+    const t = ALL_TABS.find((x) => x.id === formListKind);
+    if (tabUsesListLevelSharing(t)) {
+      setSharedMemberIds([]);
+    }
+  }, [formListKind, ALL_TABS]);
 
   useEffect(() => {
     if (!listTabsData) return;
@@ -219,19 +247,19 @@ export default function TodosBoard() {
 
     setCreatingTab(true);
     try {
+      const shareIds = hasParentPermissions
+        ? normalizedSharesForSave(myMemberId ?? '', newTabShareMemberIds)
+        : [];
       const tab = await createListTab({
         familyId: activeFamilyId,
         label: trimmed,
+        ...(shareIds.length ? { shareMemberIds: shareIds } : {}),
       });
-      setCustomTabs((prev) =>
-        [...prev, tab].sort(
-          (a, b) =>
-            (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.label.localeCompare(b.label),
-        ),
-      );
+      await qc.invalidateQueries({ queryKey: listTabsKey(activeFamilyId) });
       setActiveListKind(tab.id);
       setShowAddTabModal(false);
       setNewTabLabel('');
+      setNewTabShareMemberIds([]);
     } catch (e) {
       Alert.alert('Error', e instanceof Error ? e.message : 'Could not create list.');
     } finally {
@@ -268,22 +296,24 @@ export default function TodosBoard() {
     const familyId = activeFamilyId;
 
     const kind = formListKind.trim() || DEFAULT_LIST_TAB_ID;
+    const kindTab = ALL_TABS.find((t) => t.id === kind);
+    const listShared = tabUsesListLevelSharing(kindTab);
 
     if (editingItem) {
-      const showShare = editingItem.created_by_member_id === myMemberId;
+      const canEditShares = editingItem.created_by_member_id === myMemberId;
       try {
         const row = await updateTodoText(editingItem.id, trimmed, kind);
         const updated = mapRow(row);
 
-        if (showShare) {
-          await replaceTodoItemShares(
-            editingItem.id,
-            normalizedSharesForSave(editingItem.created_by_member_id, sharedMemberIds),
-          );
+        if (listShared) {
+          await replaceTodoItemShares(editingItem.id, []);
+          updated.shared_with_member_ids = [];
+        } else if (canEditShares) {
           const shares = normalizedSharesForSave(
             editingItem.created_by_member_id,
             sharedMemberIds,
           );
+          await replaceTodoItemShares(editingItem.id, shares);
           updated.shared_with_member_ids = shares;
         }
 
@@ -306,10 +336,12 @@ export default function TodosBoard() {
       });
       let next = mapRow(row);
 
-      const shares = normalizedSharesForSave(myMemberId, sharedMemberIds);
-      if (shares.length) {
-        await replaceTodoItemShares(row.id, shares);
-        next = { ...next, shared_with_member_ids: shares };
+      if (!listShared) {
+        const shares = normalizedSharesForSave(myMemberId, sharedMemberIds);
+        if (shares.length) {
+          await replaceTodoItemShares(row.id, shares);
+          next = { ...next, shared_with_member_ids: shares };
+        }
       }
 
       setItems((prev) => [next, ...prev]);
@@ -423,6 +455,16 @@ export default function TodosBoard() {
   /** Creator plus sharees; creator first, then others sorted by display name. */
   function visibleToMemberIds(item: TodoItem): string[] {
     const creator = item.created_by_member_id || '';
+    const tab = ALL_TABS.find((t) => t.id === item.list_kind);
+    if (tabUsesListLevelSharing(tab)) {
+      const shared = [...new Set(tab!.shareMemberIds)];
+      const rest = shared
+        .filter((id) => id && id !== creator)
+        .sort((a, b) => nameForId(a).localeCompare(nameForId(b)));
+      if (!creator) return rest;
+      return [creator, ...rest];
+    }
+
     const shared = [...new Set(item.shared_with_member_ids)];
     const rest = shared
       .filter((id) => id && id !== creator)
@@ -435,6 +477,47 @@ export default function TodosBoard() {
     const ids = visibleToMemberIds(item);
     if (ids.length === 0) return '—';
     return ids.map((id) => nameForId(id)).join(', ');
+  }
+
+  function openListShareEditor() {
+    if (!hasParentPermissions || !activeTab || activeTab.id === DEFAULT_LIST_TAB_ID) return;
+    setListShareEditingTabId(activeTab.id);
+    setListShareDraftIds([...activeTab.shareMemberIds]);
+  }
+
+  function commitListShareChanges() {
+    if (!listShareEditingTabId || !activeFamilyId || !myMemberId) return;
+    const tabMeta = ALL_TABS.find((t) => t.id === listShareEditingTabId);
+    const prev = new Set(tabMeta?.shareMemberIds ?? []);
+    const nextIds = normalizedSharesForSave(myMemberId, listShareDraftIds);
+    const next = new Set(nextIds);
+    const removed = [...prev].filter((id) => !next.has(id));
+
+    const run = async () => {
+      setListShareSaving(true);
+      try {
+        await replaceListTabShares(listShareEditingTabId, nextIds);
+        await qc.invalidateQueries({ queryKey: listTabsKey(activeFamilyId) });
+        setListShareEditingTabId(null);
+      } catch (e) {
+        Alert.alert('Error', e instanceof Error ? e.message : 'Could not update list sharing.');
+      } finally {
+        setListShareSaving(false);
+      }
+    };
+
+    if (removed.length) {
+      Alert.alert(
+        'Remove access?',
+        `${removed.map((id) => nameForId(id)).join(', ')} will no longer see items on this list.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Remove', style: 'destructive', onPress: () => void run() },
+        ],
+      );
+    } else {
+      void run();
+    }
   }
 
   function closeViewMenu() {
@@ -454,7 +537,14 @@ export default function TodosBoard() {
     const isOthersSection = !!myMemberId && memberId !== myMemberId;
     const showSharedSubtitle =
       isOthersSection &&
-      sectionItems.some((it) => myMemberId && it.shared_with_member_ids.includes(myMemberId));
+      sectionItems.some((it) => {
+        if (!myMemberId) return false;
+        const tab = ALL_TABS.find((t) => t.id === it.list_kind);
+        if (tabUsesListLevelSharing(tab)) {
+          return tab!.shareMemberIds.includes(myMemberId);
+        }
+        return it.shared_with_member_ids.includes(myMemberId);
+      });
 
     return (
       <View style={[styles.groupTitleBar, styles.groupTitleMemberRow]}>
@@ -475,14 +565,19 @@ export default function TodosBoard() {
 
   function renderRow(it: TodoItem) {
     const isCreator = !!myMemberId && it.created_by_member_id === myMemberId;
+    const rowListTab = ALL_TABS.find((t) => t.id === it.list_kind);
+    const rowListUsesSharing = tabUsesListLevelSharing(rowListTab);
     const isSharee =
       !!myMemberId &&
       !isCreator &&
-      it.shared_with_member_ids.includes(myMemberId);
+      (rowListUsesSharing
+        ? rowListTab!.shareMemberIds.includes(myMemberId)
+        : it.shared_with_member_ids.includes(myMemberId));
     const sharedByCreator =
-      isCreator && it.shared_with_member_ids.length > 0;
-    /** Same icon for “I shared this” and “someone shared this with me” — quick scan in the list. */
-    const showSharedIcon = sharedByCreator || isSharee;
+      isCreator &&
+      (rowListUsesSharing ? rowListTab!.shareMemberIds.length > 0 : it.shared_with_member_ids.length > 0);
+    /** List-level shared lists: no per-row share icon (see banner). Item-level lists: icon when shared. */
+    const showSharedIcon = !rowListUsesSharing && (sharedByCreator || isSharee);
     const sharedIconA11yLabel = sharedByCreator
       ? 'Shared with others'
       : isSharee
@@ -493,7 +588,9 @@ export default function TodosBoard() {
     let contextHint: string | null = null;
     if (viewMode === 'all') {
       if (isSharee) {
-        contextHint = `${nameForId(it.created_by_member_id)} shared this with you`;
+        contextHint = rowListUsesSharing
+          ? `${nameForId(it.created_by_member_id)} · shared list`
+          : `${nameForId(it.created_by_member_id)} shared this with you`;
       } else if (!isCreator) {
         contextHint = `From ${nameForId(it.created_by_member_id)}`;
       }
@@ -581,7 +678,12 @@ export default function TodosBoard() {
     );
   }
 
-  const editShowShare = editingItem ? editingItem.created_by_member_id === myMemberId : true;
+  const shareContextTab = ALL_TABS.find(
+    (t) => t.id === (editingItem?.list_kind ?? formListKind),
+  );
+  const editShowShare =
+    (editingItem ? editingItem.created_by_member_id === myMemberId : true) &&
+    !tabUsesListLevelSharing(shareContextTab);
 
   return (
     <Screen scroll={false} withBackground={false} gap="no" contentStyle={styles.screenContent}>
@@ -675,6 +777,7 @@ export default function TodosBoard() {
                   style={styles.tabPlusBtn}
                   onPress={() => {
                     setNewTabLabel('');
+                    setNewTabShareMemberIds([]);
                     setShowAddTabModal(true);
                   }}
                 />
@@ -682,6 +785,55 @@ export default function TodosBoard() {
             />
           </View>
         </View>
+
+        {isCustomActiveList && (activeTabUsesListSharing || hasParentPermissions) ? (
+          <Pressable
+            onPress={() => {
+              if (hasParentPermissions) openListShareEditor();
+            }}
+            disabled={!hasParentPermissions && !activeTabUsesListSharing}
+            accessibilityRole={hasParentPermissions ? 'button' : undefined}
+            accessibilityLabel={
+              hasParentPermissions
+                ? activeTabUsesListSharing
+                  ? `Shared list. Edit who can see this list. Currently: ${activeTab.shareMemberIds.map((id) => nameForId(id)).join(', ')}`
+                  : 'This list is private. Edit who can see this list.'
+                : activeTabUsesListSharing
+                  ? `Shared list with ${activeTab.shareMemberIds.map((id) => nameForId(id)).join(', ')}`
+                  : undefined
+            }
+            style={({ pressed }) => [
+              styles.sharedListBanner,
+              pressed && hasParentPermissions ? { opacity: 0.88 } : null,
+              !hasParentPermissions && !activeTabUsesListSharing ? { opacity: 0.65 } : null,
+            ]}
+          >
+            <MaterialCommunityIcons
+              name="account-multiple-outline"
+              size={20}
+              color={activeTabUsesListSharing ? '#2563eb' : '#64748b'}
+              style={styles.sharedListBannerIcon}
+            />
+            <View style={styles.sharedListBannerTextCol}>
+              <Text style={styles.sharedListBannerTitle} numberOfLines={activeTabUsesListSharing ? 3 : 2}>
+                {activeTabUsesListSharing
+                  ? `Shared list · ${activeTab.shareMemberIds.map((id) => nameForId(id)).join(', ')}`
+                  : hasParentPermissions
+                    ? 'This list is private.'
+                    : 'Custom list'}
+              </Text>
+            </View>
+            {hasParentPermissions ? (
+              <MaterialCommunityIcons
+                name="pencil-outline"
+                size={18}
+                color="#2563eb"
+                style={styles.sharedListBannerEditIcon}
+                importantForAccessibility="no"
+              />
+            ) : null}
+          </Pressable>
+        ) : null}
 
         <ScrollView
           style={styles.listScroll}
@@ -692,7 +844,11 @@ export default function TodosBoard() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator
           scrollEnabled={
-            !viewMenuOpen && !todoMenuItem && !sharedVisibilityItem && !moveTodoItem
+            !viewMenuOpen &&
+            !todoMenuItem &&
+            !sharedVisibilityItem &&
+            !moveTodoItem &&
+            !listShareEditingTabId
           }
         >
           {itemsInTab.length === 0 ? (
@@ -747,7 +903,8 @@ export default function TodosBoard() {
         <View>
           <Text style={styles.addTabTitle}>New list</Text>
           <Text style={styles.addTabHint}>
-            Same checklists and sharing as To-dos—use this for ideas, trip prep, or anything else.
+            Same items and checkboxes as To-dos. Optionally share the whole list so everyone chosen can
+            see every item (you can still use per-item sharing on To-dos only).
           </Text>
           <TextInput
             placeholder="List name (e.g. Ideas)"
@@ -766,6 +923,23 @@ export default function TodosBoard() {
               default: {},
             })}
           />
+          {hasParentPermissions ? (
+            <View style={styles.newTabShareBlock}>
+              <View style={styles.shareHeaderRow}>
+                <MaterialCommunityIcons name="account-multiple-outline" size={18} color="#475569" />
+                <Text style={styles.newTabShareLabel}>Share whole list with</Text>
+              </View>
+              <Text style={styles.newTabShareHint}>
+                Leave empty for a normal list (use per-item sharing like To-dos). Anyone you add can
+                see all items on this list.
+              </Text>
+              <MembersSelector
+                values={newTabShareMemberIds}
+                onChange={setNewTabShareMemberIds}
+                containerStyle={{ marginTop: 6, marginBottom: 4 }}
+              />
+            </View>
+          ) : null}
           <View style={styles.addTabActions}>
             <Button
               type="ghost"
@@ -780,6 +954,44 @@ export default function TodosBoard() {
               title={creatingTab ? '…' : 'Create'}
               disabled={!newTabLabel.trim() || creatingTab}
               onPress={() => void handleCreateTab()}
+            />
+          </View>
+        </View>
+      </ModalDialog>
+
+      <ModalDialog
+        visible={!!listShareEditingTabId}
+        onClose={() => setListShareEditingTabId(null)}
+        closeOnBackdropPress={!listShareSaving}
+        size="lg"
+        title="Who can see this list"
+        scrollable
+      >
+        <View>
+          <Text style={styles.listShareModalHint}>
+            Everyone you select can view and check off every item on this list. To use per-item sharing
+            instead, remove everyone here.
+          </Text>
+          <MembersSelector
+            values={listShareDraftIds}
+            onChange={setListShareDraftIds}
+            containerStyle={{ marginTop: 8, marginBottom: 8 }}
+          />
+          <View style={styles.addTabActions}>
+            <Button
+              type="ghost"
+              size="sm"
+              title="Cancel"
+              titleColor="#475569"
+              disabled={listShareSaving}
+              onPress={() => setListShareEditingTabId(null)}
+            />
+            <Button
+              type="primary"
+              size="sm"
+              title={listShareSaving ? '…' : 'Save'}
+              disabled={listShareSaving}
+              onPress={() => commitListShareChanges()}
             />
           </View>
         </View>
@@ -865,7 +1077,12 @@ export default function TodosBoard() {
           void (async () => {
             try {
               const row = await updateTodoText(target.id, target.name, tabId);
-              const updated = mapRow(row);
+              let updated = mapRow(row);
+              const destTab = ALL_TABS.find((t) => t.id === tabId);
+              if (tabUsesListLevelSharing(destTab)) {
+                await replaceTodoItemShares(target.id, []);
+                updated = { ...updated, shared_with_member_ids: [] };
+              }
               setItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)));
               setMoveTodoItem(null);
               setActiveListKind(tabId);
@@ -930,13 +1147,21 @@ export default function TodosBoard() {
           {infoItem && (
             <>
               <Text style={styles.infoModalTitle}>{infoItem.name}</Text>
-              {myMemberId &&
-              infoItem.created_by_member_id !== myMemberId &&
-              infoItem.shared_with_member_ids.includes(myMemberId) ? (
-                <Text style={styles.infoSharedBanner}>
-                  {nameForId(infoItem.created_by_member_id)} shared this with you
-                </Text>
-              ) : null}
+              {myMemberId && infoItem.created_by_member_id !== myMemberId ? (() => {
+                const ilTab = ALL_TABS.find((t) => t.id === infoItem.list_kind);
+                const listShared = tabUsesListLevelSharing(ilTab);
+                const sharedWithMe = listShared
+                  ? ilTab!.shareMemberIds.includes(myMemberId)
+                  : infoItem.shared_with_member_ids.includes(myMemberId);
+                if (!sharedWithMe) return null;
+                return (
+                  <Text style={styles.infoSharedBanner}>
+                    {listShared
+                      ? `${nameForId(infoItem.created_by_member_id)} · you’re on this shared list`
+                      : `${nameForId(infoItem.created_by_member_id)} shared this with you`}
+                  </Text>
+                );
+              })() : null}
               <MetaRow label="Created by" value={nameForId(infoItem.created_by_member_id)} spacing={6} />
               <MetaRow
                 label="List"
@@ -1061,6 +1286,62 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 8,
     marginTop: 4,
+  },
+  sharedListBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    gap: 10,
+    marginBottom: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  sharedListBannerIcon: {
+    flexShrink: 0,
+  },
+  sharedListBannerTextCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  sharedListBannerTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#334155',
+    lineHeight: 20,
+  },
+  sharedListBannerEditIcon: {
+    flexShrink: 0,
+    marginLeft: 4,
+  },
+  newTabShareBlock: {
+    marginBottom: 10,
+  },
+  shareHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  newTabShareLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  newTabShareHint: {
+    fontSize: 12,
+    color: '#64748b',
+    lineHeight: 17,
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  listShareModalHint: {
+    fontSize: 13,
+    color: '#64748b',
+    lineHeight: 18,
+    marginBottom: 4,
   },
   viewOption: {
     paddingHorizontal: 14,
