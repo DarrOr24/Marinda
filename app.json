@@ -70,7 +70,14 @@
         }
       ],
       "expo-secure-store",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "react-native-share",
+        {
+          "ios": [],
+          "android": []
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

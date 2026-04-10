@@ -50,6 +50,8 @@ export type ActivityBoardHeaderNavProps = {
   titleNumberOfLines?: number;
   /** Opens month picker (title + calendar icon). */
   onCalendarPress?: () => void;
+  /** Shown between the title and the right chevron (e.g. export image). */
+  endAccessory?: React.ReactNode;
 };
 
 export function ActivityBoardHeaderNav({
@@ -63,6 +65,7 @@ export function ActivityBoardHeaderNav({
   titleVariant = "week",
   titleNumberOfLines = 1,
   onCalendarPress,
+  endAccessory,
 }: ActivityBoardHeaderNavProps) {
   const titleEl = onCalendarPress ? (
     <Pressable
@@ -107,6 +110,9 @@ export function ActivityBoardHeaderNav({
         />
       </View>
       <View style={styles.headerTitleWrap}>{titleEl}</View>
+      {endAccessory ? (
+        <View style={styles.endAccessorySlot}>{endAccessory}</View>
+      ) : null}
       <View style={styles.navBtnSlot}>
         <BoardNavChevronButton
           direction="right"
@@ -135,6 +141,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 6,
     minWidth: 0,
+  },
+  endAccessorySlot: {
+    justifyContent: "center",
+    flexShrink: 0,
   },
   titleWithCalendar: {
     flexDirection: "row",
