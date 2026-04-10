@@ -27,7 +27,7 @@ import {
 } from '@/lib/todos/todos.api';
 import { sharePlainTextBulletList } from '@/lib/share/plain-text-list-share';
 import { useFamilyTodoItems } from '@/lib/todos/todos.hooks';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -82,7 +82,7 @@ export default function TodosBoard() {
     hasParentPermissions,
   } = useAuthContext() as any;
   const viewMenuAnchorRef = useRef<View>(null);
-  const listBannerMenuAnchorRef = useRef<View>(null);
+  const toolbarListMenuAnchorRef = useRef<View>(null);
   const getTodoMenuAnchorRef = useRefById<View>();
 
   const { familyMembers } = useFamily(activeFamilyId);
@@ -127,7 +127,7 @@ export default function TodosBoard() {
 
   const [viewMode, setViewMode] = useState<'member' | 'all'>('member');
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
-  const [listBannerMenuOpen, setListBannerMenuOpen] = useState(false);
+  const [toolbarListMenuOpen, setToolbarListMenuOpen] = useState(false);
 
   const [items, setItems] = useState<TodoItem[]>([]);
 
@@ -222,7 +222,7 @@ export default function TodosBoard() {
   }, [listTabsData]);
 
   useEffect(() => {
-    setListBannerMenuOpen(false);
+    setToolbarListMenuOpen(false);
   }, [activeListKind]);
 
   const itemsInTab = useMemo(
@@ -752,20 +752,18 @@ export default function TodosBoard() {
               />
             </View>
 
-            {hasParentPermissions ? (
-              <View style={styles.toolbarIcons}>
-                <Button
-                  type="outline"
-                  size="sm"
-                  backgroundColor="#eef2ff"
-                  round
-                  hitSlop={8}
-                  title=""
-                  onPress={() => router.push('/lists/settings')}
-                  leftIcon={<Ionicons name="settings-outline" size={20} />}
-                />
-              </View>
-            ) : null}
+            <View ref={toolbarListMenuAnchorRef} collapsable={false} style={styles.toolbarIcons}>
+              <Button
+                type="outline"
+                size="sm"
+                backgroundColor="#eef2ff"
+                round
+                hitSlop={8}
+                title=""
+                onPress={() => setToolbarListMenuOpen(true)}
+                leftIcon={<MaterialCommunityIcons name="dots-vertical" size={20} />}
+              />
+            </View>
           </View>
 
           <View style={styles.tabsContainer}>
@@ -824,33 +822,28 @@ export default function TodosBoard() {
                 Private list. Share items individually.
               </Text>
             </View>
-            <View ref={listBannerMenuAnchorRef} collapsable={false}>
-              <Pressable
-                hitSlop={10}
-                onPress={() => setListBannerMenuOpen(true)}
-                style={({ pressed }) => [styles.sharedListBannerMenuBtn, pressed && { opacity: 0.72 }]}
-                accessibilityRole="button"
-                accessibilityLabel="List actions"
-              >
-                <MaterialCommunityIcons name="dots-vertical" size={20} color="#475569" />
-              </Pressable>
-            </View>
           </View>
         ) : isCustomActiveList && (activeTabUsesListSharing || hasParentPermissions) ? (
-          <View
-            style={[
-              styles.sharedListBanner,
-              !hasParentPermissions && !activeTabUsesListSharing ? { opacity: 0.65 } : null,
-            ]}
+          <Pressable
+            onPress={() => {
+              if (hasParentPermissions) openListShareEditor();
+            }}
+            disabled={!hasParentPermissions && !activeTabUsesListSharing}
+            accessibilityRole={hasParentPermissions ? 'button' : undefined}
             accessibilityLabel={
               hasParentPermissions
                 ? activeTabUsesListSharing
-                  ? `Shared list. ${activeTab.shareMemberIds.map((id) => nameForId(id)).join(', ')}`
-                  : 'This list is private. Use the menu to edit who can see this list.'
+                  ? `Shared list. Edit who can see this list. Currently: ${activeTab.shareMemberIds.map((id) => nameForId(id)).join(', ')}`
+                  : 'This list is private. Edit who can see this list.'
                 : activeTabUsesListSharing
                   ? `Shared list with ${activeTab.shareMemberIds.map((id) => nameForId(id)).join(', ')}`
                   : undefined
             }
+            style={({ pressed }) => [
+              styles.sharedListBanner,
+              pressed && hasParentPermissions ? { opacity: 0.88 } : null,
+              !hasParentPermissions && !activeTabUsesListSharing ? { opacity: 0.65 } : null,
+            ]}
           >
             <MaterialCommunityIcons
               name="account-multiple-outline"
@@ -867,18 +860,16 @@ export default function TodosBoard() {
                     : 'Custom list'}
               </Text>
             </View>
-            <View ref={listBannerMenuAnchorRef} collapsable={false}>
-              <Pressable
-                hitSlop={10}
-                onPress={() => setListBannerMenuOpen(true)}
-                style={({ pressed }) => [styles.sharedListBannerMenuBtn, pressed && { opacity: 0.72 }]}
-                accessibilityRole="button"
-                accessibilityLabel="List actions"
-              >
-                <MaterialCommunityIcons name="dots-vertical" size={20} color="#475569" />
-              </Pressable>
-            </View>
-          </View>
+            {hasParentPermissions ? (
+              <MaterialCommunityIcons
+                name="pencil-outline"
+                size={18}
+                color="#2563eb"
+                style={styles.sharedListBannerEditIcon}
+                importantForAccessibility="no"
+              />
+            ) : null}
+          </Pressable>
         ) : null}
 
         <ScrollView
@@ -891,7 +882,7 @@ export default function TodosBoard() {
           showsVerticalScrollIndicator
           scrollEnabled={
             !viewMenuOpen &&
-            !listBannerMenuOpen &&
+            !toolbarListMenuOpen &&
             !todoMenuItem &&
             !sharedVisibilityItem &&
             !moveTodoItem &&
@@ -1257,14 +1248,12 @@ export default function TodosBoard() {
       </ModalPopover>
 
       <ListExportMenuPopover
-        visible={listBannerMenuOpen}
-        onClose={() => setListBannerMenuOpen(false)}
-        anchorRef={listBannerMenuAnchorRef}
+        visible={toolbarListMenuOpen}
+        onClose={() => setToolbarListMenuOpen(false)}
+        anchorRef={toolbarListMenuAnchorRef}
         onExportList={exportActiveTodoList}
-        onEdit={
-          activeListKind !== DEFAULT_LIST_TAB_ID && hasParentPermissions
-            ? openListShareEditor
-            : undefined
+        onOpenSettings={
+          hasParentPermissions ? () => router.push('/lists/settings') : undefined
         }
       />
     </Screen>
@@ -1372,10 +1361,9 @@ const styles = StyleSheet.create({
     color: '#334155',
     lineHeight: 20,
   },
-  sharedListBannerMenuBtn: {
+  sharedListBannerEditIcon: {
     flexShrink: 0,
-    padding: 4,
-    marginRight: -4,
+    marginLeft: 4,
   },
   newTabShareBlock: {
     marginBottom: 10,

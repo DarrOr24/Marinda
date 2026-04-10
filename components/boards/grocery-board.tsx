@@ -1,3 +1,4 @@
+import { ListExportMenuPopover } from '@/components/list-export-menu-popover';
 import { GroceryItemModal } from '@/components/modals/grocery-item-modal';
 import { MoveToTabModal } from '@/components/modals/move-to-tab-modal';
 import { ChipSelector } from '@/components/chip-selector';
@@ -6,8 +7,6 @@ import { useAuthContext } from '@/hooks/use-auth-context';
 import { useRefById } from '@/hooks/use-ref-by-id';
 import { useFamily } from '@/lib/families/families.hooks';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import {
     addGroceryItem,
     deleteGroceryItems,
@@ -22,8 +21,10 @@ import {
     GROCERIES_LIST_KIND,
     type ShoppingTab,
 } from '@/lib/groceries/shopping.types';
+import { sharePlainTextBulletList } from '@/lib/share/plain-text-list-share';
 import { getAvatarPublicUrl } from '@/lib/profiles/profiles.api';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Alert,
@@ -56,6 +57,7 @@ const shortId = (id?: string) =>
 export default function Grocery() {
     const router = useRouter();
     const viewMenuAnchorRef = useRef<View>(null);
+    const toolbarListMenuAnchorRef = useRef<View>(null);
     const getGroceryMenuAnchorRef = useRefById<View>();
     const { activeFamilyId, effectiveMember, family, members, hasParentPermissions } =
         useAuthContext() as any;
@@ -114,6 +116,7 @@ export default function Grocery() {
     const [activeListKind, setActiveListKind] = useState<string>(GROCERIES_LIST_KIND);
     const [viewMode, setViewMode] = useState<'category' | 'member' | 'all'>('category');
     const [viewMenuOpen, setViewMenuOpen] = useState(false);
+    const [toolbarListMenuOpen, setToolbarListMenuOpen] = useState(false);
 
     const [addOpen, setAddOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<GroceryItem | null>(null);
@@ -217,6 +220,10 @@ export default function Grocery() {
             setViewMode('member');
         }
     }, [isGroceriesList]);
+
+    useEffect(() => {
+        setToolbarListMenuOpen(false);
+    }, [activeListKind]);
 
     function closeViewMenu() {
         setViewMenuOpen(false);
@@ -423,6 +430,27 @@ export default function Grocery() {
         ]);
     }
 
+    function lineForGroceryExport(it: GroceryItem): string {
+        const name = it.name.trim();
+        if (!name) return '';
+        const amountPart = it.amount?.trim() ? ` (${it.amount.trim()})` : '';
+        const suffix = it.is_checked ? ' ✓' : '';
+        return `${name}${amountPart}${suffix}`;
+    }
+
+    function exportActiveGroceryList() {
+        const lines: string[] = [];
+        for (const it of allSorted) {
+            const line = lineForGroceryExport(it);
+            if (line) lines.push(line);
+        }
+        void sharePlainTextBulletList({
+            title: activeTab.label,
+            itemLines: lines,
+            shareSheetTitle: activeTab.label,
+        });
+    }
+
     function showItemInfo(it: GroceryItem) {
         setInfoItem(it);
     }
@@ -578,20 +606,18 @@ export default function Grocery() {
                             />
                         </View>
 
-                        {hasParentPermissions ? (
-                            <View style={styles.toolbarIcons}>
-                                <Button
-                                    type="outline"
-                                    size="sm"
-                                    backgroundColor="#eef2ff"
-                                    round
-                                    hitSlop={8}
-                                    title=""
-                                    onPress={() => router.push('/shopping/settings')}
-                                    leftIcon={<Ionicons name="settings-outline" size={20} />}
-                                />
-                            </View>
-                        ) : null}
+                        <View ref={toolbarListMenuAnchorRef} collapsable={false} style={styles.toolbarIcons}>
+                            <Button
+                                type="outline"
+                                size="sm"
+                                backgroundColor="#eef2ff"
+                                round
+                                hitSlop={8}
+                                title=""
+                                onPress={() => setToolbarListMenuOpen(true)}
+                                leftIcon={<MaterialCommunityIcons name="dots-vertical" size={20} />}
+                            />
+                        </View>
                     </View>
 
                     <View style={styles.tabsContainer}>
@@ -646,7 +672,12 @@ export default function Grocery() {
                     ]}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator
-                    scrollEnabled={!viewMenuOpen && !groceryMenuItem && !moveGroceryItem}
+                    scrollEnabled={
+                        !viewMenuOpen &&
+                        !toolbarListMenuOpen &&
+                        !groceryMenuItem &&
+                        !moveGroceryItem
+                    }
                 >
                     {tabItems.length === 0 ? (
                         <View
@@ -964,6 +995,16 @@ export default function Grocery() {
                     <Text style={styles.viewOptionText}>All items (A → Z)</Text>
                 </Pressable>
             </ModalPopover>
+
+            <ListExportMenuPopover
+                visible={toolbarListMenuOpen}
+                onClose={() => setToolbarListMenuOpen(false)}
+                anchorRef={toolbarListMenuAnchorRef}
+                onExportList={exportActiveGroceryList}
+                onOpenSettings={
+                    hasParentPermissions ? () => router.push('/shopping/settings') : undefined
+                }
+            />
         </Screen>
     );
 }

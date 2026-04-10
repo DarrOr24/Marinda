@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { RefObject } from 'react';
 import {
   InteractionManager,
@@ -11,26 +11,27 @@ import {
 
 import { ModalPopover } from '@/components/ui';
 
-type ListExportMenuPopoverProps = {
+type ListBoardMenuPopoverProps = {
   visible: boolean;
   onClose: () => void;
   anchorRef: RefObject<RNView | null>;
   onExportList: () => void;
   exportLabel?: string;
-  onEdit?: () => void;
-  editLabel?: string;
+  onOpenSettings?: () => void;
+  settingsLabel?: string;
 };
 
+/** List-level ⋮ menu: optional Settings, then Export list (for the active tab). */
 export function ListExportMenuPopover({
   visible,
   onClose,
   anchorRef,
   onExportList,
   exportLabel = 'Export list',
-  onEdit,
-  editLabel = 'Edit sharing',
-}: ListExportMenuPopoverProps) {
-  const showEdit = typeof onEdit === 'function';
+  onOpenSettings,
+  settingsLabel = 'Settings',
+}: ListBoardMenuPopoverProps) {
+  const showSettings = typeof onOpenSettings === 'function';
 
   function runAfterPopoverDismiss(fn: () => void) {
     onClose();
@@ -41,20 +42,20 @@ export function ListExportMenuPopover({
 
   return (
     <ModalPopover visible={visible} onClose={onClose} anchorRef={anchorRef} position="bottom-right">
-      {showEdit ? (
+      {showSettings ? (
         <Pressable
           style={styles.row}
           onPress={() => {
             runAfterPopoverDismiss(() => {
-              onEdit();
+              onOpenSettings();
             });
           }}
         >
-          <MaterialCommunityIcons name="pencil-outline" size={18} color="#334155" />
-          <Text style={styles.rowLabel}>{editLabel}</Text>
+          <Ionicons name="settings-outline" size={18} color="#334155" />
+          <Text style={styles.rowLabel}>{settingsLabel}</Text>
         </Pressable>
       ) : null}
-      {showEdit ? <View style={styles.divider} /> : null}
+      {showSettings ? <View style={styles.divider} /> : null}
       <Pressable
         style={styles.row}
         onPress={() => {
