@@ -1,26 +1,39 @@
 import { DocsPageLayout, DocsSection, docsPageStyles } from '@/components/docs-page-layout';
 import { Button, TextInput } from '@/components/ui';
 import { useAuthContext } from '@/hooks/use-auth-context';
-import { useParentPermissionGuard } from '@/hooks/use-parent-permission-guard';
 import {
     deleteShoppingTab,
     fetchShoppingTabs,
     updateShoppingTab,
 } from '@/lib/groceries/shopping-tabs.api';
 import type { ShoppingTab } from '@/lib/groceries/shopping.types';
+import { isParentRole } from '@/utils/validation.utils';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 
 export default function ShoppingListsSettingsScreen() {
-    const { activeFamilyId } = useAuthContext() as any;
-    const { hasParentPermissions, requireParent } = useParentPermissionGuard({
-        message: 'Only parents can rename or delete custom shopping lists.',
-    });
+    const { activeFamilyId, effectiveMember, authMember, isKidMode } = useAuthContext() as any;
+
+    const myMemberId: string | undefined =
+        effectiveMember?.id ?? effectiveMember?.member_id ?? undefined;
+
+    /** Parent using their own profile (not acting as a child): rename/delete any custom list. In kid mode the session is still the parent, so we key off `isKidMode`. */
+    const parentFullControl = isParentRole(authMember?.role) && !isKidMode;
 
     const [tabs, setTabs] = useState<ShoppingTab[]>([]);
     const [loading, setLoading] = useState(true);
     const [busyTabId, setBusyTabId] = useState<string | null>(null);
+
+    const canManageTab = useCallback(
+        (t: ShoppingTab) => {
+            if (!myMemberId) return false;
+            if (parentFullControl) return true;
+            if (t.created_by_member_id != null) return t.created_by_member_id === myMemberId;
+            return false;
+        },
+        [myMemberId, parentFullControl],
+    );
 
     const reload = useCallback(async () => {
         if (!activeFamilyId) {
@@ -49,12 +62,18 @@ export default function ShoppingListsSettingsScreen() {
     const [editing, setEditing] = useState<null | { id: string; label: string }>(null);
 
     const startEdit = (t: ShoppingTab) => {
-        if (!requireParent()) return;
+        if (!canManageTab(t)) {
+            Alert.alert(
+                'Not allowed',
+                'You can only rename lists you created. Ask a parent to change other lists.',
+            );
+            return;
+        }
         setEditing({ id: t.id, label: t.label });
     };
 
     const saveEdit = async () => {
-        if (!editing || !requireParent()) return;
+        if (!editing) return;
         const label = editing.label.trim();
         if (!label) {
             Alert.alert('Name required', 'Enter a list name.');
@@ -73,7 +92,13 @@ export default function ShoppingListsSettingsScreen() {
     };
 
     const confirmDelete = (t: ShoppingTab) => {
-        if (!requireParent()) return;
+        if (!canManageTab(t)) {
+            Alert.alert(
+                'Not allowed',
+                'You can only delete lists you created. Ask a parent to remove other lists.',
+            );
+            return;
+        }
         if (!activeFamilyId) return;
 
         Alert.alert(
@@ -100,19 +125,27 @@ export default function ShoppingListsSettingsScreen() {
         );
     };
 
+    const footerNote = useMemo(() => {
+        if (parentFullControl) return null;
+        return (
+            <Text style={[docsPageStyles.note, { marginTop: 10 }]}>
+                You can rename or delete lists you added. Parents can manage every custom list.
+            </Text>
+        );
+    }, [parentFullControl]);
+
     return (
         <DocsPageLayout intro="Rename or remove your family’s custom shopping lists. Open this from the Shopping board (settings icon on the top row). Groceries is always available and can’t be deleted. To add a new list, use the + button next to the list pills on the Shopping board. Examples of extra lists: online orders (e.g. Amazon), clothes, or school supplies.">
             <DocsSection title="Custom lists">
                 <Text style={docsPageStyles.description}>
                     These lists appear as tabs on the Shopping board. Categories (produce, dairy, etc.)
-                    only apply to the Groceries list. Use separate lists for things like school supplies, birthday
-                    gifts, or a big trip—whatever fits your family. On the board, tap View to switch layouts: by
-                    category (Groceries only), by who added each item, or one flat A→Z list.
+                    only apply to the Groceries list. Use separate lists for things like school supplies,
+                    birthday gifts, or a big trip—whatever fits your family. On the board, tap View to
+                    switch layouts: by category (Groceries only), by who added each item, or one flat A→Z
+                    list.
                 </Text>
 
-                {!hasParentPermissions && (
-                    <Text style={docsPageStyles.note}>Only parents can change custom lists.</Text>
-                )}
+                {footerNote}
 
                 {loading ? (
                     <ActivityIndicator style={{ marginTop: 16 }} />
@@ -125,23 +158,32 @@ export default function ShoppingListsSettingsScreen() {
                         <View key={t.id} style={styles.row}>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.tabLabel}>{t.label}</Text>
+                                {!canManageTab(t) && (
+                                    <Text style={styles.readOnlyHint}>
+                                        {t.created_by_member_id == null
+                                            ? 'Ask a parent to rename or remove this list.'
+                                            : 'Created by someone else.'}
+                                    </Text>
+                                )}
                             </View>
-                            <View style={styles.actions}>
-                                <Button
-                                    title="Rename"
-                                    type="outline"
-                                    size="sm"
-                                    disabled={busyTabId !== null}
-                                    onPress={() => startEdit(t)}
-                                />
-                                <Button
-                                    title="Delete"
-                                    type="danger"
-                                    size="sm"
-                                    disabled={busyTabId !== null}
-                                    onPress={() => confirmDelete(t)}
-                                />
-                            </View>
+                            {canManageTab(t) && (
+                                <View style={styles.actions}>
+                                    <Button
+                                        title="Rename"
+                                        type="outline"
+                                        size="sm"
+                                        disabled={busyTabId !== null}
+                                        onPress={() => startEdit(t)}
+                                    />
+                                    <Button
+                                        title="Delete"
+                                        type="danger"
+                                        size="sm"
+                                        disabled={busyTabId !== null}
+                                        onPress={() => confirmDelete(t)}
+                                    />
+                                </View>
+                            )}
                         </View>
                     ))
                 )}
@@ -206,6 +248,11 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '700',
         color: '#0f172a',
+    },
+    readOnlyHint: {
+        fontSize: 12,
+        color: '#64748b',
+        marginTop: 2,
     },
     actions: {
         flexDirection: 'row',

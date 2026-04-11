@@ -8,6 +8,8 @@ export type ShoppingTab = {
   placeholder: string;
   emptyText: string;
   sort_order?: number;
+  /** Who created this custom tab; omitted for built-in tabs. Legacy rows may be null (parents only for rename/delete). */
+  created_by_member_id?: string | null;
 };
 
 export const DEFAULT_SHOPPING_TABS: ShoppingTab[] = [

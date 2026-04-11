@@ -12,6 +12,7 @@ function mapTabRow(row: any): ShoppingTab {
     placeholder: row.placeholder?.trim() || `Add to ${label}…`,
     emptyText: `No ${label.toLowerCase()} on the list yet.`,
     sort_order: row.sort_order ?? 0,
+    created_by_member_id: row.created_by_member_id ?? null,
   };
 }
 
@@ -31,8 +32,9 @@ export async function createShoppingTab(params: {
   familyId: string;
   label: string;
   placeholder?: string;
+  createdByMemberId: string;
 }) {
-  const { familyId, label, placeholder } = params;
+  const { familyId, label, placeholder, createdByMemberId } = params;
   const trimmed = label.trim();
   if (!trimmed) throw new Error('List name is required');
 
@@ -42,6 +44,7 @@ export async function createShoppingTab(params: {
       family_id: familyId,
       label: trimmed,
       placeholder: placeholder?.trim() || null,
+      created_by_member_id: createdByMemberId,
     })
     .select('*')
     .single();

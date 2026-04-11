@@ -59,8 +59,7 @@ export default function Grocery() {
     const viewMenuAnchorRef = useRef<View>(null);
     const toolbarListMenuAnchorRef = useRef<View>(null);
     const getGroceryMenuAnchorRef = useRefById<View>();
-    const { activeFamilyId, effectiveMember, family, members, hasParentPermissions } =
-        useAuthContext() as any;
+    const { activeFamilyId, effectiveMember, family, members } = useAuthContext() as any;
 
     const { familyMembers } = useFamily(activeFamilyId);
 
@@ -481,13 +480,15 @@ export default function Grocery() {
 
     async function handleCreateTab() {
         const trimmed = newTabLabel.trim();
-        if (!trimmed || !activeFamilyId) return;
+        const creatorId = effectiveMember?.id ?? effectiveMember?.member_id;
+        if (!trimmed || !activeFamilyId || !creatorId || creatorId === 'guest') return;
 
         setCreatingTab(true);
         try {
             const tab = await createShoppingTab({
                 familyId: activeFamilyId,
                 label: trimmed,
+                createdByMemberId: creatorId,
             });
             setCustomTabs((prev) =>
                 [...prev, tab].sort(
@@ -1002,7 +1003,9 @@ export default function Grocery() {
                 anchorRef={toolbarListMenuAnchorRef}
                 onExportList={exportActiveGroceryList}
                 onOpenSettings={
-                    hasParentPermissions ? () => router.push('/shopping/settings') : undefined
+                    effectiveMember?.id && effectiveMember.id !== 'guest'
+                        ? () => router.push('/shopping/settings')
+                        : undefined
                 }
             />
         </Screen>
