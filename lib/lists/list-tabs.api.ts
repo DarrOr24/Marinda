@@ -4,6 +4,22 @@ import type { ListTab } from './list-tabs.types';
 
 const supabase = getSupabase();
 
+/**
+ * Rows in `list_tab_shares` must include the **creator** as well as everyone else. RLS visibility for
+ * items created by another member requires `list_tab_shares.member_id = viewer.id`; the creator alone
+ * is not enough to see others’ todos.
+ */
+export function mergeListTabShareMemberIds(
+  creatorMemberId: string,
+  selectedOtherMemberIds: string[],
+): string[] {
+  const others = [...new Set(selectedOtherMemberIds)]
+    .filter(Boolean)
+    .filter((id) => id !== creatorMemberId);
+  if (!others.length) return [];
+  return [...new Set([creatorMemberId, ...others])];
+}
+
 function mapTabRow(row: Record<string, unknown>): ListTab {
   const label = String(row.label ?? '').trim();
   const rawShares = row.list_tab_shares as { member_id: string }[] | null | undefined;
@@ -11,10 +27,14 @@ function mapTabRow(row: Record<string, unknown>): ListTab {
     ? rawShares.map((s) => s.member_id).filter(Boolean)
     : [];
 
+  const c = row.created_by_member_id;
+  const created_by_member_id = c == null || c === '' ? null : String(c);
+
   return {
     id: String(row.id),
     label,
     sort_order: typeof row.sort_order === 'number' ? row.sort_order : 0,
+    created_by_member_id,
     shareMemberIds,
   };
 }
@@ -51,18 +71,21 @@ export async function replaceListTabShares(listTabId: string, memberIds: string[
 export async function createListTab(params: {
   familyId: string;
   label: string;
-  /** Optional; RLS requires parent for `list_tab_shares` rows. */
+  /** Set for RLS and merge logic; required when the acting member is not a parent but adds list shares. */
+  createdByMemberId: string;
   shareMemberIds?: string[];
 }) {
-  const { familyId, label, shareMemberIds = [] } = params;
+  const { familyId, label, createdByMemberId, shareMemberIds = [] } = params;
   const trimmed = label.trim();
   if (!trimmed) throw new Error('List name is required');
+  if (!createdByMemberId) throw new Error('Creator member is required');
 
   const { data, error } = await supabase
     .from('list_tabs')
     .insert({
       family_id: familyId,
       label: trimmed,
+      created_by_member_id: createdByMemberId,
     })
     .select('*')
     .single();

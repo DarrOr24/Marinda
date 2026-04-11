@@ -15,7 +15,11 @@ import {
   type ListTab,
   tabUsesListLevelSharing,
 } from '@/lib/lists/list-tabs.types';
-import { createListTab, replaceListTabShares } from '@/lib/lists/list-tabs.api';
+import {
+  createListTab,
+  mergeListTabShareMemberIds,
+  replaceListTabShares,
+} from '@/lib/lists/list-tabs.api';
 import { listTabsKey } from '@/lib/lists/list-tabs.hooks';
 import {
   addTodoItem,
@@ -190,6 +194,24 @@ export default function TodosBoard() {
   const activeTabUsesListSharing = tabUsesListLevelSharing(activeTab);
   const isCustomActiveList = activeListKind !== DEFAULT_LIST_TAB_ID;
 
+  /** Names of everyone else on this shared list (excludes you) for banner copy. */
+  const listSharePeerNamesForBanner = useMemo(() => {
+    if (!activeTab?.shareMemberIds?.length) return '';
+    const ids = myMemberId
+      ? activeTab.shareMemberIds.filter((id) => id !== myMemberId)
+      : activeTab.shareMemberIds;
+    if (!ids.length) return '—';
+    return ids.map((id) => nameForId(id)).join(', ');
+  }, [activeTab, myMemberId, nameForId]);
+
+  /** Parents may edit any custom list’s sharing; non-parents only if they created the list. */
+  const canEditActiveListSharing = useMemo(() => {
+    if (!activeTab || activeTab.id === DEFAULT_LIST_TAB_ID) return false;
+    if (!myMemberId || myMemberId === 'guest') return false;
+    if (hasParentPermissions) return true;
+    return !!activeTab.created_by_member_id && activeTab.created_by_member_id === myMemberId;
+  }, [activeTab, myMemberId, hasParentPermissions]);
+
   useEffect(() => {
     setItems([]);
     setCustomTabs([]);
@@ -251,16 +273,15 @@ export default function TodosBoard() {
 
   async function handleCreateTab() {
     const trimmed = newTabLabel.trim();
-    if (!trimmed || !activeFamilyId) return;
+    if (!trimmed || !activeFamilyId || !myMemberId || myMemberId === 'guest') return;
 
     setCreatingTab(true);
     try {
-      const shareIds = hasParentPermissions
-        ? normalizedSharesForSave(myMemberId ?? '', newTabShareMemberIds)
-        : [];
+      const shareIds = mergeListTabShareMemberIds(myMemberId, newTabShareMemberIds);
       const tab = await createListTab({
         familyId: activeFamilyId,
         label: trimmed,
+        createdByMemberId: myMemberId,
         ...(shareIds.length ? { shareMemberIds: shareIds } : {}),
       });
       await qc.invalidateQueries({ queryKey: listTabsKey(activeFamilyId) });
@@ -488,9 +509,15 @@ export default function TodosBoard() {
   }
 
   function openListShareEditor() {
-    if (!hasParentPermissions || !activeTab || activeTab.id === DEFAULT_LIST_TAB_ID) return;
+    if (!canEditActiveListSharing || !activeTab || activeTab.id === DEFAULT_LIST_TAB_ID) return;
+    const creatorId = activeTab.created_by_member_id ?? myMemberId;
     setListShareEditingTabId(activeTab.id);
-    setListShareDraftIds([...activeTab.shareMemberIds]);
+    /** Edit “who else” — list creator is always implied; DB stores creator + others. */
+    setListShareDraftIds(
+      myMemberId
+        ? activeTab.shareMemberIds.filter((id) => id !== creatorId)
+        : [...activeTab.shareMemberIds],
+    );
   }
 
   function exportActiveTodoList() {
@@ -509,8 +536,10 @@ export default function TodosBoard() {
   function commitListShareChanges() {
     if (!listShareEditingTabId || !activeFamilyId || !myMemberId) return;
     const tabMeta = ALL_TABS.find((t) => t.id === listShareEditingTabId);
-    const prev = new Set(tabMeta?.shareMemberIds ?? []);
-    const nextIds = normalizedSharesForSave(myMemberId, listShareDraftIds);
+    if (!tabMeta) return;
+    const creatorId = tabMeta.created_by_member_id ?? myMemberId;
+    const prev = new Set(tabMeta.shareMemberIds ?? []);
+    const nextIds = mergeListTabShareMemberIds(creatorId, listShareDraftIds);
     const next = new Set(nextIds);
     const removed = [...prev].filter((id) => !next.has(id));
 
@@ -562,7 +591,7 @@ export default function TodosBoard() {
         if (!myMemberId) return false;
         const tab = ALL_TABS.find((t) => t.id === it.list_kind);
         if (tabUsesListLevelSharing(tab)) {
-          return tab!.shareMemberIds.includes(myMemberId);
+          return false;
         }
         return it.shared_with_member_ids.includes(myMemberId);
       });
@@ -823,26 +852,26 @@ export default function TodosBoard() {
               </Text>
             </View>
           </View>
-        ) : isCustomActiveList && (activeTabUsesListSharing || hasParentPermissions) ? (
+        ) : isCustomActiveList ? (
           <Pressable
             onPress={() => {
-              if (hasParentPermissions) openListShareEditor();
+              if (canEditActiveListSharing) openListShareEditor();
             }}
-            disabled={!hasParentPermissions && !activeTabUsesListSharing}
-            accessibilityRole={hasParentPermissions ? 'button' : undefined}
+            disabled={!canEditActiveListSharing}
+            accessibilityRole={canEditActiveListSharing ? 'button' : 'text'}
             accessibilityLabel={
-              hasParentPermissions
+              canEditActiveListSharing
                 ? activeTabUsesListSharing
-                  ? `Shared list. Edit who can see this list. Currently: ${activeTab.shareMemberIds.map((id) => nameForId(id)).join(', ')}`
+                  ? `Shared list. Edit who can see this list. Currently: ${listSharePeerNamesForBanner}`
                   : 'This list is private. Edit who can see this list.'
                 : activeTabUsesListSharing
-                  ? `Shared list with ${activeTab.shareMemberIds.map((id) => nameForId(id)).join(', ')}`
+                  ? `Shared list with ${listSharePeerNamesForBanner}`
                   : undefined
             }
             style={({ pressed }) => [
               styles.sharedListBanner,
-              pressed && hasParentPermissions ? { opacity: 0.88 } : null,
-              !hasParentPermissions && !activeTabUsesListSharing ? { opacity: 0.65 } : null,
+              pressed && canEditActiveListSharing ? { opacity: 0.88 } : null,
+              !canEditActiveListSharing && !activeTabUsesListSharing ? { opacity: 0.65 } : null,
             ]}
           >
             <MaterialCommunityIcons
@@ -854,13 +883,13 @@ export default function TodosBoard() {
             <View style={styles.sharedListBannerTextCol}>
               <Text style={styles.sharedListBannerTitle} numberOfLines={activeTabUsesListSharing ? 3 : 2}>
                 {activeTabUsesListSharing
-                  ? `Shared list · ${activeTab.shareMemberIds.map((id) => nameForId(id)).join(', ')}`
-                  : hasParentPermissions
+                  ? `Shared list · ${listSharePeerNamesForBanner}`
+                  : canEditActiveListSharing || hasParentPermissions
                     ? 'This list is private.'
                     : 'Custom list'}
               </Text>
             </View>
-            {hasParentPermissions ? (
+            {canEditActiveListSharing ? (
               <MaterialCommunityIcons
                 name="pencil-outline"
                 size={18}
@@ -961,7 +990,7 @@ export default function TodosBoard() {
               default: {},
             })}
           />
-          {hasParentPermissions ? (
+          {myMemberId && myMemberId !== 'guest' ? (
             <View style={styles.newTabShareBlock}>
               <View style={styles.shareHeaderRow}>
                 <MaterialCommunityIcons name="account-multiple-outline" size={18} color="#475569" />
