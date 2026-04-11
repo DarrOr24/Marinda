@@ -1,7 +1,6 @@
 import { DocsPageLayout, DocsSection, docsPageStyles } from '@/components/docs-page-layout';
 import { Button, TextInput } from '@/components/ui';
 import { useAuthContext } from '@/hooks/use-auth-context';
-import { useParentPermissionGuard } from '@/hooks/use-parent-permission-guard';
 import {
   deleteListTab,
   fetchListTabs,
@@ -9,18 +8,30 @@ import {
 } from '@/lib/lists/list-tabs.api';
 import type { ListTab } from '@/lib/lists/list-tabs.types';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 
 export default function ListsSettingsScreen() {
-  const { activeFamilyId } = useAuthContext() as any;
-  const { hasParentPermissions, requireParent } = useParentPermissionGuard({
-    message: 'Only parents can rename or delete custom lists on the Lists board.',
-  });
+  const { activeFamilyId, effectiveMember, hasParentPermissions } = useAuthContext() as any;
+
+  const myMemberId: string | undefined =
+    effectiveMember?.id ?? effectiveMember?.member_id ?? undefined;
 
   const [tabs, setTabs] = useState<ListTab[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyTabId, setBusyTabId] = useState<string | null>(null);
+
+  /**
+   * Lists you can rename/delete here: ones you created, or legacy tabs (no stored creator) for parents only.
+   * Shared lists created by someone else are managed on the board.
+   */
+  const ownTabs = useMemo(() => {
+    if (!myMemberId) return [];
+    return tabs.filter((t) => {
+      if (t.created_by_member_id != null) return t.created_by_member_id === myMemberId;
+      return hasParentPermissions;
+    });
+  }, [tabs, myMemberId, hasParentPermissions]);
 
   const reload = useCallback(async () => {
     if (!activeFamilyId) {
@@ -48,13 +59,20 @@ export default function ListsSettingsScreen() {
 
   const [editing, setEditing] = useState<null | { id: string; label: string }>(null);
 
+  const canManageTab = (t: ListTab) =>
+    !!myMemberId &&
+    (t.created_by_member_id === myMemberId || (t.created_by_member_id == null && hasParentPermissions));
+
   const startEdit = (t: ListTab) => {
-    if (!requireParent()) return;
+    if (!canManageTab(t)) {
+      Alert.alert('Not allowed', 'You can only rename lists you created.');
+      return;
+    }
     setEditing({ id: t.id, label: t.label });
   };
 
   const saveEdit = async () => {
-    if (!editing || !requireParent()) return;
+    if (!editing || !myMemberId) return;
     const label = editing.label.trim();
     if (!label) {
       Alert.alert('Name required', 'Enter a list name.');
@@ -73,7 +91,10 @@ export default function ListsSettingsScreen() {
   };
 
   const confirmDelete = (t: ListTab) => {
-    if (!requireParent()) return;
+    if (!canManageTab(t)) {
+      Alert.alert('Not allowed', 'You can only delete lists you created.');
+      return;
+    }
     if (!activeFamilyId) return;
 
     Alert.alert(
@@ -101,26 +122,28 @@ export default function ListsSettingsScreen() {
   };
 
   return (
-    <DocsPageLayout intro="Rename or remove your family’s custom list categories. Open this from the Lists board (settings icon on the top row). The “To-dos” tab is always there and can’t be deleted. Add more categories (e.g. Ideas, Summer camp) with the + button next to the tabs on the board. Items behave the same in every list: check off, share with family, and organize by member or A→Z from View.">
-      <DocsSection title="Custom lists">
+    <DocsPageLayout intro="Rename or remove custom list categories you created. Open this from the Lists board (settings on the top row). The “To-dos” tab is always there and can’t be deleted. Add more categories with the + button next to the tabs on the board. Items behave the same in every list: check off, share with family, and organize by member or A→Z from View.">
+      <DocsSection title="Your custom lists">
         <Text style={docsPageStyles.description}>
           Use separate tabs for different kinds of checklist-style items—tasks, ideas, trip prep,
-          anything that fits your family. Sharing and visibility work the same as on the default To-dos
-          tab.
+          anything that fits your family. Lists someone else created (and shared with you) don’t appear
+          here; change sharing from the Lists board.
         </Text>
 
-        {!hasParentPermissions && (
-          <Text style={docsPageStyles.note}>Only parents can rename or delete custom lists.</Text>
+        {!myMemberId && (
+          <Text style={docsPageStyles.note}>Sign in as a family member to manage your lists.</Text>
         )}
 
         {loading ? (
           <ActivityIndicator style={{ marginTop: 16 }} />
-        ) : tabs.length === 0 ? (
+        ) : ownTabs.length === 0 ? (
           <Text style={[docsPageStyles.description, { marginTop: 8 }]}>
-            No custom lists yet. Add one from the Lists board.
+            {myMemberId
+              ? 'No custom lists you created yet. Add one from the Lists board.'
+              : 'No custom lists yet.'}
           </Text>
         ) : (
-          tabs.map((t) => (
+          ownTabs.map((t) => (
             <View key={t.id} style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.tabLabel}>{t.label}</Text>

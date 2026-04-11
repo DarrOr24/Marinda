@@ -1282,7 +1282,9 @@ export default function TodosBoard() {
         anchorRef={toolbarListMenuAnchorRef}
         onExportList={exportActiveTodoList}
         onOpenSettings={
-          hasParentPermissions ? () => router.push('/lists/settings') : undefined
+          myMemberId && myMemberId !== 'guest'
+            ? () => router.push('/lists/settings')
+            : undefined
         }
       />
     </Screen>
