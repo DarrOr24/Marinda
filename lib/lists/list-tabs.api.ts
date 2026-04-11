@@ -80,18 +80,15 @@ export async function createListTab(params: {
   if (!trimmed) throw new Error('List name is required');
   if (!createdByMemberId) throw new Error('Creator member is required');
 
-  const { data, error } = await supabase
-    .from('list_tabs')
-    .insert({
-      family_id: familyId,
-      label: trimmed,
-      created_by_member_id: createdByMemberId,
-    })
-    .select('*')
-    .single();
+  const { data, error } = await supabase.rpc('create_list_tab', {
+    p_family_id: familyId,
+    p_label: trimmed,
+    p_created_by_member_id: createdByMemberId,
+  });
 
-  if (error || !data) throw new Error(error?.message || 'Failed to create list');
-  const tab = mapTabRow({ ...(data as Record<string, unknown>), list_tab_shares: [] });
+  if (error || data == null) throw new Error(error?.message || 'Failed to create list');
+  const raw = Array.isArray(data) ? data[0] : data;
+  const tab = mapTabRow({ ...(raw as Record<string, unknown>), list_tab_shares: [] });
 
   const shares = [...new Set(shareMemberIds)].filter(Boolean);
   if (shares.length) {
