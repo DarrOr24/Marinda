@@ -17,6 +17,7 @@ import {
 } from '@/lib/lists/list-tabs.types';
 import {
   createListTab,
+  deleteListTab,
   mergeListTabShareMemberIds,
   replaceListTabShares,
 } from '@/lib/lists/list-tabs.api';
@@ -34,13 +35,14 @@ import {
   type TodoItemRow,
 } from '@/lib/todos/todos.api';
 import { sharePlainTextBulletList } from '@/lib/share/plain-text-list-share';
-import { useFamilyTodoItems } from '@/lib/todos/todos.hooks';
+import { todoItemsKey, useFamilyTodoItems } from '@/lib/todos/todos.hooks';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  InteractionManager,
   Platform,
   Pressable,
   ScrollView,
@@ -91,6 +93,7 @@ export default function TodosBoard() {
   } = useAuthContext() as any;
   const viewMenuAnchorRef = useRef<View>(null);
   const toolbarListMenuAnchorRef = useRef<View>(null);
+  const listBannerMenuAnchorRef = useRef<View>(null);
   const getTodoMenuAnchorRef = useRefById<View>();
 
   const { familyMembers } = useFamily(activeFamilyId);
@@ -171,6 +174,7 @@ export default function TodosBoard() {
   const [viewMode, setViewMode] = useState<'member' | 'all'>('member');
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
   const [toolbarListMenuOpen, setToolbarListMenuOpen] = useState(false);
+  const [listBannerMenuOpen, setListBannerMenuOpen] = useState(false);
 
   const [items, setItems] = useState<TodoItem[]>([]);
 
@@ -265,6 +269,10 @@ export default function TodosBoard() {
 
   useEffect(() => {
     setToolbarListMenuOpen(false);
+  }, [activeListKind]);
+
+  useEffect(() => {
+    if (activeListKind === DEFAULT_LIST_TAB_ID) setListBannerMenuOpen(false);
   }, [activeListKind]);
 
   const itemsInTab = useMemo(
@@ -537,6 +545,34 @@ export default function TodosBoard() {
       myMemberId
         ? activeTab.shareMemberIds.filter((id) => id !== creatorId)
         : [...activeTab.shareMemberIds],
+    );
+  }
+
+  function confirmDeleteActiveList() {
+    if (!activeTab || activeTab.id === DEFAULT_LIST_TAB_ID || !activeFamilyId) return;
+    const label = activeTab.label;
+    const tabId = activeTab.id;
+    Alert.alert(
+      'Delete list?',
+      `“${label}” and every item on it will be removed. This can’t be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteListTab(activeFamilyId, tabId);
+              await qc.invalidateQueries({ queryKey: listTabsKey(activeFamilyId) });
+              await qc.invalidateQueries({ queryKey: todoItemsKey(activeFamilyId) });
+              setListBannerMenuOpen(false);
+              setActiveListKind(DEFAULT_LIST_TAB_ID);
+            } catch (e) {
+              Alert.alert('Error', e instanceof Error ? e.message : 'Could not delete.');
+            }
+          },
+        },
+      ],
     );
   }
 
@@ -873,26 +909,20 @@ export default function TodosBoard() {
             </View>
           </View>
         ) : isCustomActiveList ? (
-          <Pressable
-            onPress={() => {
-              if (canEditActiveListSharing) openListShareEditor();
-            }}
-            disabled={!canEditActiveListSharing}
-            accessibilityRole={canEditActiveListSharing ? 'button' : 'text'}
-            accessibilityLabel={
-              canEditActiveListSharing
-                ? activeTabUsesListSharing
-                  ? `Shared list. Edit who can see this list. Currently: ${listSharePeerNamesForBanner}`
-                  : 'This list is private. Edit who can see this list.'
-                : activeTabUsesListSharing
-                  ? `Shared list with ${listSharePeerNamesForBanner}`
-                  : undefined
-            }
-            style={({ pressed }) => [
+          <View
+            style={[
               styles.sharedListBanner,
-              pressed && canEditActiveListSharing ? { opacity: 0.88 } : null,
               !canEditActiveListSharing && !activeTabUsesListSharing ? { opacity: 0.65 } : null,
             ]}
+            accessible
+            accessibilityRole="text"
+            accessibilityLabel={
+              activeTabUsesListSharing
+                ? `Shared list with ${listSharePeerNamesForBanner}`
+                : canEditActiveListSharing || hasParentPermissions
+                  ? 'This list is private.'
+                  : 'Custom list'
+            }
           >
             <MaterialCommunityIcons
               name="account-multiple-outline"
@@ -910,16 +940,52 @@ export default function TodosBoard() {
               </Text>
             </View>
             {canEditActiveListSharing ? (
-              <MaterialCommunityIcons
-                name="pencil-outline"
-                size={18}
-                color="#2563eb"
-                style={styles.sharedListBannerEditIcon}
-                importantForAccessibility="no"
-              />
+              <View ref={listBannerMenuAnchorRef} collapsable={false} style={styles.sharedListBannerMenuAnchor}>
+                <TouchableOpacity
+                  onPress={() => setListBannerMenuOpen(true)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  accessibilityLabel="List options. Edit who can see this list or delete the list."
+                  accessibilityRole="button"
+                >
+                  <MaterialCommunityIcons name="dots-vertical" size={22} color="#2563eb" />
+                </TouchableOpacity>
+              </View>
             ) : null}
-          </Pressable>
+          </View>
         ) : null}
+
+        <ModalPopover
+          visible={listBannerMenuOpen}
+          onClose={() => setListBannerMenuOpen(false)}
+          anchorRef={listBannerMenuAnchorRef}
+          position="bottom-right"
+        >
+          <Pressable
+            style={styles.bannerMenuRow}
+            onPress={() => {
+              setListBannerMenuOpen(false);
+              InteractionManager.runAfterInteractions(() => {
+                openListShareEditor();
+              });
+            }}
+          >
+            <MaterialCommunityIcons name="account-multiple-outline" size={18} color="#334155" />
+            <Text style={styles.viewOptionText}>Who can see this list</Text>
+          </Pressable>
+          <View style={styles.bannerMenuDivider} />
+          <Pressable
+            style={styles.bannerMenuRow}
+            onPress={() => {
+              setListBannerMenuOpen(false);
+              InteractionManager.runAfterInteractions(() => {
+                confirmDeleteActiveList();
+              });
+            }}
+          >
+            <MaterialCommunityIcons name="delete-outline" size={18} color="#b91c1c" />
+            <Text style={[styles.viewOptionText, { color: '#b91c1c' }]}>Delete list</Text>
+          </Pressable>
+        </ModalPopover>
 
         <ScrollView
           style={styles.listScroll}
@@ -932,6 +998,7 @@ export default function TodosBoard() {
           scrollEnabled={
             !viewMenuOpen &&
             !toolbarListMenuOpen &&
+            !listBannerMenuOpen &&
             !todoMenuItem &&
             !sharedVisibilityItem &&
             !moveTodoItem &&
@@ -1302,7 +1369,7 @@ export default function TodosBoard() {
         anchorRef={toolbarListMenuAnchorRef}
         onExportList={exportActiveTodoList}
         onOpenSettings={
-          myMemberId && myMemberId !== 'guest'
+          !isKidMode && myMemberId && myMemberId !== 'guest'
             ? () => router.push('/lists/settings')
             : undefined
         }
@@ -1412,9 +1479,22 @@ const styles = StyleSheet.create({
     color: '#334155',
     lineHeight: 20,
   },
-  sharedListBannerEditIcon: {
+  sharedListBannerMenuAnchor: {
     flexShrink: 0,
     marginLeft: 4,
+    justifyContent: 'center',
+  },
+  bannerMenuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  bannerMenuDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#e2e8f0',
+    marginHorizontal: 10,
   },
   newTabShareBlock: {
     marginBottom: 10,
