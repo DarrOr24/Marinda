@@ -20,6 +20,10 @@ import {
   mergeListTabShareMemberIds,
   replaceListTabShares,
 } from '@/lib/lists/list-tabs.api';
+import {
+  listTabVisibleToMember,
+  todoItemVisibleToActingMember,
+} from '@/lib/lists/list-tab-visibility';
 import { listTabsKey } from '@/lib/lists/list-tabs.hooks';
 import {
   addTodoItem,
@@ -34,7 +38,7 @@ import { useFamilyTodoItems } from '@/lib/todos/todos.hooks';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -106,6 +110,41 @@ export default function TodosBoard() {
   const myMemberId: string | undefined =
     effectiveMember?.id ?? effectiveMember?.member_id ?? undefined;
 
+  /** Full tab map from API (parent session in kid mode); used for item visibility checks. */
+  const listTabById = useMemo(() => {
+    const m = new Map<string, ListTab>();
+    for (const t of listTabsData ?? []) m.set(t.id, t);
+    return m;
+  }, [listTabsData]);
+
+  /**
+   * RLS returns extra rows (e.g. parent can see all child-created tabs in SQL). Filter chips to what
+   * **effectiveMember** should see: creator, list share, legacy unowned for parents, or item-share.
+   */
+  const customTabs = useMemo(() => {
+    if (!listTabsData) return [];
+    if (!myMemberId) return [];
+
+    const tabById = new Map(listTabsData.map((t) => [t.id, t] as const));
+    const visible = new Set<string>();
+    const tabOpts = { includeLegacyUnownedForParent: hasParentPermissions };
+
+    for (const t of listTabsData) {
+      if (listTabVisibleToMember(t, myMemberId, tabOpts)) visible.add(t.id);
+    }
+
+    for (const row of todoRows ?? []) {
+      const kind = row.list_kind?.trim() || DEFAULT_LIST_TAB_ID;
+      if (kind === DEFAULT_LIST_TAB_ID) continue;
+      const it = mapRow(row);
+      if (todoItemVisibleToActingMember(it, tabById, myMemberId)) {
+        visible.add(kind);
+      }
+    }
+
+    return listTabsData.filter((t) => visible.has(t.id));
+  }, [listTabsData, myMemberId, todoRows, hasParentPermissions]);
+
   const qc = useQueryClient();
 
   const nameForId = useMemo(() => {
@@ -148,7 +187,6 @@ export default function TodosBoard() {
   const [listOpen, setListOpen] = useState(false);
   const [sharedMemberIds, setSharedMemberIds] = useState<string[]>([]);
 
-  const [customTabs, setCustomTabs] = useState<ListTab[]>([]);
   const [activeListKind, setActiveListKind] = useState<string>(DEFAULT_LIST_TAB_ID);
   const [showAddTabModal, setShowAddTabModal] = useState(false);
   const [newTabLabel, setNewTabLabel] = useState('');
@@ -179,18 +217,6 @@ export default function TodosBoard() {
 
   const activeTab = ALL_TABS.find((t) => t.id === activeListKind) ?? ALL_TABS[0];
 
-  const visibleToActingKid = useCallback(
-    (it: TodoItem, actingMemberId: string) => {
-      if (it.created_by_member_id === actingMemberId) return true;
-      const tab = ALL_TABS.find((t) => t.id === it.list_kind);
-      if (tabUsesListLevelSharing(tab)) {
-        return tab!.shareMemberIds.includes(actingMemberId);
-      }
-      return it.shared_with_member_ids.includes(actingMemberId);
-    },
-    [ALL_TABS],
-  );
-
   const activeTabUsesListSharing = tabUsesListLevelSharing(activeTab);
   const isCustomActiveList = activeListKind !== DEFAULT_LIST_TAB_ID;
 
@@ -214,7 +240,6 @@ export default function TodosBoard() {
 
   useEffect(() => {
     setItems([]);
-    setCustomTabs([]);
   }, [activeFamilyId]);
 
   useEffect(() => {
@@ -223,12 +248,12 @@ export default function TodosBoard() {
     let mapped = todoRows.map((row) => mapRow(row));
     if (isKidMode) {
       mapped = myMemberId
-        ? mapped.filter((item) => visibleToActingKid(item, myMemberId))
+        ? mapped.filter((item) => todoItemVisibleToActingMember(item, listTabById, myMemberId))
         : [];
     }
 
     setItems(mapped);
-  }, [todoRows, isKidMode, myMemberId, visibleToActingKid]);
+  }, [todoRows, isKidMode, myMemberId, listTabById]);
 
   /** Per-item “Also visible to” is hidden for list-level shared tabs; clear chips when switching list in the form. */
   useEffect(() => {
@@ -237,11 +262,6 @@ export default function TodosBoard() {
       setSharedMemberIds([]);
     }
   }, [formListKind, ALL_TABS]);
-
-  useEffect(() => {
-    if (!listTabsData) return;
-    setCustomTabs(listTabsData);
-  }, [listTabsData]);
 
   useEffect(() => {
     setToolbarListMenuOpen(false);
