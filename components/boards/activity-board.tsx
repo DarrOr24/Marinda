@@ -1,6 +1,10 @@
 // app/boards/activity.tsx
+import {
+  captureViewAsJpegAndShare,
+  captureViewsAsJpegsAndShareTogether,
+} from "@/lib/share/capture-scroll-jpeg";
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   Alert,
   Pressable,
@@ -8,12 +12,19 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 
 import { ActivityCalendarAttendeeFilter } from "@/components/boards/activity-calendar-attendee-filter";
-import { ActivityBoardHeaderNav } from "@/components/boards/activity-board-header-nav";
-import { ActivityDayView } from "@/components/boards/activity-day-view";
+import {
+  ActivityBoardHeaderNav,
+  BOARD_NAV_BTN_SIZE,
+} from "@/components/boards/activity-board-header-nav";
+import {
+  ActivityDayView,
+  type ActivityDayViewExportHandle,
+} from "@/components/boards/activity-day-view";
 import {
   CalendarDateModal,
   toLocalYmdFromIso,
@@ -65,6 +76,32 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const MIN_PAST_WEEKS = -4;
+/**
+ * Target max height per shared JPEG (logical px) ≈ phone-style portrait (height ~2.05× width)
+ * so exports are not extreme “ribbon” strips. Taller weeks split into more images.
+ */
+const PORTRAIT_EXPORT_HEIGHT_TO_WIDTH = 2.05;
+
+/** Split `dayCount` consecutive days into `parts` contiguous ranges (as equal as possible). */
+function equalDaySliceRanges(
+  dayCount: number,
+  parts: number,
+): { lo: number; hi: number }[] {
+  if (parts <= 1 || dayCount <= 0) return [{ lo: 0, hi: dayCount }];
+  const n = Math.min(parts, dayCount);
+  if (n <= 1) return [{ lo: 0, hi: dayCount }];
+  const base = Math.floor(dayCount / n);
+  const rem = dayCount % n;
+  const out: { lo: number; hi: number }[] = [];
+  let lo = 0;
+  for (let p = 0; p < n; p++) {
+    const sz = base + (p < rem ? 1 : 0);
+    const hi = lo + sz;
+    out.push({ lo, hi });
+    lo = hi;
+  }
+  return out;
+}
 
 function getStartOfWeek(d = new Date()) {
   const copy = new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -186,6 +223,16 @@ export default function ActivityBoard() {
   /** Month picker: which header opened it (`null` = closed). */
   const [calendarNav, setCalendarNav] = useState<null | "week" | "day">(null);
 
+  const weekScrollRef = useRef<ScrollView>(null);
+  /** Readable off-screen clone of the week list for JPEG export (main list stays compact). */
+  const weekExportFullRef = useRef<View>(null);
+  const weekExportFullHeightRef = useRef(0);
+  const weekExportChunkRefs = useRef<(View | null)[]>([]);
+  const weekExportCaptureCursorRef = useRef<View | null>(null);
+  const dayExportRef = useRef<ActivityDayViewExportHandle | null>(null);
+  const [exportingImage, setExportingImage] = useState(false);
+  const [weekExportPartCount, setWeekExportPartCount] = useState(1);
+
   const startOfThisWeek = useMemo(() => getStartOfWeek(today), [today]);
   const visibleWeekStart = useMemo(
     () => addWeeks(startOfThisWeek, weekOffset),
@@ -195,7 +242,19 @@ export default function ActivityBoard() {
     () => Array.from({ length: 7 }, (_, i) => addDays(visibleWeekStart, i)),
     [visibleWeekStart]
   );
+  const { width: windowWidth } = useWindowDimensions();
+  /** Full device width so shared JPEGs read like phone-portrait frames, not a narrow strip. */
+  const weekExportContentWidth = Math.max(0, windowWidth);
+  const weekExportMaxChunkHeight = Math.max(
+    480,
+    Math.round(windowWidth * PORTRAIT_EXPORT_HEIGHT_TO_WIDTH),
+  );
   const rangeLabel = formatRangeLabel(visibleWeekStart);
+  const visibleWeekFirstKey = toLocalDateKey(visibleWeekDays[0]!);
+
+  useEffect(() => {
+    setWeekExportPartCount(1);
+  }, [visibleWeekFirstKey]);
   const pastCapped = weekOffset <= MIN_PAST_WEEKS;
   const isPastWeek = weekOffset < 0;
 
@@ -527,6 +586,234 @@ export default function ActivityBoard() {
     setDayViewDate(new Date(visibleWeekDays[next].getTime()));
   }
 
+  function renderWeekExportHeader(partIndex?: number, partCount?: number) {
+    return (
+      <View style={styles.weekExportHeader}>
+        <Text style={styles.weekExportHeaderTitle}>Weekly schedule</Text>
+        <Text style={styles.weekExportHeaderSubtitle}>{rangeLabel}</Text>
+        {partIndex != null && partCount != null && partCount > 1 ? (
+          <Text style={styles.weekExportHeaderPart}>
+            Part {partIndex} of {partCount}
+          </Text>
+        ) : null}
+      </View>
+    );
+  }
+
+  function renderWeekDayRow(d: Date, readable: boolean) {
+    const isToday = toLocalDateKey(d) === todayKey && weekOffset === 0;
+    const key = toLocalDateKey(d);
+    const items = byDate[key] || [];
+    const titleStyle = readable ? styles.itemTitleExport : styles.itemTitle;
+    const timeStyle = readable ? styles.itemTimeExport : styles.itemTime;
+    const placeholderStyle = readable
+      ? styles.placeholderExport
+      : styles.placeholder;
+
+    return (
+      <View key={key} style={[styles.dayRow, isToday && styles.dayRowToday]}>
+        <TouchableOpacity
+          style={styles.dayHeader}
+          onPress={() => openDayView(d)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`Day view for ${DAY_NAMES[d.getDay()]} ${d.getDate()}`}
+        >
+          <MaterialCommunityIcons
+            name="arrow-expand"
+            size={18}
+            color={isToday ? "#3b82f6" : "#94a3b8"}
+            style={styles.dayHeaderExpandIcon}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+          />
+          <Text style={[styles.dayName, isToday && styles.dayNameToday]}>
+            {DAY_NAMES[d.getDay()]}
+          </Text>
+          <Text style={[styles.dayDate, isToday && styles.dayDateToday]}>
+            {d.getDate()}
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.dayContent}>
+          {isLoading && items.length === 0 ? (
+            <Text style={placeholderStyle}>Loading…</Text>
+          ) : items.length === 0 ? (
+            <Text style={placeholderStyle}>No activities</Text>
+          ) : (
+            <View style={{ gap: 8 }}>
+              {items.map((a) => {
+                const color = rowAccentColor(a);
+                const base = activityColor(a.status, color);
+
+                const badgeIcons = [
+                  a.isBirthday && (
+                    <MaterialCommunityIcons
+                      key="cake"
+                      name="cake-variant"
+                      size={readable ? 18 : 16}
+                      color={color}
+                    />
+                  ),
+                  a.ride_needed && (
+                    <MaterialCommunityIcons
+                      key="ride"
+                      name="car-outline"
+                      size={readable ? 18 : 16}
+                      color="#64748b"
+                    />
+                  ),
+                  a.present_needed && (
+                    <MaterialCommunityIcons
+                      key="present"
+                      name="gift-outline"
+                      size={readable ? 18 : 16}
+                      color="#64748b"
+                    />
+                  ),
+                  a.babysitter_needed && (
+                    <MaterialCommunityIcons
+                      key="babysitter"
+                      name="baby-face-outline"
+                      size={readable ? 18 : 16}
+                      color="#64748b"
+                    />
+                  ),
+                ].filter(Boolean);
+
+                return (
+                  <Pressable
+                    key={a.id}
+                    onPress={() => showDetails(a)}
+                    style={[
+                      styles.itemRow,
+                      base,
+                      a.status === "PENDING" && styles.itemPending,
+                    ]}
+                  >
+                    <View style={styles.itemLine1}>
+                      <Text numberOfLines={2} style={titleStyle}>
+                        {a.title}
+                      </Text>
+                    </View>
+
+                    {a.start_at ? (
+                      <View style={styles.itemLine2}>
+                        <Text style={timeStyle}>
+                          {a.isBirthday
+                            ? "All day"
+                            : formatActivityTimeRange(
+                                a.start_at,
+                                a.end_at,
+                              )}
+                        </Text>
+                        <View style={styles.itemLine2Spacer} />
+                        {badgeIcons.length > 0 ? (
+                          <View style={styles.badgeIconsRow}>{badgeIcons}</View>
+                        ) : null}
+                      </View>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  async function handleExportImage() {
+    if (exportingImage) return;
+    if (dayViewDate) {
+      if (!dayExportRef.current) {
+        Alert.alert(
+          "Export",
+          "Calendar isn’t ready yet. Try again in a moment.",
+        );
+        return;
+      }
+    } else if (!weekExportFullRef.current) {
+      Alert.alert(
+        "Export",
+        "Calendar isn’t ready yet. Try again in a moment.",
+      );
+      return;
+    }
+    setExportingImage(true);
+    try {
+      const ws = visibleWeekStart;
+      const weekSlug = `${ws.getFullYear()}-${String(ws.getMonth() + 1).padStart(2, "0")}-${String(ws.getDate()).padStart(2, "0")}`;
+      const base = dayViewDate
+        ? `events_day_${toLocalDateKey(dayViewDate)}`
+        : weekOffset === 0
+          ? "events_week_this"
+          : `events_week_${weekSlug}`;
+      if (dayViewDate) {
+        const dayExport = dayExportRef.current;
+        if (!dayExport) {
+          throw new Error("Day export is not ready yet.");
+        }
+        await dayExport.exportScheduleImages(base);
+      } else {
+        await new Promise((r) => setTimeout(r, 32));
+        const n = weekExportPartCount;
+        if (n <= 1) {
+          await captureViewAsJpegAndShare(weekExportFullRef, base);
+        } else {
+          const steps: { viewRef: RefObject<View | null>; fileBaseName: string }[] =
+            [];
+          for (let i = 0; i < n; i++) {
+            const idx = i;
+            steps.push({
+              viewRef: {
+                get current() {
+                  return weekExportChunkRefs.current[idx] ?? null;
+                },
+              },
+              fileBaseName: `${base}_${i + 1}`,
+            });
+          }
+          await captureViewsAsJpegsAndShareTogether(steps);
+        }
+      }
+    } catch (e) {
+      console.error("[handleExportImage]", e);
+      Alert.alert(
+        "Could not export",
+        e instanceof Error
+          ? e.message
+          : "If the week is very busy, try exporting one day at a time.",
+      );
+    } finally {
+      setExportingImage(false);
+    }
+  }
+
+  const exportHeaderAccessory = (
+    <Pressable
+      onPress={() => void handleExportImage()}
+      disabled={exportingImage}
+      style={({ pressed }) => [
+        styles.headerExportBtn,
+        pressed && { opacity: 0.75 },
+        exportingImage && { opacity: 0.45 },
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={
+        dayViewDate
+          ? "Export this day as an image"
+          : "Export this week as an image"
+      }
+    >
+      <MaterialCommunityIcons
+        name="image-outline"
+        size={20}
+        color="#2563eb"
+      />
+    </Pressable>
+  );
+
   const addModalInitialDateStr = dayViewDate
     ? toLocalDateKey(dayViewDate)
     : today.toISOString().split("T")[0];
@@ -562,28 +849,27 @@ export default function ActivityBoard() {
       }
     >
       <View style={[styles.center, dayViewDate && styles.centerDayTimeline]}>
-        {dayViewDate ? (
-          <>
-            {attendeeFilter}
-            <ActivityDayView
-              day={dayViewDate}
-              activities={dayViewActivities}
-              onClose={closeDayView}
-              onPrevDay={() => shiftDayView(-1)}
-              onNextDay={() => shiftDayView(1)}
-              canPrevDay={dayViewIndex > 0}
-              canNextDay={dayViewIndex >= 0 && dayViewIndex < 6}
-              onActivityPress={showDetails}
-              activityColor={rowAccentColor}
-              activityColorStyle={activityColor}
-              formatTimeRange={formatActivityTimeRange}
-              onCalendarPress={() => setCalendarNav("day")}
-            />
-          </>
-        ) : (
-          <>
         {attendeeFilter}
 
+        {dayViewDate ? (
+          <ActivityDayView
+            ref={dayExportRef}
+            day={dayViewDate}
+            activities={dayViewActivities}
+            onClose={closeDayView}
+            onPrevDay={() => shiftDayView(-1)}
+            onNextDay={() => shiftDayView(1)}
+            canPrevDay={dayViewIndex > 0}
+            canNextDay={dayViewIndex >= 0 && dayViewIndex < 6}
+            onActivityPress={showDetails}
+            activityColor={rowAccentColor}
+            activityColorStyle={activityColor}
+            formatTimeRange={formatActivityTimeRange}
+            onCalendarPress={() => setCalendarNav("day")}
+            topBarEndAccessory={exportHeaderAccessory}
+          />
+        ) : (
+          <>
         {/* Header w/ week navigation */}
         <ActivityBoardHeaderNav
           title={weekOffset === 0 ? "This week" : rangeLabel}
@@ -599,135 +885,80 @@ export default function ActivityBoard() {
           nextAccessibilityLabel="Next week"
           titleVariant="week"
           onCalendarPress={() => setCalendarNav("week")}
+          endAccessory={exportHeaderAccessory}
         />
 
         {/* Weekly list — scrolls; week nav header stays fixed (Screen scroll off) */}
         <ScrollView
+          ref={weekScrollRef}
           style={[styles.weekScroll, isPastWeek ? { opacity: 0.6 } : undefined]}
-          contentContainerStyle={styles.weekList}
+          contentContainerStyle={styles.weekListScrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator
+          collapsable={false}
         >
-          {visibleWeekDays.map((d, i) => {
-            const isToday = toLocalDateKey(d) === todayKey && weekOffset === 0;
-            const key = toLocalDateKey(d);
-            const items = byDate[key] || [];
-
-            return (
-              <View key={i} style={[styles.dayRow, isToday && styles.dayRowToday]}>
-                <TouchableOpacity
-                  style={styles.dayHeader}
-                  onPress={() => openDayView(d)}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Day view for ${DAY_NAMES[d.getDay()]} ${d.getDate()}`}
-                >
-                  <MaterialCommunityIcons
-                    name="arrow-expand"
-                    size={18}
-                    color={isToday ? "#3b82f6" : "#94a3b8"}
-                    style={styles.dayHeaderExpandIcon}
-                    accessibilityElementsHidden
-                    importantForAccessibility="no"
-                  />
-                  <Text style={[styles.dayName, isToday && styles.dayNameToday]}>
-                    {DAY_NAMES[d.getDay()]}
-                  </Text>
-                  <Text style={[styles.dayDate, isToday && styles.dayDateToday]}>
-                    {d.getDate()}
-                  </Text>
-                </TouchableOpacity>
-
-                <View style={styles.dayContent}>
-                  {isLoading && items.length === 0 ? (
-                    <Text style={styles.placeholder}>Loading…</Text>
-                  ) : items.length === 0 ? (
-                    <Text style={styles.placeholder}>No activities</Text>
-                  ) : (
-                    <View style={{ gap: 8 }}>
-                      {items.map((a) => {
-                        const color = rowAccentColor(a);
-                        const base = activityColor(a.status, color);
-
-                        const badgeIcons = [
-                          a.isBirthday && (
-                            <MaterialCommunityIcons
-                              key="cake"
-                              name="cake-variant"
-                              size={16}
-                              color={color}
-                            />
-                          ),
-                          a.ride_needed && (
-                            <MaterialCommunityIcons
-                              key="ride"
-                              name="car-outline"
-                              size={16}
-                              color="#64748b"
-                            />
-                          ),
-                          a.present_needed && (
-                            <MaterialCommunityIcons
-                              key="present"
-                              name="gift-outline"
-                              size={16}
-                              color="#64748b"
-                            />
-                          ),
-                          a.babysitter_needed && (
-                            <MaterialCommunityIcons
-                              key="babysitter"
-                              name="baby-face-outline"
-                              size={16}
-                              color="#64748b"
-                            />
-                          ),
-                        ].filter(Boolean);
-
-                        return (
-                          <Pressable
-                            key={a.id}
-                            onPress={() => showDetails(a)}
-                            style={[
-                              styles.itemRow,
-                              base,
-                              a.status === "PENDING" && styles.itemPending,
-                            ]}
-                          >
-                            <View style={styles.itemLine1}>
-                              <Text numberOfLines={2} style={styles.itemTitle}>
-                                {a.title}
-                              </Text>
-                            </View>
-
-                            {a.start_at ? (
-                              <View style={styles.itemLine2}>
-                                <Text style={styles.itemTime}>
-                                  {a.isBirthday
-                                    ? "All day"
-                                    : formatActivityTimeRange(
-                                        a.start_at,
-                                        a.end_at,
-                                      )}
-                                </Text>
-                                <View style={styles.itemLine2Spacer} />
-                                {badgeIcons.length > 0 ? (
-                                  <View style={styles.badgeIconsRow}>
-                                    {badgeIcons}
-                                  </View>
-                                ) : null}
-                              </View>
-                            ) : null}
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  )}
-                </View>
-              </View>
-            );
-          })}
+          <View collapsable={false} style={styles.weekCaptureContent}>
+            {visibleWeekDays.map((d) => renderWeekDayRow(d, false))}
+          </View>
         </ScrollView>
+
+        <View
+          style={[
+            styles.weekExportHiddenHost,
+            { width: weekExportContentWidth },
+          ]}
+          pointerEvents="none"
+          importantForAccessibility="no-hide-descendants"
+        >
+          <View
+            ref={weekExportFullRef}
+            collapsable={false}
+            onLayout={(e) => {
+              const H = e.nativeEvent.layout.height;
+              weekExportFullHeightRef.current = H;
+              const maxH = weekExportMaxChunkHeight;
+              const nextN =
+                H <= maxH || H === 0
+                  ? 1
+                  : Math.min(
+                      visibleWeekDays.length,
+                      Math.ceil(H / maxH),
+                    );
+              setWeekExportPartCount((prev) =>
+                prev !== nextN ? nextN : prev,
+              );
+            }}
+            style={styles.weekExportStack}
+          >
+            {renderWeekExportHeader()}
+            <View style={styles.weekCaptureContent}>
+              {visibleWeekDays.map((d) => renderWeekDayRow(d, true))}
+            </View>
+          </View>
+
+          {weekExportPartCount > 1
+            ? equalDaySliceRanges(
+                visibleWeekDays.length,
+                weekExportPartCount,
+              ).map(({ lo, hi }, i) => (
+                <View
+                  key={`week-export-${lo}-${hi}`}
+                  ref={(node) => {
+                    weekExportChunkRefs.current[i] = node;
+                  }}
+                  collapsable={false}
+                  style={styles.weekExportStack}
+                >
+                  {renderWeekExportHeader(i + 1, weekExportPartCount)}
+                  <View style={styles.weekCaptureContent}>
+                    {visibleWeekDays
+                      .slice(lo, hi)
+                      .map((d) => renderWeekDayRow(d, true))}
+                  </View>
+                </View>
+              ))
+            : null}
+        </View>
           </>
         )}
       </View>
@@ -1047,12 +1278,58 @@ const styles = StyleSheet.create({
   /** Slightly tighter vertical gap between filter row and day timeline than week stack. */
   centerDayTimeline: { gap: 8 },
 
+  headerExportBtn: {
+    width: BOARD_NAV_BTN_SIZE,
+    height: BOARD_NAV_BTN_SIZE,
+    borderRadius: 10,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
   subtitle: { marginTop: 2, fontSize: 13, color: "#475569" },
 
   /** Fills space below sticky week header so only the day list scrolls. */
   weekScroll: { flex: 1, minHeight: 0 },
-  /** Scroll padding so last cards clear the FAB; Screen no longer uses a large bottom pad. */
-  weekList: { gap: 10, paddingBottom: 100 },
+  weekListScrollContent: { paddingBottom: 100 },
+  weekCaptureContent: { gap: 10 },
+  weekExportStack: {
+    width: "100%",
+    backgroundColor: "#fff",
+  },
+  weekExportHeader: {
+    paddingTop: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#e2e8f0",
+  },
+  weekExportHeaderTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#0f172a",
+  },
+  weekExportHeaderSubtitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#64748b",
+    marginTop: 4,
+  },
+  weekExportHeaderPart: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#94a3b8",
+    marginTop: 6,
+  },
+  weekExportHiddenHost: {
+    position: "absolute",
+    left: -8000,
+    top: 0,
+    opacity: 0.02,
+    zIndex: -50,
+  },
 
   dayRow: {
     flexDirection: "row",
@@ -1087,6 +1364,11 @@ const styles = StyleSheet.create({
   dayDateToday: { color: "#1d4ed8", fontWeight: "700" },
   dayContent: { flex: 1, padding: 10, justifyContent: "center" },
   placeholder: { color: "#94a3b8", fontStyle: "italic" },
+  placeholderExport: {
+    color: "#94a3b8",
+    fontStyle: "italic",
+    fontSize: 15,
+  },
 
   itemRow: {
     flexDirection: "column",
@@ -1109,6 +1391,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 15,
   },
+  itemTitleExport: {
+    flex: 1,
+    minWidth: 0,
+    color: "#0f172a",
+    fontWeight: "700",
+    fontSize: 17,
+  },
   itemLine2: {
     flexDirection: "row",
     alignItems: "center",
@@ -1116,6 +1405,11 @@ const styles = StyleSheet.create({
   },
   itemTime: {
     fontSize: 13,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  itemTimeExport: {
+    fontSize: 14,
     fontWeight: "600",
     color: "#64748b",
   },

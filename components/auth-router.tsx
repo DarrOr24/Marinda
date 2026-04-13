@@ -20,8 +20,6 @@ const KID_MODE_BLOCKED_ROUTES = [
   '/chores/settings',
   '/wishlist/settings',
   '/announcements/settings',
-  '/shopping/settings',
-  '/lists/settings',
   '/getting-started',
 ]
 

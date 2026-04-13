@@ -20,7 +20,17 @@ export function useFamilyListTabs(familyId?: string) {
     } as const
   }, [familyId])
 
+  const listTabSharesRealtime = useMemo(() => {
+    if (!familyId) return null
+    return {
+      table: 'list_tab_shares',
+      queryKeys: [listTabsKey(familyId)],
+      channel: `rt:list-tab-shares:${familyId}`,
+    } as const
+  }, [familyId])
+
   usePostgresChangesInvalidate(listTabsRealtime)
+  usePostgresChangesInvalidate(listTabSharesRealtime)
 
   return useQuery<ListTab[]>({
     queryKey: listTabsKey(familyId),
