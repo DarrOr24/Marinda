@@ -1,4 +1,4 @@
-/// <reference deno-types="https://deno.land/x/types/index.d.ts" />
+/// <reference types="https://deno.land/x/types/index.d.ts" />
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -15,21 +15,15 @@ type Body = {
   familyId?: string;
 };
 
-type CreatorRow = {
+type MemberRow = {
   id: string;
   family_id: string;
   role: Role;
   nickname: string | null;
-  profile:
-    | {
-      auth_user_id: string | null;
-      first_name: string | null;
-    }
-    | {
-      auth_user_id: string | null;
-      first_name: string | null;
-    }[]
-    | null;
+  profile: {
+    auth_user_id: string | null;
+    first_name: string | null;
+  } | null;
 };
 
 type ChoreRow = {
@@ -40,19 +34,22 @@ type ChoreRow = {
   assignee_member_ids: string[] | null;
 };
 
-function getProfile(row: CreatorRow) {
-  if (!row.profile) return null;
-  return Array.isArray(row.profile) ? row.profile[0] ?? null : row.profile;
+function getProfile(row: MemberRow) {
+  return row.profile;
 }
 
-function getCreatorName(row: CreatorRow) {
+function getCreatorName(row: MemberRow) {
   const nickname = row.nickname?.trim();
   if (nickname) return nickname;
 
   const firstName = getProfile(row)?.first_name?.trim();
   if (firstName) return firstName;
 
-  return "A parent";
+  return "A family member";
+}
+
+function isParentRole(role: Role) {
+  return role === "MOM" || role === "DAD";
 }
 
 Deno.serve(async (req) => {
@@ -115,7 +112,7 @@ Deno.serve(async (req) => {
       return json({ ok: true, skipped: true, reason: "missing_creator_member" });
     }
 
-    const { data: creator, error: creatorError } = await admin
+    const { data: familyMembers, error: familyMembersError } = await admin
       .from("family_members")
       .select(`
         id,
@@ -127,48 +124,54 @@ Deno.serve(async (req) => {
           first_name
         )
       `)
-      .eq("id", chore.created_by_member_id)
+      .eq("family_id", chore.family_id)
       .eq("is_active", true)
-      .single<CreatorRow>();
+      .returns<MemberRow[]>();
 
-    if (creatorError || !creator) {
+    if (familyMembersError) {
+      throw new Error(familyMembersError.message);
+    }
+
+    const creator = (familyMembers ?? []).find((member) =>
+      member.id === chore.created_by_member_id
+    ) ?? null;
+
+    if (!creator) {
       return json({ ok: false, error: "Creator member not found" }, 404);
     }
 
-    const creatorProfile = getProfile(creator);
+    const authenticatedMember = (familyMembers ?? []).find((member) =>
+      getProfile(member)?.auth_user_id === authUserId
+    ) ?? null;
 
-    if (creator.family_id !== chore.family_id || creatorProfile?.auth_user_id !== authUserId) {
+    if (!authenticatedMember) {
       return json({ ok: false, error: "Not allowed to notify for this chore" }, 403);
     }
 
-    if (creator.role !== "MOM" && creator.role !== "DAD") {
-      return json({ ok: true, skipped: true, reason: "creator_is_not_parent" });
+    const canActForCreator =
+      authenticatedMember.id === creator.id || isParentRole(authenticatedMember.role);
+
+    if (creator.family_id !== chore.family_id || !canActForCreator) {
+      return json({ ok: false, error: "Not allowed to notify for this chore" }, 403);
     }
 
     const relevantMemberIds = [...new Set(
-      (chore.assignee_member_ids ?? [])
-        .map((memberId) => memberId?.trim())
-        .filter((memberId): memberId is string => Boolean(memberId) && memberId !== creator.id),
+      (chore.assignee_member_ids ?? []).length > 0
+        ? (chore.assignee_member_ids ?? [])
+            .map((memberId) => memberId?.trim())
+            .filter((memberId): memberId is string => Boolean(memberId) && memberId !== creator.id)
+        : (familyMembers ?? [])
+            .map((member) => member.id)
+            .filter((memberId) => memberId !== creator.id),
     )];
 
     if (relevantMemberIds.length === 0) {
       return json({ ok: true, skipped: true, reason: "no_relevant_recipients" });
     }
 
-    const { data: recipientMembers, error: memberError } = await admin
-      .from("family_members")
-      .select("id")
-      .eq("family_id", chore.family_id)
-      .eq("is_active", true)
-      .in("id", relevantMemberIds);
-
-    if (memberError) {
-      throw new Error(memberError.message);
-    }
-
-    const recipientMemberIds = (recipientMembers ?? [])
-      .map((member) => member.id as string)
-      .filter(Boolean);
+    const recipientMemberIds = (familyMembers ?? [])
+      .map((member) => member.id)
+      .filter((memberId) => relevantMemberIds.includes(memberId));
 
     if (recipientMemberIds.length === 0) {
       return json({ ok: true, recipients: 0 });
