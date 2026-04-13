@@ -51,6 +51,7 @@ export function HeaderProfileButton() {
     authMember.id === effectiveMember.id &&
     hasParentPermissions &&
     !isKidMode
+  const showSettingsAction = !!effectiveMember
 
   const handleLogout = () => {
     Alert.alert('Log out?', 'Are you sure you want to log out?', [
@@ -172,7 +173,7 @@ export function HeaderProfileButton() {
             </TouchableOpacity>
           )}
 
-          {showParentMenuActions && (
+          {showSettingsAction && !isKidMode && (
             <TouchableOpacity
               style={styles.item}
               onPress={() => {
@@ -232,14 +233,12 @@ export function HeaderProfileButton() {
             </>
           )}
 
-          {!isKidMode && (
-            <TouchableOpacity style={styles.item} onPress={handleLogout}>
-              <MaterialCommunityIcons name="logout" size={20} color={theme.dangerText} />
-              <ThemedText variant="bodySmall" weight="semibold" tone="danger">
-                Log out
-              </ThemedText>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity style={styles.item} onPress={handleLogout}>
+            <MaterialCommunityIcons name="logout" size={20} color={theme.dangerText} />
+            <ThemedText variant="bodySmall" weight="semibold" tone="danger">
+              Log out
+            </ThemedText>
+          </TouchableOpacity>
         </View>
       </ModalPopover>
 

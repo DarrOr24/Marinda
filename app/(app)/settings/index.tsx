@@ -68,11 +68,10 @@ export default function SettingsIndex() {
   const { effectiveMember, hasParentPermissions, isKidMode } = useAuthContext()
   const profileId = effectiveMember?.profile_id ?? null
   const { data: profile } = useProfile(profileId)
-  const visibleItems = isKidMode
-    ? ITEMS.filter(item => item.key === 'member')
-    : hasParentPermissions
-    ? ITEMS
-    : ITEMS.filter(item => item.key !== 'kid-mode-pin')
+  const visibleItems =
+    isKidMode || !hasParentPermissions
+      ? ITEMS.filter(item => item.key === 'member')
+      : ITEMS
 
   const firstName = profile?.first_name ?? effectiveMember?.profile?.first_name ?? ''
   const lastName = profile?.last_name ?? effectiveMember?.profile?.last_name ?? ''
