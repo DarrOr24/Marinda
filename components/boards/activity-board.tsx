@@ -913,6 +913,7 @@ export default function ActivityBoard() {
           <View
             ref={weekExportFullRef}
             collapsable={false}
+            renderToHardwareTextureAndroid={false}
             onLayout={(e) => {
               const H = e.nativeEvent.layout.height;
               weekExportFullHeightRef.current = H;
@@ -947,6 +948,7 @@ export default function ActivityBoard() {
                     weekExportChunkRefs.current[i] = node;
                   }}
                   collapsable={false}
+                  renderToHardwareTextureAndroid={false}
                   style={styles.weekExportStack}
                 >
                   {renderWeekExportHeader(i + 1, weekExportPartCount)}
@@ -1323,12 +1325,16 @@ const styles = StyleSheet.create({
     color: "#94a3b8",
     marginTop: 6,
   },
+  /**
+   * Off-screen clone for JPEG export. Keep full opacity: on Android, very low opacity + negative
+   * z-index can prevent `react-native-view-shot` from capturing real pixels (blank / empty files).
+   */
   weekExportHiddenHost: {
     position: "absolute",
     left: -8000,
     top: 0,
-    opacity: 0.02,
-    zIndex: -50,
+    opacity: 1,
+    zIndex: 0,
   },
 
   dayRow: {

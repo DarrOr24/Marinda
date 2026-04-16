@@ -53,6 +53,14 @@ function toFileUri(path: string): string {
   return path.startsWith("file://") ? path : `file://${path}`;
 }
 
+/** `react-native-view-shot` tmp paths differ by platform; `copyAsync` expects a usable file URI. */
+function normalizeLocalFileUri(uri: string): string {
+  const t = uri.trim();
+  if (t.startsWith("file://")) return t;
+  if (t.startsWith("/")) return `file://${t}`;
+  return t;
+}
+
 async function captureViewRefToJpegUri(
   captureRef: CaptureRefFn,
   viewRef: RefObject<View | null>,
@@ -75,7 +83,7 @@ async function captureViewRefToJpegUri(
     throw new Error("No cache directory available");
   }
   const dest = `${dir}export_${safe}_${Date.now()}.jpg`;
-  await copyAsync({ from: tmpUri, to: dest });
+  await copyAsync({ from: normalizeLocalFileUri(tmpUri), to: dest });
   return toFileUri(dest);
 }
 
@@ -106,12 +114,10 @@ export async function captureViewsAsJpegsAndShareTogether(
   }
 
   const uris: string[] = [];
-  const filenames: string[] = [];
 
   for (const c of captures) {
     const uri = await captureViewRefToJpegUri(captureRef, c.viewRef, c.fileBaseName);
     uris.push(uri);
-    filenames.push(`${sanitizeBaseName(c.fileBaseName)}.jpg`);
   }
 
   const canShare = await Sharing.isAvailableAsync();
@@ -135,10 +141,12 @@ export async function captureViewsAsJpegsAndShareTogether(
   const RNShare = tryLoadRNShare();
   if (RNShare) {
     try {
+      // Do not pass `filenames` with full `file://` URLs: on Android, `react-native-share`
+      // incorrectly does `new File(uri.getPath(), filename)` (treats the file path as a dir),
+      // which breaks multi-image intents and yields empty attachments.
       await RNShare.open({
         urls: uris,
         type: "image/jpeg",
-        filenames,
         failOnCancel: false,
         title: dialogTitle,
       });
