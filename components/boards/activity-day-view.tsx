@@ -21,11 +21,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from "react-native";
 
 import { BoardNavChevronButton } from "@/components/boards/activity-board-header-nav";
+import {
+  EXPORT_PAGE_CONTENT_WIDTH,
+  EXPORT_PAGE_HEIGHT,
+} from "@/components/boards/export-page-layout";
 import type { Activity, ActivityStatus } from "@/lib/activities/activities.types";
 
 const PX_PER_MINUTE = 1.35;
@@ -39,8 +42,6 @@ export const TIMELINE_END_HOUR = 24;
 const MIN_COLUMN_WIDTH_PCT = 24;
 /** Treat segment as “all day” on this date if it covers local midnight through end-of-day (±1 min). */
 const ALL_DAY_EDGE_TOLERANCE_MS = 60_000;
-/** Same idea as week export: cap JPEG height to ~phone-portrait proportions. */
-const PORTRAIT_EXPORT_HEIGHT_TO_WIDTH = 2.05;
 const DAY_EXPORT_MAX_PARTS = 12;
 
 function localDayBoundsMs(day: Date) {
@@ -207,6 +208,56 @@ function equalHourSliceRanges(
   return out;
 }
 
+/**
+ * Packs **as many early hours as fit** in each export page before splitting, instead of dividing
+ * the day into equal hour counts (which cuts busy afternoons in the middle).
+ */
+function greedyDayExportHourRanges(
+  gridStartHour: number,
+  gridEndHourExclusive: number,
+  partCount: number,
+  pageHeightPx: number,
+  firstChunkHasAllDay: boolean,
+): { chunkStart: number; chunkEnd: number }[] {
+  const totalHours = gridEndHourExclusive - gridStartHour;
+  if (partCount <= 1 || totalHours <= 0) {
+    return [{ chunkStart: gridStartHour, chunkEnd: gridEndHourExclusive }];
+  }
+
+  const hourPx = 60 * PX_PER_MINUTE;
+  const overheadFirst = 240 + (firstChunkHasAllDay ? 150 : 0);
+  const overheadRest = 200;
+
+  const ranges: { chunkStart: number; chunkEnd: number }[] = [];
+  let cursor = gridStartHour;
+
+  for (let p = 0; p < partCount; p++) {
+    const hoursLeft = gridEndHourExclusive - cursor;
+    const partsLeft = partCount - p;
+    if (hoursLeft <= 0) break;
+
+    if (partsLeft === 1) {
+      ranges.push({ chunkStart: cursor, chunkEnd: gridEndHourExclusive });
+      break;
+    }
+
+    const overhead = p === 0 ? overheadFirst : overheadRest;
+    const timelineBudget = Math.max(hourPx, pageHeightPx - overhead);
+    let take = Math.floor(timelineBudget / hourPx);
+    take = Math.min(take, hoursLeft - (partsLeft - 1));
+    take = Math.max(1, take);
+
+    const next = cursor + take;
+    ranges.push({ chunkStart: cursor, chunkEnd: next });
+    cursor = next;
+  }
+
+  if (ranges.length !== partCount) {
+    return equalHourSliceRanges(gridStartHour, gridEndHourExclusive, partCount);
+  }
+  return ranges;
+}
+
 function buildLayoutSegmentsForChunk(
   timedActivities: Activity[],
   day: Date,
@@ -248,6 +299,107 @@ function buildLayoutSegmentsForChunk(
     })
     .filter((x): x is NonNullable<typeof x> => x != null);
   return layoutOverlappingSegments(raw);
+}
+
+/** Default timed grid in export when there are no timed events (9 AM–11 PM). */
+const EXPORT_FALLBACK_START_HOUR = 9;
+const EXPORT_FALLBACK_END_HOUR_EXCLUSIVE = 24;
+const EXPORT_PAD_MS = 60 * 60 * 1000;
+/** Sparse days: widen the timed grid to at least this many hour rows (symmetric expansion). */
+const MIN_EXPORT_TIMED_HOUR_SPAN = 9;
+
+/**
+ * If the padded window spans fewer than `minHours` hour rows, grow it by adding hours
+ * left/right of the current range (as evenly as possible), clamped to [0, 24].
+ */
+function applyMinimumExportHourSpan(
+  startHour: number,
+  endHourExclusive: number,
+  minHours: number,
+): { exportGridStartHour: number; exportGridEndHourExclusive: number } {
+  let span = endHourExclusive - startHour;
+  if (span >= minHours) {
+    return {
+      exportGridStartHour: startHour,
+      exportGridEndHourExclusive: endHourExclusive,
+    };
+  }
+
+  const deficit = minHours - span;
+  const expandLeft = Math.floor(deficit / 2);
+  const expandRight = deficit - expandLeft;
+
+  let ns = startHour - expandLeft;
+  let ne = endHourExclusive + expandRight;
+
+  if (ns < 0) {
+    ne -= ns;
+    ns = 0;
+  }
+  if (ne > 24) {
+    ns -= ne - 24;
+    ne = 24;
+  }
+  if (ns < 0) {
+    ns = 0;
+  }
+
+  return {
+    exportGridStartHour: ns,
+    exportGridEndHourExclusive: ne,
+  };
+}
+
+/**
+ * JPEG export only: timed grid is first timed start − 1h through last timed end + 1h (local day),
+ * clamped to the calendar day; then widened to at least {@link MIN_EXPORT_TIMED_HOUR_SPAN} if needed.
+ * All-day / birthdays stay in their own strip above in the export tree.
+ * With no timed events → 9:00–23:00 hour rows (same as legacy empty default).
+ */
+function deriveExportDayHourRange(
+  day: Date,
+  timedActivities: Activity[],
+  dayStartMs: number,
+  dayEndMs: number,
+): { exportGridStartHour: number; exportGridEndHourExclusive: number } {
+  if (timedActivities.length === 0) {
+    return {
+      exportGridStartHour: EXPORT_FALLBACK_START_HOUR,
+      exportGridEndHourExclusive: EXPORT_FALLBACK_END_HOUR_EXCLUSIVE,
+    };
+  }
+
+  let minStart = Infinity;
+  let maxEnd = -Infinity;
+  for (const a of timedActivities) {
+    const s = new Date(a.start_at).getTime();
+    const e = new Date(a.end_at).getTime();
+    minStart = Math.min(minStart, s);
+    maxEnd = Math.max(maxEnd, e);
+  }
+
+  const startPaddedMs = Math.max(dayStartMs, minStart - EXPORT_PAD_MS);
+  const endPaddedMs = Math.min(dayEndMs - 1, maxEnd + EXPORT_PAD_MS);
+
+  const exportGridStartHour = clamp(
+    Math.floor((startPaddedMs - dayStartMs) / 3_600_000),
+    0,
+    23,
+  );
+
+  const gridStartMsExport = minutesSinceDayHour(day, exportGridStartHour);
+  const spanMs = Math.max(0, endPaddedMs - gridStartMsExport);
+  const hourSpan = Math.max(1, Math.ceil(spanMs / 3_600_000));
+  const exportGridEndHourExclusive = Math.min(
+    24,
+    Math.max(exportGridStartHour + 1, exportGridStartHour + hourSpan),
+  );
+
+  return applyMinimumExportHourSpan(
+    exportGridStartHour,
+    exportGridEndHourExclusive,
+    MIN_EXPORT_TIMED_HOUR_SPAN,
+  );
 }
 
 export const ActivityDayView = forwardRef<
@@ -398,6 +550,31 @@ export const ActivityDayView = forwardRef<
     timelineHeight,
   ]);
 
+  const { exportGridStartHour, exportGridEndHourExclusive } = useMemo(
+    () => deriveExportDayHourRange(day, timedActivities, dayStartMs, dayEndMs),
+    [day, timedActivities, dayStartMs, dayEndMs],
+  );
+
+  const layoutSegmentsForExport = useMemo(
+    () =>
+      buildLayoutSegmentsForChunk(
+        timedActivities,
+        day,
+        dayStartMs,
+        dayEndMs,
+        exportGridStartHour,
+        exportGridEndHourExclusive,
+      ),
+    [
+      timedActivities,
+      day,
+      dayStartMs,
+      dayEndMs,
+      exportGridStartHour,
+      exportGridEndHourExclusive,
+    ],
+  );
+
   const hours = useMemo(() => {
     const h: number[] = [];
     for (let hh = gridStartHour; hh < TIMELINE_END_HOUR; hh++) h.push(hh);
@@ -418,12 +595,8 @@ export const ActivityDayView = forwardRef<
   const prevAllDayHeightForScroll = useRef(-1);
   const [allDayBlockHeight, setAllDayBlockHeight] = useState(0);
 
-  const { width: windowWidth } = useWindowDimensions();
-  const dayExportContentWidth = Math.max(0, windowWidth);
-  const dayExportMaxChunkHeight = Math.max(
-    480,
-    Math.round(windowWidth * PORTRAIT_EXPORT_HEIGHT_TO_WIDTH),
-  );
+  const dayExportContentWidth = EXPORT_PAGE_CONTENT_WIDTH;
+  const dayExportMaxChunkHeight = EXPORT_PAGE_HEIGHT;
 
   const dayExportFullRef = useRef<View>(null);
   const dayExportFullHeightRef = useRef(0);
@@ -483,12 +656,20 @@ export const ActivityDayView = forwardRef<
 
   const dayExportHourRanges = useMemo(() => {
     if (dayExportPartCount <= 1) return [];
-    return equalHourSliceRanges(
-      gridStartHour,
-      TIMELINE_END_HOUR,
+    return greedyDayExportHourRanges(
+      exportGridStartHour,
+      exportGridEndHourExclusive,
       dayExportPartCount,
+      dayExportMaxChunkHeight,
+      allDayActivities.length > 0,
     );
-  }, [gridStartHour, dayExportPartCount]);
+  }, [
+    exportGridStartHour,
+    exportGridEndHourExclusive,
+    dayExportPartCount,
+    dayExportMaxChunkHeight,
+    allDayActivities.length,
+  ]);
 
   const exportChunkSegments = useMemo(() => {
     return dayExportHourRanges.map(({ chunkStart, chunkEnd }) =>
@@ -934,9 +1115,9 @@ export const ActivityDayView = forwardRef<
         {renderAllDayForExport(true)}
         {renderEmptyDayForExport(true, true)}
         {renderTimelineForExport(
-          gridStartHour,
-          TIMELINE_END_HOUR,
-          layoutSegments,
+          exportGridStartHour,
+          exportGridEndHourExclusive,
+          layoutSegmentsForExport,
           true,
         )}
       </View>

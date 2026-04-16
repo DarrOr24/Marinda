@@ -12,7 +12,6 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -25,6 +24,10 @@ import {
   ActivityDayView,
   type ActivityDayViewExportHandle,
 } from "@/components/boards/activity-day-view";
+import {
+  EXPORT_PAGE_CONTENT_WIDTH,
+  EXPORT_PAGE_HEIGHT,
+} from "@/components/boards/export-page-layout";
 import {
   CalendarDateModal,
   toLocalYmdFromIso,
@@ -76,11 +79,6 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const MIN_PAST_WEEKS = -4;
-/**
- * Target max height per shared JPEG (logical px) ≈ phone-style portrait (height ~2.05× width)
- * so exports are not extreme “ribbon” strips. Taller weeks split into more images.
- */
-const PORTRAIT_EXPORT_HEIGHT_TO_WIDTH = 2.05;
 
 /** Split `dayCount` consecutive days into `parts` contiguous ranges (as equal as possible). */
 function equalDaySliceRanges(
@@ -242,13 +240,8 @@ export default function ActivityBoard() {
     () => Array.from({ length: 7 }, (_, i) => addDays(visibleWeekStart, i)),
     [visibleWeekStart]
   );
-  const { width: windowWidth } = useWindowDimensions();
-  /** Full device width so shared JPEGs read like phone-portrait frames, not a narrow strip. */
-  const weekExportContentWidth = Math.max(0, windowWidth);
-  const weekExportMaxChunkHeight = Math.max(
-    480,
-    Math.round(windowWidth * PORTRAIT_EXPORT_HEIGHT_TO_WIDTH),
-  );
+  const weekExportContentWidth = EXPORT_PAGE_CONTENT_WIDTH;
+  const weekExportMaxChunkHeight = EXPORT_PAGE_HEIGHT;
   const rangeLabel = formatRangeLabel(visibleWeekStart);
   const visibleWeekFirstKey = toLocalDateKey(visibleWeekDays[0]!);
 
