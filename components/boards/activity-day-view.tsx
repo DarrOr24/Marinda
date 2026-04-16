@@ -217,7 +217,7 @@ function greedyDayExportHourRanges(
   gridEndHourExclusive: number,
   partCount: number,
   pageHeightPx: number,
-  firstChunkHasAllDay: boolean,
+  hasAllDayEvents: boolean,
 ): { chunkStart: number; chunkEnd: number }[] {
   const totalHours = gridEndHourExclusive - gridStartHour;
   if (partCount <= 1 || totalHours <= 0) {
@@ -225,8 +225,10 @@ function greedyDayExportHourRanges(
   }
 
   const hourPx = 60 * PX_PER_MINUTE;
-  const overheadFirst = 240 + (firstChunkHasAllDay ? 150 : 0);
-  const overheadRest = 200;
+  /** Matched to each JPEG part: every part repeats the all-day strip when present. */
+  const allDayStripOverhead = hasAllDayEvents ? 150 : 0;
+  const overheadFirst = 240 + allDayStripOverhead;
+  const overheadRest = 200 + allDayStripOverhead;
 
   const ranges: { chunkStart: number; chunkEnd: number }[] = [];
   let cursor = gridStartHour;
@@ -256,6 +258,34 @@ function greedyDayExportHourRanges(
     return equalHourSliceRanges(gridStartHour, gridEndHourExclusive, partCount);
   }
   return ranges;
+}
+
+/**
+ * Extends the **last** chunk’s `chunkEnd` (more hour rows + grid lines) so its span matches the first
+ * chunk when possible, reducing a “zoomed” tail in multi-part JPEGs. Capped at `exportEndHourExclusive`
+ * (end of the export day). Any **remaining** deficit vs page 1 is handled as plain bottom padding
+ * (no fake hour labels), e.g. when the tail already ends at midnight.
+ */
+function padLastExportChunkToMatchFirstHourSpan(
+  ranges: { chunkStart: number; chunkEnd: number }[],
+  exportEndHourExclusive: number,
+): { chunkStart: number; chunkEnd: number }[] {
+  if (ranges.length <= 1) return ranges;
+  const firstSpan = ranges[0]!.chunkEnd - ranges[0]!.chunkStart;
+  if (firstSpan <= 0) return ranges;
+
+  const lastIdx = ranges.length - 1;
+  const last = ranges[lastIdx]!;
+  const lastSpan = last.chunkEnd - last.chunkStart;
+  if (lastSpan >= firstSpan) return ranges;
+
+  const need = firstSpan - lastSpan;
+  const newEnd = Math.min(exportEndHourExclusive, last.chunkEnd + need);
+  if (newEnd <= last.chunkEnd) return ranges;
+
+  return ranges.map((r, i) =>
+    i === lastIdx ? { chunkStart: r.chunkStart, chunkEnd: newEnd } : r,
+  );
 }
 
 function buildLayoutSegmentsForChunk(
@@ -305,8 +335,8 @@ function buildLayoutSegmentsForChunk(
 const EXPORT_FALLBACK_START_HOUR = 9;
 const EXPORT_FALLBACK_END_HOUR_EXCLUSIVE = 24;
 const EXPORT_PAD_MS = 60 * 60 * 1000;
-/** Sparse days: widen the timed grid to at least this many hour rows (symmetric expansion). */
-const MIN_EXPORT_TIMED_HOUR_SPAN = 9;
+/** Sparse days: widen the timed grid to at least this many hour rows (symmetric expansion). Kept modest so all-day + timed export stays a comfortable height on quiet days. */
+const MIN_EXPORT_TIMED_HOUR_SPAN = 6;
 
 /**
  * If the padded window spans fewer than `minHours` hour rows, grow it by adding hours
@@ -352,7 +382,7 @@ function applyMinimumExportHourSpan(
 
 /**
  * JPEG export only: timed grid is first timed start − 1h through last timed end + 1h (local day),
- * clamped to the calendar day; then widened to at least {@link MIN_EXPORT_TIMED_HOUR_SPAN} if needed.
+ * clamped to the calendar day; then widened to at least {@link MIN_EXPORT_TIMED_HOUR_SPAN} hour rows if needed.
  * All-day / birthdays stay in their own strip above in the export tree.
  * With no timed events → 9:00–23:00 hour rows (same as legacy empty default).
  */
@@ -654,15 +684,32 @@ export const ActivityDayView = forwardRef<
     gridStartHour,
   ]);
 
-  const dayExportHourRanges = useMemo(() => {
-    if (dayExportPartCount <= 1) return [];
-    return greedyDayExportHourRanges(
+  const { dayExportHourRanges, dayExportTailExtraPadPx } = useMemo(() => {
+    if (dayExportPartCount <= 1) {
+      return {
+        dayExportHourRanges: [] as { chunkStart: number; chunkEnd: number }[],
+        dayExportTailExtraPadPx: 0,
+      };
+    }
+    const greedy = greedyDayExportHourRanges(
       exportGridStartHour,
       exportGridEndHourExclusive,
       dayExportPartCount,
       dayExportMaxChunkHeight,
       allDayActivities.length > 0,
     );
+    const padded = padLastExportChunkToMatchFirstHourSpan(
+      greedy,
+      exportGridEndHourExclusive,
+    );
+    const firstSpan = padded[0]!.chunkEnd - padded[0]!.chunkStart;
+    const last = padded[padded.length - 1]!;
+    const lastSpan = last.chunkEnd - last.chunkStart;
+    const dayExportTailExtraPadPx =
+      firstSpan > lastSpan
+        ? (firstSpan - lastSpan) * 60 * PX_PER_MINUTE
+        : 0;
+    return { dayExportHourRanges: padded, dayExportTailExtraPadPx };
   }, [
     exportGridStartHour,
     exportGridEndHourExclusive,
@@ -805,6 +852,7 @@ export const ActivityDayView = forwardRef<
     chunkEndHourExclusive: number,
     segments: DaySegment[],
     readable: boolean,
+    extraTimelinePadPx = 0,
   ) {
     const chunkHours: number[] = [];
     for (let hh = chunkStartHour; hh < chunkEndHourExclusive; hh++) {
@@ -822,7 +870,7 @@ export const ActivityDayView = forwardRef<
       ? [styles.blockTime, styles.blockTimeExport]
       : styles.blockTime;
 
-    return (
+    const timeline = (
       <View style={styles.timelineRow}>
         <View style={[styles.hourLabels, { minWidth: timeGutterMinWidth }]}>
           {chunkHours.map((hh) => (
@@ -890,6 +938,31 @@ export const ActivityDayView = forwardRef<
           })}
         </View>
       </View>
+    );
+
+    if (extraTimelinePadPx <= 0) {
+      return timeline;
+    }
+
+    return (
+      <>
+        {timeline}
+        <View style={styles.timelineRow}>
+          <View
+            style={{
+              minWidth: timeGutterMinWidth,
+              height: extraTimelinePadPx,
+            }}
+          />
+          <View
+            style={{
+              flex: 1,
+              height: extraTimelinePadPx,
+              minHeight: extraTimelinePadPx,
+            }}
+          />
+        </View>
+      </>
     );
   }
 
@@ -1134,13 +1207,16 @@ export const ActivityDayView = forwardRef<
               style={styles.dayExportStack}
             >
               {renderExportHeader(i + 1, dayExportPartCount)}
-              {i === 0 ? renderAllDayForExport(true) : null}
+              {renderAllDayForExport(true)}
               {i === 0 ? renderEmptyDayForExport(true, true) : null}
               {renderTimelineForExport(
                 chunkStart,
                 chunkEnd,
                 exportChunkSegments[i] ?? [],
                 true,
+                i === dayExportHourRanges.length - 1
+                  ? dayExportTailExtraPadPx
+                  : 0,
               )}
             </View>
           ))
