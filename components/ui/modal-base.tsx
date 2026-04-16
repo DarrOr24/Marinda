@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
   View,
+  type ModalProps,
 } from 'react-native'
 
 export type ModalBaseProps = {
@@ -17,6 +18,11 @@ export type ModalBaseProps = {
   backdropTone?: 'default' | 'soft'
   avoidKeyboard?: boolean
   keyboardVerticalOffset?: number
+  /**
+   * iOS: required when presenting this modal on top of another `Modal` (e.g. date picker inside
+   * “New Activity”); otherwise the new modal can fail to appear or sit behind the first.
+   */
+  presentationStyle?: ModalProps['presentationStyle']
 }
 
 export function ModalBase({
@@ -28,6 +34,7 @@ export function ModalBase({
   backdropTone = 'default',
   avoidKeyboard = false,
   keyboardVerticalOffset = 0,
+  presentationStyle,
 }: ModalBaseProps) {
   const Container = avoidKeyboard ? KeyboardAvoidingView : View
 
@@ -45,6 +52,7 @@ export function ModalBase({
       animationType="fade"
       onRequestClose={onClose}
       onShow={onShow}
+      {...(presentationStyle != null ? { presentationStyle } : {})}
     >
       <View style={modalBaseStyles.root}>
         <Pressable

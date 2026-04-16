@@ -7,12 +7,11 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 
 import {
-  CalendarDateModal,
+  CalendarDatePickerEmbeddedOverlay,
   toLocalYmdFromIso,
 } from "@/components/calendar-date-modal";
 import { ChipSelector } from "@/components/chip-selector";
@@ -390,15 +389,31 @@ export default function AddActivityModal({
   }
 
   return (
-    <>
-      <ModalDialog
-        visible={visible}
-        onClose={onClose}
-        size="xl"
-        title={modalTitle}
-        showCloseButton
-        scrollable
-      >
+    <ModalDialog
+      visible={visible}
+      onClose={onClose}
+      size="xl"
+      title={modalTitle}
+      showCloseButton
+      scrollable
+      modalOverlay={
+        untilPickerOpen ? (
+          <CalendarDatePickerEmbeddedOverlay
+            visible={untilPickerOpen}
+            title="Repeat until"
+            initialAt={untilEndIso ?? range?.start_at}
+            minDateYmd={
+              range?.start_at ? toLocalYmdFromIso(range.start_at) : undefined
+            }
+            onCancel={() => setUntilPickerOpen(false)}
+            onConfirm={(endOfLocalDayIso) => {
+              setUntilEndIso(endOfLocalDayIso);
+              setUntilPickerOpen(false);
+            }}
+          />
+        ) : null
+      }
+    >
         <FormFieldRow icon="clock-outline" first>
           <Text style={styles.label}>When *</Text>
           <DateRangePicker
@@ -566,9 +581,19 @@ export default function AddActivityModal({
                 ) : null}
 
                 {endMode === "until" ? (
-                  <TouchableOpacity
-                    style={styles.untilTap}
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.untilTap,
+                      pressed && { opacity: 0.85 },
+                    ]}
                     onPress={() => setUntilPickerOpen(true)}
+                    hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      untilEndIso
+                        ? `Repeat until ${formatShortDateFromIso(untilEndIso)}. Tap to change.`
+                        : "Choose repeat end date"
+                    }
                   >
                     <MaterialCommunityIcons
                       name="calendar"
@@ -580,7 +605,7 @@ export default function AddActivityModal({
                         ? formatShortDateFromIso(untilEndIso)
                         : "Choose end date"}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 ) : null}
               </View>
             ) : null}
@@ -717,21 +742,7 @@ export default function AddActivityModal({
             disabled={!canSave}
           />
         </View>
-      </ModalDialog>
-      <CalendarDateModal
-        visible={untilPickerOpen}
-        title="Repeat until"
-        initialAt={untilEndIso ?? range?.start_at}
-        minDateYmd={
-          range?.start_at ? toLocalYmdFromIso(range.start_at) : undefined
-        }
-        onCancel={() => setUntilPickerOpen(false)}
-        onConfirm={(endOfLocalDayIso) => {
-          setUntilEndIso(endOfLocalDayIso);
-          setUntilPickerOpen(false);
-        }}
-      />
-    </>
+    </ModalDialog>
   );
 }
 

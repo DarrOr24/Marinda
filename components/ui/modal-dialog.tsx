@@ -10,6 +10,7 @@ import {
   View,
   useWindowDimensions,
   type KeyboardEventName,
+  type ModalProps,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -44,6 +45,13 @@ type ModalDialogProps = {
   size?: ModalSize
   presentation?: DialogPresentation
   avoidKeyboard?: boolean
+  /** iOS: pass when this dialog may open on top of another modal (nested modals). */
+  modalPresentationStyle?: ModalProps['presentationStyle']
+  /**
+   * Renders above the dialog surface (same native `Modal`), e.g. a nested date picker.
+   * Prefer this over a second `Modal` on iOS, where nested modals often fail to show.
+   */
+  modalOverlay?: React.ReactNode
 }
 
 export function ModalDialog({
@@ -58,6 +66,8 @@ export function ModalDialog({
   closeOnBackdropPress = true,
   avoidKeyboard = true,
   onShow,
+  modalPresentationStyle,
+  modalOverlay,
 }: ModalDialogProps) {
   const insets = useSafeAreaInsets()
   const { height: screenHeight, width: screenWidth } = useWindowDimensions()
@@ -156,56 +166,75 @@ export function ModalDialog({
       closeOnBackdropPress={closeOnBackdropPress}
       avoidKeyboard={avoidKeyboard}
       keyboardVerticalOffset={keyboardVerticalOffset}
+      presentationStyle={modalPresentationStyle}
     >
-      <View
-        style={[
-          dialogStyles.container,
-          {
-            justifyContent: isBottomSheet
-              ? 'flex-end'
-              : shouldTopAlignForKeyboard
-                ? 'flex-start'
-                : 'center',
-            alignItems: 'center',
-            paddingTop,
-            paddingBottom,
-          },
-        ]}
-      >
-        <View style={[dialogStyles.content, dialogStyles.contentCenter]}>
-          <View
-            style={[
-              dialogStyles.surface,
-              dialogStyles.dialogSurfaceShadow,
-              isBottomSheet ? dialogStyles.bottomSheetSurface : null,
-              {
-                width: isBottomSheet ? '100%' : undefined,
-                minWidth: isBottomSheet ? undefined : boundedWidth,
-                maxWidth: screenWidth - CONTAINER_PADDING * 2,
-              },
-            ]}
-          >
+      <View style={dialogStyles.modalStackRoot}>
+        <View
+          style={[
+            dialogStyles.container,
+            {
+              justifyContent: isBottomSheet
+                ? 'flex-end'
+                : shouldTopAlignForKeyboard
+                  ? 'flex-start'
+                  : 'center',
+              alignItems: 'center',
+              paddingTop,
+              paddingBottom,
+            },
+          ]}
+        >
+          <View style={[dialogStyles.content, dialogStyles.contentCenter]}>
             <View
               style={[
-                dialogStyles.surfaceClip,
-                dialogStyles.dialogSurface,
+                dialogStyles.surface,
+                dialogStyles.dialogSurfaceShadow,
                 isBottomSheet ? dialogStyles.bottomSheetSurface : null,
                 {
-                  width: '100%',
-                  maxHeight,
+                  width: isBottomSheet ? '100%' : undefined,
+                  minWidth: isBottomSheet ? undefined : boundedWidth,
+                  maxWidth: screenWidth - CONTAINER_PADDING * 2,
                 },
               ]}
             >
-              {content}
+              <View
+                style={[
+                  dialogStyles.surfaceClip,
+                  dialogStyles.dialogSurface,
+                  isBottomSheet ? dialogStyles.bottomSheetSurface : null,
+                  {
+                    width: '100%',
+                    maxHeight,
+                  },
+                ]}
+              >
+                {content}
+              </View>
             </View>
           </View>
         </View>
+        {modalOverlay != null ? (
+          <View
+            style={dialogStyles.modalOverlayLayer}
+            pointerEvents="box-none"
+          >
+            {modalOverlay}
+          </View>
+        ) : null}
       </View>
     </ModalBase>
   )
 }
 
 const dialogStyles = StyleSheet.create({
+  modalStackRoot: {
+    flex: 1,
+  },
+  modalOverlayLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
+    elevation: 24,
+  },
   container: {
     flex: 1,
     paddingHorizontal: CONTAINER_PADDING,

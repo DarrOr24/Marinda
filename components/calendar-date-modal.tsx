@@ -51,7 +51,7 @@ function addYearsYmd(ymd: string, years: number): string {
   return `${y}-${m}-${day}`;
 }
 
-type Props = {
+export type CalendarDatePickerPanelProps = {
   visible: boolean;
   /** ISO string; used to choose initial month / default selection */
   initialAt?: string;
@@ -65,7 +65,10 @@ type Props = {
   onConfirm: (endOfLocalDayIso: string) => void;
 };
 
-export function CalendarDateModal({
+/**
+ * Calendar + year UI only (no `Modal`). Use inside `ModalDialog` or `CalendarDatePickerEmbeddedOverlay`.
+ */
+export function CalendarDatePickerPanel({
   visible,
   initialAt,
   minDateYmd,
@@ -73,7 +76,7 @@ export function CalendarDateModal({
   title = "Choose date",
   onCancel,
   onConfirm,
-}: Props) {
+}: CalendarDatePickerPanelProps) {
   const defaultMax = useMemo(() => addYearsYmd(todayYmd(), 20), []);
   const maxDate = maxDateYmd ?? defaultMax;
   const minDate = minDateYmd ?? "2000-01-01";
@@ -135,105 +138,199 @@ export function CalendarDateModal({
   }
 
   return (
-    <ModalDialog visible={visible} onClose={onCancel} size="md">
-          <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>{title}</Text>
-            <Pressable
-              onPress={() => setYearOpen((v) => !v)}
-              style={styles.yearBtn}
-              hitSlop={10}
-            >
-              <Text style={styles.yearBtnText}>Year</Text>
-              <Ionicons
-                name={yearOpen ? "chevron-up" : "chevron-down"}
-                size={16}
-                color="#334155"
-              />
-            </Pressable>
-          </View>
+    <>
+      <View style={styles.sheetHeader}>
+        <Text style={styles.sheetTitle}>{title}</Text>
+        <Pressable
+          onPress={() => setYearOpen((v) => !v)}
+          style={styles.yearBtn}
+          hitSlop={10}
+        >
+          <Text style={styles.yearBtnText}>Year</Text>
+          <Ionicons
+            name={yearOpen ? "chevron-up" : "chevron-down"}
+            size={16}
+            color="#334155"
+          />
+        </Pressable>
+      </View>
 
-          <View style={styles.calendarWrap}>
-            {yearOpen ? (
-              <View style={styles.yearOverlay}>
-                <FlatList
-                  ref={yearListRef}
-                  data={years}
-                  keyExtractor={(y) => String(y)}
-                  numColumns={YEAR_GRID_COLUMNS}
-                  columnWrapperStyle={{ gap: 10 }}
-                  contentContainerStyle={{ gap: 10, paddingVertical: 8 }}
-                  style={{ maxHeight: 260 }}
-                  getItemLayout={(_, index) => ({
-                    length: YEAR_GRID_ROW_HEIGHT,
-                    offset:
-                      YEAR_GRID_ROW_HEIGHT *
-                      Math.floor(index / YEAR_GRID_COLUMNS),
+      <View style={styles.calendarWrap}>
+        {yearOpen ? (
+          <View style={styles.yearOverlay}>
+            <FlatList
+              ref={yearListRef}
+              data={years}
+              keyExtractor={(y) => String(y)}
+              numColumns={YEAR_GRID_COLUMNS}
+              columnWrapperStyle={{ gap: 10 }}
+              contentContainerStyle={{ gap: 10, paddingVertical: 8 }}
+              style={{ maxHeight: 260 }}
+              getItemLayout={(_, index) => ({
+                length: YEAR_GRID_ROW_HEIGHT,
+                offset:
+                  YEAR_GRID_ROW_HEIGHT *
+                  Math.floor(index / YEAR_GRID_COLUMNS),
+                index,
+              })}
+              onScrollToIndexFailed={({ index }) => {
+                requestAnimationFrame(() => {
+                  yearListRef.current?.scrollToIndex({
                     index,
-                  })}
-                  onScrollToIndexFailed={({ index }) => {
-                    requestAnimationFrame(() => {
-                      yearListRef.current?.scrollToIndex({
-                        index,
-                        animated: false,
-                        viewPosition: 0,
-                      });
-                    });
-                  }}
-                  renderItem={({ item: y }) => {
-                    const active = selectedYear === y;
-                    return (
-                      <Pressable
-                        onPress={() => handlePickYear(y)}
-                        style={[styles.yearCell, active && styles.yearCellActive]}
-                      >
-                        <Text
-                          style={[
-                            styles.yearCellText,
-                            active && styles.yearCellTextActive,
-                          ]}
-                        >
-                          {y}
-                        </Text>
-                      </Pressable>
-                    );
-                  }}
-                />
-              </View>
-            ) : null}
-
-            {!yearOpen ? (
-              <Calendar
-                key={current.slice(0, 7)}
-                current={current}
-                minDate={minDate}
-                maxDate={maxDate}
-                markedDates={{
-                  [initialYmd]: {
-                    selected: true,
-                    selectedColor: "#2563eb",
-                  },
-                }}
-                onDayPress={(day) => {
-                  onConfirm(endOfLocalDayFromYmd(day.dateString));
-                }}
-                enableSwipeMonths
-                showSixWeeks
-                onMonthChange={(m) => setCurrent(m.dateString)}
-                theme={{
-                  todayTextColor: "#2563eb",
-                  selectedDayBackgroundColor: "#2563eb",
-                  arrowColor: "#2563eb",
-                }}
-              />
-            ) : null}
+                    animated: false,
+                    viewPosition: 0,
+                  });
+                });
+              }}
+              renderItem={({ item: y }) => {
+                const active = selectedYear === y;
+                return (
+                  <Pressable
+                    onPress={() => handlePickYear(y)}
+                    style={[styles.yearCell, active && styles.yearCellActive]}
+                  >
+                    <Text
+                      style={[
+                        styles.yearCellText,
+                        active && styles.yearCellTextActive,
+                      ]}
+                    >
+                      {y}
+                    </Text>
+                  </Pressable>
+                );
+              }}
+            />
           </View>
+        ) : null}
 
-          <View style={styles.actions}>
-            <Button type="outline" size="sm" title="Cancel" onPress={onCancel} />
-          </View>
+        {!yearOpen ? (
+          <Calendar
+            key={current.slice(0, 7)}
+            current={current}
+            minDate={minDate}
+            maxDate={maxDate}
+            markedDates={{
+              [initialYmd]: {
+                selected: true,
+                selectedColor: "#2563eb",
+              },
+            }}
+            onDayPress={(day) => {
+              onConfirm(endOfLocalDayFromYmd(day.dateString));
+            }}
+            enableSwipeMonths
+            showSixWeeks
+            onMonthChange={(m) => setCurrent(m.dateString)}
+            theme={{
+              todayTextColor: "#2563eb",
+              selectedDayBackgroundColor: "#2563eb",
+              arrowColor: "#2563eb",
+            }}
+          />
+        ) : null}
+      </View>
+
+      <View style={styles.actions}>
+        <Button type="outline" size="sm" title="Cancel" onPress={onCancel} />
+      </View>
+    </>
+  );
+}
+
+type CalendarDateModalProps = {
+  visible: boolean;
+  initialAt?: string;
+  minDateYmd?: string;
+  maxDateYmd?: string;
+  title?: string;
+  onCancel: () => void;
+  onConfirm: (endOfLocalDayIso: string) => void;
+};
+
+/** Standalone modal (e.g. “Go to week” on the board). */
+export function CalendarDateModal({
+  visible,
+  initialAt,
+  minDateYmd,
+  maxDateYmd,
+  title = "Choose date",
+  onCancel,
+  onConfirm,
+}: CalendarDateModalProps) {
+  return (
+    <ModalDialog
+      visible={visible}
+      onClose={onCancel}
+      size="md"
+      modalPresentationStyle="overFullScreen"
+    >
+      <CalendarDatePickerPanel
+        visible={visible}
+        initialAt={initialAt}
+        minDateYmd={minDateYmd}
+        maxDateYmd={maxDateYmd}
+        title={title}
+        onCancel={onCancel}
+        onConfirm={onConfirm}
+      />
     </ModalDialog>
   );
 }
+
+/**
+ * Dimmed overlay + card, **without** a second native `Modal`. Use as `modalOverlay` on `ModalDialog`
+ * when the parent form is already a modal (iOS nested modals are unreliable).
+ */
+export function CalendarDatePickerEmbeddedOverlay(
+  props: CalendarDatePickerPanelProps,
+) {
+  return (
+    <>
+      <Pressable
+        style={embeddedStyles.dim}
+        onPress={props.onCancel}
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss calendar"
+      />
+      <View
+        style={embeddedStyles.centerWrap}
+        pointerEvents="box-none"
+      >
+        <View style={embeddedStyles.card}>
+          <CalendarDatePickerPanel {...props} />
+        </View>
+      </View>
+    </>
+  );
+}
+
+const embeddedStyles = StyleSheet.create({
+  dim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+  },
+  centerWrap: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+});
 
 const styles = StyleSheet.create({
   sheetHeader: {
