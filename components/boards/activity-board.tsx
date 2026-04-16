@@ -1222,6 +1222,17 @@ export default function ActivityBoard() {
             detailActivity.created_by.id === effectiveMember?.id
           )
         }
+        canEdit={
+          !!(
+            detailActivity &&
+            !detailActivity.isBirthday &&
+            effectiveMember?.id &&
+            (detailActivity.created_by?.id === effectiveMember.id ||
+              detailActivity.participants?.some(
+                (p) => p.member_id === effectiveMember.id,
+              ))
+          )
+        }
       />
 
       {/* Edit Activity */}

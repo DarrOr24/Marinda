@@ -94,7 +94,10 @@ type Props = {
   memberById: Map<string, any>;
   creatorName: (a: Activity) => string;
   isParent: boolean;
+  /** Only the creator may delete; edit is also allowed for participants (see `canEdit`). */
   isCreator: boolean;
+  /** Creator or listed participant — may open Edit (save path sets pending if not a parent). */
+  canEdit: boolean;
 };
 
 export function ActivityDetailModal({
@@ -111,6 +114,7 @@ export function ActivityDetailModal({
   creatorName,
   isParent,
   isCreator,
+  canEdit,
 }: Props) {
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -380,25 +384,23 @@ export function ActivityDetailModal({
         ) : null}
 
         <View style={styles.buttons}>
-          {!isBirthday && isCreator ? (
-            <>
-              <Button
-                type="outline"
-                size="sm"
-                title="Edit"
-                leftIcon={<MaterialCommunityIcons name="pencil-outline" size={18} />}
-                onPress={() => onEdit(activity)}
-              />
-              {onDelete ? (
-                <Button
-                  type="danger"
-                  size="sm"
-                  title="Delete"
-                  leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
-                  onPress={confirmDelete}
-                />
-              ) : null}
-            </>
+          {!isBirthday && canEdit ? (
+            <Button
+              type="outline"
+              size="sm"
+              title="Edit"
+              leftIcon={<MaterialCommunityIcons name="pencil-outline" size={18} />}
+              onPress={() => onEdit(activity)}
+            />
+          ) : null}
+          {!isBirthday && isCreator && onDelete ? (
+            <Button
+              type="danger"
+              size="sm"
+              title="Delete"
+              leftIcon={<MaterialCommunityIcons name="trash-can-outline" size={18} />}
+              onPress={confirmDelete}
+            />
           ) : null}
           {canDuplicate ? (
             <Button
