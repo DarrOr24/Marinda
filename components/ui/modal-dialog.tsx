@@ -14,6 +14,8 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { useRtlStyles } from '@/hooks/use-rtl-styles'
+
 import { ModalBase } from './modal-base'
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl'
@@ -70,6 +72,7 @@ export function ModalDialog({
   modalOverlay,
 }: ModalDialogProps) {
   const insets = useSafeAreaInsets()
+  const r = useRtlStyles()
   const { height: screenHeight, width: screenWidth } = useWindowDimensions()
   const resolvedSize = size ?? (presentation === 'bottom-sheet' ? 'xl' : 'lg')
   const [keyboardVisible, setKeyboardVisible] = useState(false)
@@ -100,16 +103,26 @@ export function ModalDialog({
   }, [visible, screenWidth])
 
   const shouldTopAlignForKeyboard = visible && keyboardVisible && avoidKeyboard && !isBottomSheet
-  const paddingTop = 16 + insets.top
+  const paddingTop = isBottomSheet
+    ? 16 + insets.top
+    : shouldTopAlignForKeyboard
+      ? 20
+      : 20
   const paddingBottom = isBottomSheet
     ? 12 + insets.bottom
     : shouldTopAlignForKeyboard
       ? 20
-      : 20 + insets.bottom
+      : 20
   const surfaceScreenHeight = shouldTopAlignForKeyboard ? modalBaseHeight : screenHeight
   const maxHeight = surfaceScreenHeight - paddingTop - paddingBottom
   const renderedTitle =
-    typeof title === 'string' ? <Text style={dialogStyles.standardTitle}>{title}</Text> : title
+    typeof title === 'string'
+      ? (
+        <Text style={[dialogStyles.standardTitle, r.textAlignStart, r.writingDirection]}>
+          {title}
+        </Text>
+      )
+      : title
   const usesStandardDialogLayout = title !== undefined || showCloseButton || scrollable
   const boundedWidth = getDialogWidth(resolvedSize, screenWidth)
 
@@ -133,7 +146,7 @@ export function ModalDialog({
   const content = usesStandardDialogLayout ? (
     <View style={dialogStyles.standardLayout}>
       {title !== undefined || showCloseButton ? (
-        <View style={dialogStyles.standardHeader}>
+        <View style={[dialogStyles.standardHeader, r.row]}>
           <View style={dialogStyles.standardHeaderMain}>{renderedTitle ?? <View />}</View>
           {showCloseButton ? (
             <Pressable
@@ -184,15 +197,26 @@ export function ModalDialog({
             },
           ]}
         >
-          <View style={[dialogStyles.content, dialogStyles.contentCenter]}>
+          <View
+            style={[
+              dialogStyles.content,
+              dialogStyles.contentCenter,
+              {
+                justifyContent: isBottomSheet
+                  ? 'flex-end'
+                  : shouldTopAlignForKeyboard
+                    ? 'flex-start'
+                    : 'center',
+              },
+            ]}
+          >
             <View
               style={[
                 dialogStyles.surface,
                 dialogStyles.dialogSurfaceShadow,
                 isBottomSheet ? dialogStyles.bottomSheetSurface : null,
                 {
-                  width: isBottomSheet ? '100%' : undefined,
-                  minWidth: isBottomSheet ? undefined : boundedWidth,
+                  width: isBottomSheet ? '100%' : boundedWidth,
                   maxWidth: screenWidth - CONTAINER_PADDING * 2,
                 },
               ]}
@@ -300,6 +324,12 @@ const dialogStyles = StyleSheet.create({
   },
   standardHeaderCloseButton: {
     flexShrink: 0,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#f8fafc',
     alignItems: 'center',
     justifyContent: 'center',
   },

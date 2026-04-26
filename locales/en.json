@@ -1,1 +1,15 @@
-{}
+{
+  "common": {
+    "changeLanguage": "Change language",
+    "language": "Language"
+  },
+  "languageSettingsModal": {
+    "title": "App language",
+    "description": "Choose how Marinda appears on this device"
+  },
+  "settings": {
+    "language": {
+      "currentLanguage": "Current language: {{language}}"
+    }
+  }
+}

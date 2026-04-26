@@ -3,13 +3,13 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  Modal,
   Pressable,
   StyleSheet,
   View,
 } from 'react-native'
 
 import { ThemedText } from '@/components/themed-text'
+import { DirectionalChevron, ModalDialog } from '@/components/ui'
 import { useRtlStyles } from '@/hooks/use-rtl-styles'
 import {
   persistLanguage,
@@ -28,7 +28,7 @@ type LanguageSwitcherProps = {
 }
 
 export function LanguageSwitcher({ visible: visibleProp, onClose: onCloseProp }: LanguageSwitcherProps = {}) {
-  const { i18n } = useTranslation()
+  const { i18n, t } = useTranslation()
   const theme = useTheme()
   const r = useRtlStyles()
   const current = (i18n.language?.split('-')[0] ?? 'he') as SupportedLangCode
@@ -80,7 +80,7 @@ export function LanguageSwitcher({ visible: visibleProp, onClose: onCloseProp }:
             pressed && styles.triggerPressed,
           ]}
           onPress={() => setInternalVisible(true)}
-          accessibilityLabel={i18n.t('common.changeLanguage')}
+          accessibilityLabel={t('common.changeLanguage')}
         >
           <View style={[styles.globeSection, { backgroundColor: theme.primarySoft }]}>
             <MaterialCommunityIcons name="translate" size={18} color={theme.primaryBackground} />
@@ -88,7 +88,7 @@ export function LanguageSwitcher({ visible: visibleProp, onClose: onCloseProp }:
           <View style={[styles.divider, { backgroundColor: theme.borderLight }]} />
           <View style={[styles.flagSection, r.row]}>
             <ThemedText variant="bodySmall" weight="semibold">
-              {i18n.t('common.language')}
+              {t('common.language')}
             </ThemedText>
             <ThemedText style={styles.flag}>{flag}</ThemedText>
             <MaterialCommunityIcons name="chevron-down" size={18} color={theme.textLighter2} />
@@ -97,165 +97,113 @@ export function LanguageSwitcher({ visible: visibleProp, onClose: onCloseProp }:
       )}
 
       {visible && (
-        <Modal
+        <ModalDialog
           visible={visible}
-          transparent
-          animationType="fade"
-          onRequestClose={onClose}
+          onClose={onClose}
+          title={t('languageSettingsModal.title')}
+          showCloseButton
+          size="sm"
+          avoidKeyboard={false}
         >
-          <Pressable
-            style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}
-            onPress={onClose}
-          >
-            <Pressable>
-              <View
-                style={[
-                  styles.modalContent,
-                  {
-                    backgroundColor: theme.surface,
-                    borderColor: theme.borderLight,
-                    shadowColor: theme.shadow,
-                  },
-                ]}
-              >
-                <View style={[r.row, styles.modalHeader, { borderBottomColor: theme.borderLight }]}>
-                  <View style={styles.modalTitleBlock}>
-                    <ThemedText variant="headline">Language</ThemedText>
-                    <ThemedText variant="bodySmall" tone="muted">
-                      Choose how Marinda appears on this device.
-                    </ThemedText>
-                  </View>
-                  <Pressable
-                    onPress={onClose}
-                    hitSlop={12}
-                    style={[
-                      styles.closeArea,
-                      { backgroundColor: theme.surfaceMuted, borderColor: theme.borderLight },
-                    ]}
-                  >
-                    <MaterialCommunityIcons
-                      name="close"
-                      size={20}
-                      color={theme.textLighter2}
-                    />
-                  </Pressable>
-                </View>
-                <View style={styles.optionsList}>
-                  {SUPPORTED_LANGUAGES.map((lang) => {
-                    const isSelected = value === lang.code
+          <View style={styles.modalBody}>
+            <ThemedText
+              variant="bodySmall"
+              tone="muted"
+              style={[styles.modalDescription, r.textAlignStart, r.writingDirection]}
+            >
+              {t('languageSettingsModal.description')}
+            </ThemedText>
+            <View style={styles.optionsList}>
+              {SUPPORTED_LANGUAGES.map((lang) => {
+                const isSelected = value === lang.code
 
-                    return (
-                      <Pressable
-                        key={lang.code}
-                        style={({ pressed }) => [
-                          r.row,
-                          styles.option,
+                return (
+                  <Pressable
+                    key={lang.code}
+                    style={({ pressed }) => [
+                      r.row,
+                      styles.option,
+                      {
+                        backgroundColor: isSelected ? theme.primarySoft : theme.surface,
+                        borderColor: isSelected ? theme.primaryBorder : theme.borderLight,
+                      },
+                      pressed && styles.optionPressed,
+                    ]}
+                    onPress={() => handleSelect(lang.code)}
+                  >
+                    <View style={[r.row, styles.optionFlagGroup]}>
+                      <View
+                        style={[
+                          styles.optionFlagWrap,
                           {
-                            backgroundColor: isSelected ? theme.primarySoft : theme.surface,
-                            borderColor: isSelected ? theme.primaryBorder : theme.borderLight,
+                            backgroundColor: theme.surfaceMuted,
                           },
-                          pressed && styles.optionPressed,
                         ]}
-                        onPress={() => handleSelect(lang.code)}
                       >
-                        <View style={[r.row, styles.optionFlagGroup]}>
-                          <View
-                            style={[
-                              styles.optionFlagWrap,
-                              {
-                                backgroundColor: isSelected ? theme.primaryBackground : theme.surfaceMuted,
-                              },
-                            ]}
-                          >
-                            <ThemedText style={styles.optionFlag}>{lang.flag}</ThemedText>
-                          </View>
-                          <View style={styles.optionTextBlock}>
-                            <ThemedText variant="body" weight="semibold">
-                              {lang.nativeLabel}
-                            </ThemedText>
-                            <ThemedText variant="bodySmall" tone="muted">
-                              {lang.label}
-                            </ThemedText>
-                          </View>
-                        </View>
-                        {isSelected ? (
-                          <View
-                            style={[
-                              styles.checkBadge,
-                              { backgroundColor: theme.primaryBackground },
-                            ]}
-                          >
-                            <MaterialCommunityIcons
-                              name="check"
-                              size={16}
-                              color={theme.primaryText}
-                            />
-                          </View>
-                        ) : (
-                          <MaterialCommunityIcons
-                            name="chevron-right"
-                            size={18}
-                            color={theme.textLighter2}
-                            style={r.rtl ? styles.chevronRtl : undefined}
-                          />
-                        )}
-                      </Pressable>
-                    )
-                  })}
-                </View>
-              </View>
-            </Pressable>
-          </Pressable>
-        </Modal>
+                        <ThemedText style={styles.optionFlag}>{lang.flag}</ThemedText>
+                      </View>
+                      <View style={styles.optionTextBlock}>
+                        <ThemedText
+                          variant="body"
+                          weight="semibold"
+                          numberOfLines={1}
+                          style={[r.textAlignStart, r.writingDirection]}
+                        >
+                          {lang.nativeLabel}
+                        </ThemedText>
+                        <ThemedText
+                          variant="bodySmall"
+                          tone="muted"
+                          numberOfLines={1}
+                          style={[r.textAlignStart, r.writingDirection]}
+                        >
+                          {lang.label}
+                        </ThemedText>
+                      </View>
+                    </View>
+                    {isSelected ? (
+                      <View
+                        style={[
+                          styles.checkBadge,
+                          { backgroundColor: theme.primaryBackground },
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name="check"
+                          size={16}
+                          color={theme.primaryText}
+                        />
+                      </View>
+                    ) : (
+                      <DirectionalChevron
+                        size={18}
+                        color={theme.textLighter2}
+                      />
+                    )}
+                  </Pressable>
+                )
+              })}
+            </View>
+          </View>
+        </ModalDialog>
       )}
     </>
   )
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
+  modalBody: {
+    width: '100%',
+    gap: 14,
   },
-  modalContent: {
-    borderRadius: 24,
-    borderWidth: 1,
-    width: "100%",
-    maxWidth: 340,
-    overflow: "hidden",
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.12,
-    shadowRadius: 28,
-    elevation: 8,
-  },
-  modalHeader: {
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-  },
-  modalTitleBlock: {
-    flex: 1,
-    gap: 2,
-  },
-  closeArea: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  modalDescription: { marginTop: -2 },
   optionsList: {
-    padding: 14,
     gap: 10,
   },
   option: {
-    alignItems: "center",
+    width: '100%',
+    minWidth: 0,
+    alignItems: 'center',
     borderWidth: 1,
     borderRadius: 18,
     paddingHorizontal: 14,
@@ -267,7 +215,8 @@ const styles = StyleSheet.create({
   },
   optionFlagGroup: {
     flex: 1,
-    alignItems: "center",
+    minWidth: 0,
+    alignItems: 'center',
     gap: 12,
   },
   optionFlagWrap: {
@@ -282,6 +231,7 @@ const styles = StyleSheet.create({
   },
   optionTextBlock: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   checkBadge: {
@@ -313,7 +263,4 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   flag: { fontSize: 18 },
-  chevronRtl: {
-    transform: [{ rotate: '180deg' }],
-  },
 })

@@ -1,13 +1,16 @@
 // app/settings/index.tsx
 import { Ionicons } from '@expo/vector-icons'
 import { Href, useRouter } from 'expo-router'
-import React from 'react'
+import React, { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { MemberAvatar } from '@/components/avatar/member-avatar'
-import { Screen } from '@/components/ui'
+import { LanguageSwitcher } from '@/components/language-switcher'
+import { DirectionalChevron, Screen } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
+import { SUPPORTED_LANGUAGES, type SupportedLangCode } from '@/lib/i18n'
 import { useProfile } from '@/lib/profiles/profiles.hooks'
+import { useTranslation } from 'react-i18next'
 
 
 type Item = {
@@ -15,7 +18,8 @@ type Item = {
   title: string
   description: string
   icon: React.ComponentProps<typeof Ionicons>['name']
-  href: Href
+  href?: Href
+  action?: 'language'
 }
 
 const ITEMS: Item[] = [
@@ -39,6 +43,13 @@ const ITEMS: Item[] = [
     description: 'Nickname, theme color',
     icon: 'happy-outline',
     href: '/settings/member',
+  },
+  {
+    key: 'language',
+    title: 'App language',
+    description: 'Change the language used in the app',
+    icon: 'globe-outline',
+    action: 'language',
   },
   {
     key: 'family',
@@ -65,16 +76,26 @@ const ITEMS: Item[] = [
 
 export default function SettingsIndex() {
   const router = useRouter()
+  const { i18n, t } = useTranslation()
   const { effectiveMember, hasParentPermissions, isKidMode } = useAuthContext()
   const profileId = effectiveMember?.profile_id ?? null
   const { data: profile } = useProfile(profileId)
+  const [languageModalOpen, setLanguageModalOpen] = useState(false)
   const visibleItems =
     isKidMode || !hasParentPermissions
-      ? ITEMS.filter(item => item.key === 'member')
+      ? ITEMS.filter(item => item.key === 'member' || item.key === 'language')
       : ITEMS
 
   const firstName = profile?.first_name ?? effectiveMember?.profile?.first_name ?? ''
   const lastName = profile?.last_name ?? effectiveMember?.profile?.last_name ?? ''
+  const currentLanguage = (i18n.language?.split('-')[0] ?? 'he') as SupportedLangCode
+  const currentLanguageLabel = useMemo(
+    () => SUPPORTED_LANGUAGES.find(language => language.code === currentLanguage)?.nativeLabel ?? 'עברית',
+    [currentLanguage],
+  )
+  const languageDescription = t('settings.language.currentLanguage', {
+    language: currentLanguageLabel,
+  })
 
   return (
     <Screen>
@@ -94,14 +115,27 @@ export default function SettingsIndex() {
           <React.Fragment key={item.key}>
             <SettingsRow
               title={item.title}
-              description={item.description}
+              description={item.key === 'language' ? languageDescription : item.description}
               icon={item.icon}
-              onPress={() => router.push(item.href)}
+              onPress={() => {
+                if (item.action === 'language') {
+                  setLanguageModalOpen(true)
+                  return
+                }
+
+                if (item.href) {
+                  router.push(item.href)
+                }
+              }}
             />
             {idx !== visibleItems.length - 1 && <View style={styles.divider} />}
           </React.Fragment>
         ))}
       </View>
+      <LanguageSwitcher
+        visible={languageModalOpen}
+        onClose={() => setLanguageModalOpen(false)}
+      />
     </Screen>
   )
 }
@@ -130,7 +164,7 @@ function SettingsRow({
         </Text>
       </View>
 
-      <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+      <DirectionalChevron size={18} color="#94a3b8" />
     </Pressable>
   )
 }

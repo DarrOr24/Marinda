@@ -1,4 +1,5 @@
 export * from './button'
+export * from './directional-chevron'
 export * from './edit-button'
 export * from './keyboard-frame'
 export * from './meta-row'
