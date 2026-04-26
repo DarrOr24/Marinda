@@ -15,6 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { AuthProvider } from '@/providers/auth-provider'
 import { AppThemeProvider } from '@/providers/theme-provider'
 import { ToastProvider } from '@/providers/toast-provider'
+import { I18nProvider } from './i18n-provider'
 
 
 const queryClient = new QueryClient({
@@ -49,7 +50,7 @@ function useReactQuerySync() {
 function useAudioModeForSilentIOS() {
   useEffect(() => {
     if (Platform.OS !== 'ios') return
-    Audio.setAudioModeAsync({ playsInSilentModeIOS: true }).catch(() => {})
+    Audio.setAudioModeAsync({ playsInSilentModeIOS: true }).catch(() => { })
   }, [])
 }
 
@@ -60,15 +61,17 @@ export default function Providers({ children }: PropsWithChildren) {
 
   return (
     <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <AppThemeProvider>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
-          </AppThemeProvider>
-        </AuthProvider>
-      </QueryClientProvider>
+      <I18nProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <AppThemeProvider>
+              <ToastProvider>
+                {children}
+              </ToastProvider>
+            </AppThemeProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </I18nProvider>
     </SafeAreaProvider>
   )
 }
