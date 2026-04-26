@@ -1,7 +1,8 @@
 {
   "common": {
     "changeLanguage": "שינוי שפה",
-    "language": "שפה"
+    "language": "שפה",
+    "cancel": "ביטול"
   },
   "languageSettingsModal": {
     "title": "שפת האפליקציה",
@@ -10,6 +11,61 @@
   "settings": {
     "language": {
       "currentLanguage": "השפה הנוכחית: {{language}}"
+    }
+  },
+  "navigation": {
+    "tabs": {
+      "kids": "ילדים",
+      "profile": "פרופיל",
+      "chores": "משימות",
+      "wishes": "משאלות",
+      "boards": "לוחות"
+    },
+    "headers": {
+      "chores": "משימות",
+      "wishes": "משאלות",
+      "boards": "לוחות",
+      "getStarted": "מתחילים",
+      "settings": "הגדרות",
+      "accountSettings": "הגדרות חשבון",
+      "emailSettings": "הגדרות אימייל",
+      "memberSettings": "הגדרות בן משפחה שלי",
+      "familySettings": "הגדרות משפחה",
+      "kidModePin": "קוד מצב ילדים",
+      "addMember": "הוספת בן משפחה",
+      "inviteBySms": "הזמנה ב-SMS",
+      "addKid": "הוספת ילד ללא טלפון",
+      "billingSettings": "הגדרות תשלום",
+      "choresInfo": "מידע על משימות",
+      "choresSettings": "הגדרות משימות",
+      "wishesInfo": "מידע על משאלות",
+      "wishesSettings": "הגדרות משאלות",
+      "bulletinInfo": "מידע על לוח הודעות",
+      "postSettings": "הגדרות פוסטים",
+      "shopSettings": "הגדרות קניות",
+      "listsSettings": "הגדרות רשימות"
+    },
+    "profileMenu": {
+      "getStarted": "כיצד להתחיל",
+      "settings": "הגדרות",
+      "enterKidMode": "כניסה למצב ילדים",
+      "playingAs": "משתמשים בתור",
+      "exitKidMode": "יציאה ממצב ילדים",
+      "logOut": "התנתקות",
+      "logOutTitle": "להתנתק?",
+      "logOutMessage": "בטוחים שרוצים להתנתק?",
+      "signOutFailed": "ההתנתקות נכשלה",
+      "welcomeTitle": "ברוכים הבאים ל-Marinda",
+      "welcomeMessage": "התחברו או צרו חשבון משפחתי כדי להמשיך",
+      "logIn": "התחברות",
+      "createAccount": "יצירת חשבון",
+      "noKidsTitle": "עדיין אין ילדים",
+      "noKidsMessage": "הוסיפו ילד או נער לפני השימוש במצב ילדים.",
+      "kidModePinRequiredTitle": "נדרש קוד למצב ילדים",
+      "kidModePinRequiredMessage": "הגדירו קוד למצב ילדים בהגדרות לפני הכניסה למצב ילדים.",
+      "openSettings": "פתיחת הגדרות",
+      "enterParentPinTitle": "הזנת קוד הורה",
+      "enterParentPinMessage": "הזינו את הקוד בן 4 הספרות כדי לחזור למצב הורה."
     }
   }
 }

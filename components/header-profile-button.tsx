@@ -7,6 +7,7 @@ import { useMember } from '@/lib/members/members.hooks'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import React, { useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Alert,
   StyleSheet,
@@ -17,6 +18,7 @@ import {
 import { MemberAvatar } from '@/components/avatar/member-avatar'
 import { ThemedText } from '@/components/themed-text'
 import { ModalPopover } from '@/components/ui'
+import { useRtlStyles } from '@/hooks/use-rtl-styles'
 import type { FamilyMember } from '@/lib/members/members.types'
 import { useTheme } from '@/providers/theme-provider'
 import { memberDisplayName } from '@/utils/format.utils'
@@ -24,6 +26,8 @@ import { memberDisplayName } from '@/utils/format.utils'
 
 export function HeaderProfileButton() {
   const theme = useTheme()
+  const { t } = useTranslation()
+  const r = useRtlStyles()
   const {
     isLoggedIn,
     signOut,
@@ -54,15 +58,15 @@ export function HeaderProfileButton() {
   const showSettingsAction = !!effectiveMember
 
   const handleLogout = () => {
-    Alert.alert('Log out?', 'Are you sure you want to log out?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('navigation.profileMenu.logOutTitle'), t('navigation.profileMenu.logOutMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Log out',
+        text: t('navigation.profileMenu.logOut'),
         onPress: async () => {
           try {
             await signOut?.()
           } catch (err: any) {
-            Alert.alert('Sign out failed', err?.message)
+            Alert.alert(t('navigation.profileMenu.signOutFailed'), err?.message)
           }
         },
       },
@@ -72,12 +76,12 @@ export function HeaderProfileButton() {
   const onPressIcon = () => {
     if (!isLoggedIn) {
       return Alert.alert(
-        'Welcome to Marinda 💫',
-        'Sign in or create your family account to continue',
+        t('navigation.profileMenu.welcomeTitle'),
+        t('navigation.profileMenu.welcomeMessage'),
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Log in', onPress: () => router.push('/login') },
-          { text: 'Create Account', onPress: () => console.log('create') },
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('navigation.profileMenu.logIn'), onPress: () => router.push('/login') },
+          { text: t('navigation.profileMenu.createAccount'), onPress: () => console.log('create') },
         ]
       )
     }
@@ -88,7 +92,7 @@ export function HeaderProfileButton() {
   const handleOpenKidModePicker = () => {
     setOpen(false)
     if (kidModeCandidates.length === 0) {
-      Alert.alert('No kids yet', 'Add a kid or teen first to use kid mode.')
+      Alert.alert(t('navigation.profileMenu.noKidsTitle'), t('navigation.profileMenu.noKidsMessage'))
       return
     }
     setKidModePickerOpen(true)
@@ -99,12 +103,12 @@ export function HeaderProfileButton() {
 
     if (!authMemberDetails.data?.kid_mode_pin) {
       Alert.alert(
-        'Kid mode PIN required',
-        'Set up a kid mode PIN in Settings before entering kid mode.',
+        t('navigation.profileMenu.kidModePinRequiredTitle'),
+        t('navigation.profileMenu.kidModePinRequiredMessage'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Open settings',
+            text: t('navigation.profileMenu.openSettings'),
             onPress: () => router.push('/settings/kid-mode-pin'),
           },
         ],
@@ -138,7 +142,7 @@ export function HeaderProfileButton() {
     <>
       <View style={styles.headerRight}>
         <View ref={menuAnchorRef} collapsable={false}>
-          <TouchableOpacity onPress={onPressIcon} style={{ marginLeft: 4 }}>
+          <TouchableOpacity onPress={onPressIcon} style={r.marginStart(4)}>
             {effectiveMember?.id && (
               <MemberAvatar
                 memberId={effectiveMember.id}
@@ -155,44 +159,57 @@ export function HeaderProfileButton() {
         visible={open}
         onClose={() => setOpen(false)}
         anchorRef={menuAnchorRef}
-        position="bottom-right"
+        position={r.rtl ? 'bottom-left' : 'bottom-right'}
       >
         <View style={styles.menu}>
           {showParentMenuActions && (
             <TouchableOpacity
-              style={styles.item}
+              style={[styles.item, r.row]}
               onPress={() => {
                 setOpen(false)
                 router.push('/getting-started')
               }}
             >
               <MaterialCommunityIcons name="play-circle-outline" size={20} color={theme.info} />
-              <ThemedText variant="bodySmall" weight="semibold" tone="info">
-                Get started
+              <ThemedText
+                variant="bodySmall"
+                weight="semibold"
+                tone="info"
+                style={[styles.menuItemText, r.textAlignStart, r.writingDirection]}
+              >
+                {t('navigation.profileMenu.getStarted')}
               </ThemedText>
             </TouchableOpacity>
           )}
 
           {showSettingsAction && !isKidMode && (
             <TouchableOpacity
-              style={styles.item}
+              style={[styles.item, r.row]}
               onPress={() => {
                 setOpen(false)
                 router.push('/settings')
               }}
             >
               <MaterialCommunityIcons name="cog-outline" size={20} color={theme.textLighter1} />
-              <ThemedText variant="bodySmall" weight="semibold">
-                Settings
+              <ThemedText
+                variant="bodySmall"
+                weight="semibold"
+                style={[styles.menuItemText, r.textAlignStart, r.writingDirection]}
+              >
+                {t('navigation.profileMenu.settings')}
               </ThemedText>
             </TouchableOpacity>
           )}
 
           {showParentMenuActions && (
-            <TouchableOpacity style={styles.item} onPress={handleOpenKidModePicker}>
+            <TouchableOpacity style={[styles.item, r.row]} onPress={handleOpenKidModePicker}>
               <MaterialCommunityIcons name="shield-lock-outline" size={20} color={theme.textLighter1} />
-              <ThemedText variant="bodySmall" weight="semibold">
-                Enter kid mode
+              <ThemedText
+                variant="bodySmall"
+                weight="semibold"
+                style={[styles.menuItemText, r.textAlignStart, r.writingDirection]}
+              >
+                {t('navigation.profileMenu.enterKidMode')}
               </ThemedText>
             </TouchableOpacity>
           )}
@@ -200,43 +217,65 @@ export function HeaderProfileButton() {
           {isKidMode && effectiveMember && (
             <>
               <View style={[styles.kidMenuIdentity, { borderBottomColor: theme.borderLight }]}>
-                <ThemedText variant="label" tone="muted" style={styles.kidMenuLabel}>
-                  Playing as
+                <ThemedText
+                  variant="label"
+                  tone="muted"
+                  style={[styles.kidMenuLabel, r.textAlignStart, r.writingDirection]}
+                >
+                  {t('navigation.profileMenu.playingAs')}
                 </ThemedText>
-                <ThemedText variant="headline" numberOfLines={2}>
+                <ThemedText
+                  variant="headline"
+                  numberOfLines={2}
+                  style={[r.textAlignStart, r.writingDirection]}
+                >
                   {memberDisplayName(effectiveMember as FamilyMember)}
                 </ThemedText>
               </View>
               <TouchableOpacity
-                style={styles.item}
+                style={[styles.item, r.row]}
                 onPress={() => {
                   setOpen(false)
                   router.push('/settings')
                 }}
               >
                 <MaterialCommunityIcons name="cog-outline" size={20} color={theme.textLighter1} />
-                <ThemedText variant="bodySmall" weight="semibold">
-                  Settings
+                <ThemedText
+                  variant="bodySmall"
+                  weight="semibold"
+                  style={[styles.menuItemText, r.textAlignStart, r.writingDirection]}
+                >
+                  {t('navigation.profileMenu.settings')}
                 </ThemedText>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.item}
+                style={[styles.item, r.row]}
                 onPress={() => {
                   void handleExitKidMode()
                 }}
               >
                 <MaterialCommunityIcons name="shield-lock-outline" size={20} color={theme.info} />
-                <ThemedText variant="bodySmall" weight="semibold" tone="info">
-                  Exit kid mode
+                <ThemedText
+                  variant="bodySmall"
+                  weight="semibold"
+                  tone="info"
+                  style={[styles.menuItemText, r.textAlignStart, r.writingDirection]}
+                >
+                  {t('navigation.profileMenu.exitKidMode')}
                 </ThemedText>
               </TouchableOpacity>
             </>
           )}
 
-          <TouchableOpacity style={styles.item} onPress={handleLogout}>
+          <TouchableOpacity style={[styles.item, r.row]} onPress={handleLogout}>
             <MaterialCommunityIcons name="logout" size={20} color={theme.dangerText} />
-            <ThemedText variant="bodySmall" weight="semibold" tone="danger">
-              Log out
+            <ThemedText
+              variant="bodySmall"
+              weight="semibold"
+              tone="danger"
+              style={[styles.menuItemText, r.textAlignStart, r.writingDirection]}
+            >
+              {t('navigation.profileMenu.logOut')}
             </ThemedText>
           </TouchableOpacity>
         </View>
@@ -251,8 +290,8 @@ export function HeaderProfileButton() {
 
       <KidModePinModal
         visible={kidModePinOpen}
-        title="Enter parent PIN"
-        message="Enter your 4-digit PIN to switch back to parent mode."
+        title={t('navigation.profileMenu.enterParentPinTitle')}
+        message={t('navigation.profileMenu.enterParentPinMessage')}
         onCancel={() => setKidModePinOpen(false)}
         onSubmit={handleSubmitKidModePin}
       />
@@ -280,9 +319,14 @@ const styles = StyleSheet.create({
   },
   item: {
     flexDirection: 'row',
+    width: '100%',
     alignItems: 'center',
     gap: 8,
     paddingVertical: 10,
     paddingHorizontal: 12,
+  },
+  menuItemText: {
+    flex: 1,
+    minWidth: 0,
   },
 })

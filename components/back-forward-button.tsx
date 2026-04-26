@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router'
 import React from 'react'
 
 import { Button, type ButtonSize } from '@/components/ui'
+import { useRtlStyles } from '@/hooks/use-rtl-styles'
 
 type Props = {
   direction: 'back' | 'forward'
@@ -12,13 +13,16 @@ type Props = {
 }
 
 export function BackForwardButton({ direction, size = 'sm', path, color = '#000' }: Props) {
+  const { rtl } = useRtlStyles()
+  const router = useRouter()
 
   if (direction === 'forward' && !path) {
     throw new Error('Path is required for forward direction')
   }
 
-  const router = useRouter()
-  const icon = direction === 'back' ? 'chevron-back' : 'chevron-forward'
+  const icon = direction === 'back'
+    ? (rtl ? 'chevron-forward' : 'chevron-back')
+    : (rtl ? 'chevron-back' : 'chevron-forward')
   const iconSize = size === 'sm' ? 22 : size === 'md' ? 24 : size === 'lg' ? 26 : 28
 
   const onPress = () => {

@@ -1,7 +1,8 @@
 {
   "common": {
     "changeLanguage": "Change language",
-    "language": "Language"
+    "language": "Language",
+    "cancel": "Cancel"
   },
   "languageSettingsModal": {
     "title": "App language",
@@ -10,6 +11,61 @@
   "settings": {
     "language": {
       "currentLanguage": "Current language: {{language}}"
+    }
+  },
+  "navigation": {
+    "tabs": {
+      "kids": "Kids",
+      "profile": "Profile",
+      "chores": "Chores",
+      "wishes": "Wishes",
+      "boards": "Boards"
+    },
+    "headers": {
+      "chores": "Chores",
+      "wishes": "Wishes",
+      "boards": "Boards",
+      "getStarted": "Get started",
+      "settings": "Settings",
+      "accountSettings": "Account Settings",
+      "emailSettings": "Email Settings",
+      "memberSettings": "My Family Member Settings",
+      "familySettings": "Family Settings",
+      "kidModePin": "Kid Mode PIN",
+      "addMember": "Add Member",
+      "inviteBySms": "Invite by SMS",
+      "addKid": "Add kid (no phone)",
+      "billingSettings": "Billing Settings",
+      "choresInfo": "Chores info",
+      "choresSettings": "Chores settings",
+      "wishesInfo": "Wishes info",
+      "wishesSettings": "Wishes settings",
+      "bulletinInfo": "Bulletin info",
+      "postSettings": "Post settings",
+      "shopSettings": "Shop settings",
+      "listsSettings": "Lists settings"
+    },
+    "profileMenu": {
+      "getStarted": "Get started",
+      "settings": "Settings",
+      "enterKidMode": "Enter kid mode",
+      "playingAs": "Playing as",
+      "exitKidMode": "Exit kid mode",
+      "logOut": "Log out",
+      "logOutTitle": "Log out?",
+      "logOutMessage": "Are you sure you want to log out?",
+      "signOutFailed": "Sign out failed",
+      "welcomeTitle": "Welcome to Marinda",
+      "welcomeMessage": "Sign in or create your family account to continue",
+      "logIn": "Log in",
+      "createAccount": "Create Account",
+      "noKidsTitle": "No kids yet",
+      "noKidsMessage": "Add a kid or teen first to use kid mode.",
+      "kidModePinRequiredTitle": "Kid mode PIN required",
+      "kidModePinRequiredMessage": "Set up a kid mode PIN in Settings before entering kid mode.",
+      "openSettings": "Open settings",
+      "enterParentPinTitle": "Enter parent PIN",
+      "enterParentPinMessage": "Enter your 4-digit PIN to switch back to parent mode."
     }
   }
 }

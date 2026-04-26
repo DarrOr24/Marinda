@@ -8,11 +8,13 @@ import React, {
   useMemo,
   useState,
 } from 'react'
+import { useTranslation } from 'react-i18next'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Image, Platform, StyleSheet, Text, View } from 'react-native'
 
 import { BackForwardButton } from '@/components/back-forward-button'
 import { HeaderProfileButton } from '@/components/header-profile-button'
+import { useRtlStyles } from '@/hooks/use-rtl-styles'
 
 type HeaderIconName = React.ComponentProps<typeof MaterialCommunityIcons>['name']
 
@@ -41,6 +43,8 @@ const AppHeaderContext = createContext<AppHeaderContextValue | null>(null)
 
 export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const { t } = useTranslation()
+  const r = useRtlStyles()
   const [override, setOverride] = useState<AppHeaderConfig | null>(null)
 
   const defaultConfig = useMemo<AppHeaderConfig>(() => {
@@ -49,7 +53,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/chores') {
       return {
-        title: 'Chores',
+        title: t('navigation.headers.chores'),
         icon: 'clipboard-check-outline',
         color: '#7c3aed',
         hiddenTitle,
@@ -58,7 +62,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/wishlist') {
       return {
-        title: 'Wishes',
+        title: t('navigation.headers.wishes'),
         icon: 'gift-outline',
         color: '#22c55e',
         hiddenTitle,
@@ -67,7 +71,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/boards') {
       return {
-        title: 'Boards',
+        title: t('navigation.headers.boards'),
         icon: 'view-dashboard-outline',
         color: '#f59e0b',
         hiddenTitle,
@@ -84,84 +88,84 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/getting-started') {
       return {
-        title: 'Get started',
+        title: t('navigation.headers.getStarted'),
         hiddenTitle,
       }
     }
 
     if (pathname === '/settings') {
       return {
-        title: 'Settings',
+        title: t('navigation.headers.settings'),
         hiddenTitle,
       }
     }
 
     if (pathname === '/settings/account') {
       return {
-        title: 'Account Settings',
+        title: t('navigation.headers.accountSettings'),
         hiddenTitle,
       }
     }
 
     if (pathname === '/settings/email') {
       return {
-        title: 'Email Settings',
+        title: t('navigation.headers.emailSettings'),
         hiddenTitle,
       }
     }
 
     if (pathname === '/settings/member') {
       return {
-        title: 'My Family Member Settings',
+        title: t('navigation.headers.memberSettings'),
         hiddenTitle,
       }
     }
 
     if (pathname === '/settings/family') {
       return {
-        title: 'Family Settings',
+        title: t('navigation.headers.familySettings'),
         hiddenTitle,
       }
     }
 
     if (pathname === '/settings/kid-mode-pin') {
       return {
-        title: 'Kid Mode PIN',
+        title: t('navigation.headers.kidModePin'),
         hiddenTitle,
       }
     }
 
     if (pathname === '/settings/add-member') {
       return {
-        title: 'Add Member',
+        title: t('navigation.headers.addMember'),
         hiddenTitle,
       }
     }
 
     if (pathname === '/settings/add-member/sms-invite') {
       return {
-        title: 'Invite by SMS',
+        title: t('navigation.headers.inviteBySms'),
         hiddenTitle,
       }
     }
 
     if (pathname === '/settings/add-member/add-kid') {
       return {
-        title: 'Add kid (no phone)',
+        title: t('navigation.headers.addKid'),
         hiddenTitle,
       }
     }
 
     if (pathname === '/settings/billing') {
       return {
-        title: 'Billing Settings',
+        title: t('navigation.headers.billingSettings'),
         hiddenTitle,
       }
     }
 
     if (pathname === '/chores/info') {
       return {
-        title: 'Chores info',
+        title: t('navigation.headers.choresInfo'),
         icon: 'clipboard-check-outline',
         color: '#7c3aed',
         hiddenTitle,
@@ -170,7 +174,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/chores/settings') {
       return {
-        title: 'Chores settings',
+        title: t('navigation.headers.choresSettings'),
         icon: 'clipboard-check-outline',
         color: '#f59e0b',
         hiddenTitle,
@@ -179,7 +183,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/wishlist/info') {
       return {
-        title: 'Wishes info',
+        title: t('navigation.headers.wishesInfo'),
         icon: 'gift-outline',
         color: '#22c55e',
         hiddenTitle,
@@ -188,7 +192,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/wishlist/settings') {
       return {
-        title: 'Wishes settings',
+        title: t('navigation.headers.wishesSettings'),
         icon: 'gift-outline',
         color: '#f59e0b',
         hiddenTitle,
@@ -197,7 +201,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/announcements/info') {
       return {
-        title: 'Bulletin info',
+        title: t('navigation.headers.bulletinInfo'),
         icon: 'bullhorn-outline',
         color: '#f59e0b',
         hiddenTitle,
@@ -206,7 +210,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/announcements/settings') {
       return {
-        title: 'Post settings',
+        title: t('navigation.headers.postSettings'),
         icon: 'bullhorn-outline',
         color: '#f59e0b',
         hiddenTitle,
@@ -215,7 +219,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/shopping/settings') {
       return {
-        title: 'Shop settings',
+        title: t('navigation.headers.shopSettings'),
         icon: 'cart-outline',
         color: '#f59e0b',
         hiddenTitle,
@@ -224,7 +228,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
 
     if (pathname === '/lists/settings') {
       return {
-        title: 'Lists settings',
+        title: t('navigation.headers.listsSettings'),
         icon: 'format-list-bulleted',
         color: '#f59e0b',
         hiddenTitle,
@@ -235,7 +239,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
       title: '',
       hiddenTitle,
     }
-  }, [pathname])
+  }, [pathname, t])
 
   const value = useMemo<AppHeaderContextValue>(
     () => ({
@@ -257,12 +261,12 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
     <AppHeaderContext.Provider value={value}>
       <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={styles.header}>
-          <View style={styles.headerBalancedRow}>
-            <View style={styles.headerSide}>
+          <View style={[styles.headerBalancedRow, r.row]}>
+            <View style={[styles.headerSide, r.rtl ? styles.headerSideStartRtl : null]}>
               {showBackButton ? <BackForwardButton direction="back" size="sm" /> : null}
             </View>
 
-            <View style={[styles.headerSide, styles.headerSideEnd]}>
+            <View style={[styles.headerSide, styles.headerSideEnd, r.rtl ? styles.headerSideEndRtl : null]}>
               <HeaderProfileButton />
             </View>
           </View>
@@ -273,13 +277,16 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
                 styles.headerTitleLayer,
                 config.appBrand && [
                   styles.headerTitleLayerBrand,
-                  { paddingLeft: showBackButton ? 48 : 16 },
+                  r.rtl ? styles.headerTitleLayerBrandRtl : null,
+                  r.rtl
+                    ? { paddingRight: showBackButton ? 48 : 16 }
+                    : { paddingLeft: showBackButton ? 48 : 16 },
                 ],
               ]}
               pointerEvents="none"
             >
               {config.appBrand ? (
-                <View style={[styles.titleRow, styles.titleRowBrand]}>
+                <View style={[styles.titleRow, styles.titleRowBrand, r.row]}>
                   <Image
                     source={require('../assets/images/app-icon.png')}
                     style={styles.titleAppIcon}
@@ -289,6 +296,8 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
                       styles.titleBrandText,
                       styles.titleBrand,
                       styles.titleInRowBrand,
+                      r.textAlignStart,
+                      r.writingDirection,
                     ]}
                     numberOfLines={2}
                     ellipsizeMode="tail"
@@ -297,7 +306,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
                   </Text>
                 </View>
               ) : config.icon ? (
-                <View style={styles.titleRow}>
+                <View style={[styles.titleRow, r.row]}>
                   <MaterialCommunityIcons
                     name={config.icon}
                     size={22}
@@ -305,7 +314,13 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
                     style={styles.titleIcon}
                   />
                   <Text
-                    style={[styles.title, styles.titleInRow, { color: config.color ?? '#0f172a' }]}
+                    style={[
+                      styles.title,
+                      styles.titleInRow,
+                      r.textAlignStart,
+                      r.writingDirection,
+                      { color: config.color ?? '#0f172a' },
+                    ]}
                     numberOfLines={2}
                     ellipsizeMode="tail"
                   >
@@ -314,7 +329,7 @@ export function AppHeaderProvider({ children }: { children: React.ReactNode }) {
                 </View>
               ) : (
                 <Text
-                  style={[styles.title, styles.titlePlain]}
+                  style={[styles.title, styles.titlePlain, r.writingDirection]}
                   numberOfLines={2}
                   ellipsizeMode="tail"
                 >
@@ -381,8 +396,14 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     minWidth: 0,
   },
+  headerSideStartRtl: {
+    justifyContent: 'flex-end',
+  },
   headerSideEnd: {
     justifyContent: 'flex-end',
+  },
+  headerSideEndRtl: {
+    justifyContent: 'flex-start',
   },
   headerTitleLayer: {
     ...StyleSheet.absoluteFillObject,
@@ -392,6 +413,9 @@ const styles = StyleSheet.create({
   headerTitleLayerBrand: {
     alignItems: 'flex-start',
     justifyContent: 'center',
+  },
+  headerTitleLayerBrandRtl: {
+    alignItems: 'flex-end',
   },
   titleRow: {
     flexDirection: 'row',
