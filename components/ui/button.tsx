@@ -103,6 +103,7 @@ export function Button({
   const resolvedRightIconColor = rightIconColor ?? resolvedTextColor;
 
   const hasText = Boolean(title);
+  const displayTitle = uppercase ? title.toUpperCase() : title;
   const hasLeftIcon = Boolean(leftIcon);
   const hasRightIcon = Boolean(rightIcon);
   const iconOnly = !hasText && (hasLeftIcon || hasRightIcon);
@@ -168,10 +169,9 @@ export function Button({
               typeStyles.text,
               titleColor ? { color: titleColor } : undefined,
               bold && styles.textBold,
-              uppercase && styles.uppercase,
             ]}
           >
-            {title}
+            {displayTitle}
           </ThemedText>
         )}
 
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   sizeSm: { paddingHorizontal: 10, paddingVertical: 6 },
   sizeMd: { paddingHorizontal: 14, paddingVertical: 8 },
   sizeLg: { paddingHorizontal: 18, paddingVertical: 10 },
-  sizeXl: { paddingHorizontal: 22, paddingVertical: 12 },
+  sizeXl: { paddingHorizontal: 22, paddingVertical: 16 },
 
   fullWidth: { alignSelf: 'stretch' },
 
@@ -256,12 +256,14 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  text: { fontWeight: '500' },
+  text: {
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
   textBold: { fontWeight: '700' },
-  textSm: { fontSize: 12 },
-  textMd: { fontSize: 13 },
-  textLg: { fontSize: 16 },
-  textXl: { fontSize: 20 },
-
-  uppercase: { textTransform: 'uppercase' },
+  textSm: { fontSize: 12, lineHeight: 16 },
+  textMd: { fontSize: 13, lineHeight: 18 },
+  textLg: { fontSize: 16, lineHeight: 20 },
+  textXl: { fontSize: 20, lineHeight: 24, letterSpacing: 1 },
 });

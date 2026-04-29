@@ -7,7 +7,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Edge, SafeAreaView } from "react-native-safe-area-context";
 
 import { useTheme } from "@/providers/theme-provider";
 
@@ -17,6 +17,7 @@ type Props = {
   withBackground?: boolean;
   centerContent?: boolean;
   fixedHeader?: React.ReactNode;
+  fixedHeaderStyle?: ViewStyle;
 
   // ✅ optional floating UI (FAB, etc) rendered above scroll
   overlay?: React.ReactNode;
@@ -27,6 +28,7 @@ type Props = {
   /** Passed to ScrollView; use `none` when the user should scroll without dismissing the keyboard. */
   keyboardDismissMode?: ScrollViewProps["keyboardDismissMode"];
   keyboardShouldPersistTaps?: ScrollViewProps["keyboardShouldPersistTaps"];
+  safeAreaEdges?: Edge[];
 };
 
 export function Screen({
@@ -35,11 +37,13 @@ export function Screen({
   withBackground = true,
   centerContent = false,
   fixedHeader,
+  fixedHeaderStyle,
   overlay,
   contentStyle,
   scroll = true,
   keyboardDismissMode = "on-drag",
   keyboardShouldPersistTaps = "handled",
+  safeAreaEdges = ["left", "right"],
 }: Props) {
   const theme = useTheme()
   const gapStyle =
@@ -47,11 +51,11 @@ export function Screen({
   const screenBackgroundColor = withBackground ? theme.screenBackgroundAccent : theme.background
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: screenBackgroundColor }]} edges={["left", "right"]}>
+    <SafeAreaView style={[styles.screen, { backgroundColor: screenBackgroundColor }]} edges={safeAreaEdges}>
       {/* stage keeps overlay OUTSIDE scroll but on top */}
       <View style={styles.stage}>
         {fixedHeader ? (
-          <View style={styles.fixedHeader}>
+          <View style={[styles.fixedHeader, fixedHeaderStyle]}>
             {fixedHeader}
           </View>
         ) : null}

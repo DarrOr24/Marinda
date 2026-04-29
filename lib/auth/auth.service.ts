@@ -60,6 +60,26 @@ export async function verifyOtp(
   return { ok: true, user: data.user }
 }
 
+export async function signInWithPassword(
+  email: string,
+  password: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const normalizedEmail = email.trim().toLowerCase()
+  if (!isValidEmail(normalizedEmail)) {
+    return { ok: false, error: 'Please enter a valid email address.' }
+  }
+  if (!password) {
+    return { ok: false, error: 'Please enter the password.' }
+  }
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email: normalizedEmail,
+    password,
+  })
+
+  return error ? { ok: false, error: error.message } : { ok: true }
+}
+
 export async function updateEmail(
   nextEmail: string,
 ): Promise<{ ok: boolean; error?: string }> {

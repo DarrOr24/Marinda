@@ -11,8 +11,19 @@
     "preview": {
       "distribution": "internal"
     },
+    "review": {
+      "autoIncrement": true,
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_REVIEWER_LOGIN_ENABLED": "true"
+      }
+    },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_REVIEWER_LOGIN_ENABLED": "false"
+      }
     }
   },
   "submit": {

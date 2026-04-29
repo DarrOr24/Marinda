@@ -1,16 +1,14 @@
 // components/auth/identifier-step.tsx
 import React, { useMemo, useState } from 'react'
 import {
-  ActivityIndicator,
   Alert,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native'
 
-import { PhoneField } from '@/components/ui'
+import { Button, PhoneField } from '@/components/ui'
 
 export type AuthMode = 'phone' | 'email'
 
@@ -58,7 +56,7 @@ export function IdentifierStep({
   }
 
   return (
-    <>
+    <View style={styles.container}>
       {mode === 'phone' ? (
         <View style={styles.field}>
           <PhoneField
@@ -90,23 +88,23 @@ export function IdentifierStep({
         </View>
       )}
 
-      <TouchableOpacity
-        style={[
-          styles.button,
-          styles.primaryButton,
-          (!canContinue || loading) && styles.buttonDisabled,
-        ]}
-        disabled={loading}
+      <Button
+        title={loading ? 'Continuing...' : 'Continue'}
+        size="xl"
+        fullWidth
+        uppercase
+        bold
+        disabled={!canContinue || loading}
         onPress={handleContinue}
-      >
-        {loading ? <ActivityIndicator /> : <Text style={styles.buttonText}>Continue</Text>}
-      </TouchableOpacity>
-    </>
+        style={styles.button}
+      />
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  field: { gap: 6 },
+  container: { gap: 24 },
+  field: { gap: 12 },
   label: { fontSize: 14, fontWeight: '500', color: '#374151' },
 
   input: {
@@ -121,10 +119,7 @@ const styles = StyleSheet.create({
   },
 
 
-  helperText: { fontSize: 12, color: '#6b7280', marginTop: 6 },
+  helperText: { fontSize: 12, color: '#6b7280', marginTop: 8 },
 
-  button: { borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
-  primaryButton: { backgroundColor: '#2563eb' },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { fontWeight: '600', color: '#fff' },
+  button: { marginTop: 4 },
 })
