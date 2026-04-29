@@ -7,6 +7,7 @@ import {
   TextInput,
   View,
 } from 'react-native'
+import { useTranslation } from 'react-i18next'
 
 import { FamilyAvatar } from '@/components/avatar/family-avatar'
 import { ChipSelector } from '@/components/chip-selector'
@@ -14,16 +15,16 @@ import { DatePicker } from '@/components/date-picker'
 import { Button, Screen } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
 import { useHydratedEffect } from '@/hooks/use-hydrated-effect'
+import { useRtlStyles } from '@/hooks/use-rtl-styles'
 import { useMyFamilies } from '@/lib/families/families.hooks'
+import { ROLE_OPTIONS } from '@/lib/members/members.types'
+import { GENDER_OPTIONS } from '@/lib/profiles/profiles.types'
 import { useProfile, useUpdateProfile } from '@/lib/profiles/profiles.hooks'
 
 
-const GENDER_OPTIONS = [
-  { label: 'Male', value: 'MALE' },
-  { label: 'Female', value: 'FEMALE' },
-]
-
 export default function AccountSettingsScreen() {
+  const { t } = useTranslation()
+  const r = useRtlStyles()
   const { effectiveMember } = useAuthContext()
   const profileId = effectiveMember?.profile_id
   const activeFamilyId = effectiveMember?.family_id ?? null
@@ -39,6 +40,22 @@ export default function AccountSettingsScreen() {
   const [lastName, setLastName] = useState('')
   const [gender, setGender] = useState<string | null>(null)
   const [birthDate, setBirthDate] = useState<string>('')
+  const genderOptions = useMemo(
+    () =>
+      GENDER_OPTIONS.map((option) => ({
+        ...option,
+        label: t(option.labelKey),
+      })),
+    [t],
+  )
+  const roleOptions = useMemo(
+    () =>
+      ROLE_OPTIONS.map((option) => ({
+        ...option,
+        label: t(option.labelKey),
+      })),
+    [t],
+  )
 
   useHydratedEffect(() => {
     if (!data) return
@@ -78,28 +95,34 @@ export default function AccountSettingsScreen() {
     return (
       <View style={[styles.centerOnly, { marginTop: 32 }]}>
         <ActivityIndicator />
-        <Text style={styles.subtitle}>Loading profile…</Text>
+        <Text style={[styles.subtitle, r.textAlignStart, r.writingDirection]}>
+          {t('settings.account.loadingProfile')}
+        </Text>
       </View>
     )
   }
 
   return (
     <Screen>
-      <Text style={styles.sectionTitle}>Account Settings</Text>
+      <Text style={[styles.sectionTitle, r.textAlignStart, r.writingDirection]}>
+        {t('settings.account.title')}
+      </Text>
 
       {/* My families */}
-      <Text style={styles.label}>My families</Text>
+      <Text style={[styles.label, r.textAlignStart, r.writingDirection]}>{t('settings.account.myFamilies')}</Text>
       {isLoadingFamilies ? (
-        <View style={styles.familiesLoadingRow}>
+        <View style={[styles.familiesLoadingRow, r.row]}>
           <ActivityIndicator size="small" />
-          <Text style={styles.subtitle}>Loading families…</Text>
+          <Text style={[styles.subtitle, r.textAlignStart, r.writingDirection]}>
+            {t('settings.account.loadingFamilies')}
+          </Text>
         </View>
       ) : families.length === 0 ? (
-        <Text style={styles.subtitle}>
-          You are not a member of any families yet.
+        <Text style={[styles.subtitle, r.textAlignStart, r.writingDirection]}>
+          {t('settings.account.noFamilies')}
         </Text>
       ) : (
-        <View style={styles.familiesRow}>
+        <View style={[styles.familiesRow, r.row]}>
           {families.map((fam) => {
             const isSelected = families.length > 1 && fam.id === activeFamilyId
             return (
@@ -114,12 +137,12 @@ export default function AccountSettingsScreen() {
                     console.log('TODO: select family', fam.id)
                   }}
                 />
-                <Text style={styles.familyName} numberOfLines={1}>
+                <Text style={[styles.familyName, r.writingDirection]} numberOfLines={1}>
                   {fam.name}
                 </Text>
                 {fam.role && (
-                  <Text style={styles.familyRole}>
-                    {fam.role.toLowerCase()}
+                  <Text style={[styles.familyRole, r.textAlignStart, r.writingDirection]}>
+                    {roleOptions.find((option) => option.value === fam.role)?.label ?? fam.role}
                   </Text>
                 )}
               </View>
@@ -129,36 +152,36 @@ export default function AccountSettingsScreen() {
       )}
 
       {/* First name */}
-      <Text style={styles.label}>First Name</Text>
+      <Text style={[styles.label, r.textAlignStart, r.writingDirection]}>{t('settings.account.firstName')}</Text>
       <TextInput
         value={firstName}
         onChangeText={setFirstName}
-        style={styles.input}
+        style={[styles.input, r.textAlignStart, r.writingDirection]}
       />
 
       {/* Last name */}
-      <Text style={styles.label}>Last Name</Text>
+      <Text style={[styles.label, r.textAlignStart, r.writingDirection]}>{t('settings.account.lastName')}</Text>
       <TextInput
         value={lastName}
         onChangeText={setLastName}
-        style={styles.input}
+        style={[styles.input, r.textAlignStart, r.writingDirection]}
       />
 
       {/* Gender */}
-      <Text style={styles.label}>Gender</Text>
+      <Text style={[styles.label, r.textAlignStart, r.writingDirection]}>{t('settings.common.gender')}</Text>
       <ChipSelector
-        options={GENDER_OPTIONS}
+        options={genderOptions}
         value={gender}
         onChange={setGender}
         style={{ marginTop: 4 }}
       />
 
       {/* Birth date */}
-      <Text style={styles.label}>Birth Date</Text>
+      <Text style={[styles.label, r.textAlignStart, r.writingDirection]}>{t('settings.common.birthDate')}</Text>
       <DatePicker
         value={birthDate}
         onChange={setBirthDate}
-        title="Pick your birth date"
+        title={t('settings.account.pickBirthDate')}
         disabled={updateProfile.isPending}
         enableYearPicker
         yearPickerRange={{ past: 120, future: 0 }}
@@ -166,7 +189,7 @@ export default function AccountSettingsScreen() {
 
       {/* Save */}
       <Button
-        title={updateProfile.isPending ? 'Saving…' : 'Save Changes'}
+        title={updateProfile.isPending ? t('settings.common.saving') : t('settings.common.saveChanges')}
         type="primary"
         size="lg"
         onPress={handleSave}

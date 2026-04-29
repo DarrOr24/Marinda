@@ -4,13 +4,23 @@ import { type Profile } from "@/lib/profiles/profiles.types";
 
 export type Role = 'MOM' | 'DAD' | 'ADULT' | 'TEEN' | 'CHILD'
 
-export const ROLE_OPTIONS: { label: string; value: Role }[] = [
-  { label: 'Mom', value: 'MOM' },
-  { label: 'Dad', value: 'DAD' },
-  { label: 'Adult', value: 'ADULT' },
-  { label: 'Teen', value: 'TEEN' },
-  { label: 'Child', value: 'CHILD' },
+export type RoleOption = {
+  label: string
+  labelKey: string
+  value: Role
+}
+
+export const ROLE_OPTIONS: RoleOption[] = [
+  { label: 'Mom', labelKey: 'settings.common.roles.MOM', value: 'MOM' },
+  { label: 'Dad', labelKey: 'settings.common.roles.DAD', value: 'DAD' },
+  { label: 'Adult', labelKey: 'settings.common.roles.ADULT', value: 'ADULT' },
+  { label: 'Teen', labelKey: 'settings.common.roles.TEEN', value: 'TEEN' },
+  { label: 'Child', labelKey: 'settings.common.roles.CHILD', value: 'CHILD' },
 ]
+
+export const KID_ROLE_OPTIONS = ROLE_OPTIONS.filter((option) =>
+  option.value === 'TEEN' || option.value === 'CHILD'
+)
 export interface Color {
   name: string
   hex: string

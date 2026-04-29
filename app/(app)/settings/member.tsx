@@ -1,13 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useTranslation } from 'react-i18next'
 
 import { ChipSelector, type ChipOption } from '@/components/chip-selector'
 import { Button, ModalDialog, Screen, ScreenState } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
+import { useRtlStyles } from '@/hooks/use-rtl-styles'
 import { useColorPalette, useMember, useUpdateMember } from '@/lib/members/members.hooks'
 import { formatColorName, tint } from '@/utils/color.utils'
 
 export default function MyFamilyMemberSettingsScreen() {
+  const { t } = useTranslation()
+  const r = useRtlStyles()
   const { effectiveMember } = useAuthContext() as any
   const memberQuery = useMember(effectiveMember?.id ?? null)
   const colorPaletteQuery = useColorPalette()
@@ -48,7 +52,7 @@ export default function MyFamilyMemberSettingsScreen() {
 
   const onSave = async () => {
     if (!member?.id) {
-      Alert.alert('Not ready', 'Please try again in a moment.')
+      Alert.alert(t('settings.common.notReadyTitle'), t('settings.common.notReadyMessage'))
       return
     }
 
@@ -67,17 +71,17 @@ export default function MyFamilyMemberSettingsScreen() {
         memberId: member.id,
         updates,
       })
-      Alert.alert('Saved', 'Member settings updated.')
+      Alert.alert(t('settings.common.savedTitle'), t('settings.member.updatedMessage'))
     } catch (e: any) {
-      Alert.alert('Save failed', e?.message ?? 'Please try again.')
+      Alert.alert(t('settings.common.saveFailedTitle'), e?.message ?? t('settings.common.pleaseTryAgain'))
     }
   }
 
   if (!member && memberQuery.isLoading) {
     return (
       <ScreenState
-        title="Member settings"
-        description="Loading your family member settings."
+        title={t('settings.member.loadingTitle')}
+        description={t('settings.member.loadingDescription')}
         showActivityIndicator
       />
     )
@@ -85,35 +89,37 @@ export default function MyFamilyMemberSettingsScreen() {
 
   return (
     <Screen>
-      <Text style={styles.title}>My family member</Text>
-      <Text style={styles.subtitle}>
-        Update your nickname and choose the color that represents you across the app.
+      <Text style={[styles.title, r.textAlignStart, r.writingDirection]}>{t('settings.member.title')}</Text>
+      <Text style={[styles.subtitle, r.textAlignStart, r.writingDirection]}>
+        {t('settings.member.subtitle')}
       </Text>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Nickname (optional)</Text>
+        <Text style={[styles.label, r.textAlignStart, r.writingDirection]}>{t('settings.common.nicknameOptional')}</Text>
         <TextInput
           value={nickname}
           onChangeText={setNickname}
-          style={styles.input}
-          placeholder="Enter a nickname"
+          style={[styles.input, r.textAlignStart, r.writingDirection]}
+          placeholder={t('settings.member.nicknamePlaceholder')}
           placeholderTextColor="#94a3b8"
         />
 
-        <Text style={styles.label}>Theme color</Text>
+        <Text style={[styles.label, r.textAlignStart, r.writingDirection]}>{t('settings.member.themeColor')}</Text>
 
         {colorPaletteQuery.isLoading && !(colorPaletteQuery.data ?? []).length ? (
-          <View style={styles.loadingRow}>
+          <View style={[styles.loadingRow, r.row]}>
             <ActivityIndicator />
-            <Text style={styles.helperText}>Loading color palette…</Text>
+            <Text style={[styles.helperText, r.textAlignStart, r.writingDirection]}>
+              {t('settings.member.loadingColors')}
+            </Text>
           </View>
         ) : colorPaletteQuery.isError ? (
-          <Text style={styles.errorText}>
-            Could not load theme colors. Please try again.
+          <Text style={[styles.errorText, r.textAlignStart, r.writingDirection]}>
+            {t('settings.member.colorsError')}
           </Text>
         ) : (
-          <View style={styles.themeRow}>
-            <View style={styles.themeSummary}>
+          <View style={[styles.themeRow, r.row]}>
+            <View style={[styles.themeSummary, r.row]}>
               <View
                 style={[
                   styles.themePreview,
@@ -122,13 +128,13 @@ export default function MyFamilyMemberSettingsScreen() {
               >
                 <View style={[styles.themePreviewDot, { backgroundColor: currentThemeHex }]} />
               </View>
-              <Text style={styles.themeName}>
-                {themeColorName ? formatColorName(themeColorName) : 'No theme selected'}
+              <Text style={[styles.themeName, r.textAlignStart, r.writingDirection]}>
+                {themeColorName ? formatColorName(themeColorName) : t('settings.member.noThemeSelected')}
               </Text>
             </View>
 
             <Button
-              title="Change theme"
+              title={t('settings.member.changeTheme')}
               type="outline"
               size="md"
               onPress={() => setThemeModalVisible(true)}
@@ -137,7 +143,7 @@ export default function MyFamilyMemberSettingsScreen() {
         )}
 
         <Button
-          title={updateMember.isPending ? 'Saving…' : 'Save Changes'}
+          title={updateMember.isPending ? t('settings.common.saving') : t('settings.common.saveChanges')}
           type="primary"
           size="lg"
           onPress={onSave}
@@ -158,9 +164,9 @@ export default function MyFamilyMemberSettingsScreen() {
         size="md"
       >
           <View>
-            <Text style={styles.modalTitle}>Choose a theme</Text>
-            <Text style={styles.modalSubtitle}>
-              Pick the color that you like!
+            <Text style={[styles.modalTitle, r.textAlignStart, r.writingDirection]}>{t('settings.member.chooseThemeTitle')}</Text>
+            <Text style={[styles.modalSubtitle, r.textAlignStart, r.writingDirection]}>
+              {t('settings.member.chooseThemeDescription')}
             </Text>
 
             <ChipSelector
@@ -191,7 +197,7 @@ export default function MyFamilyMemberSettingsScreen() {
                 const color = colorByName.get(opt.value) ?? '#94a3b8'
 
                 return (
-                  <View style={styles.colorOption}>
+                  <View style={[styles.colorOption, r.row]}>
                     <View
                       style={[
                         styles.colorSwatch,
@@ -204,6 +210,8 @@ export default function MyFamilyMemberSettingsScreen() {
                     <Text
                       style={[
                         styles.colorLabel,
+                        r.textAlignStart,
+                        r.writingDirection,
                         active && styles.colorLabelActive,
                       ]}
                     >
@@ -215,11 +223,11 @@ export default function MyFamilyMemberSettingsScreen() {
             />
 
             <Button
-              title="Done"
+              title={t('settings.common.done')}
               type="ghost"
               size="lg"
               onPress={() => setThemeModalVisible(false)}
-              style={{ marginTop: 16, alignSelf: 'flex-end' }}
+              style={[{ marginTop: 16 }, r.alignSelfEnd]}
             />
           </View>
       </ModalDialog>

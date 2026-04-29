@@ -8,6 +8,7 @@ import { MemberAvatar } from '@/components/avatar/member-avatar'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { DirectionalChevron, Screen } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
+import { useRtlStyles } from '@/hooks/use-rtl-styles'
 import { SUPPORTED_LANGUAGES, type SupportedLangCode } from '@/lib/i18n'
 import { useProfile } from '@/lib/profiles/profiles.hooks'
 import { useTranslation } from 'react-i18next'
@@ -15,8 +16,8 @@ import { useTranslation } from 'react-i18next'
 
 type Item = {
   key: string
-  title: string
-  description: string
+  titleKey: string
+  descriptionKey: string
   icon: React.ComponentProps<typeof Ionicons>['name']
   href?: Href
   action?: 'language'
@@ -25,50 +26,50 @@ type Item = {
 const ITEMS: Item[] = [
   {
     key: 'account',
-    title: 'Account',
-    description: 'Profile, email, delete account',
+    titleKey: 'settings.index.accountTitle',
+    descriptionKey: 'settings.index.accountDescription',
     icon: 'person-circle-outline',
     href: '/settings/account',
   },
   {
     key: 'email',
-    title: 'Email',
-    description: 'Email settings',
+    titleKey: 'settings.index.emailTitle',
+    descriptionKey: 'settings.index.emailDescription',
     icon: 'mail-outline',
     href: '/settings/email',
   },
   {
     key: 'member',
-    title: 'My family member',
-    description: 'Nickname, theme color',
+    titleKey: 'settings.index.memberTitle',
+    descriptionKey: 'settings.index.memberDescription',
     icon: 'happy-outline',
     href: '/settings/member',
   },
   {
     key: 'language',
-    title: 'App language',
-    description: 'Change the language used in the app',
+    titleKey: 'settings.index.languageTitle',
+    descriptionKey: 'settings.index.languageDescription',
     icon: 'globe-outline',
     action: 'language',
   },
   {
     key: 'family',
-    title: 'Family',
-    description: 'Manage members and family code',
+    titleKey: 'settings.index.familyTitle',
+    descriptionKey: 'settings.index.familyDescription',
     icon: 'people-outline',
     href: '/settings/family',
   },
   {
     key: 'kid-mode-pin',
-    title: 'Kid mode PIN',
-    description: 'Set or change the PIN used to exit kid mode',
+    titleKey: 'settings.index.kidModePinTitle',
+    descriptionKey: 'settings.index.kidModePinDescription',
     icon: 'lock-closed-outline',
     href: '/settings/kid-mode-pin',
   },
   {
     key: 'billing',
-    title: 'Billing',
-    description: 'Subscription and payment methods',
+    titleKey: 'settings.index.billingTitle',
+    descriptionKey: 'settings.index.billingDescription',
     icon: 'card-outline',
     href: '/settings/billing',
   },
@@ -77,6 +78,7 @@ const ITEMS: Item[] = [
 export default function SettingsIndex() {
   const router = useRouter()
   const { i18n, t } = useTranslation()
+  const r = useRtlStyles()
   const { effectiveMember, hasParentPermissions, isKidMode } = useAuthContext()
   const profileId = effectiveMember?.profile_id ?? null
   const { data: profile } = useProfile(profileId)
@@ -99,7 +101,7 @@ export default function SettingsIndex() {
 
   return (
     <Screen>
-      <View style={styles.avatarWrapper}>
+      <View style={[styles.avatarWrapper, r.row, r.alignSelfStart]}>
         {effectiveMember?.id ? (
           <MemberAvatar
             memberId={effectiveMember.id}
@@ -107,15 +109,15 @@ export default function SettingsIndex() {
             isUpdatable={true}
           />
         ) : null}
-        <Text style={styles.avatarName}>{firstName}{'\n'}{lastName}</Text>
+        <Text style={[styles.avatarName, r.textAlignStart, r.writingDirection]}>{firstName}{'\n'}{lastName}</Text>
       </View>
 
       <View style={styles.card}>
         {visibleItems.map((item, idx) => (
           <React.Fragment key={item.key}>
             <SettingsRow
-              title={item.title}
-              description={item.key === 'language' ? languageDescription : item.description}
+              title={t(item.titleKey)}
+              description={item.key === 'language' ? languageDescription : t(item.descriptionKey)}
               icon={item.icon}
               onPress={() => {
                 if (item.action === 'language') {
@@ -151,15 +153,17 @@ function SettingsRow({
   icon: React.ComponentProps<typeof Ionicons>['name']
   onPress: () => void
 }) {
+  const r = useRtlStyles()
+
   return (
-    <Pressable onPress={onPress} style={styles.row}>
+    <Pressable onPress={onPress} style={[styles.row, r.row]}>
       <View style={styles.iconWrap}>
         <Ionicons name={icon} size={22} color="#0f172a" />
       </View>
 
       <View style={styles.rowText}>
-        <Text style={styles.rowTitle}>{title}</Text>
-        <Text style={styles.rowDesc} numberOfLines={2}>
+        <Text style={[styles.rowTitle, r.textAlignStart, r.writingDirection]}>{title}</Text>
+        <Text style={[styles.rowDesc, r.textAlignStart, r.writingDirection]} numberOfLines={2}>
           {description}
         </Text>
       </View>
@@ -171,10 +175,8 @@ function SettingsRow({
 
 const styles = StyleSheet.create({
   avatarWrapper: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 20,
-    alignSelf: 'flex-start',
     marginBottom: 12,
   },
   avatarName: { fontSize: 24, fontWeight: '600', color: '#0f172a' },
@@ -191,7 +193,6 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: '#eef2f7' },
 
   row: {
-    flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
     paddingHorizontal: 14,

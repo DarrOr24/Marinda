@@ -6,9 +6,11 @@ import {
   Text,
   View,
 } from 'react-native'
+import { useTranslation } from 'react-i18next'
 
 import { Button, Screen, ScreenState } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
+import { useRtlStyles } from '@/hooks/use-rtl-styles'
 import {
   useBillingState,
   usePurchasePackage,
@@ -21,20 +23,18 @@ import type { FamilyMember } from '@/lib/members/members.types'
 import { memberDisplayName } from '@/utils/format.utils'
 import { isParentRole } from '@/utils/validation.utils'
 
-function formatPlan(plan: string): string {
-  return plan === 'pro' ? 'Pro' : 'Basic'
-}
-
 export default function BillingSettingsScreen() {
+  const { t } = useTranslation()
+  const r = useRtlStyles()
   const { effectiveMember, activeFamilyId, profileId, hasParentPermissions } = useAuthContext()
   const familyId = activeFamilyId ?? effectiveMember?.family_id
+  const mutationFamilyId = familyId ?? ''
   const myProfileId = profileId ?? effectiveMember?.profile_id
 
-  const setBillingOwner = familyId ? useSetBillingOwner(familyId) : null
+  const setBillingOwner = useSetBillingOwner(mutationFamilyId)
   const {
     family,
     familyData,
-    subscription,
     members,
     billingOwnerId,
     isBillingOwner,
@@ -53,7 +53,8 @@ export default function BillingSettingsScreen() {
   const billingOwnerMember = members.find((m) => m.profile_id === billingOwnerId)
   const billingOwnerName = billingOwnerMember
     ? memberDisplayName(billingOwnerMember as FamilyMember)
-    : 'Unknown'
+    : t('settings.billing.unknown')
+  const planLabel = t(plan === 'pro' ? 'settings.billing.plans.pro' : 'settings.billing.plans.basic')
 
   const otherParents = members.filter(
     (m) =>
@@ -65,9 +66,9 @@ export default function BillingSettingsScreen() {
   function handleUpgradeToPro(pkg: PurchasesPackage) {
     purchasePackage.mutate(pkg, {
       onError: (e) => {
-        const msg = (e as Error)?.message ?? 'Purchase failed.'
+        const msg = (e as Error)?.message ?? t('settings.billing.purchaseFailed')
         if (!msg.toLowerCase().includes('cancel')) {
-          Alert.alert('Purchase failed', msg)
+          Alert.alert(t('settings.billing.purchaseFailed'), msg)
         }
       },
     })
@@ -76,10 +77,10 @@ export default function BillingSettingsScreen() {
   function handleRestore() {
     restorePurchases.mutate(undefined, {
       onSuccess: () => {
-        Alert.alert('Restored', 'Your purchases have been restored.')
+        Alert.alert(t('settings.billing.restoredTitle'), t('settings.billing.restoredMessage'))
       },
       onError: (e) => {
-        Alert.alert('Restore failed', (e as Error)?.message ?? 'Please try again.')
+        Alert.alert(t('settings.billing.restoreFailed'), (e as Error)?.message ?? t('settings.common.pleaseTryAgain'))
       },
     })
   }
@@ -87,10 +88,10 @@ export default function BillingSettingsScreen() {
   function handleRefreshBilling() {
     syncBillingState.mutate(undefined, {
       onSuccess: () => {
-        Alert.alert('Billing refreshed', 'Subscription state was synced with RevenueCat.')
+        Alert.alert(t('settings.billing.billingRefreshedTitle'), t('settings.billing.billingRefreshedMessage'))
       },
       onError: (e) => {
-        Alert.alert('Sync failed', (e as Error)?.message ?? 'Could not refresh billing.')
+        Alert.alert(t('settings.billing.syncFailed'), (e as Error)?.message ?? t('settings.billing.syncFailedFallback'))
       },
     })
   }
@@ -99,18 +100,18 @@ export default function BillingSettingsScreen() {
     if (!setBillingOwner || !m.profile_id) return
     const name = memberDisplayName(m)
     Alert.alert(
-      'Change billing owner',
-      `Make ${name} the billing owner? The subscription will reset to Basic until they subscribe.`,
+      t('settings.billing.changeOwnerTitle'),
+      t('settings.billing.changeOwnerMessage', { name }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Change',
+          text: t('settings.common.change'),
           onPress: () =>
             setBillingOwner.mutate(m.profile_id!, {
               onError: (e) =>
                 Alert.alert(
-                  'Failed',
-                  (e as Error)?.message ?? 'Could not update billing owner.',
+                  t('settings.billing.failed'),
+                  (e as Error)?.message ?? t('settings.billing.ownerFailedFallback'),
                 ),
             }),
         },
@@ -121,8 +122,8 @@ export default function BillingSettingsScreen() {
   if (family.isLoading && !familyData) {
     return (
       <ScreenState
-        title="Billing"
-        description="Loading your family billing details."
+        title={t('settings.billing.title')}
+        description={t('settings.billing.loading')}
         showActivityIndicator
         withBackground={false}
       />
@@ -131,27 +132,27 @@ export default function BillingSettingsScreen() {
 
   return (
     <Screen>
-      <Text style={styles.sectionTitle}>Billing</Text>
-      <Text style={styles.sectionSubtitle}>
-        Manage subscription and billing for your family.
+      <Text style={[styles.sectionTitle, r.textAlignStart, r.writingDirection]}>{t('settings.billing.title')}</Text>
+      <Text style={[styles.sectionSubtitle, r.textAlignStart, r.writingDirection]}>
+        {t('settings.billing.subtitle')}
       </Text>
 
       {/* Current plan */}
       <View style={styles.card}>
-        <Text style={styles.cardLabel}>Current plan</Text>
-        <Text style={styles.cardValue}>{formatPlan(plan)}</Text>
+        <Text style={[styles.cardLabel, r.textAlignStart, r.writingDirection]}>{t('settings.billing.currentPlan')}</Text>
+        <Text style={[styles.cardValue, r.textAlignStart, r.writingDirection]}>{planLabel}</Text>
         {effectiveExpiresAt && plan === 'pro' && (
-          <Text style={styles.cardHint}>
-            Renews {new Date(effectiveExpiresAt).toLocaleDateString()}
+          <Text style={[styles.cardHint, r.textAlignStart, r.writingDirection]}>
+            {t('settings.billing.renews', { date: new Date(effectiveExpiresAt).toLocaleDateString() })}
           </Text>
         )}
         {isSubscriptionOutOfSync && (
           <View style={styles.syncNotice}>
-            <Text style={styles.cardHint}>
-              Subscription status is still syncing with RevenueCat.
+            <Text style={[styles.cardHint, r.textAlignStart, r.writingDirection]}>
+              {t('settings.billing.syncing')}
             </Text>
             <Button
-              title={syncBillingState.isPending ? 'Refreshing…' : 'Refresh subscription'}
+              title={syncBillingState.isPending ? t('settings.billing.refreshing') : t('settings.billing.refreshSubscription')}
               type="outline"
               size="sm"
               onPress={handleRefreshBilling}
@@ -164,19 +165,19 @@ export default function BillingSettingsScreen() {
       {/* Billing owner (parents only) */}
       {hasParentPermissions && (
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>Billing owner</Text>
-          <Text style={styles.cardValue}>{billingOwnerName}</Text>
-          <Text style={styles.cardHint}>
-            The billing owner pays for Pro. Only parents can be billing owners.
+          <Text style={[styles.cardLabel, r.textAlignStart, r.writingDirection]}>{t('settings.billing.billingOwner')}</Text>
+          <Text style={[styles.cardValue, r.textAlignStart, r.writingDirection]}>{billingOwnerName}</Text>
+          <Text style={[styles.cardHint, r.textAlignStart, r.writingDirection]}>
+            {t('settings.billing.billingOwnerHint')}
           </Text>
 
           {otherParents.length > 0 && (
             <View style={styles.changeOwnerSection}>
-              <Text style={styles.changeOwnerLabel}>Change billing owner</Text>
+              <Text style={[styles.changeOwnerLabel, r.textAlignStart, r.writingDirection]}>{t('settings.billing.changeBillingOwner')}</Text>
               {otherParents.map((m) => (
                 <Button
                   key={m.id}
-                  title={`Make ${memberDisplayName(m)} billing owner`}
+                  title={t('settings.billing.makeBillingOwner', { name: memberDisplayName(m) })}
                   type="outline"
                   size="sm"
                   onPress={() => handleChangeBillingOwner(m)}
@@ -191,23 +192,22 @@ export default function BillingSettingsScreen() {
       {/* Subscribe / Manage (billing owner only) */}
       {hasParentPermissions && isBillingOwner && (
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>
-            {plan === 'pro' ? 'Manage subscription' : 'Upgrade to Pro'}
+          <Text style={[styles.cardLabel, r.textAlignStart, r.writingDirection]}>
+            {plan === 'pro' ? t('settings.billing.manageSubscription') : t('settings.billing.upgradeToPro')}
           </Text>
 
           {plan === 'pro' ? (
             <View style={styles.proActions}>
               <Button
-                title={restorePurchases.isPending ? 'Restoring…' : 'Restore purchases'}
+                title={restorePurchases.isPending ? t('settings.billing.restoring') : t('settings.billing.restorePurchases')}
                 type="outline"
                 size="lg"
                 fullWidth
                 onPress={handleRestore}
                 disabled={restorePurchases.isPending}
               />
-              <Text style={styles.manageHint}>
-                To cancel or change payment, open Settings → Subscriptions on your
-                device.
+              <Text style={[styles.manageHint, r.textAlignStart, r.writingDirection]}>
+                {t('settings.billing.manageHint')}
               </Text>
             </View>
           ) : canPurchasePro ? (
@@ -220,10 +220,10 @@ export default function BillingSettingsScreen() {
                     <Button
                       title={
                         purchasePackage.isPending
-                          ? 'Processing…'
+                          ? t('settings.billing.processing')
                           : monthlyPkg.product.priceString
-                            ? `${monthlyPkg.product.priceString}/month`
-                            : 'Monthly'
+                            ? t('settings.billing.perMonth', { price: monthlyPkg.product.priceString })
+                            : t('settings.billing.monthly')
                       }
                       type="primary"
                       size="lg"
@@ -236,8 +236,8 @@ export default function BillingSettingsScreen() {
                     <Button
                       title={
                         annualPkg.product.priceString
-                          ? `${annualPkg.product.priceString}/year`
-                          : 'Yearly'
+                          ? t('settings.billing.perYear', { price: annualPkg.product.priceString })
+                          : t('settings.billing.yearly')
                       }
                       type="primary"
                       size="lg"
@@ -250,17 +250,16 @@ export default function BillingSettingsScreen() {
               )}
             </View>
           ) : (
-            <Text style={styles.proFallback}>
-              No Pro packages available. Configure RevenueCat or enable dev mode.
+            <Text style={[styles.proFallback, r.textAlignStart, r.writingDirection]}>
+              {t('settings.billing.noPackages')}
             </Text>
           )}
         </View>
       )}
 
       {!hasParentPermissions && (
-        <Text style={styles.sectionSubtitle}>
-          Only parents can manage billing. Ask your family’s billing owner to
-          make changes.
+        <Text style={[styles.sectionSubtitle, r.textAlignStart, r.writingDirection]}>
+          {t('settings.billing.parentsOnly')}
         </Text>
       )}
     </Screen>

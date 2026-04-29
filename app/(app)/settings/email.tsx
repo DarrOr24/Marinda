@@ -6,10 +6,12 @@ import {
   Text,
   View
 } from 'react-native'
+import { useTranslation } from 'react-i18next'
 
 import { EditEmailModal } from '@/components/settings/edit-email-modal'
 import { Button, EditButton, Screen } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
+import { useRtlStyles } from '@/hooks/use-rtl-styles'
 import { resendEmailChangeVerification, updateEmail } from '@/lib/auth/auth.service'
 
 function isValidEmail(s: string) {
@@ -17,6 +19,8 @@ function isValidEmail(s: string) {
 }
 
 export default function EmailSettingsScreen() {
+  const { t } = useTranslation()
+  const r = useRtlStyles()
   const { email, isEmailVerified } = useAuthContext()
 
   const [editOpen, setEditOpen] = useState(false)
@@ -28,7 +32,7 @@ export default function EmailSettingsScreen() {
     [email],
   )
 
-  const displayEmail = normalizedCurrent ? normalizedCurrent : 'Not set'
+  const displayEmail = normalizedCurrent ? normalizedCurrent : t('settings.email.notSet')
 
   const canResend =
     isValidEmail(normalizedCurrent) && !isEmailVerified && !!email && !saving && !resending
@@ -38,14 +42,14 @@ export default function EmailSettingsScreen() {
       setSaving(true)
       const res = await updateEmail(nextEmail)
       if (!res.ok) {
-        Alert.alert('Email update failed', res.error ?? 'Please try again.')
+        Alert.alert(t('settings.email.updateFailedTitle'), res.error ?? t('settings.common.pleaseTryAgain'))
         return
       }
 
       setEditOpen(false)
       Alert.alert(
-        'Verify your email',
-        'We sent a verification link. Open it on this device to complete verification.',
+        t('settings.email.verifyTitle'),
+        t('settings.email.verifyMessage'),
       )
     } finally {
       setSaving(false)
@@ -58,16 +62,16 @@ export default function EmailSettingsScreen() {
       setResending(true)
       const res = await resendEmailChangeVerification(email)
       if (!res.ok) {
-        Alert.alert('Failed to resend', res.error ?? 'Please try again.')
+        Alert.alert(t('settings.email.resendFailedTitle'), res.error ?? t('settings.common.pleaseTryAgain'))
         return
       }
-      Alert.alert('Sent', 'We resent the verification email.')
+      Alert.alert(t('settings.email.sentTitle'), t('settings.email.sentMessage'))
     } finally {
       setResending(false)
     }
   }
 
-  const statusLabel = isEmailVerified ? 'Verified' : 'Not verified'
+  const statusLabel = isEmailVerified ? t('settings.email.verified') : t('settings.email.notVerified')
 
   return (
     <Screen gap="sm">
@@ -75,15 +79,17 @@ export default function EmailSettingsScreen() {
         <Text style={styles.heroIcon}>✉️</Text>
       </View>
 
-      <Text style={styles.description}>
-        Email helps you access your account as a backup to your phone number.
+      <Text style={[styles.description, r.textAlignStart, r.writingDirection]}>
+        {t('settings.email.description')}
       </Text>
 
-      <Text style={[styles.label, { marginTop: 18 }]}>Email</Text>
+      <Text style={[styles.label, { marginTop: 18 }, r.textAlignStart, r.writingDirection]}>
+        {t('settings.email.label')}
+      </Text>
 
-      <View style={styles.emailRow}>
+      <View style={[styles.emailRow, r.row]}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.emailText} numberOfLines={1}>
+          <Text style={[styles.emailText, r.textAlignStart, r.writingDirection]} numberOfLines={1}>
             {displayEmail}
           </Text>
         </View>
@@ -91,7 +97,7 @@ export default function EmailSettingsScreen() {
         <EditButton size="md" onPress={() => setEditOpen(true)} />
       </View>
 
-      <View style={styles.statusRow}>
+      <View style={[styles.statusRow, r.row]}>
         <View
           style={[
             styles.statusDot,
@@ -109,15 +115,15 @@ export default function EmailSettingsScreen() {
       </View>
 
       {!isEmailVerified && !!email && (
-        <Text style={styles.helper}>
-          Tap the link in your email to verify this address.
+        <Text style={[styles.helper, r.textAlignStart, r.writingDirection]}>
+          {t('settings.email.verifyHelper')}
         </Text>
       )}
 
       {!isEmailVerified && !!email && (
         <View style={{ marginTop: 12 }}>
           <Button
-            title={resending ? 'Sending…' : 'Resend verification'}
+            title={resending ? t('settings.email.sending') : t('settings.email.resendVerification')}
             type="secondary"
             size="lg"
             onPress={onResend}

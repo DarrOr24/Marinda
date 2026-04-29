@@ -7,6 +7,8 @@ import PhoneInput, {
   type ICountry,
 } from 'react-native-international-phone-number'
 
+import { useRtlStyles } from '@/hooks/use-rtl-styles'
+
 type Props = {
   label: string
   value: string // full E.164, e.g. "+15551234567"
@@ -20,6 +22,7 @@ export function PhoneField({
   onChange,
   defaultCountry = 'IL',
 }: Props) {
+  const r = useRtlStyles()
   const [inputValue, setInputValue] = useState('') // national number without calling code
   const [selectedCountry, setSelectedCountry] = useState<ICountry | undefined>(
     undefined,
@@ -34,7 +37,7 @@ export function PhoneField({
 
   return (
     <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, r.textAlignStart, r.writingDirection]}>{label}</Text>
 
       <PhoneInput
         defaultCountry={defaultCountry as any}
@@ -72,7 +75,7 @@ export function PhoneField({
           flagContainer: styles.flagContainer,
           divider: styles.divider,
           callingCode: styles.callingCode,
-          input: styles.phoneTextInput,
+          input: [styles.phoneTextInput, r.textAlignStart, r.writingDirection] as any,
           caret: styles.caret,
         }}
       />

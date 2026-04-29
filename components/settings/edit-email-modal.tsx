@@ -6,9 +6,11 @@ import {
   TextInput,
   View,
 } from 'react-native'
+import { useTranslation } from 'react-i18next'
 
 import { Button, ModalDialog } from '@/components/ui'
 import { Colors } from '@/config/colors'
+import { useRtlStyles } from '@/hooks/use-rtl-styles'
 import { isValidEmail } from '@/utils/validation.utils'
 
 
@@ -28,6 +30,8 @@ export function EditEmailModal({
   onClose,
   onSave,
 }: Props) {
+  const { t } = useTranslation()
+  const r = useRtlStyles()
   const [draft, setDraft] = useState(initialEmail)
 
   const normalizedInitial = useMemo(() => initialEmail.trim().toLowerCase(), [initialEmail])
@@ -40,19 +44,23 @@ export function EditEmailModal({
 
   return (
     <ModalDialog visible={visible} onClose={onClose} onShow={() => setDraft(initialEmail)} size="md">
-        <Text style={styles.title}>Change email</Text>
-        <Text style={styles.subtitle}>
-          We’ll send a verification link to the new address.
+        <Text style={[styles.title, r.textAlignStart, r.writingDirection]}>
+          {t('settings.email.modalTitle')}
+        </Text>
+        <Text style={[styles.subtitle, r.textAlignStart, r.writingDirection]}>
+          {t('settings.email.modalSubtitle')}
         </Text>
 
-        <Text style={[styles.label, { marginTop: 14 }]}>Email</Text>
+        <Text style={[styles.label, { marginTop: 14 }, r.textAlignStart, r.writingDirection]}>
+          {t('settings.email.label')}
+        </Text>
         <TextInput
           autoCapitalize="none"
           keyboardType="email-address"
           value={draft}
           onChangeText={setDraft}
-          placeholder="you@example.com"
-          style={styles.input}
+          placeholder={t('settings.email.placeholder')}
+          style={[styles.input, r.textAlignStart, r.writingDirection]}
           editable={!loading}
           returnKeyType="done"
           onSubmitEditing={() => {
@@ -62,12 +70,14 @@ export function EditEmailModal({
         />
 
         {showInvalid && (
-          <Text style={styles.errorText}>Please enter a valid email.</Text>
+          <Text style={[styles.errorText, r.textAlignStart, r.writingDirection]}>
+            {t('settings.email.invalidEmail')}
+          </Text>
         )}
 
         <View style={styles.actions}>
           <Button
-            title={loading ? 'Saving…' : 'Save'}
+            title={loading ? t('settings.common.saving') : t('settings.common.save')}
             type="primary"
             size="lg"
             onPress={() => void onSave(normalizedDraft)}
@@ -76,7 +86,7 @@ export function EditEmailModal({
           />
 
           <Button
-            title="Cancel"
+            title={t('common.cancel')}
             type="ghost"
             size="lg"
             titleColor={Colors.common.gray600}

@@ -8,7 +8,9 @@ import {
   View,
 } from 'react-native'
 import { Calendar } from 'react-native-calendars'
+import { useTranslation } from 'react-i18next'
 import { ModalDialog } from '@/components/ui'
+import { useRtlStyles } from '@/hooks/use-rtl-styles'
 
 
 type Props = {
@@ -59,12 +61,14 @@ function clampDay(year: number, monthIndex: number, day: number) {
 export function DatePicker({
   value,
   onChange,
-  title = 'Pick your date',
-  placeholder = 'Select date',
+  title,
+  placeholder,
   disabled,
   enableYearPicker = false,
   yearPickerRange = { past: 120, future: 0 },
 }: Props) {
+  const { t } = useTranslation()
+  const r = useRtlStyles()
   const [open, setOpen] = useState(false)
   const [yearOpen, setYearOpen] = useState(false)
 
@@ -77,7 +81,9 @@ export function DatePicker({
     if (selected) setCurrent(selected)
   }, [selected])
 
-  const displayText = selected || placeholder
+  const resolvedTitle = title ?? t('datePicker.pickDate')
+  const resolvedPlaceholder = placeholder ?? t('datePicker.selectDate')
+  const displayText = selected || resolvedPlaceholder
 
   const years = useMemo(() => {
     const now = new Date()
@@ -125,23 +131,24 @@ export function DatePicker({
         onPress={openModal}
         style={[styles.inputLike, disabled && styles.disabled]}
       >
-        <Text style={[styles.valueText, !selected && styles.placeholder]}>
+        <Text style={[styles.valueText, !selected && styles.placeholder, r.textAlignStart, r.writingDirection]}>
           {displayText}
         </Text>
       </Pressable>
 
       <ModalDialog visible={open} onClose={closeModal} size="md">
-          <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>{title}</Text>
+          <View style={[styles.sheetHeader, r.row]}>
+              <Text style={[styles.sheetTitle, r.textAlignStart, r.writingDirection]}>{resolvedTitle}</Text>
 
               {enableYearPicker && (
                 <Pressable
                   onPress={() => setYearOpen((v) => !v)}
-                  style={styles.yearBtn}
+                  style={[styles.yearBtn, r.row]}
                   hitSlop={10}
                 >
-                  <Text style={styles.yearBtnText}>
-                    Select year</Text>
+                  <Text style={[styles.yearBtnText, r.textAlignStart, r.writingDirection]}>
+                    {t('datePicker.selectYear')}
+                  </Text>
                   <Ionicons name={yearOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#334155" />
                 </Pressable>
               )}
@@ -198,7 +205,7 @@ export function DatePicker({
           </View>
 
           <Pressable onPress={closeModal} style={styles.closeBtn}>
-            <Text style={styles.closeText}>Close</Text>
+            <Text style={[styles.closeText, r.writingDirection]}>{t('settings.common.close')}</Text>
           </Pressable>
       </ModalDialog>
     </View>

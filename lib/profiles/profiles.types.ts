@@ -1,8 +1,14 @@
 export type Gender = 'MALE' | 'FEMALE'
 
-export const GENDER_OPTIONS: { label: string; value: Gender }[] = [
-  { label: 'Male', value: 'MALE' },
-  { label: 'Female', value: 'FEMALE' },
+export type GenderOption = {
+  label: string
+  labelKey: string
+  value: Gender
+}
+
+export const GENDER_OPTIONS: GenderOption[] = [
+  { label: 'Male', labelKey: 'settings.common.genders.MALE', value: 'MALE' },
+  { label: 'Female', labelKey: 'settings.common.genders.FEMALE', value: 'FEMALE' },
 ]
 
 export interface Profile {

@@ -1,18 +1,22 @@
 // app/settings/add-member/sms-invite.tsx
 import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Alert, StyleSheet, Text } from 'react-native'
+import { useTranslation } from 'react-i18next'
 
 import { ChipSelector } from '@/components/chip-selector'
 import { Button, PhoneField, Screen, Section } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
+import { useRtlStyles } from '@/hooks/use-rtl-styles'
 import { showInvokeErrorAlert } from '@/lib/errors'
 import { ROLE_OPTIONS, type Role } from '@/lib/members/members.types'
 import { getSupabase } from '@/lib/supabase'
 
 
 export default function SmsInviteScreen() {
+  const { t } = useTranslation()
+  const r = useRtlStyles()
   const [phone, setPhone] = useState('') // E.164
   const [role, setRole] = useState<Role>('CHILD')
   const [isSending, setIsSending] = useState(false)
@@ -23,18 +27,26 @@ export default function SmsInviteScreen() {
   const supabase = getSupabase()
 
   const canSend = !!phone && !!role && !isSending
+  const roleOptions = useMemo(
+    () =>
+      ROLE_OPTIONS.map((option) => ({
+        ...option,
+        label: t(option.labelKey),
+      })),
+    [t],
+  )
 
   async function onSend() {
     if (!activeFamilyId) {
       Alert.alert(
-        'No family selected',
-        'You need an active family to send an invite.',
+        t('settings.smsInvite.noFamilyTitle'),
+        t('settings.smsInvite.noFamilyMessage'),
       )
       return
     }
 
     if (!phone) {
-      Alert.alert('Missing phone number', 'Please enter a phone number.')
+      Alert.alert(t('settings.smsInvite.missingPhoneTitle'), t('settings.smsInvite.missingPhoneMessage'))
       return
     }
 
@@ -51,20 +63,20 @@ export default function SmsInviteScreen() {
 
       if (error) {
         showInvokeErrorAlert(
-          'Could not send invite',
+          t('settings.smsInvite.couldNotSendInvite'),
           error,
           data,
-          'Could not send invite',
+          t('settings.smsInvite.couldNotSendInvite'),
         )
         return
       }
 
       if (!data?.ok) {
         showInvokeErrorAlert(
-          'Could not send invite',
+          t('settings.smsInvite.couldNotSendInvite'),
           null,
           data,
-          'Could not send invite',
+          t('settings.smsInvite.couldNotSendInvite'),
         )
         return
       }
@@ -74,8 +86,8 @@ export default function SmsInviteScreen() {
       })
 
       Alert.alert(
-        'Invite sent',
-        'We sent an SMS invite to this phone number.',
+        t('settings.smsInvite.sentTitle'),
+        t('settings.smsInvite.sentMessage'),
       )
       router.replace('/settings/family')
     } finally {
@@ -86,28 +98,30 @@ export default function SmsInviteScreen() {
   return (
     <Screen>
       <Section>
-        <Text style={styles.title}>Invite by SMS</Text>
-        <Text style={styles.subtitle}>
-          Enter the phone number and select the role. The invitee’s role will be locked.
+        <Text style={[styles.title, r.textAlignStart, r.writingDirection]}>
+          {t('settings.smsInvite.title')}
+        </Text>
+        <Text style={[styles.subtitle, r.textAlignStart, r.writingDirection]}>
+          {t('settings.smsInvite.subtitle')}
         </Text>
 
         <PhoneField
-          label="Phone number"
+          label={t('settings.smsInvite.phoneNumber')}
           value={phone}
           onChange={setPhone}
           defaultCountry="IL"
         />
 
-        <Text style={styles.label}>Role</Text>
+        <Text style={[styles.label, r.textAlignStart, r.writingDirection]}>{t('settings.common.role')}</Text>
         <ChipSelector
-          options={ROLE_OPTIONS}
+          options={roleOptions}
           value={role}
           onChange={(v) => setRole((v as Role) ?? 'CHILD')}
           style={{ marginTop: 4 }}
         />
 
         <Button
-          title={isSending ? 'Sending…' : 'Send invite'}
+          title={isSending ? t('settings.email.sending') : t('settings.smsInvite.sendInvite')}
           size="lg"
           fullWidth
           onPress={onSend}

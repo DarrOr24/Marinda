@@ -11,6 +11,8 @@ import {
   ViewStyle,
 } from 'react-native'
 
+import { useRtlStyles } from '@/hooks/use-rtl-styles'
+
 export interface ChipOption {
   label: string
   value: string
@@ -46,6 +48,7 @@ type ChipSelectorProps = (SingleSelectProps | MultiSelectProps) & {
 }
 
 export function ChipSelector(props: ChipSelectorProps) {
+  const r = useRtlStyles()
   const {
     options,
     style,
@@ -97,6 +100,8 @@ export function ChipSelector(props: ChipSelectorProps) {
             style={[
               styles.chipText,
               active && styles.chipTextActive,
+              r.textAlignStart,
+              r.writingDirection,
               customChipTextStyle,
             ]}
           >
@@ -115,6 +120,7 @@ export function ChipSelector(props: ChipSelectorProps) {
         style={[styles.horizontalScroll, style]}
         contentContainerStyle={[
           styles.horizontalScrollContent,
+          r.row,
           horizontalContentContainerStyle,
         ]}
         keyboardShouldPersistTaps="handled"
@@ -128,7 +134,7 @@ export function ChipSelector(props: ChipSelectorProps) {
   }
 
   return (
-    <View style={[styles.row, style]}>
+    <View style={[styles.row, r.row, style]}>
       {chips}
       {trailingElement}
     </View>

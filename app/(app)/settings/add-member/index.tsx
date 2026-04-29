@@ -1,30 +1,36 @@
 // app/settings/add-member/index.tsx
 import { useRouter } from 'expo-router'
 import { StyleSheet, Text } from 'react-native'
+import { useTranslation } from 'react-i18next'
 
 import { Button, Screen, Section } from '@/components/ui'
+import { useRtlStyles } from '@/hooks/use-rtl-styles'
 
 
 export default function AddMemberChooserScreen() {
   const router = useRouter()
+  const { t } = useTranslation()
+  const r = useRtlStyles()
 
   return (
     <Screen>
       <Section>
-        <Text style={styles.title}>Add a family member</Text>
-        <Text style={styles.subtitle}>
-          Choose how you want to add someone to your family.
+        <Text style={[styles.title, r.textAlignStart, r.writingDirection]}>
+          {t('settings.addMember.title')}
+        </Text>
+        <Text style={[styles.subtitle, r.textAlignStart, r.writingDirection]}>
+          {t('settings.addMember.subtitle')}
         </Text>
 
         <Button
-          title="Invite a new member by SMS"
+          title={t('settings.addMember.inviteBySms')}
           size="lg"
           fullWidth
           onPress={() => router.push('/settings/add-member/sms-invite')}
         />
 
         <Button
-          title="Add a kid without a phone"
+          title={t('settings.addMember.addKidNoPhone')}
           size="lg"
           type="secondary"
           fullWidth
@@ -32,7 +38,7 @@ export default function AddMemberChooserScreen() {
         />
 
         <Button
-          title="Cancel"
+          title={t('common.cancel')}
           size="lg"
           type="ghost"
           fullWidth

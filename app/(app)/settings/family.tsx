@@ -1,6 +1,6 @@
 // app/settings/family.tsx
 import { useRouter } from 'expo-router'
-import React from 'react'
+import React, { useMemo } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -8,6 +8,7 @@ import {
   Text,
   View
 } from 'react-native'
+import { useTranslation } from 'react-i18next'
 
 import { FamilyAvatar } from '@/components/avatar/family-avatar'
 import { MemberAvatar } from '@/components/avatar/member-avatar'
@@ -15,6 +16,7 @@ import { ChipSelector } from '@/components/chip-selector'
 import { ShareButton } from '@/components/share-button'
 import { Button, Screen, ScreenState } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
+import { useRtlStyles } from '@/hooks/use-rtl-styles'
 import {
   useCancelFamilyInvite,
   useFamily,
@@ -29,30 +31,41 @@ import { memberDisplayName } from '@/utils/format.utils'
 
 export default function FamilySettingsScreen() {
   const router = useRouter()
+  const { t } = useTranslation()
+  const r = useRtlStyles()
   const { effectiveMember, activeFamilyId, hasParentPermissions } = useAuthContext() as any
   const familyId = activeFamilyId ?? effectiveMember?.family_id
+  const mutationFamilyId = familyId ?? ''
   const myProfileId = effectiveMember?.profile_id as string | undefined
 
   const { family, familyMembers, familyInvites } = useFamily(familyId)
 
-  const updateMemberRole = familyId ? useUpdateMemberRole(familyId) : null
-  const rotateCode = familyId ? useRotateFamilyCode(familyId) : null
-  const removeMember = familyId ? useRemoveMember(familyId) : null
-  const cancelInvite = familyId ? useCancelFamilyInvite(familyId) : null
+  const updateMemberRole = useUpdateMemberRole(mutationFamilyId)
+  const rotateCode = useRotateFamilyCode(mutationFamilyId)
+  const removeMember = useRemoveMember(mutationFamilyId)
+  const cancelInvite = useCancelFamilyInvite(mutationFamilyId)
 
   const familyData = family.data
   const isLoadingMembers = familyMembers.isLoading
   const isLoadingFamily = family.isLoading
   const isLoadingInvites = familyInvites.isLoading
+  const roleOptions = useMemo(
+    () =>
+      ROLE_OPTIONS.map((option) => ({
+        ...option,
+        label: t(option.labelKey),
+      })),
+    [t],
+  )
 
   if (!hasParentPermissions) {
     return (
       <ScreenState
-        title="Family management"
+        title={t('settings.family.managementTitle')}
         description={
           familyData?.code
-            ? 'Only parents can manage family settings. Ask a parent to share the family code with you to join.'
-            : 'Only parents can manage family settings.'
+            ? t('settings.family.parentsOnlyWithCode')
+            : t('settings.family.parentsOnly')
         }
       />
     )
@@ -61,8 +74,8 @@ export default function FamilySettingsScreen() {
   if (!familyId) {
     return (
       <ScreenState
-        title="Family management"
-        description="You are not attached to a family yet."
+        title={t('settings.family.managementTitle')}
+        description={t('settings.family.noFamily')}
       />
     )
   }
@@ -70,8 +83,8 @@ export default function FamilySettingsScreen() {
   if (isLoadingFamily && !familyData) {
     return (
       <ScreenState
-        title="Family management"
-        description="Loading family details."
+        title={t('settings.family.managementTitle')}
+        description={t('settings.family.loadingDetails')}
         showActivityIndicator
       />
     )
@@ -85,19 +98,19 @@ export default function FamilySettingsScreen() {
   const handleRotateCode = () => {
     rotateCode?.mutate(undefined, {
       onError: (e: any) => {
-        Alert.alert('Could not rotate code', e?.message ?? 'Please try again.')
+        Alert.alert(t('settings.family.rotateFailedTitle'), e?.message ?? t('settings.common.pleaseTryAgain'))
       },
     })
   }
 
   const handleCancelInvite = (invite: FamilyInvite) => {
     Alert.alert(
-      'Cancel invite',
-      `Cancel invite to ${invite.invited_phone}?`,
+      t('settings.family.cancelInviteTitle'),
+      t('settings.family.cancelInviteMessage', { phone: invite.invited_phone }),
       [
-        { text: 'Keep', style: 'cancel' },
+        { text: t('settings.family.keep'), style: 'cancel' },
         {
-          text: 'Cancel invite',
+          text: t('settings.family.cancelInvite'),
           style: 'destructive',
           onPress: () =>
             cancelInvite?.mutate(
@@ -105,8 +118,8 @@ export default function FamilySettingsScreen() {
               {
                 onError: (e: any) => {
                   Alert.alert(
-                    'Cancel failed',
-                    e?.message ?? 'Please try again.',
+                    t('settings.family.cancelFailedTitle'),
+                    e?.message ?? t('settings.common.pleaseTryAgain'),
                   )
                 },
               },
@@ -117,14 +130,14 @@ export default function FamilySettingsScreen() {
   }
 
   const handleRemoveMember = (m: FamilyMember) => {
-    const displayName = m.profile?.first_name || m.nickname || 'this member'
+    const displayName = m.profile?.first_name || m.nickname || t('settings.family.thisMember')
     Alert.alert(
-      'Remove member',
-      `Remove ${displayName} from your family?`,
+      t('settings.family.removeMemberTitle'),
+      t('settings.family.removeMemberMessage', { name: displayName }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('settings.common.remove'),
           style: 'destructive',
           onPress: () =>
             removeMember?.mutate(
@@ -132,8 +145,8 @@ export default function FamilySettingsScreen() {
               {
                 onError: (e: any) => {
                   Alert.alert(
-                    'Remove failed',
-                    e?.message ?? 'Please try again.',
+                    t('settings.family.removeFailedTitle'),
+                    e?.message ?? t('settings.common.pleaseTryAgain'),
                   )
                 },
               },
@@ -148,45 +161,45 @@ export default function FamilySettingsScreen() {
     <Screen>
 
       {/* Family avatar + name */}
-      <View style={styles.familyHeaderRow}>
+      <View style={[styles.familyHeaderRow, r.row]}>
         <FamilyAvatar
           familyId={familyId}
           size="lg"
           isUpdatable={true}
         />
-        <View style={{ marginLeft: 12, flex: 1 }}>
-          <Text style={styles.sectionTitle}>
-            {`${familyData?.name} Family`}
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.sectionTitle, r.textAlignStart, r.writingDirection]}>
+            {t('settings.family.familyName', { name: familyData?.name })}
           </Text>
-          <Text style={styles.sectionSubtitle}>
-            Tap the photo to change your family avatar.
+          <Text style={[styles.sectionSubtitle, r.textAlignStart, r.writingDirection]}>
+            {t('settings.family.changeAvatarHint')}
           </Text>
         </View>
       </View>
 
-      <Text style={styles.sectionSubtitle}>
-        Share the family code with your kids so they can join during signup.
+      <Text style={[styles.sectionSubtitle, r.textAlignStart, r.writingDirection]}>
+        {t('settings.family.shareCodeIntro')}
       </Text>
 
       <View style={styles.codeBox}>
-        <Text style={styles.codeLabel}>Family code</Text>
-        <View style={styles.codeRow}>
+        <Text style={[styles.codeLabel, r.textAlignStart, r.writingDirection]}>{t('settings.family.familyCode')}</Text>
+        <View style={[styles.codeRow, r.row]}>
           <Text style={styles.codeValue}>
             {familyData?.code ?? '— — — — — —'}
           </Text>
 
-          <View style={styles.codeActionsRow}>
+          <View style={[styles.codeActionsRow, r.row]}>
             {/* Share */}
             <ShareButton
-              shareMessage={`Join our family on Marinda! Use this family code: ${familyData?.code}`}
-              shareTitle="Share family code"
-              buttonTitle="Share"
+              shareMessage={t('settings.family.shareMessage', { code: familyData?.code })}
+              shareTitle={t('settings.family.shareTitle')}
+              buttonTitle={t('settings.family.share')}
               disabled={!familyData?.code}
             />
 
             {/* Rotate */}
             <Button
-              title={rotateCode?.isPending ? 'Rotating…' : 'Rotate'}
+              title={rotateCode?.isPending ? t('settings.family.rotating') : t('settings.family.rotate')}
               type="primary"
               size="sm"
               onPress={handleRotateCode}
@@ -195,15 +208,14 @@ export default function FamilySettingsScreen() {
           </View>
         </View>
 
-        <Text style={styles.codeHint}>
-          Kids can go to “Join with Code” and enter this code. You can rotate it
-          anytime.
+        <Text style={[styles.codeHint, r.textAlignStart, r.writingDirection]}>
+          {t('settings.family.codeHint')}
         </Text>
       </View>
 
       <View style={{ marginTop: 12 }}>
         <Button
-          title="Add a new family member"
+          title={t('settings.family.addMember')}
           type="primary"
           size="lg"
           fullWidth
@@ -214,43 +226,45 @@ export default function FamilySettingsScreen() {
       {/* Members + invites list */}
       <View style={{ marginTop: 16, gap: 10 }}>
         {isLoadingMembers && (
-          <View style={styles.loadingRow}>
+          <View style={[styles.loadingRow, r.row]}>
             <ActivityIndicator />
-            <Text style={styles.loadingText}>Loading family members…</Text>
+            <Text style={[styles.loadingText, r.textAlignStart, r.writingDirection]}>
+              {t('settings.family.loadingMembers')}
+            </Text>
           </View>
         )}
 
         {/* Pending invites (shown as "members" with a Pending tag) */}
         {!isLoadingInvites && (familyInvites.data?.length ?? 0) > 0 && (
-          <Text style={styles.listTitle}>Pending invites</Text>
+          <Text style={[styles.listTitle, r.textAlignStart, r.writingDirection]}>{t('settings.family.pendingInvites')}</Text>
         )}
 
         {!isLoadingInvites &&
           familyInvites.data?.map((invite: FamilyInvite) => {
             const roleLabel =
-              ROLE_OPTIONS.find((opt) => opt.value === invite.role)?.label ??
+              roleOptions.find((opt) => opt.value === invite.role)?.label ??
               invite.role.toLowerCase()
 
             return (
-              <View key={`invite-${invite.id}`} style={styles.memberRow}>
+              <View key={`invite-${invite.id}`} style={[styles.memberRow, r.row]}>
                 <View style={styles.memberAvatarWrapper}>
                   <MemberAvatar size="md" />
                 </View>
 
                 {/* phone + role + pending tag */}
                 <View style={{ flex: 1, gap: 4 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={styles.memberName}>{invite.invited_phone}</Text>
+                  <View style={[{ alignItems: 'center' }, r.row]}>
+                    <Text style={[styles.memberName, r.textAlignStart, r.writingDirection]}>{invite.invited_phone}</Text>
                   </View>
-                  <Text style={styles.pendingBadge}>Pending invite</Text>
-                  <Text style={styles.memberMeta}>
-                    Invited as: {roleLabel.toLowerCase()}
+                  <Text style={[styles.pendingBadge, r.textAlignStart, r.writingDirection]}>{t('settings.family.pendingInvite')}</Text>
+                  <Text style={[styles.memberMeta, r.textAlignStart, r.writingDirection]}>
+                    {t('settings.family.invitedAs', { role: roleLabel.toLowerCase() })}
                   </Text>
                 </View>
 
                 {/* cancel invite */}
                 <Button
-                  title="Cancel"
+                  title={t('common.cancel')}
                   type="danger"
                   size="sm"
                   onPress={() => handleCancelInvite(invite)}
@@ -260,16 +274,17 @@ export default function FamilySettingsScreen() {
           })}
 
         {!isLoadingMembers && (familyMembers.data?.length ?? 0) > 0 && (
-          <Text style={styles.listTitle}>Family members</Text>
+          <Text style={[styles.listTitle, r.textAlignStart, r.writingDirection]}>{t('settings.family.familyMembers')}</Text>
         )}
 
         {!isLoadingMembers &&
           familyMembers.data?.map((m: FamilyMember) => {
             const name = memberDisplayName(m, { official: true })
             const isSelf = myProfileId && m.profile_id === myProfileId
+            const roleLabel = roleOptions.find((option) => option.value === m.role)?.label ?? m.role
 
             return (
-              <View key={m.id} style={styles.memberRow}>
+              <View key={m.id} style={[styles.memberRow, r.row]}>
                 {/* avatar */}
                 <View style={styles.memberAvatarWrapper}>
                   {m.profile_id && (
@@ -283,20 +298,20 @@ export default function FamilySettingsScreen() {
 
                 {/* name + role */}
                 <View style={{ flex: 1, gap: 4 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={styles.memberName}>{name}</Text>
+                  <View style={[{ alignItems: 'center' }, r.row]}>
+                    <Text style={[styles.memberName, r.textAlignStart, r.writingDirection]}>{name}</Text>
                     {isSelf && (
-                      <Text style={styles.youBadge}>
-                        &nbsp;•&nbsp;You
+                      <Text style={[styles.youBadge, r.textAlignStart, r.writingDirection]}>
+                        &nbsp;•&nbsp;{t('settings.family.you')}
                       </Text>
                     )}
                   </View>
-                  <Text style={styles.memberMeta}>
-                    Role: {m.role.toUpperCase()}
+                  <Text style={[styles.memberMeta, r.textAlignStart, r.writingDirection]}>
+                    {t('settings.family.roleLabel', { role: roleLabel })}
                   </Text>
 
                   <ChipSelector
-                    options={ROLE_OPTIONS}
+                    options={roleOptions}
                     value={m.role}
                     onChange={(value: string | null) => handleChangeRole(m, value as Role)}
                     style={styles.roleChipsRow}
@@ -306,7 +321,7 @@ export default function FamilySettingsScreen() {
                 {/* remove (hidden for self) */}
                 {!isSelf && (
                   <Button
-                    title="Remove"
+                    title={t('settings.common.remove')}
                     type="danger"
                     size="sm"
                     onPress={() => handleRemoveMember(m)}

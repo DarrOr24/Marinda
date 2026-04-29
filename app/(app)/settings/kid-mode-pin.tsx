@@ -1,13 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useTranslation } from 'react-i18next'
 
 import { Button, Screen } from '@/components/ui'
 import { useAuthContext } from '@/hooks/use-auth-context'
+import { useRtlStyles } from '@/hooks/use-rtl-styles'
 import { useMember, useUpdateMember } from '@/lib/members/members.hooks'
 
 const KID_MODE_PIN_PATTERN = /^\d{4}$/
 
 export default function KidModePinSettingsScreen() {
+  const { t } = useTranslation()
+  const r = useRtlStyles()
   const { authMember, hasParentPermissions } = useAuthContext()
   const memberQuery = useMember(authMember?.id ?? null)
   const updateMember = useUpdateMember()
@@ -31,12 +35,12 @@ export default function KidModePinSettingsScreen() {
     if (!authMember?.id) return
 
     if (!KID_MODE_PIN_PATTERN.test(pin)) {
-      Alert.alert('Choose a 4-digit PIN', 'Please enter exactly 4 digits.')
+      Alert.alert(t('settings.kidModePin.choosePinTitle'), t('settings.kidModePin.choosePinMessage'))
       return
     }
 
     if (pin !== confirmPin) {
-      Alert.alert('PINs do not match', 'Please enter the same PIN twice.')
+      Alert.alert(t('settings.kidModePin.mismatchTitle'), t('settings.kidModePin.mismatchMessage'))
       return
     }
 
@@ -49,10 +53,10 @@ export default function KidModePinSettingsScreen() {
         onSuccess: () => {
           setPin('')
           setConfirmPin('')
-          Alert.alert('PIN saved', 'Your kid mode PIN has been updated.')
+          Alert.alert(t('settings.kidModePin.savedTitle'), t('settings.kidModePin.savedMessage'))
         },
         onError: (error: any) => {
-          Alert.alert('Save failed', error?.message ?? 'Please try again.')
+          Alert.alert(t('settings.common.saveFailedTitle'), error?.message ?? t('settings.common.pleaseTryAgain'))
         },
       },
     )
@@ -61,9 +65,9 @@ export default function KidModePinSettingsScreen() {
   if (!hasParentPermissions) {
     return (
       <Screen>
-        <Text style={styles.title}>Kid mode PIN</Text>
-        <Text style={styles.subtitle}>
-          Only parents can configure the PIN used for kid mode.
+        <Text style={[styles.title, r.textAlignStart, r.writingDirection]}>{t('settings.kidModePin.title')}</Text>
+        <Text style={[styles.subtitle, r.textAlignStart, r.writingDirection]}>
+          {t('settings.kidModePin.parentsOnly')}
         </Text>
       </Screen>
     )
@@ -72,9 +76,11 @@ export default function KidModePinSettingsScreen() {
   if (memberQuery.isLoading && !member) {
     return (
       <Screen>
-        <View style={styles.loadingRow}>
+        <View style={[styles.loadingRow, r.row]}>
           <ActivityIndicator />
-          <Text style={styles.subtitle}>Loading PIN settings…</Text>
+          <Text style={[styles.subtitle, r.textAlignStart, r.writingDirection]}>
+            {t('settings.kidModePin.loading')}
+          </Text>
         </View>
       </Screen>
     )
@@ -82,22 +88,26 @@ export default function KidModePinSettingsScreen() {
 
   return (
     <Screen>
-      <Text style={styles.title}>Kid mode PIN</Text>
-      <Text style={styles.subtitle}>
+      <Text style={[styles.title, r.textAlignStart, r.writingDirection]}>{t('settings.kidModePin.title')}</Text>
+      <Text style={[styles.subtitle, r.textAlignStart, r.writingDirection]}>
         {hasExistingPin
-          ? 'Change the 4-digit PIN required to switch back to parent mode.'
-          : 'Set a 4-digit PIN before using kid mode.'}
+          ? t('settings.kidModePin.changeDescription')
+          : t('settings.kidModePin.setDescription')}
       </Text>
 
       <View style={styles.card}>
         <View style={styles.statusBox}>
-          <Text style={styles.statusLabel}>Current status</Text>
-          <Text style={styles.statusValue}>
-            {hasExistingPin ? 'PIN configured' : 'No PIN configured'}
+          <Text style={[styles.statusLabel, r.textAlignStart, r.writingDirection]}>
+            {t('settings.kidModePin.currentStatus')}
+          </Text>
+          <Text style={[styles.statusValue, r.textAlignStart, r.writingDirection]}>
+            {hasExistingPin ? t('settings.kidModePin.configured') : t('settings.kidModePin.notConfigured')}
           </Text>
         </View>
 
-        <Text style={styles.label}>{hasExistingPin ? 'New PIN' : 'PIN'}</Text>
+        <Text style={[styles.label, r.textAlignStart, r.writingDirection]}>
+          {hasExistingPin ? t('settings.kidModePin.newPin') : t('settings.kidModePin.pin')}
+        </Text>
         <TextInput
           value={pin}
           onChangeText={setPin}
@@ -105,10 +115,12 @@ export default function KidModePinSettingsScreen() {
           secureTextEntry
           maxLength={4}
           placeholder="1234"
-          style={styles.input}
+          style={[styles.input, r.textAlignStart, r.writingDirection]}
         />
 
-        <Text style={styles.label}>Confirm PIN</Text>
+        <Text style={[styles.label, r.textAlignStart, r.writingDirection]}>
+          {t('settings.kidModePin.confirmPin')}
+        </Text>
         <TextInput
           value={confirmPin}
           onChangeText={setConfirmPin}
@@ -116,11 +128,17 @@ export default function KidModePinSettingsScreen() {
           secureTextEntry
           maxLength={4}
           placeholder="1234"
-          style={styles.input}
+          style={[styles.input, r.textAlignStart, r.writingDirection]}
         />
 
         <Button
-          title={updateMember.isPending ? 'Saving…' : hasExistingPin ? 'Change PIN' : 'Set PIN'}
+          title={
+            updateMember.isPending
+              ? t('settings.common.saving')
+              : hasExistingPin
+                ? t('settings.kidModePin.changePin')
+                : t('settings.kidModePin.setPin')
+          }
           type="primary"
           size="lg"
           fullWidth
